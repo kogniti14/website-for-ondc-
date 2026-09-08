@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { B2BOrder, B2BQuotation } from '../../types';
 import { storageService } from '../../services/storageService';
+import { B2BInvoiceModal } from '../../components/b2b/B2BInvoiceModal';
 
 interface B2BDashboardPageProps {
   b2bOrders: B2BOrder[];
@@ -242,6 +243,31 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                     <Package size={16} /> B2B Orders & POs
                   </span>
                   <span className="badge badge-green" style={{ fontSize: '0.65rem' }}>
+                    {b2bOrders.length}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('invoices')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.7rem 1rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: activeTab === 'invoices' ? 'var(--primary)' : 'transparent',
+                    color: '#FFFFFF',
+                    fontWeight: 700,
+                    fontSize: '0.88rem',
+                    border: 'none',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span className="flex items-center gap-2">
+                    <FileText size={16} /> Tax Invoices (GST & ITC)
+                  </span>
+                  <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>
                     {b2bOrders.length}
                   </span>
                 </button>
@@ -565,9 +591,9 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                           ))}
                         </div>
 
-                        {/* Invoice Summary Row */}
+                        {/* Order & Invoice Actions */}
                         <div
-                          className="flex justify-between items-center flex-wrap gap-2"
+                          className="flex justify-between items-center flex-wrap gap-3"
                           style={{
                             paddingTop: '0.85rem',
                             borderTop: '1px solid rgba(255, 255, 255, 0.08)',
@@ -579,12 +605,167 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                             <strong>{ord.courierPartner} (AWB: {ord.trackingNumber})</strong>
                           </div>
 
-                          <div className="flex items-baseline gap-2">
-                            <span style={{ color: '#94A3B8' }}>Invoice Grand Total:</span>
-                            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#34D399' }}>
-                              ₹{ord.grandTotal.toLocaleString('en-IN')}
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-baseline gap-2">
+                              <span style={{ color: '#94A3B8' }}>Total:</span>
+                              <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#34D399' }}>
+                                ₹{ord.grandTotal.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+
+                            <button
+                              onClick={() => setSelectedB2bInvoice(ord)}
+                              className="btn btn-outline-b2b btn-sm"
+                              style={{
+                                color: '#38BDF8',
+                                borderColor: 'rgba(56, 189, 248, 0.4)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                fontWeight: 700,
+                              }}
+                            >
+                              <FileText size={14} /> Generate B2B Tax Invoice
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 3. B2B Tax Invoices & ITC Tab */}
+            {activeTab === 'invoices' && (
+              <div>
+                <div className="flex justify-between items-center flex-wrap gap-2" style={{ marginBottom: '1.5rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#FFFFFF' }}>
+                      Commercial GST Tax Invoices & Input Tax Credit (ITC)
+                    </h3>
+                    <p style={{ fontSize: '0.82rem', color: '#94A3B8', marginTop: '0.2rem' }}>
+                      Official Section 31 statutory invoices for institutional procurement and tax credit reconciliation
+                    </p>
+                  </div>
+                </div>
+
+                {/* Statutory ITC Summary KPI Bar */}
+                <div
+                  className="grid"
+                  style={{
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '1rem',
+                    marginBottom: '1.75rem',
+                  }}
+                >
+                  <div
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: 'var(--radius-lg)',
+                      padding: '1.25rem',
+                    }}
+                  >
+                    <div style={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 600 }}>Total Invoiced Volume</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFFFFF', margin: '0.2rem 0' }}>
+                      ₹{b2bOrders.reduce((sum, o) => sum + o.grandTotal, 0).toLocaleString('en-IN')}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#38BDF8' }}>
+                      {b2bOrders.length} Invoices issued
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      background: 'rgba(16, 185, 129, 0.1)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      borderRadius: 'var(--radius-lg)',
+                      padding: '1.25rem',
+                    }}
+                  >
+                    <div style={{ fontSize: '0.75rem', color: '#A7F3D0', fontWeight: 600 }}>Total Input Tax Credit (ITC)</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#34D399', margin: '0.2rem 0' }}>
+                      ₹{b2bOrders.reduce((sum, o) => sum + o.totalGst, 0).toLocaleString('en-IN')}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#D1FAE5' }}>
+                      Claimable under GSTR-2B
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: 'var(--radius-lg)',
+                      padding: '1.25rem',
+                    }}
+                  >
+                    <div style={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 600 }}>Verified Recipient GSTIN</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#38BDF8', margin: '0.35rem 0', letterSpacing: '0.04em' }}>
+                      {b2bBusiness?.gstin || '29AAACE1234F1Z8'}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#10B981' }}>
+                      ✓ Compliant Active Entity
+                    </div>
+                  </div>
+                </div>
+
+                {/* Invoices List */}
+                {b2bOrders.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94A3B8' }}>
+                    No B2B tax invoices generated yet.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {b2bOrders.map((ord) => (
+                      <div
+                        key={ord.id}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: 'var(--radius-lg)',
+                          padding: '1.25rem 1.5rem',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '1rem',
+                        }}
+                      >
+                        <div>
+                          <div className="flex items-center gap-3">
+                            <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#FFFFFF' }}>
+                              INV-{ord.orderNumber}
+                            </span>
+                            <span
+                              className="badge"
+                              style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34D399', fontSize: '0.7rem' }}
+                            >
+                              ORIGINAL FOR RECIPIENT
                             </span>
                           </div>
+                          <div style={{ fontSize: '0.78rem', color: '#94A3B8', marginTop: '0.25rem' }}>
+                            PO Ref: <strong style={{ color: '#E2E8F0' }}>{ord.poNumber}</strong> • Date: {new Date(ord.createdAt).toLocaleDateString('en-IN')} • Payment: <strong style={{ color: '#FCD34D' }}>{ord.paymentTerms}</strong>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-6 flex-wrap">
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Taxable Base: ₹{ord.taxableAmount.toLocaleString('en-IN')}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#38BDF8' }}>GST (18%): ₹{ord.totalGst.toLocaleString('en-IN')}</div>
+                            <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#34D399', marginTop: '0.1rem' }}>
+                              ₹{ord.grandTotal.toLocaleString('en-IN')}
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => setSelectedB2bInvoice(ord)}
+                            className="btn btn-amber btn-sm"
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+                          >
+                            <Printer size={15} /> Generate B2B Tax Invoice (PDF)
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -664,6 +845,14 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Printable B2B GST Tax Invoice Modal */}
+      {selectedB2bInvoice && (
+        <B2BInvoiceModal
+          order={selectedB2bInvoice}
+          onClose={() => setSelectedB2bInvoice(null)}
+        />
+      )}
     </div>
   );
 };

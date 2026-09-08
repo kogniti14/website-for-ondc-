@@ -27,6 +27,7 @@ import {
 import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser } from '../../types';
 import { storageService } from '../../services/storageService';
 import { useAuth } from '../../context/AuthContext';
+import { B2BInvoiceModal } from '../../components/b2b/B2BInvoiceModal';
 
 interface AdminDashboardPageProps {
   products: Product[];
@@ -96,6 +97,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   // Product Edit / Add State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showProductModal, setShowProductModal] = useState(false);
+
+  // Selected B2B Order for Tax Invoice
+  const [selectedB2bOrderForInvoice, setSelectedB2bOrderForInvoice] = useState<B2BOrder | null>(null);
 
   // RFQ Response Modal
   const [activeRfqForQuote, setActiveRfqForQuote] = useState<B2BQuotation | null>(null);
@@ -609,6 +613,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     <th style={{ padding: '0.75rem 1rem' }}>Amount</th>
                     <th style={{ padding: '0.75rem 1rem' }}>Current Status</th>
                     <th style={{ padding: '0.75rem 1rem' }}>Update Status</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Tax Invoice</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -644,6 +649,24 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                           <option value="delivered">Delivered</option>
                         </select>
                       </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <button
+                          onClick={() => setSelectedB2bOrderForInvoice(o)}
+                          className="btn btn-sm"
+                          style={{
+                            background: 'rgba(2, 132, 199, 0.1)',
+                            color: '#0284C7',
+                            border: '1px solid rgba(2, 132, 199, 0.3)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                          }}
+                        >
+                          <FileText size={13} /> View B2B Invoice
+                        </button>
+                      </td>
                     </tr>
                   ))}
 
@@ -677,6 +700,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                           <option value="shipped">Shipped</option>
                           <option value="delivered">Delivered</option>
                         </select>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>Retail GST</span>
                       </td>
                     </tr>
                   ))}
@@ -1411,6 +1437,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Printable B2B GST Tax Invoice Modal */}
+      {selectedB2bOrderForInvoice && (
+        <B2BInvoiceModal
+          order={selectedB2bOrderForInvoice}
+          onClose={() => setSelectedB2bOrderForInvoice(null)}
+        />
       )}
     </div>
   );
