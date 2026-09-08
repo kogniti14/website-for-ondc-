@@ -4,6 +4,7 @@ import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { storageService } from './services/storageService';
 import { Product, B2COrder } from './types';
+import { ShieldCheck } from 'lucide-react';
 
 // Layout Components
 import { Navbar } from './components/layout/Navbar';
@@ -17,6 +18,7 @@ import { PolicyModal } from './components/common/PolicyModal';
 import { ProductDetailModal } from './components/products/ProductDetailModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { B2BAuthModal } from './components/auth/B2BAuthModal';
+import { AdminAuthModal } from './components/auth/AdminAuthModal';
 
 // B2C Pages
 import { HomePage } from './pages/b2c/HomePage';
@@ -37,6 +39,8 @@ import { B2BDashboardPage } from './pages/b2b/B2BDashboardPage';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 
 const MainApp: React.FC = () => {
+  const { isAdmin } = useAuth();
+
   // Navigation State
   const [activeTab, setActiveTab] = useState<string>('home');
   const [b2bTab, setB2bTab] = useState<string>('overview');
@@ -48,6 +52,8 @@ const MainApp: React.FC = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [b2bAuthModalOpen, setB2bAuthModalOpen] = useState(false);
+  const [adminAuthModalOpen, setAdminAuthModalOpen] = useState(false);
+  const [adminAuthMode, setAdminAuthMode] = useState<'login' | 'register'>('login');
   const [policyModalType, setPolicyModalType] = useState<'privacy' | 'terms' | 'shipping' | 'refund' | null>(null);
   const [rfqTargetProduct, setRfqTargetProduct] = useState<Product | null>(null);
 
@@ -116,6 +122,10 @@ const MainApp: React.FC = () => {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           openAuthModal={handleOpenAuth}
+          openAdminAuthModal={() => {
+            setAdminAuthMode('login');
+            setAdminAuthModalOpen(true);
+          }}
           onSearchQuery={(q) => {
             setSearchQuery(q);
             if (q.trim()) setActiveTab('products');
@@ -266,16 +276,73 @@ const MainApp: React.FC = () => {
 
         {/* --- Admin Control Center View --- */}
         {activeTab === 'admin' && (
-          <AdminDashboardPage
-            products={products}
-            b2cOrders={b2cOrders}
-            b2bOrders={b2bOrders}
-            businesses={businesses}
-            quotations={quotations}
-            coupons={coupons}
-            onRefresh={refreshData}
-            onExitAdmin={() => setActiveTab('home')}
-          />
+          isAdmin ? (
+            <AdminDashboardPage
+              products={products}
+              b2cOrders={b2cOrders}
+              b2bOrders={b2bOrders}
+              businesses={businesses}
+              quotations={quotations}
+              coupons={coupons}
+              onRefresh={refreshData}
+              onExitAdmin={() => setActiveTab('home')}
+            />
+          ) : (
+            <div className="container" style={{ padding: '5rem 1.25rem', textAlign: 'center' }}>
+              <div
+                className="card"
+                style={{
+                  maxWidth: '520px',
+                  margin: '0 auto',
+                  padding: '2.5rem',
+                  background: '#FFFFFF',
+                  borderRadius: '16px',
+                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+                }}
+              >
+                <div
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.15) 0%, rgba(126, 34, 206, 0.1) 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 1.25rem',
+                  }}
+                >
+                  <ShieldCheck size={32} style={{ color: '#9333EA' }} />
+                </div>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  Administrator Access Required
+                </h2>
+                <p style={{ fontSize: '0.88rem', color: 'var(--slate-600)', margin: '0.75rem 0 1.5rem', lineHeight: '1.5' }}>
+                  The Kogniti Minds Admin Control Center is restricted to authorized company personnel. All staff registrations are subject to Super Admin approval.
+                </p>
+                <div className="flex justify-center gap-3 flex-wrap">
+                  <button
+                    onClick={() => {
+                      setAdminAuthMode('login');
+                      setAdminAuthModalOpen(true);
+                    }}
+                    className="btn btn-purple"
+                  >
+                    Sign In with Admin ID
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAdminAuthMode('register');
+                      setAdminAuthModalOpen(true);
+                    }}
+                    className="btn btn-secondary"
+                  >
+                    Register Staff Account
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
         )}
       </main>
 
@@ -332,6 +399,17 @@ const MainApp: React.FC = () => {
         <PolicyModal
           type={policyModalType}
           onClose={() => setPolicyModalType(null)}
+        />
+      )}
+
+      {adminAuthModalOpen && (
+        <AdminAuthModal
+          initialMode={adminAuthMode}
+          onClose={() => setAdminAuthModalOpen(false)}
+          onSuccess={() => {
+            refreshData();
+            setActiveTab('admin');
+          }}
         />
       )}
     </div>

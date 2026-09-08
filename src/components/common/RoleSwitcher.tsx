@@ -8,11 +8,20 @@ interface RoleSwitcherProps {
 }
 
 export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ activeTab, setActiveTab }) => {
-  const { role, b2cUser, b2bBusiness, isAdmin, quickSwitch } = useAuth();
+  const { role, b2cUser, b2bBusiness, isAdmin, isSuperAdmin, currentAdminUser, quickSwitch } = useAuth();
   const [expanded, setExpanded] = useState(false);
 
   const getActiveLabel = () => {
-    if (isAdmin) return { label: 'Admin', color: '#9333EA', icon: <Shield size={14} /> };
+    if (isAdmin) {
+      if (isSuperAdmin) {
+        return { label: 'Super Admin (@superadmin)', color: '#9333EA', icon: <Shield size={14} /> };
+      }
+      return {
+        label: `Admin Staff (@${currentAdminUser?.userId || 'admin'})`,
+        color: '#3B82F6',
+        icon: <Shield size={14} />,
+      };
+    }
     if (role === 'b2b') {
       if (b2bBusiness?.status === 'approved') {
         return { label: 'B2B Verified Partner', color: '#10B981', icon: <CheckCircle2 size={14} /> };
@@ -206,10 +215,10 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ activeTab, setActive
               <span style={{ fontSize: '0.68rem', color: '#FCD34D' }}>Verification Gate</span>
             </button>
 
-            {/* Admin */}
+            {/* Super Admin */}
             <button
               onClick={() => {
-                quickSwitch('admin');
+                quickSwitch('superadmin');
                 setActiveTab('admin');
                 setExpanded(false);
               }}
@@ -219,15 +228,39 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ activeTab, setActive
                 justifyContent: 'space-between',
                 padding: '0.45rem 0.75rem',
                 borderRadius: '8px',
-                background: isAdmin ? 'rgba(147, 51, 234, 0.3)' : 'rgba(255, 255, 255, 0.05)',
+                background: isAdmin && isSuperAdmin ? 'rgba(147, 51, 234, 0.3)' : 'rgba(255, 255, 255, 0.05)',
                 color: '#C084FC',
                 border: 'none',
               }}
             >
               <span className="flex items-center gap-2">
-                <Shield size={14} /> Admin Portal
+                <Shield size={14} /> 👑 Super Admin (@superadmin)
               </span>
-              <span style={{ fontSize: '0.68rem', color: '#D8B4FE' }}>Verify B2B / RFQs</span>
+              <span style={{ fontSize: '0.68rem', color: '#D8B4FE' }}>Approvals + Root</span>
+            </button>
+
+            {/* Operations Admin */}
+            <button
+              onClick={() => {
+                quickSwitch('ops_admin');
+                setActiveTab('admin');
+                setExpanded(false);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.45rem 0.75rem',
+                borderRadius: '8px',
+                background: isAdmin && !isSuperAdmin ? 'rgba(59, 130, 246, 0.3)' : 'rgba(255, 255, 255, 0.05)',
+                color: '#60A5FA',
+                border: 'none',
+              }}
+            >
+              <span className="flex items-center gap-2">
+                <Shield size={14} /> 📦 Operations Admin (@admin_ops)
+              </span>
+              <span style={{ fontSize: '0.68rem', color: '#93C5FD' }}>Orders & RFQs</span>
             </button>
           </div>
         )}

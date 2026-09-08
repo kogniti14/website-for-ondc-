@@ -22,6 +22,7 @@ interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   openAuthModal: (mode?: 'login' | 'register') => void;
+  openAdminAuthModal?: () => void;
   onSearchQuery?: (q: string) => void;
 }
 
@@ -29,9 +30,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   openAuthModal,
+  openAdminAuthModal,
   onSearchQuery,
 }) => {
-  const { role, b2cUser, logout } = useAuth();
+  const { role, b2cUser, isAdmin, logout } = useAuth();
   const { b2cCount, getB2CCalculations } = useCart();
   const { wishlist } = useWishlist();
   const [search, setSearch] = useState('');
@@ -501,11 +503,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span>GST Input Credit for Businesses</span>
             <span style={{ color: 'var(--slate-300)' }}>|</span>
             <button
-              onClick={() => setActiveTab('admin')}
-              className="text-slate-500 hover:text-slate-900"
+              onClick={() => {
+                if (isAdmin) {
+                  setActiveTab('admin');
+                } else if (openAdminAuthModal) {
+                  openAdminAuthModal();
+                } else {
+                  setActiveTab('admin');
+                }
+              }}
+              className="text-slate-500 hover:text-slate-900 flex items-center gap-1"
               style={{ fontWeight: 600, fontSize: '0.78rem' }}
             >
-              Admin Portal
+              <ShieldCheck size={13} className="text-purple-600" /> Admin Portal
             </button>
           </div>
         </div>
@@ -598,6 +608,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             style={{ justifyContent: 'flex-start' }}
           >
             <Heart size={16} /> Wishlist ({wishlist.length})
+          </button>
+
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              if (isAdmin) {
+                setActiveTab('admin');
+              } else if (openAdminAuthModal) {
+                openAdminAuthModal();
+              } else {
+                setActiveTab('admin');
+              }
+            }}
+            className="btn btn-secondary"
+            style={{ justifyContent: 'flex-start', color: '#9333EA', borderColor: 'rgba(147, 51, 234, 0.3)' }}
+          >
+            <ShieldCheck size={16} /> Admin Portal & Staff Access
           </button>
 
           {role === 'b2c' ? (

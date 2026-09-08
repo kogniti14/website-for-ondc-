@@ -8,6 +8,7 @@ import {
   CartItem,
   WishlistItem,
   Coupon,
+  AdminUser,
 } from '../types';
 import { MOCK_PRODUCTS, MOCK_COUPONS } from '../data/mockProducts';
 
@@ -22,10 +23,50 @@ const KEYS = {
   B2B_CART: 'km_b2b_cart_v1',
   B2C_WISHLIST: 'km_b2c_wishlist_v1',
   COUPONS: 'km_coupons_v1',
+  ADMIN_USERS: 'km_admin_users_v1',
   CURRENT_USER_SESSION: 'km_user_session_v1',
 };
 
 // Initial Seed Data
+const SEED_ADMIN_USERS: AdminUser[] = [
+  {
+    id: 'adm_super_01',
+    userId: 'superadmin',
+    name: 'Kogniti Super Admin',
+    email: 'superadmin@kognitiminds.com',
+    password: 'SuperAdmin@2026#',
+    role: 'super_admin',
+    department: 'Executive Leadership & Governance',
+    status: 'approved',
+    registeredAt: '2026-08-01T09:00:00Z',
+    approvedAt: '2026-08-01T09:00:00Z',
+    approvedBy: 'System Root',
+  },
+  {
+    id: 'adm_ops_02',
+    userId: 'admin_ops',
+    name: 'Aarav Patel',
+    email: 'admin@kognitiminds.com',
+    password: 'AdminOps@123',
+    role: 'operations_admin',
+    department: 'Fulfillment & Logistics',
+    status: 'approved',
+    registeredAt: '2026-08-15T11:00:00Z',
+    approvedAt: '2026-08-16T10:00:00Z',
+    approvedBy: 'superadmin',
+  },
+  {
+    id: 'adm_pending_03',
+    userId: 'admin_neha',
+    name: 'Neha Sharma',
+    email: 'neha.sharma@kognitiminds.com',
+    password: 'NehaAdmin@123',
+    role: 'catalog_manager',
+    department: 'Product Merchandising & Pricing',
+    status: 'pending',
+    registeredAt: '2026-09-07T14:20:00Z',
+  },
+];
 const SEED_B2C_USERS: B2CUser[] = [
   {
     id: 'usr_b2c_demo',
@@ -331,8 +372,14 @@ const SEED_B2B_QUOTATIONS: B2BQuotation[] = [
 ];
 
 class StorageService {
+  private memoryStore: Record<string, string> = {};
+
   private getItem<T>(key: string, defaultVal: T): T {
     try {
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        const stored = this.memoryStore[key];
+        return stored ? JSON.parse(stored) : defaultVal;
+      }
       const stored = localStorage.getItem(key);
       if (!stored) {
         localStorage.setItem(key, JSON.stringify(defaultVal));
@@ -346,6 +393,10 @@ class StorageService {
 
   private setItem<T>(key: string, val: T): void {
     try {
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        this.memoryStore[key] = JSON.stringify(val);
+        return;
+      }
       localStorage.setItem(key, JSON.stringify(val));
     } catch (e) {
       console.error('LocalStorage write error', e);
@@ -544,6 +595,60 @@ class StorageService {
       coupons.push(coupon);
     }
     this.setItem(KEYS.COUPONS, coupons);
+  }
+
+  // --- Admin Staff & Governance ---
+  getAdminUsers(): AdminUser[] {
+    return this.getItem<AdminUser[]>(KEYS.ADMIN_USERS, SEED_ADMIN_USERS);
+  }
+
+  getAdminUserById(id: string): AdminUser | null {
+    const users = this.getAdminUsers();
+    return users.find((u) => u.id === id) || null;
+  }
+
+  getAdminUserByIdentifier(identifier: string): AdminUser | null {
+    const users = this.getAdminUsers();
+    const clean = identifier.trim().toLowerCase();
+    return (
+      users.find(
+        (u) => u.userId.toLowerCase() === clean || u.email.toLowerCase() === clean
+      ) || null
+    );
+  }
+
+  saveAdminUser(admin: AdminUser): void {
+    const users = this.getAdminUsers();
+    const index = users.findIndex((u) => u.id === admin.id || u.userId.toLowerCase() === admin.userId.toLowerCase());
+    if (index >= 0) {
+      users[index] = { ...users[index], ...admin };
+    } else {
+      users.push(admin);
+    }
+    this.setItem(KEYS.ADMIN_USERS, users);
+  }
+
+  updateAdminStatus(
+    id: string,
+    status: 'approved' | 'rejected',
+    reason?: string,
+    approvedBy?: string
+  ): AdminUser | null {
+    const users = this.getAdminUsers();
+    const index = users.findIndex((u) => u.id === id);
+    if (index >= 0) {
+      users[index].status = status;
+      if (status === 'approved') {
+        users[index].approvedAt = new Date().toISOString();
+        users[index].approvedBy = approvedBy || 'superadmin';
+        users[index].rejectionReason = undefined;
+      } else if (status === 'rejected') {
+        users[index].rejectionReason = reason || 'Application declined by Super Admin';
+      }
+      this.setItem(KEYS.ADMIN_USERS, users);
+      return users[index];
+    }
+    return null;
   }
 }
 

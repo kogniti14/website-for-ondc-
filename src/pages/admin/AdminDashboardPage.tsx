@@ -19,9 +19,14 @@ import {
   Send,
   AlertCircle,
   Eye,
+  Lock,
+  UserCheck,
+  UserX,
+  Shield,
 } from 'lucide-react';
-import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon } from '../../types';
+import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser } from '../../types';
 import { storageService } from '../../services/storageService';
+import { useAuth } from '../../context/AuthContext';
 
 interface AdminDashboardPageProps {
   products: Product[];
@@ -44,9 +49,49 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   onRefresh,
   onExitAdmin,
 }) => {
+  const { currentAdminUser, isSuperAdmin, logout } = useAuth();
+
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'orders' | 'verification' | 'rfqs' | 'coupons'
+    'overview' | 'products' | 'orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals'
   >('overview');
+
+  // Admin Users & Super Admin Approvals State
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(() => storageService.getAdminUsers());
+  const [adminSuccessMsg, setAdminSuccessMsg] = useState<string | null>(null);
+
+  const refreshAdminUsers = () => {
+    setAdminUsers(storageService.getAdminUsers());
+  };
+
+  const handleApproveAdmin = (adminId: string) => {
+    storageService.updateAdminStatus(
+      adminId,
+      'approved',
+      undefined,
+      currentAdminUser?.userId || 'superadmin'
+    );
+    refreshAdminUsers();
+    setAdminSuccessMsg('Admin staff authorization granted successfully! Account is now active.');
+    setTimeout(() => setAdminSuccessMsg(null), 5000);
+    onRefresh();
+  };
+
+  const handleRejectAdmin = (adminId: string) => {
+    const reason = prompt(
+      'Enter rejection justification for applicant records:',
+      'Corporate verification criteria not met'
+    ) || 'Application declined by Super Admin';
+    storageService.updateAdminStatus(
+      adminId,
+      'rejected',
+      reason,
+      currentAdminUser?.userId || 'superadmin'
+    );
+    refreshAdminUsers();
+    setAdminSuccessMsg('Staff registration request was rejected.');
+    setTimeout(() => setAdminSuccessMsg(null), 5000);
+    onRefresh();
+  };
 
   // Product Edit / Add State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -69,6 +114,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const totalRevenue = b2cRevenue + b2bRevenue;
   const pendingApprovals = businesses.filter((b) => b.status === 'pending').length;
   const pendingRfqs = quotations.filter((q) => q.status === 'submitted').length;
+  const pendingAdminRequests = adminUsers.filter((u) => u.status === 'pending').length;
 
   const handleApproveBusiness = (bizId: string) => {
     storageService.updateBusinessStatus(bizId, 'approved');
@@ -183,15 +229,49 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="badge badge-purple" style={{ fontSize: '0.75rem' }}>
-              Super Admin Access
+            <div className="text-right hide-on-mobile">
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFFFFF' }}>
+                {currentAdminUser?.name || 'Kogniti Super Admin'}
+              </div>
+              <div style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
+                User ID: <span style={{ color: '#C084FC', fontWeight: 600 }}>@{currentAdminUser?.userId || 'superadmin'}</span> ({currentAdminUser?.department || 'Governance'})
+              </div>
+            </div>
+
+            <span
+              className={`badge ${isSuperAdmin ? 'badge-purple' : 'badge-blue'}`}
+              style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}
+            >
+              {isSuperAdmin
+                ? '👑 Super Admin'
+                : currentAdminUser?.role === 'operations_admin'
+                ? '📦 Operations Admin'
+                : currentAdminUser?.role === 'catalog_manager'
+                ? '🏷️ Catalog Manager'
+                : 'Staff Admin'}
             </span>
+
             <button
               onClick={onExitAdmin}
               className="btn btn-outline-b2b btn-sm"
               style={{ color: '#FFFFFF', borderColor: 'rgba(255, 255, 255, 0.3)' }}
             >
-              Exit to Consumer Store
+              Exit to Store
+            </button>
+
+            <button
+              onClick={() => {
+                logout();
+                onExitAdmin();
+              }}
+              className="btn btn-sm"
+              style={{
+                background: 'rgba(239, 68, 68, 0.2)',
+                color: '#FCA5A5',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+              }}
+            >
+              Sign Out
             </button>
           </div>
         </div>
@@ -278,15 +358,50 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           >
             <Tag size={16} /> Coupons & Marketing
           </button>
+          <button
+            onClick={() => setActiveTab('approvals')}
+            style={{
+              padding: '0.5rem 0.2rem',
+              color: activeTab === 'approvals' ? 'var(--primary)' : 'var(--slate-600)',
+              borderBottom: activeTab === 'approvals' ? '2px solid var(--primary)' : '2px solid transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+            }}
+          >
+            <ShieldCheck size={16} /> Staff & Approvals {pendingAdminRequests > 0 && <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>{pendingAdminRequests}</span>}
+          </button>
         </div>
       </div>
 
       {/* Main Admin Content Container */}
       <div className="container" style={{ padding: '2.5rem 1.25rem' }}>
+        {/* Banner Alert if any action was performed */}
+        {adminSuccessMsg && (
+          <div
+            style={{
+              padding: '1rem 1.25rem',
+              background: 'rgba(16, 185, 129, 0.1)',
+              border: '1px solid #10B981',
+              borderRadius: '10px',
+              color: '#065F46',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+            }}
+          >
+            <CheckCircle2 size={18} className="text-emerald-600" />
+            {adminSuccessMsg}
+          </div>
+        )}
+
         {/* 1. Overview Tab */}
         {activeTab === 'overview' && (
           <div>
-            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
               <div className="card" style={{ padding: '1.5rem', background: '#FFFFFF' }}>
                 <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', fontWeight: 600 }}>Total Platform Revenue</div>
                 <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--slate-900)', margin: '0.3rem 0' }}>
@@ -320,10 +435,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               <div className="card" style={{ padding: '1.5rem', background: '#FFFFFF' }}>
                 <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', fontWeight: 600 }}>Pending Action Items</div>
                 <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#D97706', margin: '0.3rem 0' }}>
-                  {pendingApprovals + pendingRfqs}
+                  {pendingApprovals + pendingRfqs + pendingAdminRequests}
                 </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)' }}>
-                  {pendingApprovals} B2B Approvals, {pendingRfqs} RFQs
+                  {pendingAdminRequests} Staff, {pendingApprovals} B2B, {pendingRfqs} RFQs
                 </div>
               </div>
             </div>
@@ -788,6 +903,325 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* 7. Staff Governance & Super Admin Approvals Tab */}
+        {activeTab === 'approvals' && (
+          <div>
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.5rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  Admin Staff Governance & Approvals
+                </h2>
+                <p style={{ fontSize: '0.85rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
+                  Super Admin approval workflow for staff registration requests and security access control
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className={`badge ${isSuperAdmin ? 'badge-purple' : 'badge-blue'}`} style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>
+                  {isSuperAdmin ? '👑 Super Admin Authority Active' : 'Staff View'}
+                </span>
+              </div>
+            </div>
+
+            {/* Governance Authority Banner */}
+            <div
+              style={{
+                background: isSuperAdmin
+                  ? 'linear-gradient(135deg, rgba(147, 51, 234, 0.1) 0%, rgba(30, 41, 59, 0.05) 100%)'
+                  : 'rgba(245, 158, 11, 0.1)',
+                border: isSuperAdmin ? '1px solid rgba(147, 51, 234, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)',
+                borderRadius: '12px',
+                padding: '1.25rem',
+                marginBottom: '2rem',
+                display: 'flex',
+                gap: '1rem',
+                alignItems: 'flex-start',
+              }}
+            >
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '8px',
+                  background: isSuperAdmin ? 'var(--primary)' : '#F59E0B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFFFFF',
+                  flexShrink: 0,
+                }}
+              >
+                {isSuperAdmin ? <ShieldCheck size={22} /> : <Lock size={22} />}
+              </div>
+              <div style={{ fontSize: '0.88rem', lineHeight: '1.5' }}>
+                <div style={{ fontWeight: 800, color: 'var(--slate-900)', fontSize: '0.95rem', marginBottom: '0.2rem' }}>
+                  {isSuperAdmin
+                    ? 'Super Admin Approval Desk is Active'
+                    : 'Restricted Governance Privilege Notice'}
+                </div>
+                <div style={{ color: 'var(--slate-600)' }}>
+                  {isSuperAdmin
+                    ? 'As the Super Admin, you have supreme authority to review incoming staff registration requests, verify departmental credentials, and grant operational portal access.'
+                    : 'Only the Super Admin (@superadmin) holds authorization rights to approve or reject new administrative personnel. You can view the roster below.'}
+                </div>
+              </div>
+            </div>
+
+            {/* Metrics */}
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+              <div className="card" style={{ padding: '1.25rem', background: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)', fontWeight: 600 }}>Total Registered Staff</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--slate-900)', margin: '0.2rem 0' }}>
+                  {adminUsers.length}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>System personnel database</div>
+              </div>
+
+              <div className="card" style={{ padding: '1.25rem', background: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)', fontWeight: 600 }}>Active & Approved Admins</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#10B981', margin: '0.2rem 0' }}>
+                  {adminUsers.filter((u) => u.status === 'approved').length}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>Authorized to access console</div>
+              </div>
+
+              <div className="card" style={{ padding: '1.25rem', background: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)', fontWeight: 600 }}>Pending Super Admin Approval</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#D97706', margin: '0.2rem 0' }}>
+                  {pendingAdminRequests}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
+                  {pendingAdminRequests > 0 ? 'Requires immediate review' : 'All requests processed'}
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: '1.25rem', background: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)', fontWeight: 600 }}>Rejected / Suspended</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#EF4444', margin: '0.2rem 0' }}>
+                  {adminUsers.filter((u) => u.status === 'rejected').length}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>Denied authorization</div>
+              </div>
+            </div>
+
+            {/* 1. Pending Approvals Section */}
+            <div style={{ marginBottom: '2.5rem' }}>
+              <div className="flex items-center justify-between" style={{ marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--slate-900)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Clock size={20} className="text-amber-500" />
+                  Pending Staff Authorization Requests ({pendingAdminRequests})
+                </h3>
+                {pendingAdminRequests > 0 && (
+                  <span className="badge badge-amber" style={{ fontSize: '0.75rem' }}>
+                    Super Admin Action Required
+                  </span>
+                )}
+              </div>
+
+              {pendingAdminRequests === 0 ? (
+                <div
+                  className="card"
+                  style={{
+                    padding: '2.5rem 1.5rem',
+                    textAlign: 'center',
+                    background: '#FFFFFF',
+                    color: 'var(--slate-500)',
+                  }}
+                >
+                  <CheckCircle2 size={36} className="text-emerald-500" style={{ margin: '0 auto 0.75rem' }} />
+                  <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--slate-800)' }}>
+                    No Pending Staff Requests
+                  </div>
+                  <p style={{ fontSize: '0.82rem', marginTop: '0.25rem' }}>
+                    All administrative staff registrations have been reviewed. New registration requests will appear here for Super Admin approval.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {adminUsers
+                    .filter((u) => u.status === 'pending')
+                    .map((applicant) => (
+                      <div
+                        key={applicant.id}
+                        className="card"
+                        style={{
+                          padding: '1.5rem',
+                          background: '#FFFFFF',
+                          border: '1.5px solid #F59E0B',
+                          borderRadius: '12px',
+                          boxShadow: '0 4px 15px rgba(245, 158, 11, 0.08)',
+                        }}
+                      >
+                        <div className="flex justify-between items-start flex-wrap gap-3" style={{ marginBottom: '1rem' }}>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                                {applicant.name}
+                              </span>
+                              <span style={{ fontSize: '0.82rem', color: '#9333EA', fontWeight: 700, background: 'rgba(147, 51, 234, 0.1)', padding: '0.15rem 0.5rem', borderRadius: '6px' }}>
+                                @{applicant.userId}
+                              </span>
+                              <span className="badge badge-amber" style={{ fontSize: '0.72rem' }}>
+                                PENDING APPROVAL
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.82rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
+                              Work Email: <span style={{ color: 'var(--slate-700)', fontWeight: 600 }}>{applicant.email}</span>
+                            </div>
+                          </div>
+
+                          <div style={{ fontSize: '0.78rem', color: 'var(--slate-400)', textAlign: 'right' }}>
+                            Applied on: {new Date(applicant.registeredAt).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </div>
+                        </div>
+
+                        <div
+                          className="grid"
+                          style={{
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                            gap: '1rem',
+                            padding: '1rem',
+                            background: 'var(--slate-50)',
+                            borderRadius: '8px',
+                            fontSize: '0.82rem',
+                            marginBottom: '1.25rem',
+                          }}
+                        >
+                          <div>
+                            <span style={{ color: 'var(--slate-500)', display: 'block', fontSize: '0.72rem' }}>
+                              Department
+                            </span>
+                            <strong style={{ color: 'var(--slate-800)' }}>{applicant.department}</strong>
+                          </div>
+
+                          <div>
+                            <span style={{ color: 'var(--slate-500)', display: 'block', fontSize: '0.72rem' }}>
+                              Requested Security Role
+                            </span>
+                            <strong style={{ color: 'var(--slate-800)', textTransform: 'capitalize' }}>
+                              {applicant.role.replace('_', ' ')}
+                            </strong>
+                          </div>
+
+                          <div>
+                            <span style={{ color: 'var(--slate-500)', display: 'block', fontSize: '0.72rem' }}>
+                              Access Level
+                            </span>
+                            <strong style={{ color: '#2563EB' }}>
+                              {applicant.role === 'catalog_manager' ? 'Catalog, Products & Slabbing' : 'Fulfillment, Orders & Dispatch'}
+                            </strong>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex justify-between items-center flex-wrap gap-3" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '1rem' }}>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)' }}>
+                            🛡️ Super Admin authorization will enable this user to log in with password.
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleRejectAdmin(applicant.id)}
+                              className="btn btn-outline-b2b btn-sm"
+                              style={{ color: '#EF4444', borderColor: '#FCA5A5' }}
+                            >
+                              <UserX size={15} /> Reject Request
+                            </button>
+                            <button
+                              onClick={() => handleApproveAdmin(applicant.id)}
+                              className="btn btn-primary btn-sm"
+                              style={{ background: '#10B981', borderColor: '#10B981' }}
+                            >
+                              <UserCheck size={15} /> Approve Staff Access
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            {/* 2. Authorized Staff Directory */}
+            <div>
+              <div className="flex items-center justify-between" style={{ marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--slate-900)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <ShieldCheck size={20} className="text-emerald-600" />
+                  Authorized Administrative Personnel ({adminUsers.filter((u) => u.status === 'approved').length})
+                </h3>
+              </div>
+
+              <div className="card" style={{ background: '#FFFFFF', padding: '0', overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                        <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>Administrator</th>
+                        <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>User ID</th>
+                        <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>Department</th>
+                        <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>Role</th>
+                        <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>Approval Status</th>
+                        <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>Authorized By</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adminUsers
+                        .filter((u) => u.status === 'approved')
+                        .map((staff) => (
+                          <tr key={staff.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '0.85rem 1rem' }}>
+                              <div style={{ fontWeight: 700, color: 'var(--slate-900)' }}>{staff.name}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>{staff.email}</div>
+                            </td>
+                            <td style={{ padding: '0.85rem 1rem' }}>
+                              <code style={{ background: 'var(--slate-100)', padding: '0.15rem 0.4rem', borderRadius: '4px', fontWeight: 600 }}>
+                                @{staff.userId}
+                              </code>
+                            </td>
+                            <td style={{ padding: '0.85rem 1rem', color: 'var(--slate-700)' }}>
+                              {staff.department}
+                            </td>
+                            <td style={{ padding: '0.85rem 1rem' }}>
+                              <span
+                                className={`badge ${staff.role === 'super_admin' ? 'badge-purple' : 'badge-blue'}`}
+                                style={{ fontSize: '0.72rem' }}
+                              >
+                                {staff.role === 'super_admin' ? '👑 Super Admin' : staff.role.replace('_', ' ')}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.85rem 1rem' }}>
+                              <span className="badge badge-green" style={{ fontSize: '0.72rem' }}>
+                                ✓ ACTIVE & APPROVED
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.85rem 1rem', fontSize: '0.75rem', color: 'var(--slate-500)' }}>
+                              {staff.role === 'super_admin' ? (
+                                <strong style={{ color: '#9333EA' }}>Permanent Root</strong>
+                              ) : (
+                                <div>
+                                  By: <strong>@{staff.approvedBy || 'superadmin'}</strong>
+                                  <div style={{ color: 'var(--slate-400)' }}>
+                                    {staff.approvedAt ? new Date(staff.approvedAt).toLocaleDateString('en-IN') : 'Verified'}
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         )}

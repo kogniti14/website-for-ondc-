@@ -1,19 +1,37 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { UserRole, B2CUser, B2BBusiness } from '../types';
+import { UserRole, B2CUser, B2BBusiness, AdminUser, AdminRole } from '../types';
 import { storageService } from '../services/storageService';
 
 interface AuthContextType {
   role: UserRole;
   b2cUser: B2CUser | null;
   b2bBusiness: B2BBusiness | null;
+  currentAdminUser: AdminUser | null;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   loginB2C: (email: string) => boolean;
   loginB2B: (email: string) => boolean;
   registerB2C: (user: Partial<B2CUser>) => B2CUser;
   registerB2B: (biz: Partial<B2BBusiness>) => B2BBusiness;
   loginAdmin: () => void;
+  loginAdminWithCredentials: (
+    identifier: string,
+    password: string
+  ) => { success: boolean; message: string; user?: AdminUser; isPending?: boolean };
+  registerAdminUser: (data: {
+    userId: string;
+    name: string;
+    email: string;
+    password: string;
+    role: AdminRole;
+    department: string;
+  }) => { success: boolean; message: string };
+  approveAdminUser: (adminId: string) => boolean;
+  rejectAdminUser: (adminId: string, reason?: string) => boolean;
   logout: () => void;
-  quickSwitch: (target: 'guest' | 'b2c' | 'b2b_approved' | 'b2b_pending' | 'admin') => void;
+  quickSwitch: (
+    target: 'guest' | 'b2c' | 'b2b_approved' | 'b2b_pending' | 'admin' | 'superadmin' | 'ops_admin'
+  ) => void;
   refreshUserData: () => void;
 }
 
@@ -23,12 +41,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [role, setRole] = useState<UserRole>('guest');
   const [b2cUser, setB2cUser] = useState<B2CUser | null>(null);
   const [b2bBusiness, setB2bBusiness] = useState<B2BBusiness | null>(null);
+  const [currentAdminUser, setCurrentAdminUser] = useState<AdminUser | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  const isSuperAdmin = currentAdminUser?.role === 'super_admin';
 
   useEffect(() => {
     // Check saved session
     const savedRole = localStorage.getItem('km_active_role') as UserRole | null;
     const savedEntityId = localStorage.getItem('km_active_entity_id');
+    const savedAdminId = localStorage.getItem('km_active_admin_id');
 
     if (savedRole === 'b2c' && savedEntityId) {
       const u = storageService.getB2CUserById(savedEntityId);
@@ -43,8 +65,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRole('b2b');
       }
     } else if (savedRole === 'admin') {
-      setIsAdmin(true);
-      setRole('admin');
+      let admin = savedAdminId ? storageService.getAdminUserById(savedAdminId) : null;
+      if (!admin || admin.status !== 'approved') {
+        admin = storageService.getAdminUserById('adm_super_01');
+      }
+      if (admin && admin.status === 'approved') {
+        setCurrentAdminUser(admin);
+        setIsAdmin(true);
+        setRole('admin');
+      }
     }
   }, []);
 
@@ -56,6 +85,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (b2bBusiness) {
       const updated = storageService.getB2BBusinessById(b2bBusiness.id);
       if (updated) setB2bBusiness(updated);
+    }
+    if (currentAdminUser) {
+      const updated = storageService.getAdminUserById(currentAdminUser.id);
+      if (updated) setCurrentAdminUser(updated);
     }
   };
 
@@ -188,6 +221,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginAdmin = () => {
+    const superAdmin = storageService.getAdminUserById('adm_super_01');
+    if (superAdmin) {
+      setCurrentAdminUser(superAdmin);
+      localStorage.setItem('km_active_admin_id', superAdmin.id);
+    }
     setIsAdmin(true);
     setRole('admin');
     setB2cUser(null);
@@ -196,16 +234,144 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('km_active_entity_id');
   };
 
+  const loginAdminWithCredentials = (
+    identifier: string,
+    password: string
+  ): { success: boolean; message: string; user?: AdminUser; isPending?: boolean } => {
+    const admin = storageService.getAdminUserByIdentifier(identifier);
+    if (!admin) {
+      return {
+        success: false,
+        message: 'No administrative account found with this User ID or Work Email.',
+      };
+    }
+
+    if (admin.password && admin.password !== password) {
+      return {
+        success: false,
+        message: 'Incorrect password entered. Please verify and try again.',
+      };
+    }
+
+    if (admin.status === 'pending') {
+      return {
+        success: false,
+        isPending: true,
+        message:
+          'Your administrative registration is currently PENDING review by the Super Admin. You cannot log in until your access is approved.',
+        user: admin,
+      };
+    }
+
+    if (admin.status === 'rejected') {
+      return {
+        success: false,
+        message: `Your administrative request was rejected by the Super Admin. Reason: ${admin.rejectionReason || 'Access denied'}`,
+        user: admin,
+      };
+    }
+
+    // Approved - log in
+    setCurrentAdminUser(admin);
+    setIsAdmin(true);
+    setRole('admin');
+    setB2cUser(null);
+    setB2bBusiness(null);
+    localStorage.setItem('km_active_role', 'admin');
+    localStorage.setItem('km_active_admin_id', admin.id);
+    localStorage.removeItem('km_active_entity_id');
+
+    return {
+      success: true,
+      message: `Authentication successful! Welcome, ${admin.name}.`,
+      user: admin,
+    };
+  };
+
+  const registerAdminUser = (data: {
+    userId: string;
+    name: string;
+    email: string;
+    password: string;
+    role: AdminRole;
+    department: string;
+  }): { success: boolean; message: string } => {
+    const existing = storageService.getAdminUserByIdentifier(data.userId) ||
+      storageService.getAdminUserByIdentifier(data.email);
+
+    if (existing) {
+      return {
+        success: false,
+        message: 'A staff account with this User ID or Work Email already exists.',
+      };
+    }
+
+    const newAdmin: AdminUser = {
+      id: `adm_${Date.now()}`,
+      userId: data.userId.trim().toLowerCase(),
+      name: data.name.trim(),
+      email: data.email.trim().toLowerCase(),
+      password: data.password,
+      role: data.role,
+      department: data.department.trim(),
+      status: 'pending',
+      registeredAt: new Date().toISOString(),
+    };
+
+    storageService.saveAdminUser(newAdmin);
+    return {
+      success: true,
+      message:
+        'Registration request submitted! Your account is queued for Super Admin review and authorization.',
+    };
+  };
+
+  const approveAdminUser = (adminId: string): boolean => {
+    const updated = storageService.updateAdminStatus(
+      adminId,
+      'approved',
+      undefined,
+      currentAdminUser?.userId || 'superadmin'
+    );
+    if (updated) {
+      if (currentAdminUser && currentAdminUser.id === adminId) {
+        setCurrentAdminUser(updated);
+      }
+      return true;
+    }
+    return false;
+  };
+
+  const rejectAdminUser = (adminId: string, reason?: string): boolean => {
+    const updated = storageService.updateAdminStatus(
+      adminId,
+      'rejected',
+      reason || 'Authorization declined by Super Admin',
+      currentAdminUser?.userId || 'superadmin'
+    );
+    if (updated) {
+      if (currentAdminUser && currentAdminUser.id === adminId) {
+        setCurrentAdminUser(updated);
+      }
+      return true;
+    }
+    return false;
+  };
+
   const logout = () => {
     setRole('guest');
     setB2cUser(null);
     setB2bBusiness(null);
+    setCurrentAdminUser(null);
     setIsAdmin(false);
     localStorage.removeItem('km_active_role');
     localStorage.removeItem('km_active_entity_id');
+    localStorage.removeItem('km_active_admin_id');
   };
 
-  const quickSwitch = (target: 'guest' | 'b2c' | 'b2b_approved' | 'b2b_pending' | 'admin') => {
+  const quickSwitch = (
+    target: 'guest' | 'b2c' | 'b2b_approved' | 'b2b_pending' | 'admin' | 'superadmin' | 'ops_admin'
+  ) => {
     if (target === 'guest') {
       logout();
     } else if (target === 'b2c') {
@@ -213,33 +379,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (demo) {
         setB2cUser(demo);
         setB2bBusiness(null);
+        setCurrentAdminUser(null);
         setIsAdmin(false);
         setRole('b2c');
         localStorage.setItem('km_active_role', 'b2c');
         localStorage.setItem('km_active_entity_id', demo.id);
+        localStorage.removeItem('km_active_admin_id');
       }
     } else if (target === 'b2b_approved') {
       const biz = storageService.getB2BBusinessById('biz_edutech');
       if (biz) {
         setB2bBusiness(biz);
         setB2cUser(null);
+        setCurrentAdminUser(null);
         setIsAdmin(false);
         setRole('b2b');
         localStorage.setItem('km_active_role', 'b2b');
         localStorage.setItem('km_active_entity_id', biz.id);
+        localStorage.removeItem('km_active_admin_id');
       }
     } else if (target === 'b2b_pending') {
       const biz = storageService.getB2BBusinessById('biz_innovate');
       if (biz) {
         setB2bBusiness(biz);
         setB2cUser(null);
+        setCurrentAdminUser(null);
         setIsAdmin(false);
         setRole('b2b');
         localStorage.setItem('km_active_role', 'b2b');
         localStorage.setItem('km_active_entity_id', biz.id);
+        localStorage.removeItem('km_active_admin_id');
       }
-    } else if (target === 'admin') {
-      loginAdmin();
+    } else if (target === 'admin' || target === 'superadmin') {
+      const superAdmin = storageService.getAdminUserById('adm_super_01');
+      if (superAdmin) {
+        setCurrentAdminUser(superAdmin);
+        localStorage.setItem('km_active_admin_id', superAdmin.id);
+      }
+      setIsAdmin(true);
+      setRole('admin');
+      setB2cUser(null);
+      setB2bBusiness(null);
+      localStorage.setItem('km_active_role', 'admin');
+      localStorage.removeItem('km_active_entity_id');
+    } else if (target === 'ops_admin') {
+      const opsAdmin = storageService.getAdminUserById('adm_ops_02');
+      if (opsAdmin) {
+        setCurrentAdminUser(opsAdmin);
+        localStorage.setItem('km_active_admin_id', opsAdmin.id);
+      }
+      setIsAdmin(true);
+      setRole('admin');
+      setB2cUser(null);
+      setB2bBusiness(null);
+      localStorage.setItem('km_active_role', 'admin');
+      localStorage.removeItem('km_active_entity_id');
     }
   };
 
@@ -249,12 +443,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role,
         b2cUser,
         b2bBusiness,
+        currentAdminUser,
         isAdmin,
+        isSuperAdmin,
         loginB2C,
         loginB2B,
         registerB2C,
         registerB2B,
         loginAdmin,
+        loginAdminWithCredentials,
+        registerAdminUser,
+        approveAdminUser,
+        rejectAdminUser,
         logout,
         quickSwitch,
         refreshUserData,

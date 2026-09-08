@@ -252,4 +252,21 @@ export interface Coupon {
   description: string;
 }
 
+export type AdminRole = 'super_admin' | 'operations_admin' | 'catalog_manager' | 'finance_admin';
+
+export interface AdminUser {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  password?: string;
+  role: AdminRole;
+  department: string;
+  status: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
+  registeredAt: string;
+  approvedAt?: string;
+  approvedBy?: string;
+}
+
 export type UserRole = 'guest' | 'b2c' | 'b2b' | 'admin';
