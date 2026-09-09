@@ -49,7 +49,7 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
             <Building2 size={13} className="text-amber-400" /> Kogniti Minds Institutional & Enterprise Division
           </span>
           <span className="text-slate-400 hide-on-mobile">
-            GSTIN: 29AABCK9901M1Z4 | CIN: U72900KA2024PTC188219
+            GSTIN: 09AALCK4750F1ZC | CIN: U46496UP2024PTC213997
           </span>
         </div>
 

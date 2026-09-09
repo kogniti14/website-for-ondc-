@@ -77,7 +77,7 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
     window.print();
   };
 
-  const isInterState = order.billingAddress.state.toLowerCase() !== 'karnataka';
+  const isInterState = !order.billingAddress.state.toLowerCase().includes('uttar') && order.billingAddress.state.toLowerCase() !== 'up';
   const invoiceDate = new Date(order.createdAt).toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'short',
@@ -277,11 +277,11 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
                 Supplier (Tax Details):
               </div>
               <div><strong>Kogniti Minds Private Limited</strong></div>
-              <div>Registered Office: 42, 100 Feet Road, Indiranagar</div>
-              <div>Bengaluru, Karnataka - 560038, India</div>
-              <div><strong>GSTIN:</strong> <code style={{ color: '#0284C7', fontWeight: 700 }}>29AABCK9901M1Z4</code></div>
-              <div><strong>PAN:</strong> AABCK9901M | <strong>State Code:</strong> 29 (Karnataka)</div>
-              <div><strong>CIN:</strong> U72900KA2024PTC188219</div>
+              <div>Registered Office: Panchsheel Greens-2, Sec-16 B, Gr. Noida West, Bisrakh</div>
+              <div>Gautam Buddha Nagar, Uttar Pradesh, India - 201306</div>
+              <div><strong>GSTIN:</strong> <code style={{ color: '#0284C7', fontWeight: 700 }}>09AALCK4750F1ZC</code></div>
+              <div><strong>PAN:</strong> AALCK4750F | <strong>State Code:</strong> 09 (Uttar Pradesh)</div>
+              <div><strong>CIN:</strong> U46496UP2024PTC213997</div>
               <div style={{ color: '#64748B' }}>Corporate Desk: enterprise@kognitiminds.com | +91 80 4912 8800</div>
             </div>
 
@@ -522,7 +522,7 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
                 <div><strong>Beneficiary:</strong> KOGNITI MINDS PRIVATE LIMITED</div>
                 <div><strong>Bank Name:</strong> HDFC Bank Ltd | <strong>A/C Type:</strong> Current Account</div>
                 <div><strong>A/C Number:</strong> <code>50200088991122</code> | <strong>IFSC:</strong> <code>HDFC0001234</code></div>
-                <div><strong>Branch:</strong> Indiranagar 100 Feet Road, Bengaluru - 560038</div>
+                <div><strong>Branch:</strong> Greater Noida West, Gautam Buddha Nagar, UP - 201306</div>
                 <div style={{ color: '#64748B', fontSize: '0.72rem', marginTop: '0.25rem' }}>
                   * Please mention Invoice Ref <strong>INV-{order.orderNumber}</strong> in the remittance remark.
                 </div>

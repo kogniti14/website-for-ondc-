@@ -347,9 +347,9 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                   </div>
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--slate-600)', lineHeight: '1.4' }}>
-                  Registered Office: 42, 100 Feet Road, Indiranagar, Bengaluru, KA - 560038<br />
-                  <strong>GSTIN:</strong> 29AABCK9901M1Z4 | <strong>CIN:</strong> U72900KA2024PTC188219<br />
-                  <strong>PAN:</strong> AABCK9901M | <strong>State Code:</strong> 29 (Karnataka)
+                  Registered Office: Panchsheel Greens-2, Sec-16 B, Gr. Noida West, Bisrakh, Gautam Buddha Nagar, Uttar Pradesh, India - 201306<br />
+                  <strong>GSTIN:</strong> 09AALCK4750F1ZC | <strong>CIN:</strong> U46496UP2024PTC213997<br />
+                  <strong>PAN:</strong> AALCK4750F | <strong>State Code:</strong> 09 (Uttar Pradesh)
                 </div>
               </div>
 
@@ -437,14 +437,23 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                   <span>Taxable Base Value:</span>
                   <span>₹{Math.round((selectedOrderForInvoice.total / 1.18) * 100 / 100).toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between text-slate-600">
-                  <span>CGST (9%):</span>
-                  <span>₹{Math.round((selectedOrderForInvoice.gstAmount / 2) * 100 / 100).toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between text-slate-600">
-                  <span>SGST (9%):</span>
-                  <span>₹{Math.round((selectedOrderForInvoice.gstAmount / 2) * 100 / 100).toLocaleString('en-IN')}</span>
-                </div>
+                {selectedOrderForInvoice.shippingAddress.state.toLowerCase().includes('uttar') || selectedOrderForInvoice.shippingAddress.state.toLowerCase() === 'up' ? (
+                  <>
+                    <div className="flex justify-between text-slate-600">
+                      <span>CGST (9%):</span>
+                      <span>₹{Math.round((selectedOrderForInvoice.gstAmount / 2) * 100 / 100).toLocaleString('en-IN')}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>SGST (9%):</span>
+                      <span>₹{Math.round((selectedOrderForInvoice.gstAmount / 2) * 100 / 100).toLocaleString('en-IN')}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-between text-slate-600">
+                    <span>IGST (18%):</span>
+                    <span>₹{Math.round(selectedOrderForInvoice.gstAmount * 100 / 100).toLocaleString('en-IN')}</span>
+                  </div>
+                )}
                 <div
                   className="flex justify-between items-baseline"
                   style={{

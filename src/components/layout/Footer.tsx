@@ -184,8 +184,9 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal })
               Kogniti Minds Private Limited is an Indian technology-driven physical products company delivering smart ergonomic furniture, interactive edtech displays, biometric access systems, and corporate essentials across India.
             </p>
             <div style={{ fontSize: '0.78rem', color: '#64748B', lineHeight: '1.5' }}>
-              <strong>CIN:</strong> U72900KA2024PTC188219<br />
-              <strong>GSTIN:</strong> 29AABCK9901M1Z4 (Karnataka)
+              <strong>CIN:</strong> U46496UP2024PTC213997<br />
+              <strong>GSTIN:</strong> 09AALCK4750F1ZC (Uttar Pradesh)<br />
+              <strong>PAN:</strong> AALCK4750F
             </div>
           </div>
 
@@ -294,7 +295,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal })
               </div>
               <div className="flex items-start gap-2">
                 <MapPin size={14} className="text-amber-400" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <span>Indiranagar 100 Feet Rd, Bengaluru 560038</span>
+                <span>Panchsheel Greens-2, Sec-16 B, Gr. Noida West, Bisrakh, Gautam Buddha Nagar, Uttar Pradesh, India - 201306</span>
               </div>
             </div>
           </div>

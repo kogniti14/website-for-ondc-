@@ -52,7 +52,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ type, onClose }) => {
               </p>
               <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>3. Jurisdiction</h4>
               <p style={{ lineHeight: '1.6' }}>
-                Any legal disputes arising from transactions on this platform shall be subject to the exclusive jurisdiction of the competent courts in Bengaluru, Karnataka, India.
+                Any legal disputes arising from transactions on this platform shall be subject to the exclusive jurisdiction of the competent courts in Gautam Buddha Nagar, Uttar Pradesh, India.
               </p>
             </div>
           ),
