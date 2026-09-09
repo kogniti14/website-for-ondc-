@@ -79,17 +79,21 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
           >
             <div
               style={{
-                width: '42px',
-                height: '42px',
+                height: '44px',
                 borderRadius: '10px',
-                background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
-                border: '1.5px solid rgba(255, 255, 255, 0.2)',
+                background: '#FFFFFF',
+                padding: '4px 8px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
               }}
             >
-              <Building2 size={22} className="text-amber-400" />
+              <img
+                src="/logo.png"
+                alt="Kogniti Minds"
+                style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
+              />
             </div>
             <div>
               <div

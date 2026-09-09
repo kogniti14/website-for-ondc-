@@ -153,9 +153,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
         {/* Brand Header */}
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           <img
-            src="/logo.svg"
+            src="/logo.png"
             alt="Kogniti Minds"
-            style={{ width: '44px', height: '44px', borderRadius: '10px', margin: '0 auto 0.5rem' }}
+            style={{ height: '56px', width: 'auto', margin: '0 auto 0.5rem', objectFit: 'contain' }}
           />
           <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)' }}>
             {mode === 'login' ? 'Welcome to Kogniti Minds' : 'Create Your Account'}

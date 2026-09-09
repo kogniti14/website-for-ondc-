@@ -340,8 +340,8 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
             {/* Official GST Invoice Document Header */}
             <div className="flex justify-between items-start" style={{ marginBottom: '2rem' }}>
               <div>
-                <div className="flex items-center gap-2" style={{ marginBottom: '0.5rem' }}>
-                  <img src="/logo.svg" alt="" style={{ width: '36px', height: '36px', borderRadius: '8px' }} />
+                <div className="flex items-center gap-3" style={{ marginBottom: '0.5rem' }}>
+                  <img src="/logo.png" alt="Kogniti Minds" style={{ height: '42px', width: 'auto', objectFit: 'contain' }} />
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)' }}>
                     KOGNITI MINDS PRIVATE LIMITED
                   </div>

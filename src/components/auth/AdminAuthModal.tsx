@@ -208,17 +208,21 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
           <div className="flex items-center gap-3">
             <div
               style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, #9333EA 0%, #7E22CE 100%)',
+                height: '42px',
+                borderRadius: '10px',
+                background: '#FFFFFF',
+                padding: '4px 8px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 0 15px rgba(147, 51, 234, 0.4)',
+                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.25)',
               }}
             >
-              <ShieldCheck size={20} className="text-white" />
+              <img
+                src="/logo.png"
+                alt="Kogniti Minds"
+                style={{ height: '34px', width: 'auto', objectFit: 'contain' }}
+              />
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '-0.01em' }}>

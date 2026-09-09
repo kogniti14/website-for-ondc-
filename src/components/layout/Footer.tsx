@@ -159,7 +159,23 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal })
           {/* Brand Col */}
           <div style={{ maxWidth: '320px' }}>
             <div className="flex items-center gap-3" style={{ marginBottom: '1rem' }}>
-              <img src="/logo.svg" alt="Kogniti Minds" style={{ width: '36px', height: '36px', borderRadius: '8px' }} />
+              <div
+                style={{
+                  background: '#FFFFFF',
+                  borderRadius: '8px',
+                  padding: '4px 8px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.2)',
+                }}
+              >
+                <img
+                  src="/logo.png"
+                  alt="Kogniti Minds"
+                  style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
+                />
+              </div>
               <div style={{ color: '#ffffff', fontWeight: 800, fontSize: '1.2rem' }}>
                 KOGNITI MINDS
               </div>

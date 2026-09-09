@@ -225,19 +225,21 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
             <div className="flex items-center gap-3">
               <div
                 style={{
-                  width: '44px',
-                  height: '44px',
+                  height: '46px',
                   borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                  background: '#FFFFFF',
+                  padding: '4px 8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontWeight: 800,
-                  fontSize: '1.4rem',
-                  color: '#FFF',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
                 }}
               >
-                KM
+                <img
+                  src="/logo.png"
+                  alt="Kogniti Minds"
+                  style={{ height: '38px', width: 'auto', objectFit: 'contain' }}
+                />
               </div>
               <div>
                 <div style={{ fontSize: '1.35rem', fontWeight: 900, letterSpacing: '0.02em' }}>

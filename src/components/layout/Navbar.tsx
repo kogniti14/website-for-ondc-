@@ -75,9 +75,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setActiveTab('home')}
           >
             <img
-              src="/logo.svg"
+              src="/logo.png"
               alt="Kogniti Minds Logo"
-              style={{ width: '42px', height: '42px', borderRadius: '10px' }}
+              style={{ height: '44px', width: 'auto', objectFit: 'contain' }}
             />
             <div>
               <div

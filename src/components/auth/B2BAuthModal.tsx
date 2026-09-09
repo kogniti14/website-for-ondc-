@@ -203,18 +203,22 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           <div
             style={{
-              width: '48px',
-              height: '48px',
+              height: '52px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
-              border: '1.5px solid rgba(255, 255, 255, 0.2)',
-              display: 'flex',
+              background: '#FFFFFF',
+              padding: '4px 10px',
+              display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 0.5rem',
+              margin: '0 auto 0.75rem',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
             }}
           >
-            <Building2 size={24} className="text-amber-400" />
+            <img
+              src="/logo.png"
+              alt="Kogniti Minds"
+              style={{ height: '42px', width: 'auto', objectFit: 'contain' }}
+            />
           </div>
           <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#FFFFFF' }}>
             {tab === 'login' ? 'Kogniti Minds B2B Portal' : 'Register Corporate Entity'}
