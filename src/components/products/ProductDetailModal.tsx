@@ -12,6 +12,7 @@ import {
   FileText,
   Briefcase,
   Info,
+  Building2,
 } from 'lucide-react';
 import { Product } from '../../types';
 import { useCart } from '../../context/CartContext';
@@ -285,7 +286,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     </span>
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', marginTop: '0.25rem' }}>
-                    Inclusive of 18% GST (CGST 9% + SGST 9%) • Free pan-India delivery
+                    100% GENUINE PRODUCTS | GST Invoice Available • FREE PAN-INDIA DELIVERY on Orders Above ₹1,999
                   </div>
                 </div>
               )}
@@ -411,6 +412,40 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
               )}
             </form>
+
+            {/* Brand Value Propositions */}
+            <div
+              style={{
+                background: 'var(--slate-50)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.65rem 0.85rem',
+                fontSize: '0.74rem',
+                color: 'var(--slate-600)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.35rem',
+                marginBottom: '1rem',
+              }}
+            >
+              <div className="flex items-center gap-1.5 font-medium">
+                <Truck size={13} className="text-emerald-600 flex-shrink-0" />
+                <span>FREE PAN-INDIA DELIVERY on Orders Above ₹1,999</span>
+              </div>
+              <div className="flex items-center gap-1.5 font-medium">
+                <ShieldCheck size={13} className="text-blue-600 flex-shrink-0" />
+                <span>100% GENUINE PRODUCTS | GST Invoice Available</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Building2 size={13} className="text-amber-600 flex-shrink-0" />
+                <span>
+                  B2B & INSTITUTIONAL ENQUIRIES:{' '}
+                  <a href="tel:+919931648595" style={{ color: 'var(--primary-600)', fontWeight: 700 }}>
+                    +91 9931648595
+                  </a>
+                </span>
+              </div>
+            </div>
 
             {/* Tabs for Specs & Features */}
             <div style={{ borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '1rem', marginTop: 'auto' }}>

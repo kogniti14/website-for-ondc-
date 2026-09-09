@@ -72,9 +72,9 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ type, onClose }) => {
                 • Tier 2 & Tier 3 cities: 3 to 6 business days.<br />
                 • Institutional heavy freight (commercial standing desks, 75" flat panels): Scheduled delivery with lift gate within 5 to 7 business days.
               </p>
-              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>2. Free Shipping Eligibility</h4>
+              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>2. Free Shipping & Institutional Support</h4>
               <p style={{ lineHeight: '1.6', marginBottom: '0.75rem' }}>
-                All retail consumer orders exceeding ₹999 qualify for complimentary free shipping. All approved B2B institutional bulk orders receive free palletized freight dispatch.
+                FREE PAN-INDIA DELIVERY on Orders Above ₹1,999. All retail consumer orders with net value exceeding ₹1,999 qualify for complimentary zero-fee delivery. 100% GENUINE PRODUCTS | GST Invoice Available with input credit. For bulk corporate procurement or B2B & INSTITUTIONAL ENQUIRIES, please contact: +91 9931648595 or sales@kognitiminds.com.
               </p>
               <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>3. Transit Tracking</h4>
               <p style={{ lineHeight: '1.6' }}>

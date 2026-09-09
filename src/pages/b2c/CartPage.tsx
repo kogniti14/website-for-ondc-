@@ -10,6 +10,7 @@ import {
   Truck,
   Heart,
   Briefcase,
+  Building2,
 } from 'lucide-react';
 import { Product } from '../../types';
 import { useCart } from '../../context/CartContext';
@@ -449,19 +450,28 @@ export const CartPage: React.FC<CartPageProps> = ({
                   paddingTop: '1rem',
                   borderTop: '1px solid var(--border-subtle)',
                   fontSize: '0.78rem',
-                  color: 'var(--slate-500)',
+                  color: 'var(--slate-600)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '0.5rem',
+                  gap: '0.6rem',
                 }}
               >
                 <div className="flex items-center gap-2">
-                  <ShieldCheck size={16} className="text-emerald-600" />
-                  <span>256-bit SSL encrypted checkout</span>
+                  <Truck size={15} className="text-emerald-600 flex-shrink-0" />
+                  <span style={{ fontWeight: 600 }}>FREE PAN-INDIA DELIVERY on Orders Above ₹1,999</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Briefcase size={16} className="text-blue-600" />
-                  <span>Buying for business? Add GSTIN at checkout for input credit</span>
+                  <ShieldCheck size={15} className="text-blue-600 flex-shrink-0" />
+                  <span style={{ fontWeight: 600 }}>100% GENUINE PRODUCTS | GST Invoice Available</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Building2 size={15} className="text-amber-600 flex-shrink-0" />
+                  <span>
+                    B2B & INSTITUTIONAL ENQUIRIES:{' '}
+                    <a href="tel:+919931648595" style={{ color: 'var(--primary-600)', fontWeight: 700 }}>
+                      +91 9931648595
+                    </a>
+                  </span>
                 </div>
               </div>
             </div>

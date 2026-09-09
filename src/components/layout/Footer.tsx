@@ -9,6 +9,7 @@ import {
   Phone,
   ArrowRight,
   CheckCircle2,
+  Building2,
 } from 'lucide-react';
 
 interface FooterProps {
@@ -64,10 +65,10 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal })
                 <Truck size={24} />
               </div>
               <div>
-                <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.95rem' }}>
-                  Pan-India Fast Delivery
+                <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.92rem' }}>
+                  FREE PAN-INDIA DELIVERY
                 </div>
-                <div style={{ fontSize: '0.8rem' }}>Express courier & freight transit</div>
+                <div style={{ fontSize: '0.78rem' }}>On Orders Above ₹1,999</div>
               </div>
             </div>
 
@@ -88,10 +89,10 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal })
                 <ShieldCheck size={24} />
               </div>
               <div>
-                <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.95rem' }}>
-                  100% Verified Quality
+                <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.92rem' }}>
+                  100% GENUINE PRODUCTS
                 </div>
-                <div style={{ fontSize: '0.8rem' }}>BIFMA & ISO certified products</div>
+                <div style={{ fontSize: '0.78rem' }}>GST Invoice Available with Input Credit</div>
               </div>
             </div>
 
@@ -112,10 +113,10 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal })
                 <RotateCcw size={24} />
               </div>
               <div>
-                <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.95rem' }}>
+                <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.92rem' }}>
                   7-Day Replacement
                 </div>
-                <div style={{ fontSize: '0.8rem' }}>Hassle-free physical claims</div>
+                <div style={{ fontSize: '0.78rem' }}>Hassle-free verified support</div>
               </div>
             </div>
 
@@ -133,13 +134,18 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal })
                   flexShrink: 0,
                 }}
               >
-                <Headphones size={24} />
+                <Building2 size={24} />
               </div>
               <div>
-                <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.95rem' }}>
-                  Institutional Desk
+                <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.92rem' }}>
+                  B2B & INSTITUTIONAL ENQUIRIES
                 </div>
-                <div style={{ fontSize: '0.8rem' }}>Dedicated relationship managers</div>
+                <div style={{ fontSize: '0.78rem' }}>
+                  <a href="tel:+919931648595" style={{ color: '#A5B4FC', fontWeight: 600 }}>
+                    +91 9931648595
+                  </a>{' '}
+                  | sales@kognitiminds.com
+                </div>
               </div>
             </div>
           </div>

@@ -14,6 +14,7 @@ import {
   Tag,
   Headphones,
   FileText,
+  Building2,
 } from 'lucide-react';
 import { Product, UserRole, Category } from '../../types';
 import { CATEGORIES } from '../../data/mockProducts';
@@ -288,6 +289,49 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
         </div>
       </section>
+
+      {/* Brand Value Assurance Banner */}
+      <div
+        style={{
+          background: '#0B132B',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          padding: '1.1rem 0',
+          boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+        }}
+      >
+        <div className="container">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-around',
+              flexWrap: 'wrap',
+              gap: '1.5rem',
+              fontSize: '0.86rem',
+              fontWeight: 600,
+              color: '#E2E8F0',
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <Truck size={18} className="text-emerald-400" />
+              <span>FREE PAN-INDIA DELIVERY on Orders Above ₹1,999</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ShieldCheck size={18} className="text-amber-400" />
+              <span>100% GENUINE PRODUCTS | GST Invoice Available</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Building2 size={18} className="text-blue-400" />
+              <span>
+                B2B & INSTITUTIONAL ENQUIRIES:{' '}
+                <a href="tel:+919931648595" style={{ color: '#93C5FD', fontWeight: 700, textDecoration: 'underline' }}>
+                  +91 9931648595
+                </a>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* 2. Featured Categories Section */}
       <section style={{ padding: '4.5rem 0 3.5rem' }}>

@@ -13,6 +13,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Info,
+  Building2,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Product, B2COrder, B2CAddress } from '../../types';
@@ -655,8 +656,35 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                 {isProcessing ? 'Confirming Payment...' : `Place Order (₹${calculations.total.toLocaleString('en-IN')})`}
               </button>
 
-              <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.75rem', color: 'var(--slate-400)' }}>
-                Guaranteed safe checkout with 256-Bit SSL encryption
+              <div
+                style={{
+                  marginTop: '1.25rem',
+                  paddingTop: '1rem',
+                  borderTop: '1px solid var(--border-subtle)',
+                  fontSize: '0.76rem',
+                  color: 'var(--slate-600)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                }}
+              >
+                <div className="flex items-center gap-1.5 font-medium">
+                  <Truck size={14} className="text-emerald-600 flex-shrink-0" />
+                  <span>FREE PAN-INDIA DELIVERY on Orders Above ₹1,999</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-medium">
+                  <ShieldCheck size={14} className="text-blue-600 flex-shrink-0" />
+                  <span>100% GENUINE PRODUCTS | GST Invoice Available</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Building2 size={14} className="text-amber-600 flex-shrink-0" />
+                  <span>
+                    B2B & INSTITUTIONAL ENQUIRIES:{' '}
+                    <a href="tel:+919931648595" style={{ color: 'var(--primary-600)', fontWeight: 700 }}>
+                      +91 9931648595
+                    </a>
+                  </span>
+                </div>
               </div>
             </div>
           </div>

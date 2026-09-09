@@ -54,15 +54,23 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="header-sticky">
       {/* Top Announcement Bar */}
-      <div className="announcement-bar hide-on-mobile">
-        <span className="flex items-center gap-1">
-          <Truck size={14} className="text-emerald-400" /> 🚚 FREE PAN-INDIA DELIVERY on Orders Above ₹1,999
+      <div className="announcement-bar">
+        <span className="flex items-center gap-1.5">
+          <Truck size={14} className="text-emerald-400" />
+          <span>FREE PAN-INDIA DELIVERY on Orders Above ₹1,999</span>
         </span>
-        <span className="flex items-center gap-1">
-          <ShieldCheck size={14} className="text-amber-400" /> ✓ 100% GENUINE PRODUCTS | GST Invoice Available
+        <span className="hide-on-mobile flex items-center gap-1.5">
+          <ShieldCheck size={14} className="text-amber-400" />
+          <span>100% GENUINE PRODUCTS | GST Invoice Available</span>
         </span>
-        <span className="flex items-center gap-1">
-          <Building2 size={14} className="text-blue-400" /> 🏢 B2B & INSTITUTIONAL ENQUIRIES: +91 9931648595
+        <span className="flex items-center gap-1.5">
+          <Building2 size={14} className="text-blue-400" />
+          <span>
+            B2B & INSTITUTIONAL ENQUIRIES:{' '}
+            <a href="tel:+919931648595" style={{ color: '#93C5FD', fontWeight: 700, textDecoration: 'underline' }}>
+              +91 9931648595
+            </a>
+          </span>
         </span>
       </div>
 

@@ -9,6 +9,8 @@ import {
   LogOut,
   UserCheck,
   Package,
+  Truck,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -42,14 +44,25 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '0.5rem',
         }}
       >
-        <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1 text-slate-300">
-            <Building2 size={13} className="text-amber-400" /> B2B & Institutional Enquiries: +91 9931648595 | sales@kognitiminds.com
+        <div className="flex items-center gap-4 flex-wrap">
+          <span className="flex items-center gap-1.5 text-slate-300 font-medium">
+            <Truck size={13} className="text-emerald-400" /> FREE PAN-INDIA DELIVERY on Orders Above ₹1,999
           </span>
-          <span className="text-slate-400 hide-on-mobile">
-            GSTIN: 09AALCK4750F1ZC | CIN: U46496UP2024PTC213997
+          <span className="hide-on-mobile flex items-center gap-1.5 text-slate-300 font-medium">
+            <ShieldCheck size={13} className="text-amber-400" /> 100% GENUINE PRODUCTS | GST Invoice Available
+          </span>
+          <span className="flex items-center gap-1.5 text-amber-300 font-semibold">
+            <Building2 size={13} className="text-amber-400" />
+            <span>
+              B2B & INSTITUTIONAL ENQUIRIES:{' '}
+              <a href="tel:+919931648595" style={{ color: '#FCD34D', textDecoration: 'underline' }}>
+                +91 9931648595
+              </a>
+            </span>
           </span>
         </div>
 
