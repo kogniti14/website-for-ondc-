@@ -10,7 +10,6 @@ import { ShieldCheck } from 'lucide-react';
 import { Navbar } from './components/layout/Navbar';
 import { B2BNavbar } from './components/layout/B2BNavbar';
 import { Footer } from './components/layout/Footer';
-import { MobileBottomBar } from './components/layout/MobileBottomBar';
 import { PolicyModal } from './components/common/PolicyModal';
 
 // Modals
@@ -363,16 +362,7 @@ const MainApp: React.FC = () => {
         />
       )}
 
-      {/* 4. Mobile Bottom Touch Navigation */}
-      {activeTab !== 'admin' && (
-        <MobileBottomBar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          openAuthModal={() => handleOpenAuth('login')}
-        />
-      )}
-
-      {/* 5. Modals */}
+      {/* 4. Modals */}
       {selectedProduct && (
         <ProductDetailModal
           product={selectedProduct}
