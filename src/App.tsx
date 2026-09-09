@@ -11,7 +11,6 @@ import { Navbar } from './components/layout/Navbar';
 import { B2BNavbar } from './components/layout/B2BNavbar';
 import { Footer } from './components/layout/Footer';
 import { MobileBottomBar } from './components/layout/MobileBottomBar';
-import { RoleSwitcher } from './components/common/RoleSwitcher';
 import { PolicyModal } from './components/common/PolicyModal';
 
 // Modals
@@ -373,10 +372,7 @@ const MainApp: React.FC = () => {
         />
       )}
 
-      {/* 5. Floating Role Switcher Widget */}
-      <RoleSwitcher activeTab={activeTab} setActiveTab={setActiveTab} />
-
-      {/* 6. Modals */}
+      {/* 5. Modals */}
       {selectedProduct && (
         <ProductDetailModal
           product={selectedProduct}
