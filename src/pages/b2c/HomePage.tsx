@@ -15,12 +15,13 @@ import {
   Headphones,
   FileText,
 } from 'lucide-react';
-import { Product, UserRole } from '../../types';
+import { Product, UserRole, Category } from '../../types';
 import { CATEGORIES } from '../../data/mockProducts';
 import { ProductCard } from '../../components/products/ProductCard';
 
 interface HomePageProps {
   products: Product[];
+  categories?: Category[];
   onSelectCategory: (cat: string) => void;
   onOpenProduct: (product: Product) => void;
   onBuyNow: (product: Product) => void;
@@ -30,6 +31,7 @@ interface HomePageProps {
 
 export const HomePage: React.FC<HomePageProps> = ({
   products,
+  categories,
   onSelectCategory,
   onOpenProduct,
   onBuyNow,
@@ -316,7 +318,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               gap: '1.25rem',
             }}
           >
-            {CATEGORIES.map((cat) => (
+            {(categories && categories.length > 0 ? categories : CATEGORIES).map((cat) => (
               <div
                 key={cat.id}
                 onClick={() => {

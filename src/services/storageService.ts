@@ -9,11 +9,13 @@ import {
   WishlistItem,
   Coupon,
   AdminUser,
+  Category,
 } from '../types';
-import { MOCK_PRODUCTS, MOCK_COUPONS } from '../data/mockProducts';
+import { MOCK_PRODUCTS, MOCK_COUPONS, CATEGORIES } from '../data/mockProducts';
 
 const KEYS = {
   PRODUCTS: 'km_products_v1',
+  CATEGORIES: 'km_categories_v1',
   B2C_USERS: 'km_b2c_users_v1',
   B2B_BUSINESSES: 'km_b2b_businesses_v1',
   B2C_ORDERS: 'km_b2c_orders_v1',
@@ -649,6 +651,52 @@ class StorageService {
       return users[index];
     }
     return null;
+  }
+
+  // --- Category Management ---
+  getCategories(): Category[] {
+    return this.getItem<Category[]>(KEYS.CATEGORIES, CATEGORIES);
+  }
+
+  getCategoryById(id: string): Category | null {
+    const cats = this.getCategories();
+    return cats.find((c) => c.id === id) || null;
+  }
+
+  saveCategory(category: Category, oldName?: string): void {
+    const cats = this.getCategories();
+    const index = cats.findIndex((c) => c.id === category.id);
+    if (index >= 0) {
+      cats[index] = { ...cats[index], ...category };
+    } else {
+      cats.unshift(category);
+    }
+    this.setItem(KEYS.CATEGORIES, cats);
+
+    // If category was renamed, synchronize existing products assigned to old category name
+    if (oldName && oldName.trim() !== category.name.trim()) {
+      const products = this.getProducts();
+      let hasProductUpdates = false;
+      products.forEach((p) => {
+        if (p.category === oldName) {
+          p.category = category.name;
+          hasProductUpdates = true;
+        }
+      });
+      if (hasProductUpdates) {
+        this.setItem(KEYS.PRODUCTS, products);
+      }
+    }
+  }
+
+  deleteCategory(id: string): boolean {
+    const cats = this.getCategories();
+    const target = cats.find((c) => c.id === id);
+    if (!target) return false;
+
+    const filtered = cats.filter((c) => c.id !== id);
+    this.setItem(KEYS.CATEGORIES, filtered);
+    return true;
   }
 }
 

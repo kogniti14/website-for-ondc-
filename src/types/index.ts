@@ -252,6 +252,16 @@ export interface Coupon {
   description: string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  icon?: string;
+  count?: number;
+  description?: string;
+  image?: string;
+  createdAt?: string;
+}
+
 export type AdminRole = 'super_admin' | 'operations_admin' | 'catalog_manager' | 'finance_admin';
 
 export interface AdminUser {

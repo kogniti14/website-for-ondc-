@@ -9,12 +9,13 @@ import {
   RotateCcw,
   Sparkles,
 } from 'lucide-react';
-import { Product } from '../../types';
+import { Product, Category } from '../../types';
 import { CATEGORIES } from '../../data/mockProducts';
 import { ProductCard } from '../../components/products/ProductCard';
 
 interface ProductListingPageProps {
   products: Product[];
+  categories?: Category[];
   initialCategory?: string;
   initialSearch?: string;
   onOpenProduct: (product: Product) => void;
@@ -24,12 +25,14 @@ interface ProductListingPageProps {
 
 export const ProductListingPage: React.FC<ProductListingPageProps> = ({
   products,
+  categories,
   initialCategory,
   initialSearch = '',
   onOpenProduct,
   onBuyNow,
   isShopNowView = false,
 }) => {
+  const categoryList = categories && categories.length > 0 ? categories : CATEGORIES;
   const [search, setSearch] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'All');
   const [priceRange, setPriceRange] = useState<number>(200000);
@@ -157,7 +160,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
             >
               All Items
             </button>
-            {CATEGORIES.slice(0, 3).map((c) => (
+            {categoryList.slice(0, 4).map((c) => (
               <button
                 key={c.id}
                 onClick={() => setSelectedCategory(c.name)}
@@ -236,7 +239,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
                 />
                 <span>All Categories ({products.length})</span>
               </label>
-              {CATEGORIES.map((c) => (
+              {categoryList.map((c) => (
                 <label key={c.id} className="flex items-center gap-2" style={{ cursor: 'pointer' }}>
                   <input
                     type="radio"

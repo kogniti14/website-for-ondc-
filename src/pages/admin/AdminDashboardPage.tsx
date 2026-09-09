@@ -23,14 +23,16 @@ import {
   UserCheck,
   UserX,
   Shield,
+  FolderTree,
 } from 'lucide-react';
-import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser } from '../../types';
+import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, Category } from '../../types';
 import { storageService } from '../../services/storageService';
 import { useAuth } from '../../context/AuthContext';
 import { B2BInvoiceModal } from '../../components/b2b/B2BInvoiceModal';
 
 interface AdminDashboardPageProps {
   products: Product[];
+  categories: Category[];
   b2cOrders: B2COrder[];
   b2bOrders: B2BOrder[];
   businesses: B2BBusiness[];
@@ -42,6 +44,7 @@ interface AdminDashboardPageProps {
 
 export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   products,
+  categories,
   b2cOrders,
   b2bOrders,
   businesses,
@@ -53,7 +56,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const { currentAdminUser, isSuperAdmin, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals'
+    'overview' | 'products' | 'categories' | 'orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals'
   >('overview');
 
   // Admin Users & Super Admin Approvals State
@@ -97,6 +100,93 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   // Product Edit / Add State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showProductModal, setShowProductModal] = useState(false);
+
+  // Category Management State
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categoryOriginalName, setCategoryOriginalName] = useState<string | null>(null);
+  const [categoryForm, setCategoryForm] = useState<{
+    id: string;
+    name: string;
+    description: string;
+    image: string;
+    icon: string;
+    isNew: boolean;
+  }>({
+    id: '',
+    name: '',
+    description: '',
+    image: '',
+    icon: '📦',
+    isNew: false,
+  });
+  const [categoryMsg, setCategoryMsg] = useState<string | null>(null);
+
+  const handleOpenAddCategory = () => {
+    setCategoryForm({
+      id: '',
+      name: '',
+      description: '',
+      image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
+      icon: '📦',
+      isNew: true,
+    });
+    setCategoryOriginalName(null);
+    setShowCategoryModal(true);
+  };
+
+  const handleOpenEditCategory = (cat: Category) => {
+    setCategoryForm({
+      id: cat.id,
+      name: cat.name,
+      description: cat.description || '',
+      image: cat.image || '',
+      icon: cat.icon || '📦',
+      isNew: false,
+    });
+    setCategoryOriginalName(cat.name);
+    setShowCategoryModal(true);
+  };
+
+  const handleSaveCategorySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!categoryForm.name.trim()) return;
+
+    const slugId = categoryForm.id.trim()
+      ? categoryForm.id.trim().toLowerCase().replace(/\s+/g, '-')
+      : categoryForm.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+    const catToSave: Category = {
+      id: slugId,
+      name: categoryForm.name.trim(),
+      description: categoryForm.description.trim(),
+      image: categoryForm.image.trim(),
+      icon: categoryForm.icon.trim() || '📦',
+    };
+
+    storageService.saveCategory(catToSave, categoryForm.isNew ? undefined : categoryOriginalName || undefined);
+    onRefresh();
+    setShowCategoryModal(false);
+    setCategoryMsg(
+      categoryForm.isNew
+        ? `Category "${catToSave.name}" created successfully!`
+        : `Category "${catToSave.name}" updated successfully! Assigned products synchronized.`
+    );
+    setTimeout(() => setCategoryMsg(null), 5000);
+  };
+
+  const handleDeleteCategory = (cat: Category) => {
+    const assignedCount = products.filter((p) => p.category === cat.name).length;
+    const confirmMsg = assignedCount > 0
+      ? `Warning: Category "${cat.name}" has ${assignedCount} product(s) linked to it. Are you sure you want to delete it?`
+      : `Are you sure you want to delete category "${cat.name}"?`;
+
+    if (window.confirm(confirmMsg)) {
+      storageService.deleteCategory(cat.id);
+      onRefresh();
+      setCategoryMsg(`Category "${cat.name}" deleted successfully.`);
+      setTimeout(() => setCategoryMsg(null), 4000);
+    }
+  };
 
   // Selected B2B Order for Tax Invoice
   const [selectedB2bOrderForInvoice, setSelectedB2bOrderForInvoice] = useState<B2BOrder | null>(null);
@@ -311,6 +401,19 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             <Package size={16} /> Products ({products.length})
           </button>
           <button
+            onClick={() => setActiveTab('categories')}
+            style={{
+              padding: '0.5rem 0.2rem',
+              color: activeTab === 'categories' ? 'var(--primary)' : 'var(--slate-600)',
+              borderBottom: activeTab === 'categories' ? '2px solid var(--primary)' : '2px solid transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+            }}
+          >
+            <FolderTree size={16} /> Categories ({categories.length})
+          </button>
+          <button
             onClick={() => setActiveTab('orders')}
             style={{
               padding: '0.5rem 0.2rem',
@@ -507,7 +610,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     tagline: '',
                     sku: 'KM-HW-',
                     hsn: '84213920',
-                    category: 'Ergonomic Furniture',
+                    category: categories[0]?.name || 'Ergonomic Furniture',
                     b2cMrp: 10000,
                     b2cPrice: 7500,
                     b2bWholesalePrice: 5500,
@@ -594,6 +697,182 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* 2b. Categories Tab */}
+        {activeTab === 'categories' && (
+          <div>
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Category Management & Taxonomy</h2>
+                <p style={{ color: 'var(--slate-500)', fontSize: '0.85rem', marginTop: '0.2rem' }}>
+                  Organize store catalog hierarchy, banner images, and dynamic storefront filters.
+                </p>
+              </div>
+              <button
+                onClick={handleOpenAddCategory}
+                className="btn btn-primary btn-sm"
+              >
+                <Plus size={15} /> Add New Category
+              </button>
+            </div>
+
+            {categoryMsg && (
+              <div
+                style={{
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  color: '#065F46',
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  marginBottom: '1.25rem',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                <CheckCircle2 size={16} />
+                <span>{categoryMsg}</span>
+              </div>
+            )}
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                gap: '1.25rem',
+              }}
+            >
+              {categories.map((cat) => {
+                const productCount = products.filter((p) => p.category === cat.name).length;
+                return (
+                  <div
+                    key={cat.id}
+                    className="card"
+                    style={{
+                      padding: 0,
+                      overflow: 'hidden',
+                      background: '#FFFFFF',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      borderRadius: 'var(--radius-lg)',
+                      border: '1px solid var(--border-color)',
+                      boxShadow: 'var(--shadow-sm)',
+                    }}
+                  >
+                    {/* Card Banner */}
+                    <div
+                      style={{
+                        height: '130px',
+                        backgroundImage: `linear-gradient(to top, rgba(15, 23, 42, 0.8) 0%, rgba(15, 23, 42, 0.25) 100%), url(${cat.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80'})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        position: 'relative',
+                        padding: '1rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div className="flex justify-between items-start">
+                        <span
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.25)',
+                            backdropFilter: 'blur(6px)',
+                            color: '#FFFFFF',
+                            fontSize: '1.2rem',
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: '6px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {cat.icon || '📁'}
+                        </span>
+                        <span
+                          style={{
+                            background: 'rgba(15, 23, 42, 0.7)',
+                            backdropFilter: 'blur(4px)',
+                            color: '#CBD5E1',
+                            fontSize: '0.72rem',
+                            fontFamily: 'monospace',
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: '4px',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                          }}
+                        >
+                          ID: {cat.id}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-end">
+                        <span
+                          style={{
+                            background: 'rgba(99, 102, 241, 0.9)',
+                            color: '#FFFFFF',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            padding: '0.2rem 0.6rem',
+                            borderRadius: '9999px',
+                          }}
+                        >
+                          {productCount} {productCount === 1 ? 'Product' : 'Products'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Card Content */}
+                    <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--slate-900)', marginBottom: '0.4rem' }}>
+                          {cat.name}
+                        </h3>
+                        <p style={{ fontSize: '0.82rem', color: 'var(--slate-500)', lineHeight: 1.4, marginBottom: '1rem' }}>
+                          {cat.description || 'No description provided.'}
+                        </p>
+                      </div>
+
+                      {/* Actions */}
+                      <div
+                        className="flex items-center justify-between"
+                        style={{
+                          paddingTop: '0.75rem',
+                          borderTop: '1px solid var(--border-color)',
+                          gap: '0.5rem',
+                        }}
+                      >
+                        <button
+                          onClick={() => handleOpenEditCategory(cat)}
+                          className="btn btn-outline btn-sm"
+                          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}
+                        >
+                          <Edit size={14} /> Edit Category
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCategory(cat)}
+                          className="btn btn-sm"
+                          style={{
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            color: 'var(--danger)',
+                            border: '1px solid rgba(239, 68, 68, 0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '0.4rem 0.6rem',
+                          }}
+                          title="Delete Category"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -1357,11 +1636,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
                     className="form-select"
                   >
-                    <option value="Ergonomic Furniture">Ergonomic Furniture</option>
-                    <option value="Smart EdTech & Display">Smart EdTech & Display</option>
-                    <option value="Enterprise Security & IT">Enterprise Security & IT</option>
-                    <option value="Office Wellness & Hygiene">Office Wellness & Hygiene</option>
-                    <option value="Corporate Gifts & Supplies">Corporate Gifts & Supplies</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-group">
@@ -1432,6 +1711,117 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 </button>
                 <button type="submit" className="btn btn-primary">
                   Save Product to Catalog
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Category Modal */}
+      {showCategoryModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '540px', width: '100%' }}>
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.25rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  {categoryForm.isNew ? 'Create New Category' : `Edit Category: ${categoryOriginalName}`}
+                </h3>
+                <p style={{ fontSize: '0.75rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
+                  {categoryForm.isNew
+                    ? 'Define a new taxonomy group for the B2C & B2B storefronts.'
+                    : 'Changes to category name will automatically synchronize all linked products.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCategoryModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--slate-400)', fontSize: '1.2rem' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCategorySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label">Category Name *</label>
+                <input
+                  type="text"
+                  value={categoryForm.name}
+                  onChange={(e) => {
+                    const newName = e.target.value;
+                    setCategoryForm((prev) => ({
+                      ...prev,
+                      name: newName,
+                      id: prev.isNew ? newName.toLowerCase().replace(/[^a-z0-9]+/g, '-') : prev.id,
+                    }));
+                  }}
+                  placeholder="e.g. Ergonomic Furniture, Smart Robotics"
+                  className="form-input"
+                  required
+                />
+              </div>
+
+              <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Slug / ID *</label>
+                  <input
+                    type="text"
+                    value={categoryForm.id}
+                    onChange={(e) => setCategoryForm({ ...categoryForm, id: e.target.value })}
+                    placeholder="e.g. smart-robotics"
+                    className="form-input"
+                    required
+                  />
+                  <span style={{ fontSize: '0.7rem', color: 'var(--slate-400)' }}>Used as unique internal key</span>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Icon / Emoji</label>
+                  <input
+                    type="text"
+                    value={categoryForm.icon}
+                    onChange={(e) => setCategoryForm({ ...categoryForm, icon: e.target.value })}
+                    placeholder="🪑, 📺, 🤖"
+                    className="form-input"
+                    style={{ textAlign: 'center', fontSize: '1.1rem' }}
+                  />
+                  <span style={{ fontSize: '0.7rem', color: 'var(--slate-400)' }}>Emoji or symbol</span>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Description</label>
+                <textarea
+                  rows={2}
+                  value={categoryForm.description}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
+                  placeholder="Short overview of what products belong in this category..."
+                  className="form-textarea"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Cover Banner Image URL</label>
+                <input
+                  type="text"
+                  value={categoryForm.image}
+                  onChange={(e) => setCategoryForm({ ...categoryForm, image: e.target.value })}
+                  placeholder="https://images.unsplash.com/photo-..."
+                  className="form-input"
+                />
+                {categoryForm.image && (
+                  <div style={{ marginTop: '0.5rem', height: '90px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                    <img src={categoryForm.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                <button type="button" onClick={() => setShowCategoryModal(false)} className="btn btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  {categoryForm.isNew ? 'Create Category' : 'Update Category'}
                 </button>
               </div>
             </form>

@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { storageService } from './services/storageService';
-import { Product, B2COrder } from './types';
+import { Product, B2COrder, Category } from './types';
 import { ShieldCheck } from 'lucide-react';
 
 // Layout Components
@@ -59,6 +59,7 @@ const MainApp: React.FC = () => {
 
   // App Data (reactive)
   const [products, setProducts] = useState<Product[]>(() => storageService.getProducts());
+  const [categories, setCategories] = useState<Category[]>(() => storageService.getCategories());
   const [b2cOrders, setB2cOrders] = useState<B2COrder[]>(() => storageService.getB2COrders());
   const [b2bOrders, setB2bOrders] = useState(() => storageService.getB2BOrders());
   const [businesses, setBusinesses] = useState(() => storageService.getB2BBusinesses());
@@ -67,6 +68,7 @@ const MainApp: React.FC = () => {
 
   const refreshData = () => {
     setProducts(storageService.getProducts());
+    setCategories(storageService.getCategories());
     setB2cOrders(storageService.getB2COrders());
     setB2bOrders(storageService.getB2BOrders());
     setBusinesses(storageService.getB2BBusinesses());
@@ -139,6 +141,7 @@ const MainApp: React.FC = () => {
         {activeTab === 'home' && (
           <HomePage
             products={products}
+            categories={categories}
             onSelectCategory={(cat) => {
               setSelectedCategory(cat);
               setActiveTab('products');
@@ -153,6 +156,7 @@ const MainApp: React.FC = () => {
         {activeTab === 'products' && (
           <ProductListingPage
             products={products}
+            categories={categories}
             initialCategory={selectedCategory}
             initialSearch={searchQuery}
             onOpenProduct={handleOpenProduct}
@@ -164,6 +168,7 @@ const MainApp: React.FC = () => {
         {activeTab === 'shop' && (
           <ProductListingPage
             products={products}
+            categories={categories}
             initialCategory="All"
             initialSearch=""
             onOpenProduct={handleOpenProduct}
@@ -227,6 +232,7 @@ const MainApp: React.FC = () => {
             {b2bTab === 'catalog' && (
               <B2BCatalogPage
                 products={products}
+                categories={categories}
                 onOpenProduct={handleOpenProduct}
                 openB2BAuthModal={handleOpenB2BAuth}
                 onOpenRfqModal={handleOpenRfqModal}
@@ -279,6 +285,7 @@ const MainApp: React.FC = () => {
           isAdmin ? (
             <AdminDashboardPage
               products={products}
+              categories={categories}
               b2cOrders={b2cOrders}
               b2bOrders={b2bOrders}
               businesses={businesses}

@@ -11,13 +11,14 @@ import {
   Sparkles,
   ArrowRight,
 } from 'lucide-react';
-import { Product } from '../../types';
+import { Product, Category } from '../../types';
 import { CATEGORIES } from '../../data/mockProducts';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 
 interface B2BCatalogPageProps {
   products: Product[];
+  categories?: Category[];
   onOpenProduct: (product: Product) => void;
   openB2BAuthModal: () => void;
   onOpenRfqModal: (product: Product) => void;
@@ -25,10 +26,12 @@ interface B2BCatalogPageProps {
 
 export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
   products,
+  categories,
   onOpenProduct,
   openB2BAuthModal,
   onOpenRfqModal,
 }) => {
+  const categoryList = categories && categories.length > 0 ? categories : CATEGORIES;
   const { role, b2bBusiness } = useAuth();
   const { addToB2BCart } = useCart();
 
@@ -197,7 +200,7 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
             >
               All Items
             </button>
-            {CATEGORIES.map((c) => (
+            {categoryList.map((c) => (
               <button
                 key={c.id}
                 onClick={() => setSelectedCategory(c.name)}
