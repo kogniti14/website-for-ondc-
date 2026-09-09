@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { storageService } from './services/storageService';
-import { Product, B2COrder, Category } from './types';
+import { Product, B2COrder, Category, B2CUser } from './types';
 import { ShieldCheck } from 'lucide-react';
 
 // Layout Components
@@ -60,6 +60,7 @@ const MainApp: React.FC = () => {
   // App Data (reactive)
   const [products, setProducts] = useState<Product[]>(() => storageService.getProducts());
   const [categories, setCategories] = useState<Category[]>(() => storageService.getCategories());
+  const [b2cUsers, setB2cUsers] = useState<B2CUser[]>(() => storageService.getB2CUsers());
   const [b2cOrders, setB2cOrders] = useState<B2COrder[]>(() => storageService.getB2COrders());
   const [b2bOrders, setB2bOrders] = useState(() => storageService.getB2BOrders());
   const [businesses, setBusinesses] = useState(() => storageService.getB2BBusinesses());
@@ -69,6 +70,7 @@ const MainApp: React.FC = () => {
   const refreshData = () => {
     setProducts(storageService.getProducts());
     setCategories(storageService.getCategories());
+    setB2cUsers(storageService.getB2CUsers());
     setB2cOrders(storageService.getB2COrders());
     setB2bOrders(storageService.getB2BOrders());
     setBusinesses(storageService.getB2BBusinesses());
@@ -286,6 +288,7 @@ const MainApp: React.FC = () => {
             <AdminDashboardPage
               products={products}
               categories={categories}
+              b2cUsers={b2cUsers}
               b2cOrders={b2cOrders}
               b2bOrders={b2bOrders}
               businesses={businesses}

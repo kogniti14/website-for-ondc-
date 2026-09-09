@@ -51,6 +51,7 @@ export interface B2CUser {
   name: string;
   email: string;
   phone: string;
+  password?: string;
   addresses: B2CAddress[];
   createdAt: string;
 }
@@ -61,6 +62,7 @@ export interface B2BBusiness {
   contactPerson: string;
   businessEmail: string;
   mobile: string;
+  password?: string;
   gstin: string;
   pan: string;
   businessType:
@@ -280,3 +282,10 @@ export interface AdminUser {
 }
 
 export type UserRole = 'guest' | 'b2c' | 'b2b' | 'admin';
+
+export interface PasswordResetOtp {
+  targetIdentifier: string;
+  otp: string;
+  expiresAt: string;
+  userType: 'admin' | 'b2c' | 'b2b';
+}

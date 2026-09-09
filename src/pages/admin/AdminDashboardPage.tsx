@@ -19,13 +19,18 @@ import {
   Send,
   AlertCircle,
   Eye,
+  EyeOff,
   Lock,
   UserCheck,
   UserX,
   Shield,
   FolderTree,
+  KeyRound,
+  Copy,
+  Check,
+  Search,
 } from 'lucide-react';
-import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, Category } from '../../types';
+import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, Category, B2CUser } from '../../types';
 import { storageService } from '../../services/storageService';
 import { useAuth } from '../../context/AuthContext';
 import { B2BInvoiceModal } from '../../components/b2b/B2BInvoiceModal';
@@ -33,6 +38,7 @@ import { B2BInvoiceModal } from '../../components/b2b/B2BInvoiceModal';
 interface AdminDashboardPageProps {
   products: Product[];
   categories: Category[];
+  b2cUsers: B2CUser[];
   b2cOrders: B2COrder[];
   b2bOrders: B2BOrder[];
   businesses: B2BBusiness[];
@@ -45,6 +51,7 @@ interface AdminDashboardPageProps {
 export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   products,
   categories,
+  b2cUsers,
   b2cOrders,
   b2bOrders,
   businesses,
@@ -56,7 +63,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const { currentAdminUser, isSuperAdmin, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'categories' | 'orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals'
+    'overview' | 'products' | 'categories' | 'orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials'
   >('overview');
 
   // Admin Users & Super Admin Approvals State
@@ -190,6 +197,199 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   // Selected B2B Order for Tax Invoice
   const [selectedB2bOrderForInvoice, setSelectedB2bOrderForInvoice] = useState<B2BOrder | null>(null);
+
+  // Super Admin Self Password Change State
+  const [showChangeSuperAdminPasswordModal, setShowChangeSuperAdminPasswordModal] = useState(false);
+  const [superAdminCurrentPassword, setSuperAdminCurrentPassword] = useState('');
+  const [superAdminNewPassword, setSuperAdminNewPassword] = useState('');
+  const [superAdminConfirmPassword, setSuperAdminConfirmPassword] = useState('');
+  const [superAdminPassError, setSuperAdminPassError] = useState<string | null>(null);
+  const [superAdminPassSuccess, setSuperAdminPassSuccess] = useState<string | null>(null);
+
+  // User Credentials Hub State
+  const [credFilter, setCredFilter] = useState<'all' | 'admin' | 'b2b' | 'b2c'>('all');
+  const [credSearch, setCredSearch] = useState('');
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [credSuccessMsg, setCredSuccessMsg] = useState<string | null>(null);
+
+  // Edit Credentials Modal State
+  const [showEditCredModal, setShowEditCredModal] = useState(false);
+  const [editingCredTarget, setEditingCredTarget] = useState<{
+    type: 'admin' | 'b2b' | 'b2c';
+    id: string;
+    name: string;
+    identifier: string;
+    secondaryIdentifier: string;
+    currentPassword?: string;
+  } | null>(null);
+  const [editCredForm, setEditCredForm] = useState({
+    name: '',
+    identifier: '',
+    secondaryIdentifier: '',
+    newPassword: '',
+  });
+
+  // OTP Reset Modal State
+  const [showOtpResetModal, setShowOtpResetModal] = useState(false);
+  const [otpResetTarget, setOtpResetTarget] = useState<{
+    type: 'admin' | 'b2b' | 'b2c';
+    id: string;
+    name: string;
+    identifier: string;
+  } | null>(null);
+  const [generatedOtpInfo, setGeneratedOtpInfo] = useState<{
+    otp: string;
+    expiresAt: string;
+    targetIdentifier: string;
+  } | null>(null);
+  const [otpResetForm, setOtpResetForm] = useState({
+    inputOtp: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [otpResetMsg, setOtpResetMsg] = useState<{ success: boolean; text: string } | null>(null);
+
+  const handleTogglePasswordReveal = (id: string) => {
+    setRevealedPasswords((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleCopyPassword = (id: string, pass: string) => {
+    navigator.clipboard.writeText(pass);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2500);
+  };
+
+  const handleOpenEditCred = (
+    type: 'admin' | 'b2b' | 'b2c',
+    id: string,
+    name: string,
+    identifier: string,
+    secondaryIdentifier: string,
+    currentPassword?: string
+  ) => {
+    setEditingCredTarget({ type, id, name, identifier, secondaryIdentifier, currentPassword });
+    setEditCredForm({
+      name,
+      identifier,
+      secondaryIdentifier,
+      newPassword: currentPassword || '',
+    });
+    setShowEditCredModal(true);
+  };
+
+  const handleSaveCredSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCredTarget) return;
+
+    if (editingCredTarget.type === 'admin') {
+      storageService.updateAdminCredentials(
+        editingCredTarget.id,
+        editCredForm.identifier,
+        editCredForm.secondaryIdentifier,
+        editCredForm.newPassword
+      );
+      setAdminUsers(storageService.getAdminUsers());
+    } else if (editingCredTarget.type === 'b2c') {
+      storageService.updateB2CCredentials(
+        editingCredTarget.id,
+        editCredForm.identifier,
+        editCredForm.secondaryIdentifier,
+        editCredForm.newPassword,
+        editCredForm.name
+      );
+    } else if (editingCredTarget.type === 'b2b') {
+      storageService.updateB2BCredentials(
+        editingCredTarget.id,
+        editCredForm.identifier,
+        editCredForm.secondaryIdentifier,
+        editCredForm.newPassword,
+        editCredForm.name
+      );
+    }
+
+    onRefresh();
+    setShowEditCredModal(false);
+    setCredSuccessMsg(`Credentials for "${editCredForm.name}" were successfully updated!`);
+    setTimeout(() => setCredSuccessMsg(null), 5000);
+  };
+
+  const handleOpenOtpReset = (
+    type: 'admin' | 'b2b' | 'b2c',
+    id: string,
+    name: string,
+    identifier: string
+  ) => {
+    setOtpResetTarget({ type, id, name, identifier });
+    const otpRes = storageService.generatePasswordResetOtp(identifier, type);
+    setGeneratedOtpInfo(otpRes);
+    setOtpResetForm({ inputOtp: otpRes.otp, newPassword: '', confirmPassword: '' });
+    setOtpResetMsg(null);
+    setShowOtpResetModal(true);
+  };
+
+  const handleExecuteOtpReset = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otpResetTarget) return;
+    if (!otpResetForm.newPassword || otpResetForm.newPassword.length < 6) {
+      setOtpResetMsg({ success: false, text: 'Password must be at least 6 characters long.' });
+      return;
+    }
+    if (otpResetForm.newPassword !== otpResetForm.confirmPassword) {
+      setOtpResetMsg({ success: false, text: 'New passwords do not match.' });
+      return;
+    }
+
+    const res = storageService.resetPasswordWithOtp(
+      otpResetTarget.identifier,
+      otpResetForm.inputOtp,
+      otpResetForm.newPassword
+    );
+
+    if (res.success) {
+      onRefresh();
+      setAdminUsers(storageService.getAdminUsers());
+      setOtpResetMsg({ success: true, text: res.message });
+      setTimeout(() => {
+        setShowOtpResetModal(false);
+        setCredSuccessMsg(res.message);
+        setTimeout(() => setCredSuccessMsg(null), 5000);
+      }, 1500);
+    } else {
+      setOtpResetMsg({ success: false, text: res.message });
+    }
+  };
+
+  const handleSuperAdminChangePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSuperAdminPassError(null);
+    setSuperAdminPassSuccess(null);
+
+    if (superAdminNewPassword.length < 6) {
+      setSuperAdminPassError('New password must be at least 6 characters long.');
+      return;
+    }
+    if (superAdminNewPassword !== superAdminConfirmPassword) {
+      setSuperAdminPassError('Passwords do not match.');
+      return;
+    }
+
+    const res = storageService.changeSuperAdminPassword(
+      superAdminCurrentPassword,
+      superAdminNewPassword
+    );
+
+    if (res.success) {
+      setSuperAdminPassSuccess(res.message);
+      setAdminUsers(storageService.getAdminUsers());
+      onRefresh();
+      setTimeout(() => {
+        setShowChangeSuperAdminPasswordModal(false);
+      }, 1800);
+    } else {
+      setSuperAdminPassError(res.message);
+    }
+  };
 
   // RFQ Response Modal
   const [activeRfqForQuote, setActiveRfqForQuote] = useState<B2BQuotation | null>(null);
@@ -345,6 +545,30 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 : 'Staff Admin'}
             </span>
 
+            {isSuperAdmin && (
+              <button
+                onClick={() => {
+                  setSuperAdminCurrentPassword('');
+                  setSuperAdminNewPassword('');
+                  setSuperAdminConfirmPassword('');
+                  setSuperAdminPassError(null);
+                  setSuperAdminPassSuccess(null);
+                  setShowChangeSuperAdminPasswordModal(true);
+                }}
+                className="btn btn-sm"
+                style={{
+                  background: 'rgba(147, 51, 234, 0.25)',
+                  color: '#E9D5FF',
+                  border: '1px solid rgba(147, 51, 234, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                }}
+              >
+                <KeyRound size={14} /> Change My Password
+              </button>
+            )}
+
             <button
               onClick={onExitAdmin}
               className="btn btn-outline-b2b btn-sm"
@@ -477,6 +701,20 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             }}
           >
             <ShieldCheck size={16} /> Staff & Approvals {pendingAdminRequests > 0 && <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>{pendingAdminRequests}</span>}
+          </button>
+          <button
+            onClick={() => setActiveTab('credentials')}
+            style={{
+              padding: '0.5rem 0.2rem',
+              color: activeTab === 'credentials' ? 'var(--primary)' : 'var(--slate-600)',
+              borderBottom: activeTab === 'credentials' ? '2px solid var(--primary)' : '2px solid transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+            }}
+          >
+            <KeyRound size={16} /> User Credentials ({adminUsers.length + businesses.length + b2cUsers.length})
+            {isSuperAdmin && <span className="badge badge-purple" style={{ fontSize: '0.65rem' }}>👑 Master Rights</span>}
           </button>
         </div>
       </div>
@@ -1530,6 +1768,639 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             </div>
           </div>
         )}
+
+        {/* 8. User Credentials & Master Security Hub Tab */}
+        {activeTab === 'credentials' && (
+          <div>
+            {/* Header */}
+            <div className="flex justify-between items-center flex-wrap gap-4" style={{ marginBottom: '1.5rem' }}>
+              <div>
+                <div className="flex items-center gap-2">
+                  <div
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '8px',
+                      background: 'linear-gradient(135deg, #9333EA 0%, #7E22CE 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#FFF',
+                    }}
+                  >
+                    <KeyRound size={20} />
+                  </div>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                    Enterprise Credential Control & Master Security Hub
+                  </h2>
+                </div>
+                <p style={{ color: 'var(--slate-500)', fontSize: '0.85rem', marginTop: '0.25rem' }}>
+                  Super Admin authorization center: inspect cleartext credentials, edit user identifiers, directly override passwords, and trigger verified OTP resets across all system accounts.
+                </p>
+              </div>
+
+              {isSuperAdmin && (
+                <button
+                  onClick={() => {
+                    setSuperAdminCurrentPassword('');
+                    setSuperAdminNewPassword('');
+                    setSuperAdminConfirmPassword('');
+                    setSuperAdminPassError(null);
+                    setSuperAdminPassSuccess(null);
+                    setShowChangeSuperAdminPasswordModal(true);
+                  }}
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <Lock size={15} /> Change Super Admin Password
+                </button>
+              )}
+            </div>
+
+            {/* Notification Banner if action performed */}
+            {credSuccessMsg && (
+              <div
+                style={{
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  color: '#065F46',
+                  padding: '0.85rem 1.25rem',
+                  borderRadius: 'var(--radius-md)',
+                  marginBottom: '1.5rem',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.6rem',
+                }}
+              >
+                <CheckCircle2 size={18} className="text-emerald-600" />
+                <strong>{credSuccessMsg}</strong>
+              </div>
+            )}
+
+            {/* Super Admin Rights Notice Card */}
+            <div
+              className="card"
+              style={{
+                marginBottom: '1.5rem',
+                padding: '1.25rem',
+                background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.08) 0%, rgba(79, 70, 229, 0.05) 100%)',
+                border: '1px solid rgba(147, 51, 234, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
+              }}
+            >
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #9333EA 0%, #7E22CE 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFF',
+                  flexShrink: 0,
+                }}
+              >
+                <Shield size={22} />
+              </div>
+              <div style={{ flex: 1, fontSize: '0.85rem', color: 'var(--slate-700)' }}>
+                <strong style={{ color: '#9333EA', fontSize: '0.92rem' }}>
+                  {isSuperAdmin ? 'Elevated Governance Privilege Enabled' : 'Auditor / Staff Visibility Mode'}
+                </strong>
+                <div style={{ marginTop: '0.2rem', color: 'var(--slate-600)' }}>
+                  {isSuperAdmin
+                    ? 'You have complete visibility rights to reveal passwords, reassign login IDs, and perform cryptographic password resets on any administrative staff member, corporate B2B procurement account, or retail customer.'
+                    : 'Credential modification and cleartext disclosure rights are restricted to the Super Admin (@superadmin).'}
+                </div>
+              </div>
+            </div>
+
+            {/* Filters & Search Toolbar */}
+            <div
+              className="flex justify-between items-center flex-wrap gap-3"
+              style={{ marginBottom: '1.25rem' }}
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => setCredFilter('all')}
+                  className={`btn btn-sm ${credFilter === 'all' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ borderRadius: 'var(--radius-full)' }}
+                >
+                  All Accounts ({adminUsers.length + businesses.length + b2cUsers.length})
+                </button>
+                <button
+                  onClick={() => setCredFilter('admin')}
+                  className={`btn btn-sm ${credFilter === 'admin' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ borderRadius: 'var(--radius-full)' }}
+                >
+                  🛡️ Admin Staff ({adminUsers.length})
+                </button>
+                <button
+                  onClick={() => setCredFilter('b2b')}
+                  className={`btn btn-sm ${credFilter === 'b2b' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ borderRadius: 'var(--radius-full)' }}
+                >
+                  🏢 B2B Corporate ({businesses.length})
+                </button>
+                <button
+                  onClick={() => setCredFilter('b2c')}
+                  className={`btn btn-sm ${credFilter === 'b2c' ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ borderRadius: 'var(--radius-full)' }}
+                >
+                  🛍️ B2C Customers ({b2cUsers.length})
+                </button>
+              </div>
+
+              <div style={{ position: 'relative', width: '280px' }}>
+                <Search
+                  size={16}
+                  style={{ position: 'absolute', left: '12px', top: '10px', color: 'var(--slate-400)' }}
+                />
+                <input
+                  type="text"
+                  placeholder="Search user, ID, email..."
+                  value={credSearch}
+                  onChange={(e) => setCredSearch(e.target.value)}
+                  className="form-input"
+                  style={{ paddingLeft: '36px', height: '36px', fontSize: '0.85rem' }}
+                />
+              </div>
+            </div>
+
+            {/* Consolidated User Credentials Table */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden', background: '#FFFFFF' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr
+                      style={{
+                        background: 'var(--slate-50)',
+                        borderBottom: '1px solid var(--border-color)',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>
+                        User / Entity
+                      </th>
+                      <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>
+                        Account Type
+                      </th>
+                      <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>
+                        Primary Login ID / Identifier
+                      </th>
+                      <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>
+                        Password (Show / Hide Rights)
+                      </th>
+                      <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>
+                        Status
+                      </th>
+                      <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700, textAlign: 'right' }}>
+                        Super Admin Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* 1. Admins */}
+                    {(credFilter === 'all' || credFilter === 'admin') &&
+                      adminUsers
+                        .filter((u) => {
+                          if (!credSearch.trim()) return true;
+                          const q = credSearch.toLowerCase();
+                          return (
+                            u.name.toLowerCase().includes(q) ||
+                            u.userId.toLowerCase().includes(q) ||
+                            u.email.toLowerCase().includes(q)
+                          );
+                        })
+                        .map((u) => {
+                          const isRevealed = !!revealedPasswords[`admin_${u.id}`];
+                          const pwd = u.password || 'AdminOps@123';
+                          return (
+                            <tr key={`admin_${u.id}`} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--slate-900)' }}>{u.name}</div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
+                                  Dept: {u.department}
+                                </div>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <span
+                                  className={`badge ${u.role === 'super_admin' ? 'badge-purple' : 'badge-blue'}`}
+                                  style={{ fontSize: '0.72rem' }}
+                                >
+                                  {u.role === 'super_admin' ? '👑 Super Admin' : u.role.replace('_', ' ')}
+                                </span>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <code
+                                  style={{
+                                    background: 'var(--slate-100)',
+                                    padding: '0.2rem 0.5rem',
+                                    borderRadius: '4px',
+                                    fontWeight: 700,
+                                    color: '#9333EA',
+                                  }}
+                                >
+                                  @{u.userId}
+                                </code>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--slate-400)', marginTop: '0.15rem' }}>
+                                  {u.email}
+                                </div>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <div className="flex items-center gap-2">
+                                  {isRevealed ? (
+                                    <span
+                                      style={{
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 700,
+                                        color: '#047857',
+                                        background: '#D1FAE5',
+                                        padding: '0.2rem 0.5rem',
+                                        borderRadius: '4px',
+                                      }}
+                                    >
+                                      {pwd}
+                                    </span>
+                                  ) : (
+                                    <span
+                                      style={{
+                                        letterSpacing: '2px',
+                                        color: 'var(--slate-400)',
+                                        fontSize: '0.9rem',
+                                      }}
+                                    >
+                                      ••••••••••••
+                                    </span>
+                                  )}
+
+                                  <button
+                                    onClick={() => handleTogglePasswordReveal(`admin_${u.id}`)}
+                                    className="btn btn-sm"
+                                    style={{
+                                      padding: '0.25rem 0.5rem',
+                                      background: 'var(--slate-100)',
+                                      color: 'var(--slate-600)',
+                                    }}
+                                    title={isRevealed ? 'Hide Password' : 'Show Password'}
+                                  >
+                                    {isRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
+                                  </button>
+
+                                  {isRevealed && (
+                                    <button
+                                      onClick={() => handleCopyPassword(`admin_${u.id}`, pwd)}
+                                      className="btn btn-sm"
+                                      style={{
+                                        padding: '0.25rem 0.5rem',
+                                        background: copiedId === `admin_${u.id}` ? '#D1FAE5' : 'var(--slate-100)',
+                                        color: copiedId === `admin_${u.id}` ? '#047857' : 'var(--slate-600)',
+                                      }}
+                                      title="Copy Password"
+                                    >
+                                      {copiedId === `admin_${u.id}` ? <Check size={13} /> : <Copy size={13} />}
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <span
+                                  className={`badge ${
+                                    u.status === 'approved'
+                                      ? 'badge-green'
+                                      : u.status === 'pending'
+                                      ? 'badge-amber'
+                                      : 'badge-dark'
+                                  }`}
+                                  style={{ fontSize: '0.7rem' }}
+                                >
+                                  {u.status.toUpperCase()}
+                                </span>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() =>
+                                      handleOpenEditCred(
+                                        'admin',
+                                        u.id,
+                                        u.name,
+                                        u.userId,
+                                        u.email,
+                                        u.password
+                                      )
+                                    }
+                                    className="btn btn-sm btn-outline"
+                                    style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}
+                                  >
+                                    Edit ID / Pass
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenOtpReset('admin', u.id, u.name, u.userId)}
+                                    className="btn btn-sm"
+                                    style={{
+                                      fontSize: '0.75rem',
+                                      padding: '0.35rem 0.65rem',
+                                      background: 'rgba(147, 51, 234, 0.1)',
+                                      color: '#9333EA',
+                                      border: '1px solid rgba(147, 51, 234, 0.25)',
+                                    }}
+                                  >
+                                    Reset via OTP
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+
+                    {/* 2. B2B Businesses */}
+                    {(credFilter === 'all' || credFilter === 'b2b') &&
+                      businesses
+                        .filter((b) => {
+                          if (!credSearch.trim()) return true;
+                          const q = credSearch.toLowerCase();
+                          return (
+                            b.companyName.toLowerCase().includes(q) ||
+                            b.businessEmail.toLowerCase().includes(q) ||
+                            b.mobile.includes(q) ||
+                            b.gstin.toLowerCase().includes(q)
+                          );
+                        })
+                        .map((b) => {
+                          const isRevealed = !!revealedPasswords[`b2b_${b.id}`];
+                          const pwd = b.password || 'B2bEdu@123';
+                          return (
+                            <tr key={`b2b_${b.id}`} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--slate-900)' }}>{b.companyName}</div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
+                                  Contact: {b.contactPerson} ({b.businessType})
+                                </div>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <span className="badge badge-amber" style={{ fontSize: '0.72rem' }}>
+                                  🏢 B2B Corporate Entity
+                                </span>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--slate-800)' }}>{b.businessEmail}</div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--slate-400)', marginTop: '0.15rem' }}>
+                                  Mobile: {b.mobile} • GSTIN: {b.gstin}
+                                </div>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <div className="flex items-center gap-2">
+                                  {isRevealed ? (
+                                    <span
+                                      style={{
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 700,
+                                        color: '#047857',
+                                        background: '#D1FAE5',
+                                        padding: '0.2rem 0.5rem',
+                                        borderRadius: '4px',
+                                      }}
+                                    >
+                                      {pwd}
+                                    </span>
+                                  ) : (
+                                    <span
+                                      style={{
+                                        letterSpacing: '2px',
+                                        color: 'var(--slate-400)',
+                                        fontSize: '0.9rem',
+                                      }}
+                                    >
+                                      ••••••••••••
+                                    </span>
+                                  )}
+
+                                  <button
+                                    onClick={() => handleTogglePasswordReveal(`b2b_${b.id}`)}
+                                    className="btn btn-sm"
+                                    style={{
+                                      padding: '0.25rem 0.5rem',
+                                      background: 'var(--slate-100)',
+                                      color: 'var(--slate-600)',
+                                    }}
+                                    title={isRevealed ? 'Hide Password' : 'Show Password'}
+                                  >
+                                    {isRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
+                                  </button>
+
+                                  {isRevealed && (
+                                    <button
+                                      onClick={() => handleCopyPassword(`b2b_${b.id}`, pwd)}
+                                      className="btn btn-sm"
+                                      style={{
+                                        padding: '0.25rem 0.5rem',
+                                        background: copiedId === `b2b_${b.id}` ? '#D1FAE5' : 'var(--slate-100)',
+                                        color: copiedId === `b2b_${b.id}` ? '#047857' : 'var(--slate-600)',
+                                      }}
+                                      title="Copy Password"
+                                    >
+                                      {copiedId === `b2b_${b.id}` ? <Check size={13} /> : <Copy size={13} />}
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <span
+                                  className={`badge ${
+                                    b.status === 'approved'
+                                      ? 'badge-green'
+                                      : b.status === 'pending'
+                                      ? 'badge-amber'
+                                      : 'badge-dark'
+                                  }`}
+                                  style={{ fontSize: '0.7rem' }}
+                                >
+                                  {b.status.toUpperCase()}
+                                </span>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() =>
+                                      handleOpenEditCred(
+                                        'b2b',
+                                        b.id,
+                                        b.companyName,
+                                        b.businessEmail,
+                                        b.mobile,
+                                        b.password
+                                      )
+                                    }
+                                    className="btn btn-sm btn-outline"
+                                    style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}
+                                  >
+                                    Edit ID / Pass
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleOpenOtpReset('b2b', b.id, b.companyName, b.businessEmail)
+                                    }
+                                    className="btn btn-sm"
+                                    style={{
+                                      fontSize: '0.75rem',
+                                      padding: '0.35rem 0.65rem',
+                                      background: 'rgba(217, 119, 6, 0.1)',
+                                      color: '#D97706',
+                                      border: '1px solid rgba(217, 119, 6, 0.25)',
+                                    }}
+                                  >
+                                    Reset via OTP
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+
+                    {/* 3. B2C Customers */}
+                    {(credFilter === 'all' || credFilter === 'b2c') &&
+                      b2cUsers
+                        .filter((c) => {
+                          if (!credSearch.trim()) return true;
+                          const q = credSearch.toLowerCase();
+                          return (
+                            c.name.toLowerCase().includes(q) ||
+                            c.email.toLowerCase().includes(q) ||
+                            c.phone.includes(q)
+                          );
+                        })
+                        .map((c) => {
+                          const isRevealed = !!revealedPasswords[`b2c_${c.id}`];
+                          const pwd = c.password || 'Customer@123';
+                          return (
+                            <tr key={`b2c_${c.id}`} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--slate-900)' }}>{c.name}</div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
+                                  Member since: {new Date(c.createdAt).toLocaleDateString('en-IN')}
+                                </div>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <span className="badge badge-blue" style={{ fontSize: '0.72rem' }}>
+                                  🛍️ B2C Customer
+                                </span>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--slate-800)' }}>{c.email}</div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--slate-400)', marginTop: '0.15rem' }}>
+                                  Phone: {c.phone}
+                                </div>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <div className="flex items-center gap-2">
+                                  {isRevealed ? (
+                                    <span
+                                      style={{
+                                        fontFamily: 'monospace',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 700,
+                                        color: '#047857',
+                                        background: '#D1FAE5',
+                                        padding: '0.2rem 0.5rem',
+                                        borderRadius: '4px',
+                                      }}
+                                    >
+                                      {pwd}
+                                    </span>
+                                  ) : (
+                                    <span
+                                      style={{
+                                        letterSpacing: '2px',
+                                        color: 'var(--slate-400)',
+                                        fontSize: '0.9rem',
+                                      }}
+                                    >
+                                      ••••••••••••
+                                    </span>
+                                  )}
+
+                                  <button
+                                    onClick={() => handleTogglePasswordReveal(`b2c_${c.id}`)}
+                                    className="btn btn-sm"
+                                    style={{
+                                      padding: '0.25rem 0.5rem',
+                                      background: 'var(--slate-100)',
+                                      color: 'var(--slate-600)',
+                                    }}
+                                    title={isRevealed ? 'Hide Password' : 'Show Password'}
+                                  >
+                                    {isRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
+                                  </button>
+
+                                  {isRevealed && (
+                                    <button
+                                      onClick={() => handleCopyPassword(`b2c_${c.id}`, pwd)}
+                                      className="btn btn-sm"
+                                      style={{
+                                        padding: '0.25rem 0.5rem',
+                                        background: copiedId === `b2c_${c.id}` ? '#D1FAE5' : 'var(--slate-100)',
+                                        color: copiedId === `b2c_${c.id}` ? '#047857' : 'var(--slate-600)',
+                                      }}
+                                      title="Copy Password"
+                                    >
+                                      {copiedId === `b2c_${c.id}` ? <Check size={13} /> : <Copy size={13} />}
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <span className="badge badge-green" style={{ fontSize: '0.7rem' }}>
+                                  ACTIVE
+                                </span>
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() =>
+                                      handleOpenEditCred(
+                                        'b2c',
+                                        c.id,
+                                        c.name,
+                                        c.email,
+                                        c.phone,
+                                        c.password
+                                      )
+                                    }
+                                    className="btn btn-sm btn-outline"
+                                    style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}
+                                  >
+                                    Edit ID / Pass
+                                  </button>
+                                  <button
+                                    onClick={() => handleOpenOtpReset('b2c', c.id, c.name, c.email)}
+                                    className="btn btn-sm"
+                                    style={{
+                                      fontSize: '0.75rem',
+                                      padding: '0.35rem 0.65rem',
+                                      background: 'rgba(2, 132, 199, 0.1)',
+                                      color: '#0284C7',
+                                      border: '1px solid rgba(2, 132, 199, 0.25)',
+                                    }}
+                                  >
+                                    Reset via OTP
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* RFQ Formulate Modal */}
@@ -1835,6 +2706,366 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           order={selectedB2bOrderForInvoice}
           onClose={() => setSelectedB2bOrderForInvoice(null)}
         />
+      )}
+
+      {/* 1. Change Super Admin Password Modal */}
+      {showChangeSuperAdminPasswordModal && (
+        <div className="modal-overlay" onClick={() => setShowChangeSuperAdminPasswordModal(false)}>
+          <div className="modal-content" style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.25rem' }}>
+              <div className="flex items-center gap-2">
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, #9333EA 0%, #7E22CE 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#FFF',
+                  }}
+                >
+                  <Lock size={16} />
+                </div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  Change Super Admin Password
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowChangeSuperAdminPasswordModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--slate-400)', fontSize: '1.2rem' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {superAdminPassError && (
+              <div
+                style={{
+                  background: 'var(--rose-50)',
+                  border: '1px solid var(--rose-100)',
+                  color: 'var(--rose-600)',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '0.82rem',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                <AlertCircle size={16} />
+                <span>{superAdminPassError}</span>
+              </div>
+            )}
+
+            {superAdminPassSuccess && (
+              <div
+                style={{
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  color: '#065F46',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '0.82rem',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                <CheckCircle2 size={16} />
+                <span>{superAdminPassSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSuperAdminChangePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label">Current Super Admin Password *</label>
+                <input
+                  type="password"
+                  value={superAdminCurrentPassword}
+                  onChange={(e) => setSuperAdminCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                  className="form-input"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">New Password * (Min. 6 chars)</label>
+                <input
+                  type="password"
+                  value={superAdminNewPassword}
+                  onChange={(e) => setSuperAdminNewPassword(e.target.value)}
+                  placeholder="Enter secure new password"
+                  className="form-input"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Confirm New Password *</label>
+                <input
+                  type="password"
+                  value={superAdminConfirmPassword}
+                  onChange={(e) => setSuperAdminConfirmPassword(e.target.value)}
+                  placeholder="Re-enter new password"
+                  className="form-input"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-3" style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                <button type="button" onClick={() => setShowChangeSuperAdminPasswordModal(false)} className="btn btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Update Super Admin Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Edit User Credentials Modal */}
+      {showEditCredModal && editingCredTarget && (
+        <div className="modal-overlay" onClick={() => setShowEditCredModal(false)}>
+          <div className="modal-content" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.25rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  Edit User ID & Credentials
+                </h3>
+                <p style={{ fontSize: '0.78rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
+                  Super Admin direct credential override for {editingCredTarget.name} ({editingCredTarget.type.toUpperCase()})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditCredModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--slate-400)', fontSize: '1.2rem' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCredSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label">Account / Display Name</label>
+                <input
+                  type="text"
+                  value={editCredForm.name}
+                  onChange={(e) => setEditCredForm({ ...editCredForm, name: e.target.value })}
+                  className="form-input"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  {editingCredTarget.type === 'admin' ? 'Administrative User ID *' : 'Primary Login Email *'}
+                </label>
+                <input
+                  type="text"
+                  value={editCredForm.identifier}
+                  onChange={(e) => setEditCredForm({ ...editCredForm, identifier: e.target.value })}
+                  className="form-input"
+                  required
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--slate-400)' }}>
+                  {editingCredTarget.type === 'admin'
+                    ? 'Unique login handle without spaces (e.g. admin_ops)'
+                    : 'Registered email used for authentication'}
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">
+                  {editingCredTarget.type === 'admin' ? 'Official Work Email *' : 'Contact Mobile / Phone *'}
+                </label>
+                <input
+                  type="text"
+                  value={editCredForm.secondaryIdentifier}
+                  onChange={(e) => setEditCredForm({ ...editCredForm, secondaryIdentifier: e.target.value })}
+                  className="form-input"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Set New Password (Direct Super Admin Override)</label>
+                <input
+                  type="text"
+                  value={editCredForm.newPassword}
+                  onChange={(e) => setEditCredForm({ ...editCredForm, newPassword: e.target.value })}
+                  placeholder="Leave as is or enter new password"
+                  className="form-input"
+                  style={{ fontFamily: 'monospace', fontWeight: 600 }}
+                  required
+                />
+                <span style={{ fontSize: '0.72rem', color: '#047857' }}>
+                  ✓ Super Admin has master privilege to set cleartext passwords directly
+                </span>
+              </div>
+
+              <div className="flex justify-end gap-3" style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                <button type="button" onClick={() => setShowEditCredModal(false)} className="btn btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Trigger OTP Password Reset Modal */}
+      {showOtpResetModal && otpResetTarget && (
+        <div className="modal-overlay" onClick={() => setShowOtpResetModal(false)}>
+          <div className="modal-content" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.25rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  OTP-Authenticated Password Reset
+                </h3>
+                <p style={{ fontSize: '0.78rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
+                  Cryptographic OTP verification for {otpResetTarget.name} ({otpResetTarget.identifier})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowOtpResetModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--slate-400)', fontSize: '1.2rem' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Simulated Live OTP Dispatch Notice */}
+            {generatedOtpInfo && (
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, #EDE9FE 0%, #E0E7FF 100%)',
+                  border: '1.5px solid #8B5CF6',
+                  borderRadius: '12px',
+                  padding: '1rem',
+                  marginBottom: '1.25rem',
+                  boxShadow: '0 4px 12px rgba(139, 92, 246, 0.12)',
+                }}
+              >
+                <div className="flex items-center justify-between" style={{ marginBottom: '0.4rem' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#6D28D9', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    ✨ Live OTP Dispatch Simulation
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: '#7C3AED' }}>Valid for 10 minutes</span>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#4C1D95', lineHeight: 1.4 }}>
+                  Verification OTP generated for <strong>{generatedOtpInfo.targetIdentifier}</strong>:
+                </div>
+                <div className="flex items-center gap-3" style={{ marginTop: '0.5rem' }}>
+                  <span
+                    style={{
+                      fontFamily: 'monospace',
+                      fontSize: '1.4rem',
+                      fontWeight: 900,
+                      letterSpacing: '4px',
+                      background: '#FFFFFF',
+                      padding: '0.3rem 0.8rem',
+                      borderRadius: '8px',
+                      color: '#6D28D9',
+                      border: '1px solid #C4B5FD',
+                    }}
+                  >
+                    {generatedOtpInfo.otp}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setOtpResetForm({ ...otpResetForm, inputOtp: generatedOtpInfo.otp })}
+                    className="btn btn-sm"
+                    style={{ background: '#7C3AED', color: '#FFFFFF', fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                  >
+                    Auto-Fill OTP
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {otpResetMsg && (
+              <div
+                style={{
+                  background: otpResetMsg.success ? '#ECFDF5' : 'var(--rose-50)',
+                  border: `1px solid ${otpResetMsg.success ? '#A7F3D0' : 'var(--rose-100)'}`,
+                  color: otpResetMsg.success ? '#065F46' : 'var(--rose-600)',
+                  padding: '0.65rem 0.85rem',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '0.82rem',
+                  marginBottom: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                {otpResetMsg.success ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                <span>{otpResetMsg.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleExecuteOtpReset} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="form-group">
+                <label className="form-label">6-Digit Verification OTP *</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={otpResetForm.inputOtp}
+                  onChange={(e) => setOtpResetForm({ ...otpResetForm, inputOtp: e.target.value })}
+                  placeholder="Enter 6-digit code (e.g. 123456)"
+                  className="form-input"
+                  style={{ fontFamily: 'monospace', fontSize: '1.1rem', letterSpacing: '2px', fontWeight: 700 }}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">New Password * (Min. 6 chars)</label>
+                <input
+                  type="password"
+                  value={otpResetForm.newPassword}
+                  onChange={(e) => setOtpResetForm({ ...otpResetForm, newPassword: e.target.value })}
+                  placeholder="Enter secure new password"
+                  className="form-input"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Confirm New Password *</label>
+                <input
+                  type="password"
+                  value={otpResetForm.confirmPassword}
+                  onChange={(e) => setOtpResetForm({ ...otpResetForm, confirmPassword: e.target.value })}
+                  placeholder="Re-enter new password"
+                  className="form-input"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-3" style={{ marginTop: '0.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                <button type="button" onClick={() => setShowOtpResetModal(false)} className="btn btn-secondary">
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Verify OTP & Reset Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

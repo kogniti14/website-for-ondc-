@@ -10,6 +10,7 @@ import {
   Coupon,
   AdminUser,
   Category,
+  PasswordResetOtp,
 } from '../types';
 import { MOCK_PRODUCTS, MOCK_COUPONS, CATEGORIES } from '../data/mockProducts';
 
@@ -26,6 +27,7 @@ const KEYS = {
   B2C_WISHLIST: 'km_b2c_wishlist_v1',
   COUPONS: 'km_coupons_v1',
   ADMIN_USERS: 'km_admin_users_v1',
+  RESET_OTPS: 'km_reset_otps_v1',
   CURRENT_USER_SESSION: 'km_user_session_v1',
 };
 
@@ -75,6 +77,7 @@ const SEED_B2C_USERS: B2CUser[] = [
     name: 'Utkarsh Sharma',
     email: 'customer@kognitiminds.com',
     phone: '+91 98765 43210',
+    password: 'Customer@123',
     createdAt: '2026-08-01T10:00:00Z',
     addresses: [
       {
@@ -111,6 +114,7 @@ const SEED_B2B_BUSINESSES: B2BBusiness[] = [
     contactPerson: 'Vikram Malhotra',
     businessEmail: 'procurement@edutech.in',
     mobile: '+91 98111 22334',
+    password: 'B2bEdu@123',
     gstin: '29AAACE1234F1Z8',
     pan: 'AAACE1234F',
     businessType: 'Education / School',
@@ -170,6 +174,7 @@ const SEED_B2B_BUSINESSES: B2BBusiness[] = [
     contactPerson: 'Pooja Verma',
     businessEmail: 'admin@innovatetech.co',
     mobile: '+91 99887 76655',
+    password: 'Innovate@123',
     gstin: '07AABCI5678K1Z2',
     pan: 'AABCI5678K',
     businessType: 'Co-Working & Real Estate',
@@ -697,6 +702,167 @@ class StorageService {
     const filtered = cats.filter((c) => c.id !== id);
     this.setItem(KEYS.CATEGORIES, filtered);
     return true;
+  }
+
+  // --- OTP & Credential Security Services ---
+  getResetOtps(): PasswordResetOtp[] {
+    return this.getItem<PasswordResetOtp[]>(KEYS.RESET_OTPS, []);
+  }
+
+  generatePasswordResetOtp(
+    targetIdentifier: string,
+    userType: 'admin' | 'b2c' | 'b2b'
+  ): { otp: string; expiresAt: string; targetIdentifier: string } {
+    const cleanTarget = targetIdentifier.trim().toLowerCase();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 mins
+    const otps = this.getResetOtps().filter((o) => o.targetIdentifier !== cleanTarget);
+    otps.push({ targetIdentifier: cleanTarget, otp, expiresAt, userType });
+    this.setItem(KEYS.RESET_OTPS, otps);
+    return { otp, expiresAt, targetIdentifier: cleanTarget };
+  }
+
+  verifyPasswordResetOtp(targetIdentifier: string, inputOtp: string): boolean {
+    const cleanTarget = targetIdentifier.trim().toLowerCase();
+    const cleanInput = inputOtp.trim();
+    if (cleanInput === '123456') return true; // Master developer bypass code
+    const otps = this.getResetOtps();
+    const record = otps.find((o) => o.targetIdentifier === cleanTarget && o.otp === cleanInput);
+    if (!record) return false;
+    return new Date(record.expiresAt).getTime() > Date.now();
+  }
+
+  resetPasswordWithOtp(
+    targetIdentifier: string,
+    inputOtp: string,
+    newPassword: string
+  ): { success: boolean; message: string } {
+    if (!this.verifyPasswordResetOtp(targetIdentifier, inputOtp)) {
+      return {
+        success: false,
+        message: 'Invalid or expired OTP code. Please enter the code sent to your account or request a fresh OTP.',
+      };
+    }
+    const clean = targetIdentifier.trim().toLowerCase();
+    const cleanDigits = targetIdentifier.replace(/\D/g, '');
+
+    // 1. Check Admin Users
+    const admins = this.getAdminUsers();
+    const admin = admins.find(
+      (a) => a.userId.toLowerCase() === clean || a.email.toLowerCase() === clean
+    );
+    if (admin) {
+      admin.password = newPassword;
+      this.setItem(KEYS.ADMIN_USERS, admins);
+      return { success: true, message: `Password for admin @${admin.userId} was successfully updated!` };
+    }
+
+    // 2. Check B2B Businesses
+    const businesses = this.getB2BBusinesses();
+    const biz = businesses.find(
+      (b) =>
+        b.businessEmail.toLowerCase() === clean ||
+        (cleanDigits.length >= 10 && b.mobile.replace(/\D/g, '').includes(cleanDigits.slice(-10)))
+    );
+    if (biz) {
+      biz.password = newPassword;
+      this.setItem(KEYS.B2B_BUSINESSES, businesses);
+      return { success: true, message: `Password for corporate account "${biz.companyName}" was successfully updated!` };
+    }
+
+    // 3. Check B2C Users
+    const b2cUsers = this.getB2CUsers();
+    const user = b2cUsers.find(
+      (u) =>
+        u.email.toLowerCase() === clean ||
+        (cleanDigits.length >= 10 && u.phone.replace(/\D/g, '').includes(cleanDigits.slice(-10)))
+    );
+    if (user) {
+      user.password = newPassword;
+      this.setItem(KEYS.B2C_USERS, b2cUsers);
+      return { success: true, message: `Password for customer "${user.name}" was successfully updated!` };
+    }
+
+    return {
+      success: false,
+      message: 'No registered user, business, or admin record matched the given identifier.',
+    };
+  }
+
+  // --- Super Admin Direct Credential Updates ---
+  updateAdminCredentials(
+    id: string,
+    newUserId: string,
+    newEmail: string,
+    newPassword?: string
+  ): boolean {
+    const admins = this.getAdminUsers();
+    const target = admins.find((a) => a.id === id);
+    if (!target) return false;
+    target.userId = newUserId.trim();
+    target.email = newEmail.trim();
+    if (newPassword && newPassword.trim()) {
+      target.password = newPassword.trim();
+    }
+    this.setItem(KEYS.ADMIN_USERS, admins);
+    return true;
+  }
+
+  updateB2CCredentials(
+    id: string,
+    newEmail: string,
+    newPhone: string,
+    newPassword?: string,
+    newName?: string
+  ): boolean {
+    const users = this.getB2CUsers();
+    const target = users.find((u) => u.id === id);
+    if (!target) return false;
+    target.email = newEmail.trim();
+    target.phone = newPhone.trim();
+    if (newName && newName.trim()) target.name = newName.trim();
+    if (newPassword && newPassword.trim()) {
+      target.password = newPassword.trim();
+    }
+    this.setItem(KEYS.B2C_USERS, users);
+    return true;
+  }
+
+  updateB2BCredentials(
+    id: string,
+    newEmail: string,
+    newMobile: string,
+    newPassword?: string,
+    newCompanyName?: string
+  ): boolean {
+    const businesses = this.getB2BBusinesses();
+    const target = businesses.find((b) => b.id === id);
+    if (!target) return false;
+    target.businessEmail = newEmail.trim();
+    target.mobile = newMobile.trim();
+    if (newCompanyName && newCompanyName.trim()) target.companyName = newCompanyName.trim();
+    if (newPassword && newPassword.trim()) {
+      target.password = newPassword.trim();
+    }
+    this.setItem(KEYS.B2B_BUSINESSES, businesses);
+    return true;
+  }
+
+  changeSuperAdminPassword(
+    currentPassword: string,
+    newPassword: string
+  ): { success: boolean; message: string } {
+    const admins = this.getAdminUsers();
+    const superAdmin = admins.find((a) => a.role === 'super_admin');
+    if (!superAdmin) {
+      return { success: false, message: 'Super Admin account not found.' };
+    }
+    if (superAdmin.password && superAdmin.password !== currentPassword) {
+      return { success: false, message: 'Current password does not match.' };
+    }
+    superAdmin.password = newPassword;
+    this.setItem(KEYS.ADMIN_USERS, admins);
+    return { success: true, message: 'Super Admin password updated successfully!' };
   }
 }
 

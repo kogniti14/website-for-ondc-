@@ -11,9 +11,12 @@ import {
   CheckCircle2,
   FileText,
   Upload,
+  ArrowLeft,
+  KeyRound,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { B2BBusiness } from '../../types';
+import { storageService } from '../../services/storageService';
 
 interface B2BAuthModalProps {
   onClose: () => void;
@@ -21,7 +24,7 @@ interface B2BAuthModalProps {
 }
 
 export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }) => {
-  const [tab, setTab] = useState<'login' | 'register'>('login');
+  const [tab, setTab] = useState<'login' | 'register' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -39,17 +42,74 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
   const [pincode, setPincode] = useState('');
   const [docUploaded, setDocUploaded] = useState(false);
 
+  // Forgot Password via OTP State
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [forgotOtpInfo, setForgotOtpInfo] = useState<{ otp: string; expiresAt: string } | null>(null);
+  const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
+
   const { loginB2B, registerB2B } = useAuth();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const cleanEmail = email.trim().toLowerCase();
+    const businesses = storageService.getB2BBusinesses();
+    const target = businesses.find((b) => b.businessEmail.toLowerCase() === cleanEmail);
+    if (target && target.password && password && target.password !== password) {
+      setError('Incorrect corporate password entered. Click "Forgot Password? Reset via OTP" below to reset.');
+      return;
+    }
     const success = loginB2B(email);
     if (success) {
       if (onSuccess) onSuccess();
       onClose();
     } else {
       setError('No business account found with this corporate email. Please register your company or use demo accounts.');
+    }
+  };
+
+  const handleSendB2BForgotOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!forgotEmail.trim()) {
+      setError('Please enter your registered corporate email.');
+      return;
+    }
+    const otpRes = storageService.generatePasswordResetOtp(forgotEmail.trim(), 'b2b');
+    setForgotOtpInfo(otpRes);
+    setForgotOtp(otpRes.otp);
+  };
+
+  const handleVerifyB2BForgotOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!forgotNewPassword || forgotNewPassword.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    const res = storageService.resetPasswordWithOtp(
+      forgotEmail.trim(),
+      forgotOtp.trim(),
+      forgotNewPassword
+    );
+    if (res.success) {
+      setForgotSuccess(res.message);
+      setEmail(forgotEmail.trim());
+      setPassword('');
+      setTimeout(() => {
+        setTab('login');
+        setForgotSuccess(null);
+        setForgotOtpInfo(null);
+      }, 2500);
+    } else {
+      setError(res.message);
     }
   };
 
@@ -185,54 +245,56 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
         )}
 
         {/* Tab Switcher */}
-        <div
-          style={{
-            display: 'flex',
-            background: 'rgba(255, 255, 255, 0.08)',
-            padding: '3px',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: '1.25rem',
-          }}
-        >
-          <button
-            onClick={() => {
-              setTab('login');
-              setError(null);
-            }}
+        {tab !== 'forgot' && (
+          <div
             style={{
-              flex: 1,
-              padding: '0.5rem',
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              borderRadius: '6px',
-              background: tab === 'login' ? 'var(--primary)' : 'transparent',
-              color: '#FFFFFF',
-              border: 'none',
-              cursor: 'pointer',
+              display: 'flex',
+              background: 'rgba(255, 255, 255, 0.08)',
+              padding: '3px',
+              borderRadius: 'var(--radius-md)',
+              marginBottom: '1.25rem',
             }}
           >
-            B2B Login
-          </button>
-          <button
-            onClick={() => {
-              setTab('register');
-              setError(null);
-            }}
-            style={{
-              flex: 1,
-              padding: '0.5rem',
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              borderRadius: '6px',
-              background: tab === 'register' ? 'var(--primary)' : 'transparent',
-              color: '#FFFFFF',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            Register Business
-          </button>
-        </div>
+            <button
+              onClick={() => {
+                setTab('login');
+                setError(null);
+              }}
+              style={{
+                flex: 1,
+                padding: '0.5rem',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                borderRadius: '6px',
+                background: tab === 'login' ? 'var(--primary)' : 'transparent',
+                color: '#FFFFFF',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              B2B Login
+            </button>
+            <button
+              onClick={() => {
+                setTab('register');
+                setError(null);
+              }}
+              style={{
+                flex: 1,
+                padding: '0.5rem',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                borderRadius: '6px',
+                background: tab === 'register' ? 'var(--primary)' : 'transparent',
+                color: '#FFFFFF',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              Register Business
+            </button>
+          </div>
+        )}
 
         {tab === 'login' ? (
           <div>
@@ -261,9 +323,32 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
               </div>
 
               <div className="form-group">
-                <label className="form-label" style={{ color: '#CBD5E1' }}>
-                  Password
-                </label>
+                <div className="flex justify-between items-center" style={{ marginBottom: '0.4rem' }}>
+                  <label className="form-label" style={{ color: '#CBD5E1', margin: 0 }}>
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTab('forgot');
+                      setForgotEmail(email || '');
+                      setError(null);
+                      setForgotSuccess(null);
+                      setForgotOtpInfo(null);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                      color: '#F59E0B',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Forgot Password? Reset via OTP
+                  </button>
+                </div>
                 <div style={{ position: 'relative' }}>
                   <Lock size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94A3B8' }} />
                   <input
@@ -344,6 +429,195 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
                 </button>
               </div>
             </div>
+          </div>
+        ) : tab === 'forgot' ? (
+          /* Forgot Password via OTP Form for B2B */
+          <div>
+            <div className="flex items-center gap-2" style={{ marginBottom: '1.25rem' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setTab('login');
+                  setError(null);
+                }}
+                className="btn btn-sm btn-outline-b2b"
+                style={{ padding: '0.3rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#FFF' }}
+              >
+                <ArrowLeft size={14} /> Back to B2B Sign In
+              </button>
+              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#FFF' }}>
+                Corporate Password Recovery
+              </span>
+            </div>
+
+            {forgotSuccess ? (
+              <div
+                style={{
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  color: '#34D399',
+                  padding: '1.25rem',
+                  borderRadius: 'var(--radius-md)',
+                  textAlign: 'center',
+                }}
+              >
+                <CheckCircle2 size={32} style={{ margin: '0 auto 0.5rem' }} />
+                <div style={{ fontWeight: 800, fontSize: '1rem', marginBottom: '0.25rem', color: '#FFF' }}>Password Reset Complete</div>
+                <p style={{ fontSize: '0.82rem' }}>{forgotSuccess}</p>
+                <button
+                  type="button"
+                  onClick={() => setTab('login')}
+                  className="btn btn-amber btn-sm"
+                  style={{ marginTop: '1rem', width: '100%' }}
+                >
+                  Sign In with New Password
+                </button>
+              </div>
+            ) : !forgotOtpInfo ? (
+              <form onSubmit={handleSendB2BForgotOtp}>
+                <div className="form-group">
+                  <label className="form-label" style={{ color: '#CBD5E1' }}>Registered Corporate Email</label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94A3B8' }} />
+                    <input
+                      type="email"
+                      placeholder="procurement@company.com"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className="form-input"
+                      style={{
+                        paddingLeft: '38px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderColor: 'rgba(255, 255, 255, 0.15)',
+                        color: '#FFFFFF',
+                      }}
+                      required
+                    />
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '0.2rem', display: 'block' }}>
+                    A 6-digit authentication OTP will be generated to authenticate corporate recovery.
+                  </span>
+                </div>
+
+                <button type="submit" className="btn btn-amber" style={{ width: '100%', marginTop: '0.5rem' }}>
+                  Generate & Send Verification OTP
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyB2BForgotOtp}>
+                {/* Live OTP Notification Simulation Banner */}
+                <div
+                  style={{
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    border: '1.5px solid rgba(245, 158, 11, 0.4)',
+                    borderRadius: '10px',
+                    padding: '0.85rem',
+                    marginBottom: '1rem',
+                  }}
+                >
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#FBBF24', marginBottom: '0.25rem' }}>
+                    ✨ Live OTP Dispatch Simulation
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#E2E8F0' }}>
+                    OTP sent to <strong>{forgotEmail}</strong>:
+                  </div>
+                  <div className="flex items-center gap-3" style={{ marginTop: '0.4rem' }}>
+                    <span
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: '1.3rem',
+                        fontWeight: 900,
+                        letterSpacing: '3px',
+                        background: '#1E293B',
+                        padding: '0.25rem 0.6rem',
+                        borderRadius: '6px',
+                        color: '#F59E0B',
+                        border: '1px solid rgba(245, 158, 11, 0.3)',
+                      }}
+                    >
+                      {forgotOtpInfo.otp}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setForgotOtp(forgotOtpInfo.otp)}
+                      className="btn btn-sm"
+                      style={{ background: '#F59E0B', color: '#000', fontWeight: 700, fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                    >
+                      Auto-Fill OTP
+                    </button>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ color: '#CBD5E1' }}>6-Digit Verification OTP *</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={forgotOtp}
+                    onChange={(e) => setForgotOtp(e.target.value)}
+                    placeholder="123456"
+                    className="form-input"
+                    style={{
+                      fontFamily: 'monospace',
+                      fontSize: '1.1rem',
+                      letterSpacing: '2px',
+                      textAlign: 'center',
+                      fontWeight: 700,
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      borderColor: 'rgba(255, 255, 255, 0.15)',
+                      color: '#FFFFFF',
+                    }}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ color: '#CBD5E1' }}>New Password * (Min. 6 chars)</label>
+                  <div style={{ position: 'relative' }}>
+                    <Lock size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94A3B8' }} />
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={forgotNewPassword}
+                      onChange={(e) => setForgotNewPassword(e.target.value)}
+                      className="form-input"
+                      style={{
+                        paddingLeft: '38px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderColor: 'rgba(255, 255, 255, 0.15)',
+                        color: '#FFFFFF',
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" style={{ color: '#CBD5E1' }}>Confirm New Password *</label>
+                  <div style={{ position: 'relative' }}>
+                    <Lock size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94A3B8' }} />
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={forgotConfirmPassword}
+                      onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                      className="form-input"
+                      style={{
+                        paddingLeft: '38px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderColor: 'rgba(255, 255, 255, 0.15)',
+                        color: '#FFFFFF',
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <button type="submit" className="btn btn-amber" style={{ width: '100%', marginTop: '0.5rem' }}>
+                  Verify OTP & Set New Password
+                </button>
+              </form>
+            )}
           </div>
         ) : (
           /* Business Registration Form */

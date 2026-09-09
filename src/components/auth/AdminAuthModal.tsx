@@ -12,9 +12,12 @@ import {
   EyeOff,
   Clock,
   ArrowRight,
+  ArrowLeft,
+  KeyRound,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { AdminRole } from '../../types';
+import { storageService } from '../../services/storageService';
 
 interface AdminAuthModalProps {
   onClose: () => void;
@@ -29,12 +32,20 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
 }) => {
   const { loginAdminWithCredentials, registerAdminUser } = useAuth();
 
-  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isPendingNotice, setIsPendingNotice] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredUserId, setRegisteredUserId] = useState('');
+
+  // Forgot Password via OTP State
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [forgotOtpInfo, setForgotOtpInfo] = useState<{ otp: string; expiresAt: string } | null>(null);
+  const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
 
   // Login Form State
   const [loginIdentifier, setLoginIdentifier] = useState('');
@@ -54,6 +65,48 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
     setLoginPassword(pass);
     setErrorMsg(null);
     setIsPendingNotice(false);
+  };
+
+  const handleSendAdminForgotOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    if (!forgotIdentifier.trim()) {
+      setErrorMsg('Please enter your Admin User ID or Work Email.');
+      return;
+    }
+    const otpRes = storageService.generatePasswordResetOtp(forgotIdentifier.trim(), 'admin');
+    setForgotOtpInfo(otpRes);
+    setForgotOtp(otpRes.otp);
+  };
+
+  const handleVerifyAdminForgotOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    if (!forgotNewPassword || forgotNewPassword.length < 6) {
+      setErrorMsg('Password must be at least 6 characters long.');
+      return;
+    }
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      setErrorMsg('Passwords do not match.');
+      return;
+    }
+    const res = storageService.resetPasswordWithOtp(
+      forgotIdentifier.trim(),
+      forgotOtp.trim(),
+      forgotNewPassword
+    );
+    if (res.success) {
+      setForgotSuccess(res.message);
+      setLoginIdentifier(forgotIdentifier.trim());
+      setLoginPassword('');
+      setTimeout(() => {
+        setMode('login');
+        setForgotSuccess(null);
+        setForgotOtpInfo(null);
+      }, 2500);
+    } else {
+      setErrorMsg(res.message);
+    }
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -196,8 +249,8 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Selector */}
-        {!registrationSuccess && (
+        {/* Navigation Switcher */}
+        {!registrationSuccess && mode !== 'forgot' && (
           <div
             style={{
               display: 'flex',
@@ -411,9 +464,32 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#CBD5E1', marginBottom: '0.4rem' }}>
-                    Password *
-                  </label>
+                  <div className="flex justify-between items-center" style={{ marginBottom: '0.4rem' }}>
+                    <label style={{ fontSize: '0.78rem', fontWeight: 600, color: '#CBD5E1', margin: 0 }}>
+                      Password *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('forgot');
+                        setForgotIdentifier(loginIdentifier || '');
+                        setErrorMsg(null);
+                        setForgotSuccess(null);
+                        setForgotOtpInfo(null);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        fontSize: '0.72rem',
+                        color: '#C084FC',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Forgot Staff Password? Reset via OTP
+                    </button>
+                  </div>
                   <div style={{ position: 'relative' }}>
                     <Lock size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: '#94A3B8' }} />
                     <input
@@ -571,6 +647,220 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                   </button>
                 </div>
               </div>
+            </div>
+          ) : mode === 'forgot' ? (
+            /* --- FORGOT PASSWORD VIA OTP TAB --- */
+            <div>
+              <div className="flex items-center gap-2" style={{ marginBottom: '1.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('login');
+                    setErrorMsg(null);
+                  }}
+                  className="btn btn-sm btn-outline-b2b"
+                  style={{ padding: '0.3rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#FFF' }}
+                >
+                  <ArrowLeft size={14} /> Back to Admin Sign In
+                </button>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#FFF' }}>
+                  Administrative Password Recovery
+                </span>
+              </div>
+
+              {forgotSuccess ? (
+                <div
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    color: '#34D399',
+                    padding: '1.25rem',
+                    borderRadius: 'var(--radius-md)',
+                    textAlign: 'center',
+                  }}
+                >
+                  <CheckCircle2 size={32} style={{ margin: '0 auto 0.5rem' }} />
+                  <div style={{ fontWeight: 800, fontSize: '1rem', marginBottom: '0.25rem', color: '#FFF' }}>
+                    Password Reset Complete
+                  </div>
+                  <p style={{ fontSize: '0.82rem' }}>{forgotSuccess}</p>
+                  <button
+                    type="button"
+                    onClick={() => setMode('login')}
+                    className="btn btn-purple btn-sm"
+                    style={{ marginTop: '1rem', width: '100%' }}
+                  >
+                    Sign In with New Password
+                  </button>
+                </div>
+              ) : !forgotOtpInfo ? (
+                <form onSubmit={handleSendAdminForgotOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#CBD5E1', marginBottom: '0.4rem' }}>
+                      Admin User ID or Work Email *
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <User size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: '#94A3B8' }} />
+                      <input
+                        type="text"
+                        value={forgotIdentifier}
+                        onChange={(e) => setForgotIdentifier(e.target.value)}
+                        placeholder="e.g. superadmin or admin_ops"
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '0.65rem 1rem 0.65rem 2.4rem',
+                          background: 'rgba(255, 255, 255, 0.06)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: '10px',
+                          color: '#FFFFFF',
+                          fontSize: '0.88rem',
+                        }}
+                      />
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '0.2rem', display: 'block' }}>
+                      A secure 6-digit authentication OTP will be dispatched to verify your identity.
+                    </span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn btn-purple"
+                    style={{ padding: '0.75rem', fontWeight: 700, justifyContent: 'center', marginTop: '0.5rem' }}
+                  >
+                    Generate & Send Verification OTP
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyAdminForgotOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {/* Live OTP Notification Simulation Banner */}
+                  <div
+                    style={{
+                      background: 'rgba(147, 51, 234, 0.18)',
+                      border: '1.5px solid rgba(147, 51, 234, 0.45)',
+                      borderRadius: '10px',
+                      padding: '0.85rem',
+                    }}
+                  >
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#C084FC', marginBottom: '0.25rem' }}>
+                      ✨ Live OTP Dispatch Simulation
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: '#E9D5FF' }}>
+                      OTP generated for <strong>{forgotIdentifier}</strong>:
+                    </div>
+                    <div className="flex items-center gap-3" style={{ marginTop: '0.4rem' }}>
+                      <span
+                        style={{
+                          fontFamily: 'monospace',
+                          fontSize: '1.3rem',
+                          fontWeight: 900,
+                          letterSpacing: '3px',
+                          background: '#0F172A',
+                          padding: '0.25rem 0.6rem',
+                          borderRadius: '6px',
+                          color: '#C084FC',
+                          border: '1px solid rgba(147, 51, 234, 0.4)',
+                        }}
+                      >
+                        {forgotOtpInfo.otp}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setForgotOtp(forgotOtpInfo.otp)}
+                        className="btn btn-sm"
+                        style={{ background: '#9333EA', color: '#FFF', fontWeight: 700, fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                      >
+                        Auto-Fill OTP
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#CBD5E1', marginBottom: '0.4rem' }}>
+                      6-Digit Verification OTP *
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={forgotOtp}
+                      onChange={(e) => setForgotOtp(e.target.value)}
+                      placeholder="123456"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem',
+                        fontFamily: 'monospace',
+                        fontSize: '1.1rem',
+                        letterSpacing: '2px',
+                        textAlign: 'center',
+                        fontWeight: 700,
+                        background: 'rgba(255, 255, 255, 0.06)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        borderRadius: '10px',
+                        color: '#FFFFFF',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#CBD5E1', marginBottom: '0.4rem' }}>
+                      New Password * (Min. 6 chars)
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <Lock size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: '#94A3B8' }} />
+                      <input
+                        type="password"
+                        value={forgotNewPassword}
+                        onChange={(e) => setForgotNewPassword(e.target.value)}
+                        placeholder="••••••••••••"
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '0.65rem 1rem 0.65rem 2.4rem',
+                          background: 'rgba(255, 255, 255, 0.06)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: '10px',
+                          color: '#FFFFFF',
+                          fontSize: '0.88rem',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#CBD5E1', marginBottom: '0.4rem' }}>
+                      Confirm New Password *
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <Lock size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: '#94A3B8' }} />
+                      <input
+                        type="password"
+                        value={forgotConfirmPassword}
+                        onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                        placeholder="••••••••••••"
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '0.65rem 1rem 0.65rem 2.4rem',
+                          background: 'rgba(255, 255, 255, 0.06)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          borderRadius: '10px',
+                          color: '#FFFFFF',
+                          fontSize: '0.88rem',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn btn-purple"
+                    style={{ padding: '0.75rem', fontWeight: 700, justifyContent: 'center', marginTop: '0.5rem' }}
+                  >
+                    Verify OTP & Reset Password
+                  </button>
+                </form>
+              )}
             </div>
           ) : (
             /* --- REGISTRATION TAB --- */

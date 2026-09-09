@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, Phone, CheckCircle2, AlertCircle } from 'lucide-react';
+import { X, Mail, Lock, User, Phone, CheckCircle2, AlertCircle, ArrowLeft, KeyRound } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { storageService } from '../../services/storageService';
 
 interface AuthModalProps {
   initialMode?: 'login' | 'register';
@@ -8,7 +9,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onClose }) => {
-  const [mode, setMode] = useState<'login' | 'register' | 'otp'>(initialMode);
+  const [mode, setMode] = useState<'login' | 'register' | 'otp' | 'forgot'>(initialMode);
   const [loginMethod, setLoginMethod] = useState<'password' | 'otp'>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,6 +19,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
   const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Forgot Password via OTP State
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [forgotOtpInfo, setForgotOtpInfo] = useState<{ otp: string; expiresAt: string } | null>(null);
+  const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
+
   const { loginB2C, registerB2C } = useAuth();
 
   const handleLoginSubmit = (e: React.FormEvent) => {
@@ -25,6 +34,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
     setError(null);
     if (!email) {
       setError('Please enter your registered email address or mobile number');
+      return;
+    }
+    const cleanEmail = email.trim().toLowerCase();
+    const users = storageService.getB2CUsers();
+    const existing = users.find(
+      (u) => u.email.toLowerCase() === cleanEmail || u.phone.replace(/\D/g, '') === email.replace(/\D/g, '')
+    );
+    if (existing && existing.password && password && existing.password !== password) {
+      setError('Incorrect password entered. Click "Forgot Password? Reset via OTP" below to reset your password.');
       return;
     }
     const success = loginB2C(email);
@@ -44,8 +62,51 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
       name: fullName,
       email,
       phone,
+      password: password || 'Customer@123',
     });
     onClose();
+  };
+
+  const handleSendForgotOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!forgotIdentifier.trim()) {
+      setError('Please enter your registered email address or mobile number.');
+      return;
+    }
+    const otpRes = storageService.generatePasswordResetOtp(forgotIdentifier.trim(), 'b2c');
+    setForgotOtpInfo(otpRes);
+    setForgotOtp(otpRes.otp);
+  };
+
+  const handleVerifyForgotOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!forgotNewPassword || forgotNewPassword.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    const res = storageService.resetPasswordWithOtp(
+      forgotIdentifier.trim(),
+      forgotOtp.trim(),
+      forgotNewPassword
+    );
+    if (res.success) {
+      setForgotSuccess(res.message);
+      setEmail(forgotIdentifier.trim());
+      setPassword('');
+      setTimeout(() => {
+        setMode('login');
+        setForgotSuccess(null);
+        setForgotOtpInfo(null);
+      }, 2500);
+    } else {
+      setError(res.message);
+    }
   };
 
   const handleSendOtp = (e: React.FormEvent) => {
@@ -125,54 +186,221 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
         )}
 
         {/* Tabs for Login vs Register */}
-        <div
-          style={{
-            display: 'flex',
-            background: 'var(--slate-100)',
-            padding: '3px',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: '1.25rem',
-          }}
-        >
-          <button
-            onClick={() => {
-              setMode('login');
-              setError(null);
-            }}
+        {mode !== 'forgot' && (
+          <div
             style={{
-              flex: 1,
-              padding: '0.45rem',
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              borderRadius: '6px',
-              background: mode === 'login' ? '#ffffff' : 'transparent',
-              color: mode === 'login' ? 'var(--slate-900)' : 'var(--slate-500)',
-              boxShadow: mode === 'login' ? 'var(--shadow-xs)' : 'none',
+              display: 'flex',
+              background: 'var(--slate-100)',
+              padding: '3px',
+              borderRadius: 'var(--radius-md)',
+              marginBottom: '1.25rem',
             }}
           >
-            Sign In
-          </button>
-          <button
-            onClick={() => {
-              setMode('register');
-              setError(null);
-            }}
-            style={{
-              flex: 1,
-              padding: '0.45rem',
-              fontSize: '0.85rem',
-              fontWeight: 700,
-              borderRadius: '6px',
-              background: mode === 'register' ? '#ffffff' : 'transparent',
-              color: mode === 'register' ? 'var(--slate-900)' : 'var(--slate-500)',
-              boxShadow: mode === 'register' ? 'var(--shadow-xs)' : 'none',
-            }}
-          >
-            New Customer
-          </button>
-        </div>
+            <button
+              onClick={() => {
+                setMode('login');
+                setError(null);
+              }}
+              style={{
+                flex: 1,
+                padding: '0.45rem',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                borderRadius: '6px',
+                background: mode === 'login' ? '#ffffff' : 'transparent',
+                color: mode === 'login' ? 'var(--slate-900)' : 'var(--slate-500)',
+                boxShadow: mode === 'login' ? 'var(--shadow-xs)' : 'none',
+              }}
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => {
+                setMode('register');
+                setError(null);
+              }}
+              style={{
+                flex: 1,
+                padding: '0.45rem',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                borderRadius: '6px',
+                background: mode === 'register' ? '#ffffff' : 'transparent',
+                color: mode === 'register' ? 'var(--slate-900)' : 'var(--slate-500)',
+                boxShadow: mode === 'register' ? 'var(--shadow-xs)' : 'none',
+              }}
+            >
+              New Customer
+            </button>
+          </div>
+        )}
 
-        {mode === 'login' ? (
+        {mode === 'forgot' ? (
+          /* Forgot Password via OTP Form */
+          <div>
+            <div className="flex items-center gap-2" style={{ marginBottom: '1.25rem' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('login');
+                  setError(null);
+                }}
+                className="btn btn-sm btn-outline"
+                style={{ padding: '0.3rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              >
+                <ArrowLeft size={14} /> Back to Sign In
+              </button>
+              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--slate-800)' }}>
+                Reset Account Password
+              </span>
+            </div>
+
+            {forgotSuccess ? (
+              <div
+                style={{
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  color: '#065F46',
+                  padding: '1.25rem',
+                  borderRadius: 'var(--radius-md)',
+                  textAlign: 'center',
+                }}
+              >
+                <CheckCircle2 size={32} className="text-emerald-600" style={{ margin: '0 auto 0.5rem' }} />
+                <div style={{ fontWeight: 800, fontSize: '1rem', marginBottom: '0.25rem' }}>Password Reset Complete</div>
+                <p style={{ fontSize: '0.82rem' }}>{forgotSuccess}</p>
+                <button
+                  type="button"
+                  onClick={() => setMode('login')}
+                  className="btn btn-primary btn-sm"
+                  style={{ marginTop: '1rem', width: '100%' }}
+                >
+                  Sign In with New Password
+                </button>
+              </div>
+            ) : !forgotOtpInfo ? (
+              <form onSubmit={handleSendForgotOtp}>
+                <div className="form-group">
+                  <label className="form-label">Registered Email or Mobile Number</label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
+                    <input
+                      type="text"
+                      placeholder="customer@kognitiminds.com"
+                      value={forgotIdentifier}
+                      onChange={(e) => setForgotIdentifier(e.target.value)}
+                      className="form-input"
+                      style={{ paddingLeft: '38px' }}
+                      required
+                    />
+                  </div>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--slate-500)', marginTop: '0.2rem', display: 'block' }}>
+                    We will dispatch a secure 6-digit authentication OTP to verify ownership.
+                  </span>
+                </div>
+
+                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
+                  Generate & Send Verification OTP
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyForgotOtp}>
+                {/* Live OTP Notification Simulation Banner */}
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, #ECFDF5 0%, #E0F2FE 100%)',
+                    border: '1.5px solid #10B981',
+                    borderRadius: '10px',
+                    padding: '0.85rem',
+                    marginBottom: '1rem',
+                  }}
+                >
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#047857', marginBottom: '0.25rem' }}>
+                    ✨ Live OTP Dispatch Simulation
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#065F46' }}>
+                    OTP sent to <strong>{forgotIdentifier}</strong>:
+                  </div>
+                  <div className="flex items-center gap-3" style={{ marginTop: '0.4rem' }}>
+                    <span
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: '1.3rem',
+                        fontWeight: 900,
+                        letterSpacing: '3px',
+                        background: '#FFFFFF',
+                        padding: '0.25rem 0.6rem',
+                        borderRadius: '6px',
+                        color: '#047857',
+                        border: '1px solid #A7F3D0',
+                      }}
+                    >
+                      {forgotOtpInfo.otp}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setForgotOtp(forgotOtpInfo.otp)}
+                      className="btn btn-sm"
+                      style={{ background: '#10B981', color: '#FFFFFF', fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
+                    >
+                      Auto-Fill OTP
+                    </button>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">6-Digit Verification OTP *</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={forgotOtp}
+                    onChange={(e) => setForgotOtp(e.target.value)}
+                    placeholder="123456"
+                    className="form-input"
+                    style={{ fontFamily: 'monospace', fontSize: '1.1rem', letterSpacing: '2px', textAlign: 'center', fontWeight: 700 }}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">New Password * (Min. 6 chars)</label>
+                  <div style={{ position: 'relative' }}>
+                    <Lock size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={forgotNewPassword}
+                      onChange={(e) => setForgotNewPassword(e.target.value)}
+                      className="form-input"
+                      style={{ paddingLeft: '38px' }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Confirm New Password *</label>
+                  <div style={{ position: 'relative' }}>
+                    <Lock size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={forgotConfirmPassword}
+                      onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                      className="form-input"
+                      style={{ paddingLeft: '38px' }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
+                  Verify OTP & Set New Password
+                </button>
+              </form>
+            )}
+          </div>
+        ) : mode === 'login' ? (
           <div>
             {/* Login Method Toggle */}
             <div className="flex justify-center gap-4" style={{ marginBottom: '1rem', fontSize: '0.8rem' }}>
@@ -223,9 +451,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
                 <div className="form-group">
                   <div className="flex justify-between items-center">
                     <label className="form-label">Password</label>
-                    <a href="#forgot" onClick={(e) => { e.preventDefault(); alert('Demo reset link sent to registered email.'); }} style={{ fontSize: '0.75rem', color: 'var(--primary)' }}>
-                      Forgot Password?
-                    </a>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('forgot');
+                        setForgotIdentifier(email || '');
+                        setError(null);
+                        setForgotSuccess(null);
+                        setForgotOtpInfo(null);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        color: 'var(--primary)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Forgot Password? Reset via OTP
+                    </button>
                   </div>
                   <div style={{ position: 'relative' }}>
                     <Lock size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
@@ -363,6 +609,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
                   value={phone}
                   maxLength={10}
                   onChange={(e) => setPhone(e.target.value)}
+                  className="form-input"
+                  style={{ paddingLeft: '38px' }}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Account Password</label>
+              <div style={{ position: 'relative' }}>
+                <Lock size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
+                <input
+                  type="password"
+                  placeholder="Create secure password (min 6 chars)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="form-input"
                   style={{ paddingLeft: '38px' }}
                   required
