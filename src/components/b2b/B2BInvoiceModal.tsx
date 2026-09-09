@@ -282,7 +282,9 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
               <div><strong>GSTIN:</strong> <code style={{ color: '#0284C7', fontWeight: 700 }}>09AALCK4750F1ZC</code></div>
               <div><strong>PAN:</strong> AALCK4750F | <strong>State Code:</strong> 09 (Uttar Pradesh)</div>
               <div><strong>CIN:</strong> U46496UP2024PTC213997</div>
-              <div style={{ color: '#64748B' }}>Corporate Desk: enterprise@kognitiminds.com | +91 80 4912 8800</div>
+              <div style={{ color: '#64748B', marginTop: '0.2rem' }}>
+                Sales Desk: sales@kognitiminds.com | Accounts: accounts@kognitiminds.com | Helpline: +91 9931648595
+              </div>
             </div>
 
             {/* Invoice Reference Metadata */}

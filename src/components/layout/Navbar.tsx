@@ -11,6 +11,7 @@ import {
   Phone,
   Truck,
   ShieldCheck,
+  Building2,
   LogOut,
   Package,
 } from 'lucide-react';
@@ -55,13 +56,13 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Top Announcement Bar */}
       <div className="announcement-bar hide-on-mobile">
         <span className="flex items-center gap-1">
-          <Truck size={14} className="text-emerald-400" /> Free Pan-India Delivery on orders above ₹999
+          <Truck size={14} className="text-emerald-400" /> 🚚 FREE PAN-INDIA DELIVERY on Orders Above ₹1,999
         </span>
         <span className="flex items-center gap-1">
-          <ShieldCheck size={14} className="text-amber-400" /> 100% Genuine Physical Products with GST Billing
+          <ShieldCheck size={14} className="text-amber-400" /> ✓ 100% GENUINE PRODUCTS | GST Invoice Available
         </span>
         <span className="flex items-center gap-1">
-          <Phone size={14} className="text-blue-400" /> B2B / Institutional Hotline: +91 80 4912 8800
+          <Building2 size={14} className="text-blue-400" /> 🏢 B2B & INSTITUTIONAL ENQUIRIES: +91 9931648595
         </span>
       </div>
 

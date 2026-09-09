@@ -192,7 +192,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const totalGst = Math.round((netAmount - taxableAmount) * 100) / 100;
     const cgst = Math.round((totalGst / 2) * 100) / 100;
     const sgst = Math.round((totalGst / 2) * 100) / 100;
-    const shippingFee = netAmount > 999 || netAmount === 0 ? 0 : 99;
+    const shippingFee = netAmount >= 1999 || netAmount === 0 ? 0 : 99;
     const total = netAmount + shippingFee;
 
     return {

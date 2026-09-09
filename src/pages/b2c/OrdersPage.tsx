@@ -349,7 +349,8 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                 <div style={{ fontSize: '0.8rem', color: 'var(--slate-600)', lineHeight: '1.4' }}>
                   Registered Office: Panchsheel Greens-2, Sec-16 B, Gr. Noida West, Bisrakh, Gautam Buddha Nagar, Uttar Pradesh, India - 201306<br />
                   <strong>GSTIN:</strong> 09AALCK4750F1ZC | <strong>CIN:</strong> U46496UP2024PTC213997<br />
-                  <strong>PAN:</strong> AALCK4750F | <strong>State Code:</strong> 09 (Uttar Pradesh)
+                  <strong>PAN:</strong> AALCK4750F | <strong>State Code:</strong> 09 (Uttar Pradesh)<br />
+                  <strong>Support:</strong> support@kognitiminds.com | <strong>Accounts:</strong> accounts@kognitiminds.com | <strong>Helpline:</strong> +91 9931648595
                 </div>
               </div>
 

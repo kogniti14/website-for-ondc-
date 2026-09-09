@@ -61,7 +61,7 @@ export const CartPage: React.FC<CartPageProps> = ({
     removeFromB2CCart(productId);
   };
 
-  const freeDeliveryThreshold = 999;
+  const freeDeliveryThreshold = 1999;
   const freeDeliveryShortfall = Math.max(0, freeDeliveryThreshold - calculations.subtotal);
 
   return (

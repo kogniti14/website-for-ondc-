@@ -46,7 +46,7 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
       >
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-1 text-slate-300">
-            <Building2 size={13} className="text-amber-400" /> Kogniti Minds Institutional & Enterprise Division
+            <Building2 size={13} className="text-amber-400" /> B2B & Institutional Enquiries: +91 9931648595 | sales@kognitiminds.com
           </span>
           <span className="text-slate-400 hide-on-mobile">
             GSTIN: 09AALCK4750F1ZC | CIN: U46496UP2024PTC213997

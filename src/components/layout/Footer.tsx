@@ -288,12 +288,18 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal })
 
             <div style={{ fontSize: '0.8rem', color: '#94A3B8', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
               <div className="flex items-center gap-2">
-                <Mail size={14} className="text-blue-400" /> support@kognitiminds.com
+                <Mail size={14} className="text-blue-400" /> <span>Support: <a href="mailto:support@kognitiminds.com" style={{ color: '#E2E8F0', textDecoration: 'underline' }}>support@kognitiminds.com</a></span>
               </div>
               <div className="flex items-center gap-2">
-                <Phone size={14} className="text-emerald-400" /> +91 80 4912 8800
+                <Mail size={14} className="text-amber-400" /> <span>Sales & B2B: <a href="mailto:sales@kognitiminds.com" style={{ color: '#E2E8F0', textDecoration: 'underline' }}>sales@kognitiminds.com</a></span>
               </div>
-              <div className="flex items-start gap-2">
+              <div className="flex items-center gap-2">
+                <Mail size={14} className="text-emerald-400" /> <span>Accounts & Billing: <a href="mailto:accounts@kognitiminds.com" style={{ color: '#E2E8F0', textDecoration: 'underline' }}>accounts@kognitiminds.com</a></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone size={14} className="text-emerald-400" /> <span>Enquiries / Helpline: <a href="tel:+919931648595" style={{ color: '#F1F5F9', fontWeight: 600 }}>+91 9931648595</a></span>
+              </div>
+              <div className="flex items-start gap-2" style={{ marginTop: '0.15rem' }}>
                 <MapPin size={14} className="text-amber-400" style={{ flexShrink: 0, marginTop: '2px' }} />
                 <span>Panchsheel Greens-2, Sec-16 B, Gr. Noida West, Bisrakh, Gautam Buddha Nagar, Uttar Pradesh, India - 201306</span>
               </div>
