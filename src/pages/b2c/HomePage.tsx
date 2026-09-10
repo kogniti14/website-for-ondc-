@@ -121,7 +121,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                   marginBottom: '1.25rem',
                 }}
               >
-                Smart Products.{' '}
+                From Farm Waste to{' '}
                 <span
                   style={{
                     background: 'linear-gradient(90deg, #60A5FA 0%, #34D399 100%)',
@@ -129,23 +129,30 @@ export const HomePage: React.FC<HomePageProps> = ({
                     WebkitTextFillColor: 'transparent',
                   }}
                 >
-                  Better Value.
-                </span>{' '}
-                Built for Everyone.
+                  Future-Ready Paper.
+                </span>
               </h1>
 
               {/* Subheading */}
-              <p
+              <div
                 style={{
                   fontSize: '1.05rem',
                   lineHeight: '1.6',
                   color: '#CBD5E1',
                   marginBottom: '2rem',
-                  maxWidth: '540px',
+                  maxWidth: '560px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.65rem',
                 }}
               >
-                Discover quality products for individuals, businesses, schools, offices and institutions — all in one place. Direct manufacturer pricing with official GST input tax credit.
-              </p>
+                <p style={{ margin: 0 }}>
+                  From agricultural waste to everyday paper — discover sustainable paper solutions created for individuals, businesses, schools, offices, and institutions.
+                </p>
+                <p style={{ margin: 0, fontSize: '0.92rem', color: '#94A3B8' }}>
+                  Made with purpose. Designed for performance. Competitive pricing with GST-compliant billing and eligible input tax credit for registered businesses.
+                </p>
+              </div>
 
               {/* CTA Buttons */}
               <div className="flex items-center gap-4 flex-wrap" style={{ marginBottom: '2.5rem' }}>

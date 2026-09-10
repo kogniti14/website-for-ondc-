@@ -123,7 +123,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   letterSpacing: '0.01em',
                 }}
               >
-                Smart Products. Better Value.
+                From Farm Waste to Future-Ready Paper.
               </div>
             </div>
           </div>
