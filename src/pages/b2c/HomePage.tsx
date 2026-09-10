@@ -107,7 +107,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 }}
               >
                 <Sparkles size={14} className="text-amber-400" />
-                <span>Premier Indian Hardware & Commercial Platform</span>
+                <span>From Agri-Waste to Sustainable Paper</span>
               </div>
 
               {/* Main Headline */}
