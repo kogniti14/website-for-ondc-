@@ -187,7 +187,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal })
               </div>
             </div>
             <p style={{ fontSize: '0.85rem', lineHeight: '1.6', marginBottom: '1.2rem', color: '#94A3B8' }}>
-              Kogniti Minds Private Limited is an Indian technology-driven physical products company delivering smart ergonomic furniture, interactive edtech displays, biometric access systems, and corporate essentials across India.
+              Kogniti Minds Private Limited is an Indian manufacturer pioneering the transformation of agricultural waste into next-generation paper products. We combine material innovation with responsible manufacturing to create quality paper solutions that give agricultural residue a new purpose serving consumers, businesses, institutions, and organizations across India.
             </p>
             <div style={{ fontSize: '0.78rem', color: '#64748B', lineHeight: '1.5' }}>
               <strong>CIN:</strong> U46496UP2024PTC213997<br />
