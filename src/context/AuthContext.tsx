@@ -147,31 +147,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Traditional B2C login
-  const loginB2C = (email: string): boolean => {
-    const users = storageService.getB2CUsers();
-    let found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  const loginB2C = (emailOrPhone: string): boolean => {
+    const found = storageService.getB2CUserByIdentifier(emailOrPhone);
     if (!found) {
-      found = {
-        id: `usr_${Date.now()}`,
-        name: email.split('@')[0],
-        email,
-        phone: '+91 98765 00000',
-        createdAt: new Date().toISOString(),
-        addresses: [
-          {
-            id: `addr_${Date.now()}`,
-            fullName: email.split('@')[0],
-            phone: '+91 98765 00000',
-            street: '12th Main, Indiranagar',
-            city: 'Bengaluru',
-            state: 'Karnataka',
-            pincode: '560038',
-            isDefault: true,
-            addressType: 'home',
-          },
-        ],
-      };
-      storageService.saveB2CUser(found);
+      return false;
     }
     setB2cUser(found);
     setB2bBusiness(null);
@@ -433,26 +412,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const users = storageService.getB2CUsers();
-    let found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
     if (!found) {
-      found = {
-        id: `usr_${Date.now()}`,
-        name: res.user?.displayName || email.split('@')[0],
-        email,
-        phone: '+91 98765 00000',
-        password,
-        firebaseUid: res.user?.uid,
-        authProvider: 'firebase_email',
-        createdAt: new Date().toISOString(),
-        addresses: [],
+      return {
+        success: false,
+        error: 'This mobile number/email address is not registered. Please register your details or create a new account before signing in.',
       };
-      storageService.saveB2CUser(found);
-    } else {
-      found.firebaseUid = res.user?.uid;
-      found.authProvider = 'firebase_email';
-      if (password) found.password = password;
-      storageService.saveB2CUser(found);
     }
+
+    found.firebaseUid = res.user?.uid;
+    found.authProvider = 'firebase_email';
+    if (password) found.password = password;
+    storageService.saveB2CUser(found);
 
     setB2cUser(found);
     setB2bBusiness(null);

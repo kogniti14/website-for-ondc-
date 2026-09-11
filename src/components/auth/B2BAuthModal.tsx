@@ -17,6 +17,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { B2BBusiness } from '../../types';
 import { storageService } from '../../services/storageService';
+import { UnregisteredUserModal } from './UnregisteredUserModal';
 
 interface B2BAuthModalProps {
   onClose: () => void;
@@ -28,6 +29,10 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Unregistered Account Check State
+  const [showUnregisteredModal, setShowUnregisteredModal] = useState(false);
+  const [unregisteredIdentifier, setUnregisteredIdentifier] = useState('');
 
   // Registration Fields
   const [companyName, setCompanyName] = useState('');
@@ -65,11 +70,24 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!email) {
+      setError('Please enter your registered corporate email or mobile number.');
+      return;
+    }
+    const cleanEmail = email.trim();
+
+    // Check whether the entered mobile number or email address exists in the database
+    const isRegistered = storageService.isB2BIdentifierRegistered(cleanEmail);
+    if (!isRegistered) {
+      setUnregisteredIdentifier(cleanEmail);
+      setShowUnregisteredModal(true);
+      return;
+    }
+
     setLoading(true);
-    const cleanEmail = email.trim().toLowerCase();
 
     if (password) {
-      const res = await loginB2BWithFirebase(cleanEmail, password);
+      const res = await loginB2BWithFirebase(cleanEmail.toLowerCase(), password);
       setLoading(false);
       if (res.success) {
         if (onSuccess) onSuccess();
@@ -80,13 +98,13 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
       return;
     }
 
-    const success = loginB2B(cleanEmail);
+    const success = loginB2B(cleanEmail.toLowerCase());
     setLoading(false);
     if (success) {
       if (onSuccess) onSuccess();
       onClose();
     } else {
-      setError('No business account found with this corporate email. Please register your company or use demo accounts.');
+      setError('Incorrect corporate credentials. Please verify your password or reset via OTP.');
     }
   };
 
@@ -939,6 +957,34 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
           </span>
         </div>
       </div>
+
+      {showUnregisteredModal && (
+        <UnregisteredUserModal
+          identifier={unregisteredIdentifier}
+          portalName="Kogniti Minds Corporate Portal"
+          onClose={() => setShowUnregisteredModal(false)}
+          onCreateAccount={() => {
+            setShowUnregisteredModal(false);
+            setTab('register');
+            if (unregisteredIdentifier.includes('@')) {
+              setBusinessEmail(unregisteredIdentifier);
+            } else {
+              setMobile(unregisteredIdentifier.replace(/\D/g, '').slice(-10));
+            }
+            setError(null);
+          }}
+          onRegisterNow={() => {
+            setShowUnregisteredModal(false);
+            setTab('register');
+            if (unregisteredIdentifier.includes('@')) {
+              setBusinessEmail(unregisteredIdentifier);
+            } else {
+              setMobile(unregisteredIdentifier.replace(/\D/g, '').slice(-10));
+            }
+            setError(null);
+          }}
+        />
+      )}
     </div>
   );
 };

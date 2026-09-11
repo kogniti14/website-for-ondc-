@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Mail, Lock, User, Phone, CheckCircle2, AlertCircle, ArrowLeft, KeyRound } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { storageService } from '../../services/storageService';
+import { UnregisteredUserModal } from './UnregisteredUserModal';
 
 interface AuthModalProps {
   initialMode?: 'login' | 'register';
@@ -18,6 +19,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Unregistered Account Check State
+  const [showUnregisteredModal, setShowUnregisteredModal] = useState(false);
+  const [unregisteredIdentifier, setUnregisteredIdentifier] = useState('');
 
   // Forgot Password via OTP State
   const [forgotIdentifier, setForgotIdentifier] = useState('');
@@ -45,12 +50,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
       setError('Please enter your registered email address or mobile number');
       return;
     }
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail = email.trim();
+
+    // Check whether the entered mobile number or email address exists in the database
+    const isRegistered = storageService.isB2CIdentifierRegistered(cleanEmail);
+    if (!isRegistered) {
+      setUnregisteredIdentifier(cleanEmail);
+      setShowUnregisteredModal(true);
+      return;
+    }
+
     setLoading(true);
 
     // If email format and password entered, authenticate via Firebase
     if (cleanEmail.includes('@') && password) {
-      const res = await loginB2CWithFirebase(cleanEmail, password);
+      const res = await loginB2CWithFirebase(cleanEmail.toLowerCase(), password);
       setLoading(false);
       if (res.success) {
         onClose();
@@ -61,10 +75,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
     }
 
     // Local / Mobile fallback
-    const success = loginB2C(email);
+    const success = loginB2C(cleanEmail);
     setLoading(false);
     if (success) {
       onClose();
+    } else {
+      setError('Incorrect password. Please verify your credentials or reset via OTP.');
     }
   };
 
@@ -164,10 +180,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
 
   const handleSendOtp = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone || phone.length < 10) {
+    if (!phone || phone.replace(/\D/g, '').length < 10) {
       setError('Please enter a valid 10-digit Indian mobile number');
       return;
     }
+    const cleanPhone = phone.trim();
+
+    // Check whether the entered mobile number exists in the database
+    const isRegistered = storageService.isB2CIdentifierRegistered(cleanPhone);
+    if (!isRegistered) {
+      setUnregisteredIdentifier(cleanPhone);
+      setShowUnregisteredModal(true);
+      return;
+    }
+
     setOtpSent(true);
     setError(null);
   };
@@ -175,8 +201,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
   const handleVerifyOtp = (e: React.FormEvent) => {
     e.preventDefault();
     if (otp === '123456' || otp.length === 6) {
-      loginB2C(`user_${phone.slice(-4)}@kognitiminds.com`);
-      onClose();
+      const cleanPhone = phone.trim();
+      const success = loginB2C(cleanPhone);
+      if (success) {
+        onClose();
+      } else {
+        setError('Verification failed. No matching account found for this mobile number.');
+      }
     } else {
       setError('Invalid OTP. For demo testing, enter 123456');
     }
@@ -794,6 +825,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
           By continuing, you agree to Kogniti Minds' Terms of Service & Privacy Policy.
         </div>
       </div>
+
+      {showUnregisteredModal && (
+        <UnregisteredUserModal
+          identifier={unregisteredIdentifier}
+          portalName="Kogniti Minds"
+          onClose={() => setShowUnregisteredModal(false)}
+          onCreateAccount={() => {
+            setShowUnregisteredModal(false);
+            setMode('register');
+            if (unregisteredIdentifier.includes('@')) {
+              setEmail(unregisteredIdentifier);
+            } else {
+              setPhone(unregisteredIdentifier.replace(/\D/g, '').slice(-10));
+            }
+            setError(null);
+          }}
+          onRegisterNow={() => {
+            setShowUnregisteredModal(false);
+            setMode('register');
+            if (unregisteredIdentifier.includes('@')) {
+              setEmail(unregisteredIdentifier);
+            } else {
+              setPhone(unregisteredIdentifier.replace(/\D/g, '').slice(-10));
+            }
+            setError(null);
+          }}
+        />
+      )}
     </div>
   );
 };

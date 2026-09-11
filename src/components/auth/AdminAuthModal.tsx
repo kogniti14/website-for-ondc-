@@ -18,6 +18,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { AdminRole } from '../../types';
 import { storageService } from '../../services/storageService';
+import { UnregisteredUserModal } from './UnregisteredUserModal';
 
 interface AdminAuthModalProps {
   onClose: () => void;
@@ -40,6 +41,10 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   const [registeredUserId, setRegisteredUserId] = useState('');
   const [loading, setLoading] = useState(false);
   const [firebaseResetSuccess, setFirebaseResetSuccess] = useState<string | null>(null);
+
+  // Unregistered Account Check State
+  const [showUnregisteredModal, setShowUnregisteredModal] = useState(false);
+  const [unregisteredIdentifier, setUnregisteredIdentifier] = useState('');
 
   // Forgot Password via OTP State
   const [forgotIdentifier, setForgotIdentifier] = useState('');
@@ -137,8 +142,16 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
       return;
     }
 
+    const cleanId = loginIdentifier.trim();
+    const admin = storageService.getAdminUserByIdentifier(cleanId);
+    if (!admin) {
+      setUnregisteredIdentifier(cleanId);
+      setShowUnregisteredModal(true);
+      return;
+    }
+
     setLoading(true);
-    const res = await loginAdminWithFirebase(loginIdentifier.trim(), loginPassword);
+    const res = await loginAdminWithFirebase(cleanId, loginPassword);
     setLoading(false);
 
     if (res.success) {
@@ -566,57 +579,6 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                   {loading ? 'Authenticating...' : 'Authenticate & Enter Admin Portal'} <ArrowRight size={16} />
                 </button>
               </form>
-
-              {/* Quick Staff Credentials Pre-fill Links */}
-              <div
-                style={{
-                  marginTop: '1.25rem',
-                  padding: '0.85rem',
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px dashed rgba(255, 255, 255, 0.15)',
-                }}
-              >
-                <div style={{ fontSize: '0.72rem', color: '#94A3B8', textTransform: 'uppercase', marginBottom: '0.45rem', fontWeight: 700 }}>
-                  Authorized Administrative Credentials
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => fillDemoCredentials('kogniti14', 'kogniti14')}
-                    className="flex items-center justify-between"
-                    style={{
-                      padding: '0.45rem 0.7rem',
-                      borderRadius: '6px',
-                      background: 'rgba(147, 51, 234, 0.12)',
-                      color: '#C084FC',
-                      fontSize: '0.76rem',
-                      textAlign: 'left',
-                      border: '1px solid rgba(147, 51, 234, 0.25)',
-                    }}
-                  >
-                    <span>1. Super Admin: <strong>kogniti14</strong> (Pass: kogniti14)</span>
-                    <span className="badge badge-purple" style={{ fontSize: '0.62rem' }}>Master Root</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => fillDemoCredentials('admin_ops', 'OpsAdmin@2026#')}
-                    className="flex items-center justify-between"
-                    style={{
-                      padding: '0.45rem 0.7rem',
-                      borderRadius: '6px',
-                      background: 'rgba(59, 130, 246, 0.12)',
-                      color: '#93C5FD',
-                      fontSize: '0.76rem',
-                      textAlign: 'left',
-                      border: '1px solid rgba(59, 130, 246, 0.25)',
-                    }}
-                  >
-                    <span>2. Operations Admin: <strong>admin_ops</strong></span>
-                    <span className="badge badge-blue" style={{ fontSize: '0.62rem' }}>Approved</span>
-                  </button>
-                </div>
-              </div>
 
               <div
                 style={{
@@ -1083,6 +1045,34 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
           )}
         </div>
       </div>
+
+      {showUnregisteredModal && (
+        <UnregisteredUserModal
+          identifier={unregisteredIdentifier}
+          portalName="Kogniti Minds Admin Access"
+          onClose={() => setShowUnregisteredModal(false)}
+          onCreateAccount={() => {
+            setShowUnregisteredModal(false);
+            setMode('register');
+            if (unregisteredIdentifier.includes('@')) {
+              setRegEmail(unregisteredIdentifier);
+            } else {
+              setRegUserId(unregisteredIdentifier);
+            }
+            setErrorMsg(null);
+          }}
+          onRegisterNow={() => {
+            setShowUnregisteredModal(false);
+            setMode('register');
+            if (unregisteredIdentifier.includes('@')) {
+              setRegEmail(unregisteredIdentifier);
+            } else {
+              setRegUserId(unregisteredIdentifier);
+            }
+            setErrorMsg(null);
+          }}
+        />
+      )}
     </div>
   );
 };

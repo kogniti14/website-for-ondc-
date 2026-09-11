@@ -444,6 +444,34 @@ class StorageService {
     return this.getB2CUsers().find((u) => u.id === id);
   }
 
+  isB2CIdentifierRegistered(identifier: string): boolean {
+    if (!identifier || !identifier.trim()) return false;
+    const clean = identifier.trim().toLowerCase();
+    const cleanDigits = identifier.replace(/\D/g, '');
+    const users = this.getB2CUsers();
+    return users.some((u) => {
+      const uEmail = (u.email || '').trim().toLowerCase();
+      const uDigits = (u.phone || '').replace(/\D/g, '');
+      if (clean.includes('@') && uEmail === clean) return true;
+      if (cleanDigits.length >= 10 && uDigits.length >= 10 && uDigits.slice(-10) === cleanDigits.slice(-10)) return true;
+      return false;
+    });
+  }
+
+  getB2CUserByIdentifier(identifier: string): B2CUser | undefined {
+    if (!identifier || !identifier.trim()) return undefined;
+    const clean = identifier.trim().toLowerCase();
+    const cleanDigits = identifier.replace(/\D/g, '');
+    const users = this.getB2CUsers();
+    return users.find((u) => {
+      const uEmail = (u.email || '').trim().toLowerCase();
+      const uDigits = (u.phone || '').replace(/\D/g, '');
+      if (clean.includes('@') && uEmail === clean) return true;
+      if (cleanDigits.length >= 10 && uDigits.length >= 10 && uDigits.slice(-10) === cleanDigits.slice(-10)) return true;
+      return false;
+    });
+  }
+
   saveB2CUser(user: B2CUser): void {
     const users = this.getB2CUsers();
     const index = users.findIndex((u) => u.id === user.id);
@@ -462,6 +490,34 @@ class StorageService {
 
   getB2BBusinessById(id: string): B2BBusiness | undefined {
     return this.getB2BBusinesses().find((b) => b.id === id);
+  }
+
+  isB2BIdentifierRegistered(identifier: string): boolean {
+    if (!identifier || !identifier.trim()) return false;
+    const clean = identifier.trim().toLowerCase();
+    const cleanDigits = identifier.replace(/\D/g, '');
+    const businesses = this.getB2BBusinesses();
+    return businesses.some((b) => {
+      const bEmail = (b.businessEmail || '').trim().toLowerCase();
+      const bDigits = (b.mobile || '').replace(/\D/g, '');
+      if (clean.includes('@') && bEmail === clean) return true;
+      if (cleanDigits.length >= 10 && bDigits.length >= 10 && bDigits.slice(-10) === cleanDigits.slice(-10)) return true;
+      return false;
+    });
+  }
+
+  getB2BBusinessByIdentifier(identifier: string): B2BBusiness | undefined {
+    if (!identifier || !identifier.trim()) return undefined;
+    const clean = identifier.trim().toLowerCase();
+    const cleanDigits = identifier.replace(/\D/g, '');
+    const businesses = this.getB2BBusinesses();
+    return businesses.find((b) => {
+      const bEmail = (b.businessEmail || '').trim().toLowerCase();
+      const bDigits = (b.mobile || '').replace(/\D/g, '');
+      if (clean.includes('@') && bEmail === clean) return true;
+      if (cleanDigits.length >= 10 && bDigits.length >= 10 && bDigits.slice(-10) === cleanDigits.slice(-10)) return true;
+      return false;
+    });
   }
 
   saveB2BBusiness(business: B2BBusiness): void {
