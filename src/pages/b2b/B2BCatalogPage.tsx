@@ -10,6 +10,7 @@ import {
   Clock,
   Sparkles,
   ArrowRight,
+  Tag,
 } from 'lucide-react';
 import { Product, Category } from '../../types';
 import { CATEGORIES } from '../../data/mockProducts';
@@ -141,9 +142,28 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
         {/* Header Title */}
         <div className="flex items-center justify-between flex-wrap gap-4" style={{ marginBottom: '2rem' }}>
           <div>
-            <span style={{ color: '#38BDF8', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>
-              Institutional Sourcing Desk
-            </span>
+            <div className="flex items-center gap-2 flex-wrap" style={{ marginBottom: '0.4rem' }}>
+              <span style={{ color: '#38BDF8', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                Institutional Sourcing Desk
+              </span>
+              <span
+                style={{
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  color: '#34D399',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  padding: '0.2rem 0.65rem',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.03em',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                }}
+              >
+                <Tag size={12} /> DIRECT MANUFACTURER PRICING
+              </span>
+            </div>
             <h1 style={{ fontSize: '2.2rem', fontWeight: 800, color: '#FFFFFF' }}>
               Wholesale Sustainable Paper & Institutional Supplies Catalog
             </h1>
@@ -310,7 +330,9 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
               >
                 {isApproved ? (
                   <div>
-                    <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Wholesale Base Price</div>
+                    <div style={{ fontSize: '0.72rem', color: '#34D399', fontWeight: 800, letterSpacing: '0.03em' }}>
+                      DIRECT MANUFACTURER PRICING
+                    </div>
                     <div className="flex items-baseline gap-1">
                       <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#38BDF8' }}>
                         ₹{product.b2bWholesalePrice.toLocaleString('en-IN')}
@@ -358,11 +380,11 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
                       }}
                     >
                       <Lock size={18} className="text-amber-400" style={{ margin: '0 auto 0.35rem' }} />
-                      <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#FFFFFF' }}>
-                        Wholesale Locked
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#FCD34D' }}>
+                        DIRECT MANUFACTURER PRICING
                       </div>
                       <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '0.2rem' }}>
-                        Approved business account required
+                        Approved business GSTIN required
                       </div>
                     </div>
 

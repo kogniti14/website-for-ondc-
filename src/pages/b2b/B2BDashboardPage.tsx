@@ -15,6 +15,7 @@ import {
   X,
   ArrowRight,
   TrendingUp,
+  Tag,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { B2BOrder, B2BQuotation } from '../../types';
@@ -147,6 +148,23 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                   <Clock size={13} /> Verification Pending (24h)
                 </span>
               )}
+              <span
+                style={{
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  color: '#34D399',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  padding: '0.25rem 0.7rem',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.03em',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                }}
+              >
+                <Tag size={12} /> DIRECT MANUFACTURER PRICING
+              </span>
             </div>
             <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginTop: '0.35rem' }}>
               GSTIN: <strong>{b2bBusiness?.gstin || '29AAACE1234F1Z8'}</strong> • Type: {b2bBusiness?.businessType || 'Corporate Office'} • Payment Terms: {b2bBusiness?.paymentTerms || 'Net 30'}

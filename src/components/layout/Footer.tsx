@@ -10,14 +10,16 @@ import {
   ArrowRight,
   CheckCircle2,
   Building2,
+  Tag,
 } from 'lucide-react';
 
 interface FooterProps {
   setActiveTab: (tab: string) => void;
   openPolicyModal: (type: 'privacy' | 'terms' | 'shipping' | 'refund') => void;
+  isB2B?: boolean;
 }
 
-export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal }) => {
+export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal, isB2B = false }) => {
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
 
@@ -48,29 +50,55 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal })
               gap: '1.5rem',
             }}
           >
-            <div className="flex items-center gap-3">
-              <div
-                style={{
-                  width: '46px',
-                  height: '46px',
-                  borderRadius: '12px',
-                  background: 'rgba(37, 99, 235, 0.15)',
-                  color: '#60A5FA',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <Truck size={24} />
-              </div>
-              <div>
-                <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.92rem' }}>
-                  FREE PAN-INDIA DELIVERY
+            {isB2B ? (
+              <div className="flex items-center gap-3">
+                <div
+                  style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '12px',
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    color: '#34D399',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Tag size={24} />
                 </div>
-                <div style={{ fontSize: '0.78rem' }}>On Orders Above ₹1,999</div>
+                <div>
+                  <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.92rem' }}>
+                    DIRECT MANUFACTURER PRICING
+                  </div>
+                  <div style={{ fontSize: '0.78rem' }}>Factory-Direct Rates For Institutions</div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div
+                  style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '12px',
+                    background: 'rgba(37, 99, 235, 0.15)',
+                    color: '#60A5FA',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Truck size={24} />
+                </div>
+                <div>
+                  <div style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.92rem' }}>
+                    FREE PAN-INDIA DELIVERY
+                  </div>
+                  <div style={{ fontSize: '0.78rem' }}>On Orders Above ₹1,999</div>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-3">
               <div

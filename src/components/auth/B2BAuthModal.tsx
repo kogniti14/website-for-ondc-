@@ -298,8 +298,8 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
           </h3>
           <p style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '0.25rem' }}>
             {tab === 'login'
-              ? 'Wholesale pricing, bulk tier discounts, RFQs & GST billing'
-              : 'Unlock institutional procurement with verified GSTIN'}
+              ? 'DIRECT MANUFACTURER PRICING • Bulk tier discounts, RFQs & GST billing'
+              : 'DIRECT MANUFACTURER PRICING • Verified institutional procurement'}
           </p>
         </div>
 

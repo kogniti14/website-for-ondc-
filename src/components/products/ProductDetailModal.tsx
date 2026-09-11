@@ -13,6 +13,7 @@ import {
   Briefcase,
   Info,
   Building2,
+  Tag,
 } from 'lucide-react';
 import { Product } from '../../types';
 import { useCart } from '../../context/CartContext';
@@ -251,11 +252,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         ))}
                       </div>
                     </div>
+                    <div style={{ fontSize: '0.75rem', color: '#6EE7B7', marginTop: '0.5rem', fontWeight: 700 }}>
+                      DIRECT MANUFACTURER PRICING • 100% GST Invoice with Input Tax Credit
+                    </div>
                   </div>
                 ) : (
                   <div>
                     <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#FCD34D' }}>
-                      Wholesale Pricing Masked
+                      DIRECT MANUFACTURER PRICING (Slabs Protected)
                     </div>
                     <p style={{ fontSize: '0.78rem', color: '#94A3B8', margin: '0.4rem 0' }}>
                       B2B confidential pricing, volume discount slabs and MOQs are restricted to approved business accounts.
@@ -428,10 +432,17 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 marginBottom: '1rem',
               }}
             >
-              <div className="flex items-center gap-1.5 font-medium">
-                <Truck size={13} className="text-emerald-600 flex-shrink-0" />
-                <span>FREE PAN-INDIA DELIVERY on Orders Above ₹1,999</span>
-              </div>
+              {isB2BMode ? (
+                <div className="flex items-center gap-1.5 font-bold" style={{ color: '#059669' }}>
+                  <Tag size={13} className="text-emerald-600 flex-shrink-0" />
+                  <span>DIRECT MANUFACTURER PRICING</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 font-medium">
+                  <Truck size={13} className="text-emerald-600 flex-shrink-0" />
+                  <span>FREE PAN-INDIA DELIVERY on Orders Above ₹1,999</span>
+                </div>
+              )}
               <div className="flex items-center gap-1.5 font-medium">
                 <ShieldCheck size={13} className="text-blue-600 flex-shrink-0" />
                 <span>100% GENUINE PRODUCTS | GST Invoice Available</span>

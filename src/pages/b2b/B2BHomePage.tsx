@@ -13,6 +13,7 @@ import {
   Sparkles,
   PhoneCall,
   Lock,
+  Tag,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Product } from '../../types';
@@ -47,20 +48,36 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
       >
         <div className="container" style={{ position: 'relative', zIndex: 2 }}>
           <div style={{ maxWidth: '820px', margin: '0 auto', textAlign: 'center' }}>
-            <div
-              className="inline-flex items-center gap-2"
-              style={{
-                background: 'rgba(217, 119, 6, 0.15)',
-                border: '1px solid rgba(217, 119, 6, 0.3)',
-                padding: '0.35rem 0.9rem',
-                borderRadius: 'var(--radius-full)',
-                fontSize: '0.78rem',
-                color: '#FBBF24',
-                fontWeight: 700,
-                marginBottom: '1.25rem',
-              }}
-            >
-              <Building2 size={14} /> Institutional & Wholesale Division
+            <div className="flex items-center justify-center gap-2.5 flex-wrap" style={{ marginBottom: '1.25rem' }}>
+              <div
+                className="inline-flex items-center gap-2"
+                style={{
+                  background: 'rgba(217, 119, 6, 0.15)',
+                  border: '1px solid rgba(217, 119, 6, 0.3)',
+                  padding: '0.35rem 0.9rem',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '0.78rem',
+                  color: '#FBBF24',
+                  fontWeight: 700,
+                }}
+              >
+                <Building2 size={14} /> Institutional & Wholesale Division
+              </div>
+              <div
+                className="inline-flex items-center gap-1.5"
+                style={{
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                  padding: '0.35rem 0.9rem',
+                  borderRadius: 'var(--radius-full)',
+                  fontSize: '0.78rem',
+                  color: '#34D399',
+                  fontWeight: 800,
+                  letterSpacing: '0.03em',
+                }}
+              >
+                <Tag size={14} /> DIRECT MANUFACTURER PRICING
+              </div>
             </div>
 
             <h1
@@ -150,20 +167,24 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
                 textAlign: 'left',
               }}
             >
+              <div style={{ padding: '0.75rem', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px' }}>
+                <div style={{ color: '#34D399', fontWeight: 800, fontSize: '1.15rem' }}>Direct Manufacturer Pricing</div>
+                <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Zero distributor markups on bulk supply</div>
+              </div>
               <div style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px' }}>
-                <div style={{ color: '#38BDF8', fontWeight: 800, fontSize: '1.25rem' }}>Wholesale Slabs</div>
+                <div style={{ color: '#38BDF8', fontWeight: 800, fontSize: '1.15rem' }}>Wholesale Slabs</div>
                 <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Tiered volume pricing up to 28% off</div>
               </div>
               <div style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px' }}>
-                <div style={{ color: '#34D399', fontWeight: 800, fontSize: '1.25rem' }}>100% GST Credit</div>
+                <div style={{ color: '#34D399', fontWeight: 800, fontSize: '1.15rem' }}>100% GST Credit</div>
                 <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Official invoices with buyer GSTIN</div>
               </div>
               <div style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px' }}>
-                <div style={{ color: '#FBBF24', fontWeight: 800, fontSize: '1.25rem' }}>Net 30 Terms</div>
+                <div style={{ color: '#FBBF24', fontWeight: 800, fontSize: '1.15rem' }}>Net 30 Terms</div>
                 <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Approved credit lines against PO</div>
               </div>
               <div style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px' }}>
-                <div style={{ color: '#C084FC', fontWeight: 800, fontSize: '1.25rem' }}>Key Account Mgr</div>
+                <div style={{ color: '#C084FC', fontWeight: 800, fontSize: '1.15rem' }}>Key Account Mgr</div>
                 <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Dedicated single point of contact</div>
               </div>
             </div>
@@ -532,10 +553,10 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
                 3
               </div>
               <h4 style={{ color: '#FFFFFF', fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.4rem' }}>
-                Order with Net Credit & Slabs
+                Direct Manufacturer Pricing & Slabs
               </h4>
               <p style={{ color: '#94A3B8', fontSize: '0.85rem', lineHeight: '1.5' }}>
-                Unlock wholesale volume discounts, submit RFQs, upload POs, and claim 100% GST Input Tax Credit.
+                Unlock direct manufacturer pricing, wholesale volume discounts, submit RFQs, upload POs, and claim 100% GST Input Tax Credit.
               </p>
             </div>
           </div>

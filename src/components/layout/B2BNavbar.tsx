@@ -9,7 +9,7 @@ import {
   LogOut,
   UserCheck,
   Package,
-  Truck,
+  Tag,
   ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -49,8 +49,8 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
         }}
       >
         <div className="flex items-center gap-4 flex-wrap">
-          <span className="flex items-center gap-1.5 text-slate-300 font-medium">
-            <Truck size={13} className="text-emerald-400" /> FREE PAN-INDIA DELIVERY on Orders Above ₹1,999
+          <span className="flex items-center gap-1.5 text-emerald-400 font-bold tracking-wide">
+            <Tag size={13} className="text-emerald-400" /> DIRECT MANUFACTURER PRICING
           </span>
           <span className="hide-on-mobile flex items-center gap-1.5 text-slate-300 font-medium">
             <ShieldCheck size={13} className="text-amber-400" /> 100% GENUINE PRODUCTS | GST Invoice Available

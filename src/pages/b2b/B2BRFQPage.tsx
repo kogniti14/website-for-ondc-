@@ -152,26 +152,42 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
         ) : (
           <div>
             <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-              <div
-                className="inline-flex items-center gap-2"
-                style={{
-                  background: 'rgba(245, 158, 11, 0.15)',
-                  color: '#FBBF24',
-                  border: '1px solid rgba(245, 158, 11, 0.3)',
-                  padding: '0.35rem 0.85rem',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  marginBottom: '0.75rem',
-                }}
-              >
-                <FileText size={14} /> Custom Commercial Proposals
+              <div className="flex items-center justify-center gap-2 flex-wrap" style={{ marginBottom: '0.75rem' }}>
+                <div
+                  className="inline-flex items-center gap-2"
+                  style={{
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    color: '#FBBF24',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    padding: '0.35rem 0.85rem',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  <FileText size={14} /> Custom Commercial Proposals
+                </div>
+                <div
+                  className="inline-flex items-center gap-1.5"
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    color: '#34D399',
+                    border: '1px solid rgba(16, 185, 129, 0.35)',
+                    padding: '0.35rem 0.85rem',
+                    borderRadius: 'var(--radius-full)',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.03em',
+                  }}
+                >
+                  <Tag size={13} /> DIRECT MANUFACTURER PRICING
+                </div>
               </div>
               <h1 style={{ fontSize: '2.3rem', fontWeight: 800, color: '#FFFFFF' }}>
                 Request a Formal B2B Quotation (RFQ)
               </h1>
               <p style={{ color: '#94A3B8', fontSize: '0.95rem', marginTop: '0.35rem' }}>
-                For tenders, institutional supplies, corporate bulk paper procurement, and custom stationery branding requests.
+                Direct factory proposals for tenders, institutional supplies, corporate bulk paper procurement, and custom stationery branding.
               </p>
             </div>
 

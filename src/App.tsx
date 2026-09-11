@@ -260,6 +260,24 @@ const MainApp: React.FC = () => {
             {b2bTab === 'cart' && (
               <div className="container" style={{ padding: '4rem 1.25rem' }}>
                 <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      color: '#34D399',
+                      border: '1px solid rgba(16, 185, 129, 0.35)',
+                      padding: '0.35rem 0.9rem',
+                      borderRadius: 'var(--radius-full)',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      marginBottom: '1rem',
+                      letterSpacing: '0.03em',
+                    }}
+                  >
+                    DIRECT MANUFACTURER PRICING
+                  </div>
                   <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#FFF' }}>
                     Institutional B2B Procurement Cart
                   </h2>
@@ -359,6 +377,7 @@ const MainApp: React.FC = () => {
         <Footer
           setActiveTab={setActiveTab}
           openPolicyModal={(type) => setPolicyModalType(type)}
+          isB2B={activeTab === 'b2b'}
         />
       )}
 
