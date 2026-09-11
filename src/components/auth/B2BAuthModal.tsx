@@ -294,7 +294,7 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
             />
           </div>
           <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#FFFFFF' }}>
-            {tab === 'login' ? 'Kogniti Minds B2B Portal' : 'Register Corporate Entity'}
+            {tab === 'login' ? 'Kogniti Minds B2B Portal' : 'Registered Business'}
           </h3>
           <p style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '0.25rem' }}>
             {tab === 'login'
@@ -368,7 +368,7 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
                 cursor: 'pointer',
               }}
             >
-              Register Business
+              Registered Business
             </button>
           </div>
         )}
