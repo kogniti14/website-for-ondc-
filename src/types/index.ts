@@ -157,7 +157,13 @@ export interface B2COrder {
     | 'shipped'
     | 'out_for_delivery'
     | 'delivered'
-    | 'cancelled';
+    | 'cancelled'
+    | 'rejected';
+  rejectionReason?: string;
+  confirmedAt?: string;
+  confirmedBy?: string;
+  rejectedAt?: string;
+  rejectedBy?: string;
   trackingNumber?: string;
   courierPartner?: 'Delhivery' | 'Blue Dart' | 'Shiprocket' | 'DTDC';
   createdAt: string;
@@ -216,7 +222,13 @@ export interface B2BOrder {
     | 'shipped'
     | 'out_for_delivery'
     | 'delivered'
-    | 'cancelled';
+    | 'cancelled'
+    | 'rejected';
+  rejectionReason?: string;
+  confirmedAt?: string;
+  confirmedBy?: string;
+  rejectedAt?: string;
+  rejectedBy?: string;
   trackingNumber?: string;
   courierPartner?: string;
   createdAt: string;
@@ -258,11 +270,21 @@ export interface B2BQuotation {
 }
 
 export interface Coupon {
+  id: string;
   code: string;
   discountType: 'percent' | 'flat';
   value: number;
   minOrderValue: number;
+  maxDiscountAmount?: number;
+  startDate?: string;
+  expiryDate?: string;
+  usageLimit?: number;
+  usageCount?: number;
+  perUserLimit?: number;
+  isActive: boolean;
   description: string;
+  createdAt: string;
+  createdBy?: string;
 }
 
 export interface Category {
@@ -273,6 +295,14 @@ export interface Category {
   description?: string;
   image?: string;
   createdAt?: string;
+}
+
+export interface AdminPermissions {
+  canManageCoupons?: boolean;
+  canConfirmOrders?: boolean;
+  canRejectOrders?: boolean;
+  canManageProducts?: boolean;
+  canManageUsers?: boolean;
 }
 
 export type AdminRole = 'super_admin' | 'operations_admin' | 'catalog_manager' | 'finance_admin';
@@ -293,6 +323,7 @@ export interface AdminUser {
   registeredAt: string;
   approvedAt?: string;
   approvedBy?: string;
+  permissions?: AdminPermissions;
 }
 
 export type UserRole = 'guest' | 'b2c' | 'b2b' | 'admin';

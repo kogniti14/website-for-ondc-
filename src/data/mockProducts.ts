@@ -742,26 +742,6 @@ export const CATEGORIES = [
   },
 ];
 
-export const MOCK_COUPONS = [
-  {
-    code: 'WELCOME10',
-    discountType: 'percent' as const,
-    value: 10,
-    minOrderValue: 500,
-    description: '10% off on your first sustainable paper order (Min. ₹500)',
-  },
-  {
-    code: 'KOGNITI15',
-    discountType: 'percent' as const,
-    value: 15,
-    minOrderValue: 2500,
-    description: '15% off on bulk stationery orders above ₹2,500',
-  },
-  {
-    code: 'FLAT200',
-    discountType: 'flat' as const,
-    value: 200,
-    minOrderValue: 1500,
-    description: 'Flat ₹200 instant discount on orders above ₹1,500',
-  },
-];
+import { Coupon } from '../types';
+
+export const MOCK_COUPONS: Coupon[] = [];

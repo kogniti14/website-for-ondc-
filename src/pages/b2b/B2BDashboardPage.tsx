@@ -143,7 +143,7 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
       grandTotal: q.adminQuotation.grandTotal,
       paymentTerms: 'Net 30',
       paymentStatus: 'credit_approved',
-      orderStatus: 'confirmed',
+      orderStatus: 'placed',
       trackingNumber: `BLUEDART-${Math.floor(100000 + Math.random() * 900000)}`,
       courierPartner: 'Blue Dart Freight',
       createdAt: new Date().toISOString(),
@@ -626,15 +626,47 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-3">
-                            <span className="badge badge-green">
-                              {ord.orderStatus.toUpperCase()}
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span
+                              className={`badge ${
+                                ord.orderStatus === 'confirmed' || ord.orderStatus === 'delivered'
+                                  ? 'badge-green'
+                                  : ord.orderStatus === 'rejected'
+                                  ? 'badge-red'
+                                  : ord.orderStatus === 'placed'
+                                  ? 'badge-amber'
+                                  : 'badge-blue'
+                              }`}
+                            >
+                              {ord.orderStatus === 'placed'
+                                ? 'ORDER PLACED (AWAITING REVIEW)'
+                                : ord.orderStatus === 'confirmed'
+                                ? 'ORDER CONFIRMED'
+                                : ord.orderStatus === 'rejected'
+                                ? 'ORDER REJECTED'
+                                : ord.orderStatus.toUpperCase()}
                             </span>
                             <span className="badge badge-amber">
                               Payment: {ord.paymentTerms}
                             </span>
                           </div>
                         </div>
+
+                        {ord.orderStatus === 'rejected' && ord.rejectionReason && (
+                          <div
+                            style={{
+                              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                              border: '1px solid rgba(239, 68, 68, 0.3)',
+                              borderRadius: '6px',
+                              padding: '0.5rem 0.75rem',
+                              fontSize: '0.78rem',
+                              color: '#FCA5A5',
+                              marginBottom: '0.75rem',
+                            }}
+                          >
+                            <strong>Rejection Note:</strong> {ord.rejectionReason}
+                          </div>
+                        )}
 
                         {/* Items */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>

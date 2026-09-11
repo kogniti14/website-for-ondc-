@@ -154,15 +154,24 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                     {/* Status Badge */}
                     <span
                       className={`badge ${
-                        order.orderStatus === 'delivered'
+                        order.orderStatus === 'confirmed' || order.orderStatus === 'delivered'
                           ? 'badge-green'
-                          : order.orderStatus === 'shipped'
-                          ? 'badge-blue'
-                          : 'badge-amber'
+                          : order.orderStatus === 'rejected'
+                          ? 'badge-red'
+                          : order.orderStatus === 'placed'
+                          ? 'badge-amber'
+                          : 'badge-blue'
                       }`}
-                      style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}
+                      style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', fontWeight: 700 }}
                     >
-                      <Truck size={13} /> {order.orderStatus.replace('_', ' ').toUpperCase()}
+                      {order.orderStatus === 'placed' && '🟡 Order Placed'}
+                      {order.orderStatus === 'confirmed' && '🟢 Order Confirmed'}
+                      {order.orderStatus === 'rejected' && '🔴 Order Rejected'}
+                      {order.orderStatus === 'processing' && '🔵 Processing'}
+                      {order.orderStatus === 'packed' && '📦 Packed'}
+                      {order.orderStatus === 'shipped' && '🚚 Shipped'}
+                      {order.orderStatus === 'delivered' && '✅ Delivered'}
+                      {order.orderStatus === 'cancelled' && '⚪ Cancelled'}
                     </span>
 
                     {/* Payment Status / Action */}
@@ -206,6 +215,78 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                     </button>
                   </div>
                 </div>
+
+                {/* Real-time Synchronized Status Banner */}
+                {order.orderStatus === 'placed' && (
+                  <div
+                    style={{
+                      background: '#FEF3C7',
+                      border: '1px solid #F59E0B',
+                      borderRadius: '8px',
+                      padding: '0.65rem 0.9rem',
+                      marginBottom: '1rem',
+                      fontSize: '0.82rem',
+                      color: '#92400E',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <span>🟡</span>
+                    <span>
+                      <strong>Order Placed (Under Admin Review):</strong> Your order and payment have been logged successfully. Our fulfillment team is reviewing your order details for confirmation.
+                    </span>
+                  </div>
+                )}
+
+                {order.orderStatus === 'confirmed' && (
+                  <div
+                    style={{
+                      background: '#ECFDF5',
+                      border: '1px solid #10B981',
+                      borderRadius: '8px',
+                      padding: '0.65rem 0.9rem',
+                      marginBottom: '1rem',
+                      fontSize: '0.82rem',
+                      color: '#065F46',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <span>🟢</span>
+                    <span>
+                      <strong>Order Confirmed:</strong> Your order has been reviewed and officially confirmed by our operations desk! Proceeding to warehouse packing.
+                    </span>
+                  </div>
+                )}
+
+                {order.orderStatus === 'rejected' && (
+                  <div
+                    style={{
+                      background: '#FEF2F2',
+                      border: '1px solid #EF4444',
+                      borderRadius: '8px',
+                      padding: '0.65rem 0.9rem',
+                      marginBottom: '1rem',
+                      fontSize: '0.82rem',
+                      color: '#991B1B',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.2rem',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
+                      <span>🔴</span>
+                      <span>Order Rejected by Operations Team</span>
+                    </div>
+                    {order.rejectionReason && (
+                      <div style={{ paddingLeft: '1.5rem', fontSize: '0.8rem', color: '#B91C1C' }}>
+                        <strong>Reason:</strong> {order.rejectionReason}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Items List */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.25rem' }}>
@@ -311,7 +392,12 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                       width: '24px',
                       height: '24px',
                       borderRadius: '50%',
-                      backgroundColor: i === selectedOrderForTracking.statusTimeline.length - 1 ? 'var(--primary)' : 'var(--emerald-600)',
+                      backgroundColor:
+                        step.status.includes('REJECTED')
+                          ? '#EF4444'
+                          : i === selectedOrderForTracking.statusTimeline.length - 1
+                          ? 'var(--primary)'
+                          : 'var(--emerald-600)',
                       color: '#ffffff',
                       display: 'flex',
                       alignItems: 'center',

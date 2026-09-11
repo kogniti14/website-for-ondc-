@@ -32,8 +32,12 @@ import {
   Image as ImageIcon,
   CreditCard,
   RefreshCw,
+  Percent,
+  Calendar,
+  Filter,
+  X,
 } from 'lucide-react';
-import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, Category, B2CUser, SiteMedia } from '../../types';
+import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, Category, B2CUser, SiteMedia, B2BOrderItemSummary, OrderItemSummary } from '../../types';
 import { storageService } from '../../services/storageService';
 import { useAuth } from '../../context/AuthContext';
 import { B2BInvoiceModal } from '../../components/b2b/B2BInvoiceModal';
@@ -432,10 +436,55 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [quoteValidDate, setQuoteValidDate] = useState<string>('2026-10-15');
   const [quoteNotes, setQuoteNotes] = useState<string>('Standard commercial quotation with 18% GST and priority dispatch.');
 
-  // Coupon Add State
-  const [newCouponCode, setNewCouponCode] = useState('');
-  const [newCouponVal, setNewCouponVal] = useState(10);
-  const [newCouponMin, setNewCouponMin] = useState(2000);
+  // Coupon Management State
+  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
+  const [showCouponModal, setShowCouponModal] = useState(false);
+  const [couponFilter, setCouponFilter] = useState<'all' | 'active' | 'inactive' | 'expired'>('all');
+  const [couponCodeInput, setCouponCodeInput] = useState('');
+  const [couponDescriptionInput, setCouponDescriptionInput] = useState('');
+  const [couponTypeInput, setCouponTypeInput] = useState<'percent' | 'flat'>('percent');
+  const [couponValueInput, setCouponValueInput] = useState<number>(10);
+  const [couponMinOrderInput, setCouponMinOrderInput] = useState<number>(500);
+  const [couponMaxDiscountInput, setCouponMaxDiscountInput] = useState<string>('');
+  const [couponStartDateInput, setCouponStartDateInput] = useState<string>('');
+  const [couponExpiryDateInput, setCouponExpiryDateInput] = useState<string>('');
+  const [couponUsageLimitInput, setCouponUsageLimitInput] = useState<string>('');
+  const [couponIsActiveInput, setCouponIsActiveInput] = useState<boolean>(true);
+  const [couponSuccessMsg, setCouponSuccessMsg] = useState<string | null>(null);
+
+  // Order Management State
+  const [orderChannelFilter, setOrderChannelFilter] = useState<'all' | 'b2c' | 'b2b'>('all');
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  const [selectedOrderForInspection, setSelectedOrderForInspection] = useState<
+    { type: 'b2c'; order: B2COrder } | { type: 'b2b'; order: B2BOrder } | null
+  >(null);
+  const [orderRejectionModal, setOrderRejectionModal] = useState<
+    { type: 'b2c' | 'b2b'; id: string; orderNumber: string } | null
+  >(null);
+  const [orderRejectionReason, setOrderRejectionReason] = useState('');
+  const [orderSuccessMsg, setOrderSuccessMsg] = useState<string | null>(null);
+
+  // Role-based permissions
+  const canManageCoupons =
+    isSuperAdmin ||
+    currentAdminUser?.role === 'super_admin' ||
+    currentAdminUser?.userId === 'kogniti14' ||
+    Boolean(currentAdminUser?.permissions?.canManageCoupons);
+
+  const canConfirmOrders =
+    isSuperAdmin ||
+    currentAdminUser?.role === 'super_admin' ||
+    currentAdminUser?.userId === 'kogniti14' ||
+    Boolean(currentAdminUser?.permissions?.canConfirmOrders) ||
+    currentAdminUser?.role === 'operations_admin';
+
+  const canRejectOrders =
+    isSuperAdmin ||
+    currentAdminUser?.role === 'super_admin' ||
+    currentAdminUser?.userId === 'kogniti14' ||
+    Boolean(currentAdminUser?.permissions?.canRejectOrders) ||
+    currentAdminUser?.role === 'operations_admin';
 
   // Calculations for KPI cards
   const b2cRevenue = b2cOrders.reduce((sum, o) => sum + o.total, 0);
@@ -507,19 +556,198 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     }
   };
 
-  const handleCreateCoupon = (e: React.FormEvent) => {
+  const handleOpenCreateCoupon = () => {
+    setEditingCoupon(null);
+    setCouponCodeInput('');
+    setCouponDescriptionInput('');
+    setCouponTypeInput('percent');
+    setCouponValueInput(10);
+    setCouponMinOrderInput(500);
+    setCouponMaxDiscountInput('');
+    setCouponStartDateInput(new Date().toISOString().slice(0, 10));
+    setCouponExpiryDateInput('');
+    setCouponUsageLimitInput('');
+    setCouponIsActiveInput(true);
+    setShowCouponModal(true);
+  };
+
+  const handleOpenEditCoupon = (c: Coupon) => {
+    setEditingCoupon(c);
+    setCouponCodeInput(c.code);
+    setCouponDescriptionInput(c.description || '');
+    setCouponTypeInput(c.discountType);
+    setCouponValueInput(c.value);
+    setCouponMinOrderInput(c.minOrderValue);
+    setCouponMaxDiscountInput(c.maxDiscountAmount ? String(c.maxDiscountAmount) : '');
+    setCouponStartDateInput(c.startDate ? c.startDate.slice(0, 10) : '');
+    setCouponExpiryDateInput(c.expiryDate ? c.expiryDate.slice(0, 10) : '');
+    setCouponUsageLimitInput(c.usageLimit ? String(c.usageLimit) : '');
+    setCouponIsActiveInput(c.isActive !== false);
+    setShowCouponModal(true);
+  };
+
+  const handleSaveCouponSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCouponCode) return;
-    storageService.saveCoupon({
-      code: newCouponCode.toUpperCase(),
-      discountType: 'percent',
-      value: newCouponVal,
-      minOrderValue: newCouponMin,
-      description: `${newCouponVal}% off on orders above ₹${newCouponMin}`,
-    });
-    setNewCouponCode('');
+    if (!couponCodeInput.trim()) return;
+
+    const cleanCode = couponCodeInput.trim().toUpperCase();
+    const couponData: Coupon = {
+      id: editingCoupon?.id || `cpn_${Date.now()}`,
+      code: cleanCode,
+      description:
+        couponDescriptionInput.trim() ||
+        `${couponTypeInput === 'percent' ? `${couponValueInput}%` : `₹${couponValueInput}`} off on orders above ₹${couponMinOrderInput}`,
+      discountType: couponTypeInput,
+      value: Number(couponValueInput),
+      minOrderValue: Number(couponMinOrderInput),
+      maxDiscountAmount: couponMaxDiscountInput ? Number(couponMaxDiscountInput) : undefined,
+      startDate: couponStartDateInput ? couponStartDateInput : undefined,
+      expiryDate: couponExpiryDateInput ? couponExpiryDateInput : undefined,
+      usageLimit: couponUsageLimitInput ? Number(couponUsageLimitInput) : undefined,
+      usageCount: editingCoupon?.usageCount || 0,
+      isActive: couponIsActiveInput,
+      createdAt: editingCoupon?.createdAt || new Date().toISOString(),
+      createdBy: currentAdminUser?.name || 'Super Admin',
+    };
+
+    storageService.saveCoupon(couponData);
+    setShowCouponModal(false);
+    onRefresh();
+    setCouponSuccessMsg(`Coupon '${cleanCode}' ${editingCoupon ? 'updated' : 'created'} successfully!`);
+    setTimeout(() => setCouponSuccessMsg(null), 3500);
+  };
+
+  const handleDeleteCoupon = (idOrCode: string) => {
+    if (confirm('Are you sure you want to permanently remove this coupon?')) {
+      storageService.deleteCoupon(idOrCode);
+      onRefresh();
+      setCouponSuccessMsg('Coupon deleted successfully.');
+      setTimeout(() => setCouponSuccessMsg(null), 3500);
+    }
+  };
+
+  const handleToggleCoupon = (idOrCode: string) => {
+    storageService.toggleCouponStatus(idOrCode);
     onRefresh();
   };
+
+  const handleConfirmOrder = (type: 'b2c' | 'b2b', id: string) => {
+    const adminName = currentAdminUser?.name || 'Operations Lead';
+    if (type === 'b2c') {
+      const updated = storageService.confirmB2COrder(id, adminName);
+      if (selectedOrderForInspection && selectedOrderForInspection.order.id === id && updated) {
+        setSelectedOrderForInspection({ type: 'b2c', order: updated });
+      }
+    } else {
+      const updated = storageService.confirmB2BOrder(id, adminName);
+      if (selectedOrderForInspection && selectedOrderForInspection.order.id === id && updated) {
+        setSelectedOrderForInspection({ type: 'b2b', order: updated });
+      }
+    }
+    onRefresh();
+    setOrderSuccessMsg('Order confirmed successfully! Customer portal status updated to "Order Confirmed".');
+    setTimeout(() => setOrderSuccessMsg(null), 4000);
+  };
+
+  const handleOpenRejectOrderModal = (type: 'b2c' | 'b2b', id: string, orderNumber: string) => {
+    setOrderRejectionModal({ type, id, orderNumber });
+    setOrderRejectionReason('Verification criteria not met / Address unserviceable');
+  };
+
+  const handleConfirmOrderRejection = () => {
+    if (!orderRejectionModal) return;
+    const adminName = currentAdminUser?.name || 'Operations Lead';
+    if (orderRejectionModal.type === 'b2c') {
+      const updated = storageService.rejectB2COrder(orderRejectionModal.id, adminName, orderRejectionReason);
+      if (selectedOrderForInspection && selectedOrderForInspection.order.id === orderRejectionModal.id && updated) {
+        setSelectedOrderForInspection({ type: 'b2c', order: updated });
+      }
+    } else {
+      const updated = storageService.rejectB2BOrder(orderRejectionModal.id, adminName, orderRejectionReason);
+      if (selectedOrderForInspection && selectedOrderForInspection.order.id === orderRejectionModal.id && updated) {
+        setSelectedOrderForInspection({ type: 'b2b', order: updated });
+      }
+    }
+    setOrderRejectionModal(null);
+    setOrderRejectionReason('');
+    onRefresh();
+    setOrderSuccessMsg('Order rejected. Customer portal status updated to "Order Rejected".');
+    setTimeout(() => setOrderSuccessMsg(null), 4000);
+  };
+
+  const handleToggleStaffPermission = (
+    staffId: string,
+    permKey: 'canManageCoupons' | 'canConfirmOrders' | 'canRejectOrders'
+  ) => {
+    const staff = adminUsers.find((u) => u.id === staffId);
+    if (!staff) return;
+    const currentPerms = staff.permissions || {};
+    staff.permissions = {
+      ...currentPerms,
+      [permKey]: !currentPerms[permKey],
+    };
+    storageService.saveAdminUser(staff);
+    refreshAdminUsers();
+  };
+
+  // Unified Combined Orders for Administration
+  const allOrdersCombined = [
+    ...b2cOrders.map((o) => ({
+      id: o.id,
+      orderNumber: o.orderNumber,
+      channel: 'b2c' as const,
+      createdAt: o.createdAt,
+      customerName: o.customerName,
+      email: o.customerEmail || 'Customer',
+      phone: o.customerPhone || o.shippingAddress?.phone || '',
+      totalAmount: o.total,
+      orderStatus: o.orderStatus,
+      paymentStatus: o.paymentStatus,
+      paymentMethod: o.paymentMethod,
+      itemsCount: o.items.reduce((s, i) => s + i.quantity, 0),
+      items: o.items,
+      rawOrder: o,
+    })),
+    ...b2bOrders.map((o) => ({
+      id: o.id,
+      orderNumber: o.orderNumber,
+      channel: 'b2b' as const,
+      createdAt: o.createdAt,
+      customerName: o.businessName,
+      email: o.gstin || 'B2B Client',
+      phone: o.billingAddress?.phone || '',
+      totalAmount: o.grandTotal,
+      orderStatus: o.orderStatus,
+      paymentStatus: o.paymentStatus,
+      paymentMethod: o.paymentTerms || 'Prepaid',
+      itemsCount: o.items.reduce((s, i) => s + i.quantity, 0),
+      items: o.items,
+      rawOrder: o,
+    })),
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const filteredOrders = allOrdersCombined.filter((o) => {
+    if (orderChannelFilter !== 'all' && o.channel !== orderChannelFilter) return false;
+    if (orderStatusFilter !== 'all' && o.orderStatus !== orderStatusFilter) return false;
+    if (orderSearchQuery.trim()) {
+      const q = orderSearchQuery.toLowerCase();
+      const matchNum = o.orderNumber.toLowerCase().includes(q);
+      const matchCust = o.customerName.toLowerCase().includes(q);
+      const matchEmail = o.email.toLowerCase().includes(q);
+      const matchPhone = o.phone.toLowerCase().includes(q);
+      if (!matchNum && !matchCust && !matchEmail && !matchPhone) return false;
+    }
+    return true;
+  });
+
+  const filteredCoupons = coupons.filter((c) => {
+    const isExpired = c.expiryDate ? new Date(c.expiryDate).getTime() < Date.now() : false;
+    const isInactive = c.isActive === false;
+    if (couponFilter === 'active') return !isInactive && !isExpired;
+    if (couponFilter === 'inactive') return isInactive;
+    if (couponFilter === 'expired') return isExpired;
+    return true;
+  });
 
   return (
     <div style={{ backgroundColor: '#F8FAFC', minHeight: '100vh', paddingBottom: '6rem' }}>
@@ -1257,111 +1485,354 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         {/* 3. Orders Tab */}
         {activeTab === 'orders' && (
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>All Order Dispatches</h2>
+            <div className="flex justify-between items-center flex-wrap gap-3" style={{ marginBottom: '1.5rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  Enterprise Order Governance & Dispatch
+                </h2>
+                <p style={{ fontSize: '0.85rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
+                  Super Admin & Operations Desk: Review incoming retail & institutional orders, verify details, and confirm or reject before fulfillment.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="badge badge-amber" style={{ fontSize: '0.78rem' }}>
+                  🟡 {allOrdersCombined.filter((o) => o.orderStatus === 'placed').length} Awaiting Confirmation
+                </span>
+                <span className="badge badge-green" style={{ fontSize: '0.78rem' }}>
+                  🟢 {allOrdersCombined.filter((o) => o.orderStatus === 'confirmed').length} Confirmed
+                </span>
+              </div>
+            </div>
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden', background: '#FFFFFF' }}>
+            {orderSuccessMsg && (
+              <div
+                style={{
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  color: '#065F46',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '8px',
+                  marginBottom: '1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontWeight: 600,
+                  fontSize: '0.88rem',
+                }}
+              >
+                <CheckCircle2 size={18} /> {orderSuccessMsg}
+              </div>
+            )}
+
+            {/* Filter & Search Bar */}
+            <div
+              className="card"
+              style={{
+                padding: '1rem 1.25rem',
+                background: '#FFFFFF',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '1rem',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--slate-600)', marginRight: '0.25rem' }}>
+                  Channel:
+                </div>
+                {(['all', 'b2c', 'b2b'] as const).map((ch) => (
+                  <button
+                    key={ch}
+                    onClick={() => setOrderChannelFilter(ch)}
+                    className="btn btn-sm"
+                    style={{
+                      background: orderChannelFilter === ch ? 'var(--slate-900)' : 'var(--slate-100)',
+                      color: orderChannelFilter === ch ? '#FFF' : 'var(--slate-700)',
+                      border: 'none',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {ch === 'all' ? 'All Channels' : ch === 'b2c' ? 'B2C Retail' : 'B2B Institutional'}
+                  </button>
+                ))}
+
+                <div style={{ height: '20px', width: '1px', background: 'var(--border-color)', margin: '0 0.5rem' }} />
+
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--slate-600)', marginRight: '0.25rem' }}>
+                  Status:
+                </div>
+                <select
+                  value={orderStatusFilter}
+                  onChange={(e) => setOrderStatusFilter(e.target.value)}
+                  className="form-select"
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', width: 'auto' }}
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="placed">🟡 Placed (Needs Review)</option>
+                  <option value="confirmed">🟢 Confirmed</option>
+                  <option value="processing">🔵 Processing</option>
+                  <option value="packed">📦 Packed</option>
+                  <option value="shipped">🚚 Shipped</option>
+                  <option value="delivered">🏁 Delivered</option>
+                  <option value="rejected">🔴 Rejected</option>
+                </select>
+              </div>
+
+              <div style={{ position: 'relative', minWidth: '260px', flex: '1 1 260px', maxWidth: '400px' }}>
+                <Search size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--slate-400)' }} />
+                <input
+                  type="text"
+                  placeholder="Search by Order #, customer, phone..."
+                  value={orderSearchQuery}
+                  onChange={(e) => setOrderSearchQuery(e.target.value)}
+                  className="form-input"
+                  style={{ paddingLeft: '2.2rem', fontSize: '0.82rem', paddingBlock: '0.4rem' }}
+                />
+              </div>
+            </div>
+
+            {/* Orders Table */}
+            <div className="card" style={{ padding: 0, overflowX: 'auto', background: '#FFFFFF' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
-                    <th style={{ padding: '0.75rem 1rem' }}>Order Ref</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>Channel</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>Customer / Entity</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>Amount</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>Current Status</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>Update Status</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>Tax Invoice</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Order Ref & Date</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Channel</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Customer / Entity</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Items</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Final Amount</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Order Status</th>
+                    <th style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>Review & Confirmation</th>
+                    <th style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {/* B2B Orders */}
-                  {b2bOrders.map((o) => (
-                    <tr key={o.id} style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(37, 99, 235, 0.02)' }}>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <strong>{o.orderNumber}</strong>
-                        <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>PO: {o.poNumber}</div>
+                  {filteredOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--slate-400)' }}>
+                        <ShoppingCart size={36} style={{ margin: '0 auto 0.75rem', opacity: 0.4 }} />
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--slate-700)' }}>
+                          No Orders Found
+                        </div>
+                        <p style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                          No matching orders match the current filter or search criteria.
+                        </p>
                       </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <span className="badge badge-dark">B2B Institutional</span>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>{o.businessName}</td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: 'var(--primary)' }}>
-                        ₹{o.grandTotal.toLocaleString('en-IN')}
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <span className="badge badge-amber">{o.orderStatus}</span>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <select
-                          value={o.orderStatus}
-                          onChange={(e) => handleUpdateB2BOrderStatus(o.id, e.target.value)}
-                          className="form-select"
-                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', width: 'auto' }}
-                        >
-                          <option value="placed">Placed</option>
-                          <option value="confirmed">Confirmed</option>
-                          <option value="processing">Processing</option>
-                          <option value="packed">Packed</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="delivered">Delivered</option>
-                        </select>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <button
-                          onClick={() => setSelectedB2bOrderForInvoice(o)}
-                          className="btn btn-sm"
+                    </tr>
+                  ) : (
+                    filteredOrders.map((o) => {
+                      const isB2B = o.channel === 'b2b';
+                      return (
+                        <tr
+                          key={o.id}
                           style={{
-                            background: 'rgba(2, 132, 199, 0.1)',
-                            color: '#0284C7',
-                            border: '1px solid rgba(2, 132, 199, 0.3)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.35rem',
-                            fontSize: '0.75rem',
-                            fontWeight: 700,
+                            borderBottom: '1px solid var(--border-color)',
+                            background: o.orderStatus === 'placed' ? 'rgba(245, 158, 11, 0.03)' : 'transparent',
                           }}
                         >
-                          <FileText size={13} /> View B2B Invoice
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                          <td style={{ padding: '0.85rem 1rem' }}>
+                            <div style={{ fontWeight: 800, color: 'var(--slate-900)' }}>{o.orderNumber}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
+                              {new Date(o.createdAt).toLocaleDateString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </div>
+                            {isB2B && (o.rawOrder as B2BOrder).poNumber && (
+                              <div style={{ fontSize: '0.7rem', color: '#0284C7', fontWeight: 600 }}>
+                                PO: {(o.rawOrder as B2BOrder).poNumber}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ padding: '0.85rem 1rem' }}>
+                            <span className={`badge ${isB2B ? 'badge-dark' : 'badge-blue'}`} style={{ fontSize: '0.72rem' }}>
+                              {isB2B ? 'B2B Institutional' : 'B2C Retail'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.85rem 1rem' }}>
+                            <div style={{ fontWeight: 700, color: 'var(--slate-800)' }}>{o.customerName}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>{o.email}</div>
+                            {o.phone && <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>📞 {o.phone}</div>}
+                          </td>
+                          <td style={{ padding: '0.85rem 1rem' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--slate-700)' }}>
+                              {o.itemsCount} unit{o.itemsCount !== 1 ? 's' : ''}
+                            </span>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
+                              ({o.items.length} unique SKU{o.items.length !== 1 ? 's' : ''})
+                            </div>
+                          </td>
+                          <td style={{ padding: '0.85rem 1rem' }}>
+                            <div style={{ fontWeight: 800, color: 'var(--slate-900)', fontSize: '0.92rem' }}>
+                              ₹{o.totalAmount.toLocaleString('en-IN')}
+                            </div>
+                            <span
+                              className={`badge ${
+                                o.paymentStatus === 'paid' ? 'badge-green' : 'badge-amber'
+                              }`}
+                              style={{ fontSize: '0.68rem', marginTop: '0.2rem' }}
+                            >
+                              {o.paymentStatus === 'paid' ? 'PAID (ONLINE)' : o.paymentStatus.toUpperCase()}
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.85rem 1rem' }}>
+                            <div style={{ marginBottom: '0.35rem' }}>
+                              {o.orderStatus === 'placed' && (
+                                <span className="badge badge-amber" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+                                  🟡 Order Placed
+                                </span>
+                              )}
+                              {o.orderStatus === 'confirmed' && (
+                                <span className="badge badge-green" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+                                  🟢 Order Confirmed
+                                </span>
+                              )}
+                              {o.orderStatus === 'rejected' && (
+                                <span className="badge badge-red" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+                                  🔴 Order Rejected
+                                </span>
+                              )}
+                              {['processing', 'packed', 'shipped', 'delivered'].includes(o.orderStatus) && (
+                                <span className="badge badge-blue" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+                                  {o.orderStatus.toUpperCase()}
+                                </span>
+                              )}
+                            </div>
+                            {o.orderStatus !== 'rejected' && (
+                              <select
+                                value={o.orderStatus}
+                                onChange={(e) => {
+                                  if (isB2B) {
+                                    handleUpdateB2BOrderStatus(o.id, e.target.value);
+                                  } else {
+                                    handleUpdateB2COrderStatus(o.id, e.target.value);
+                                  }
+                                }}
+                                className="form-select"
+                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: 'auto' }}
+                              >
+                                <option value="placed">Placed</option>
+                                <option value="confirmed">Confirmed</option>
+                                <option value="processing">Processing</option>
+                                <option value="packed">Packed</option>
+                                <option value="shipped">Shipped</option>
+                                <option value="delivered">Delivered</option>
+                                <option value="rejected">Rejected</option>
+                              </select>
+                            )}
+                          </td>
+                          <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                            <div className="flex items-center justify-center gap-1.5">
+                              {/* Confirm Order Button */}
+                              {canConfirmOrders && o.orderStatus !== 'confirmed' && o.orderStatus !== 'delivered' && (
+                                <button
+                                  onClick={() => handleConfirmOrder(o.channel, o.id)}
+                                  className="btn btn-sm"
+                                  style={{
+                                    background: 'rgba(16, 185, 129, 0.12)',
+                                    color: '#059669',
+                                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    padding: '0.35rem 0.65rem',
+                                  }}
+                                  title="Confirm this order and notify customer"
+                                >
+                                  <CheckCircle2 size={13} /> Confirm
+                                </button>
+                              )}
 
-                  {/* B2C Orders */}
-                  {b2cOrders.map((o) => (
-                    <tr key={o.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <strong>{o.orderNumber}</strong>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <span className="badge badge-blue">B2C Retail</span>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>{o.customerName}</td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 800 }}>
-                        ₹{o.total.toLocaleString('en-IN')}
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <span className="badge badge-green">{o.orderStatus}</span>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <select
-                          value={o.orderStatus}
-                          onChange={(e) => handleUpdateB2COrderStatus(o.id, e.target.value)}
-                          className="form-select"
-                          style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', width: 'auto' }}
-                        >
-                          <option value="placed">Placed</option>
-                          <option value="confirmed">Confirmed</option>
-                          <option value="processing">Processing</option>
-                          <option value="packed">Packed</option>
-                          <option value="shipped">Shipped</option>
-                          <option value="delivered">Delivered</option>
-                        </select>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>Retail GST</span>
-                      </td>
-                    </tr>
-                  ))}
+                              {/* Reject Order Button */}
+                              {canRejectOrders && o.orderStatus !== 'rejected' && o.orderStatus !== 'delivered' && (
+                                <button
+                                  onClick={() => handleOpenRejectOrderModal(o.channel, o.id, o.orderNumber)}
+                                  className="btn btn-sm"
+                                  style={{
+                                    background: 'rgba(239, 68, 68, 0.1)',
+                                    color: '#DC2626',
+                                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    padding: '0.35rem 0.65rem',
+                                  }}
+                                  title="Reject this order with reason"
+                                >
+                                  <XCircle size={13} /> Reject
+                                </button>
+                              )}
+
+                              {o.orderStatus === 'confirmed' && (
+                                <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600 }}>
+                                  ✓ Verified
+                                </span>
+                              )}
+                              {o.orderStatus === 'rejected' && (
+                                <span style={{ fontSize: '0.75rem', color: '#DC2626', fontWeight: 600 }}>
+                                  ✕ Declined
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => setSelectedOrderForInspection(isB2B ? { type: 'b2b', order: o.rawOrder as B2BOrder } : { type: 'b2c', order: o.rawOrder as B2COrder })}
+                                className="btn btn-sm"
+                                style={{
+                                  background: 'var(--slate-100)',
+                                  color: 'var(--slate-800)',
+                                  border: '1px solid var(--border-color)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  padding: '0.35rem 0.65rem',
+                                }}
+                                title="Inspect Full Order Details"
+                              >
+                                <Eye size={13} /> Inspect
+                              </button>
+
+                              {isB2B && (
+                                <button
+                                  onClick={() => setSelectedB2bOrderForInvoice(o.rawOrder as B2BOrder)}
+                                  className="btn btn-sm"
+                                  style={{
+                                    background: 'rgba(2, 132, 199, 0.1)',
+                                    color: '#0284C7',
+                                    border: '1px solid rgba(2, 132, 199, 0.3)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    padding: '0.35rem 0.65rem',
+                                  }}
+                                  title="View Tax Invoice"
+                                >
+                                  <FileText size={13} /> Invoice
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1525,67 +1996,291 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         {/* 6. Coupons & Marketing Tab */}
         {activeTab === 'coupons' && (
           <div>
-            <div className="flex justify-between items-center" style={{ marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Marketing & Coupons</h2>
+            <div className="flex justify-between items-center flex-wrap gap-3" style={{ marginBottom: '1.5rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  Promotions & Coupon Governance
+                </h2>
+                <p style={{ fontSize: '0.85rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
+                  Super Admin & Operations Desk: Configure discount codes, percentage caps, order minimums, and validity schedules.
+                </p>
+              </div>
+
+              {canManageCoupons && (
+                <button
+                  onClick={handleOpenCreateCoupon}
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <Plus size={16} /> Create New Coupon
+                </button>
+              )}
             </div>
 
-            <form onSubmit={handleCreateCoupon} className="card" style={{ padding: '1.25rem', background: '#FFFFFF', marginBottom: '1.5rem' }}>
-              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', alignItems: 'end' }}>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Coupon Code</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. FESTIVE20"
-                    value={newCouponCode}
-                    onChange={(e) => setNewCouponCode(e.target.value.toUpperCase())}
-                    className="form-input"
-                    required
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Discount %</label>
-                  <input
-                    type="number"
-                    value={newCouponVal}
-                    onChange={(e) => setNewCouponVal(Number(e.target.value))}
-                    className="form-input"
-                    required
-                  />
-                </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Min Cart Value (₹)</label>
-                  <input
-                    type="number"
-                    value={newCouponMin}
-                    onChange={(e) => setNewCouponMin(Number(e.target.value))}
-                    className="form-input"
-                    required
-                  />
-                </div>
-                <button type="submit" className="btn btn-primary">
-                  <Plus size={16} /> Create Coupon
-                </button>
+            {couponSuccessMsg && (
+              <div
+                style={{
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  color: '#065F46',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '8px',
+                  marginBottom: '1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontWeight: 600,
+                  fontSize: '0.88rem',
+                }}
+              >
+                <CheckCircle2 size={18} /> {couponSuccessMsg}
               </div>
-            </form>
+            )}
 
-            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-              {coupons.map((c) => (
-                <div key={c.code} className="card" style={{ padding: '1.25rem', background: '#FFFFFF' }}>
-                  <div className="flex justify-between items-center">
-                    <span className="badge badge-amber" style={{ fontSize: '0.85rem' }}>
-                      {c.code}
-                    </span>
-                    <strong style={{ color: 'var(--primary)' }}>{c.value}% OFF</strong>
-                  </div>
-                  <p style={{ fontSize: '0.82rem', color: 'var(--slate-600)', margin: '0.5rem 0' }}>
-                    {c.description}
-                  </p>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>
-                    Min order threshold: ₹{c.minOrderValue.toLocaleString('en-IN')}
-                  </div>
+            {/* Metrics */}
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div className="card" style={{ padding: '1.25rem', background: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)', fontWeight: 600 }}>Total Configured Coupons</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--slate-900)', margin: '0.2rem 0' }}>
+                  {coupons.length}
                 </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>Promotions across system</div>
+              </div>
+
+              <div className="card" style={{ padding: '1.25rem', background: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)', fontWeight: 600 }}>Active Coupons</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#10B981', margin: '0.2rem 0' }}>
+                  {coupons.filter((c) => c.isActive !== false && (!c.expiryDate || new Date(c.expiryDate).getTime() >= Date.now())).length}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>Live & eligible at checkout</div>
+              </div>
+
+              <div className="card" style={{ padding: '1.25rem', background: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)', fontWeight: 600 }}>Total Redemptions</div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#2563EB', margin: '0.2rem 0' }}>
+                  {coupons.reduce((sum, c) => sum + (c.usageCount || 0), 0)}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>Customer checkout applications</div>
+              </div>
+            </div>
+
+            {/* Filter Pills */}
+            <div className="card" style={{ padding: '0.75rem 1.25rem', background: '#FFFFFF', marginBottom: '1.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--slate-600)', marginRight: '0.5rem' }}>
+                Filter:
+              </div>
+              {(['all', 'active', 'inactive', 'expired'] as const).map((filterMode) => (
+                <button
+                  key={filterMode}
+                  onClick={() => setCouponFilter(filterMode)}
+                  className="btn btn-sm"
+                  style={{
+                    background: couponFilter === filterMode ? 'var(--primary)' : 'var(--slate-100)',
+                    color: couponFilter === filterMode ? '#FFF' : 'var(--slate-700)',
+                    border: 'none',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {filterMode}
+                </button>
               ))}
             </div>
+
+            {/* Coupons List / Cards */}
+            {filteredCoupons.length === 0 ? (
+              <div
+                className="card"
+                style={{
+                  padding: '3rem 1.5rem',
+                  textAlign: 'center',
+                  background: '#FFFFFF',
+                  color: 'var(--slate-500)',
+                }}
+              >
+                <Tag size={36} style={{ margin: '0 auto 0.75rem', opacity: 0.4 }} />
+                <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--slate-800)' }}>
+                  No Coupons Found
+                </div>
+                <p style={{ fontSize: '0.82rem', marginTop: '0.25rem' }}>
+                  {coupons.length === 0
+                    ? 'No promotional coupons have been created yet. Click "+ Create New Coupon" to configure your first discount code.'
+                    : 'No coupons match the selected filter.'}
+                </p>
+                {canManageCoupons && (
+                  <button
+                    onClick={handleOpenCreateCoupon}
+                    className="btn btn-primary btn-sm"
+                    style={{ marginTop: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                  >
+                    <Plus size={14} /> Create Coupon
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.25rem' }}>
+                {filteredCoupons.map((c) => {
+                  const isExpired = c.expiryDate ? new Date(c.expiryDate).getTime() < Date.now() : false;
+                  const isInactive = c.isActive === false;
+
+                  return (
+                    <div
+                      key={c.id || c.code}
+                      className="card"
+                      style={{
+                        padding: '1.25rem',
+                        background: '#FFFFFF',
+                        border: isExpired
+                          ? '1px solid var(--border-color)'
+                          : isInactive
+                          ? '1px dashed var(--slate-300)'
+                          : '1px solid rgba(16, 185, 129, 0.3)',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div>
+                        <div className="flex justify-between items-start" style={{ marginBottom: '0.75rem' }}>
+                          <div className="flex items-center gap-2">
+                            <span
+                              style={{
+                                background: 'var(--slate-900)',
+                                color: '#FFFFFF',
+                                fontWeight: 800,
+                                fontSize: '0.95rem',
+                                padding: '0.3rem 0.75rem',
+                                borderRadius: '6px',
+                                letterSpacing: '0.05em',
+                                fontFamily: 'monospace',
+                              }}
+                            >
+                              {c.code}
+                            </span>
+                          </div>
+
+                          <div>
+                            {isExpired ? (
+                              <span className="badge badge-red" style={{ fontSize: '0.7rem' }}>
+                                EXPIRED
+                              </span>
+                            ) : isInactive ? (
+                              <span className="badge badge-amber" style={{ fontSize: '0.7rem' }}>
+                                DISABLED
+                              </span>
+                            ) : (
+                              <span className="badge badge-green" style={{ fontSize: '0.7rem' }}>
+                                ACTIVE
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.25rem' }}>
+                          {c.discountType === 'percent' ? `${c.value}% OFF` : `₹${c.value} FLAT OFF`}
+                          {c.maxDiscountAmount && c.discountType === 'percent' && (
+                            <span style={{ fontSize: '0.78rem', color: 'var(--slate-500)', fontWeight: 500, marginLeft: '0.4rem' }}>
+                              (Capped at ₹{c.maxDiscountAmount})
+                            </span>
+                          )}
+                        </div>
+
+                        <p style={{ fontSize: '0.82rem', color: 'var(--slate-600)', marginBottom: '0.75rem', minHeight: '36px' }}>
+                          {c.description || 'Promotional coupon applicable on qualified order totals.'}
+                        </p>
+
+                        <div
+                          style={{
+                            background: 'var(--slate-50)',
+                            borderRadius: '8px',
+                            padding: '0.6rem 0.75rem',
+                            fontSize: '0.75rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.25rem',
+                            marginBottom: '1rem',
+                          }}
+                        >
+                          <div className="flex justify-between">
+                            <span style={{ color: 'var(--slate-500)' }}>Min Cart Value:</span>
+                            <strong>₹{c.minOrderValue.toLocaleString('en-IN')}</strong>
+                          </div>
+                          <div className="flex justify-between">
+                            <span style={{ color: 'var(--slate-500)' }}>Validity:</span>
+                            <span>
+                              {c.startDate ? new Date(c.startDate).toLocaleDateString('en-IN') : 'Anytime'} →{' '}
+                              {c.expiryDate ? new Date(c.expiryDate).toLocaleDateString('en-IN') : 'No Expiry'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span style={{ color: 'var(--slate-500)' }}>Redemptions:</span>
+                            <span>
+                              <strong>{c.usageCount || 0}</strong>
+                              {c.usageLimit ? ` / ${c.usageLimit} limit` : ' (Unlimited)'}
+                            </span>
+                          </div>
+                          {c.createdBy && (
+                            <div className="flex justify-between">
+                              <span style={{ color: 'var(--slate-500)' }}>Created By:</span>
+                              <span style={{ color: 'var(--slate-700)' }}>{c.createdBy}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Controls */}
+                      {canManageCoupons && (
+                        <div
+                          className="flex justify-between items-center"
+                          style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem' }}
+                        >
+                          <button
+                            onClick={() => handleToggleCoupon(c.id || c.code)}
+                            className="btn btn-sm"
+                            style={{
+                              background: c.isActive !== false ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                              color: c.isActive !== false ? '#DC2626' : '#059669',
+                              border: 'none',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                            }}
+                          >
+                            {c.isActive !== false ? 'Disable' : 'Enable'}
+                          </button>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleOpenEditCoupon(c)}
+                              className="btn btn-secondary btn-sm"
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.75rem' }}
+                            >
+                              <Edit size={13} /> Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCoupon(c.id || c.code)}
+                              className="btn btn-sm"
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                color: 'var(--danger)',
+                                border: '1px solid rgba(239, 68, 68, 0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '0.3rem 0.5rem',
+                              }}
+                              title="Delete Coupon"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -1852,6 +2547,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>User ID</th>
                         <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>Department</th>
                         <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>Role</th>
+                        <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>Operational Permissions</th>
                         <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>Approval Status</th>
                         <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>Authorized By</th>
                       </tr>
@@ -1880,6 +2576,78 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                               >
                                 {staff.role === 'super_admin' ? '👑 Super Admin' : staff.role.replace('_', ' ')}
                               </span>
+                            </td>
+                            <td style={{ padding: '0.85rem 1rem' }}>
+                              {staff.role === 'super_admin' ? (
+                                <span style={{ fontSize: '0.75rem', color: '#9333EA', fontWeight: 700 }}>
+                                  👑 Root (Unrestricted)
+                                </span>
+                              ) : (
+                                <div className="flex flex-col gap-1.5" style={{ fontSize: '0.72rem' }}>
+                                  <label
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.4rem',
+                                      cursor: isSuperAdmin ? 'pointer' : 'default',
+                                      fontWeight: staff.permissions?.canManageCoupons ? 700 : 500,
+                                      color: staff.permissions?.canManageCoupons ? '#059669' : 'var(--slate-500)',
+                                    }}
+                                    onClick={() => isSuperAdmin && handleToggleStaffPermission(staff.id, 'canManageCoupons')}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(staff.permissions?.canManageCoupons)}
+                                      disabled={!isSuperAdmin}
+                                      readOnly
+                                      style={{ cursor: isSuperAdmin ? 'pointer' : 'default' }}
+                                    />
+                                    Manage Coupons
+                                  </label>
+
+                                  <label
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.4rem',
+                                      cursor: isSuperAdmin ? 'pointer' : 'default',
+                                      fontWeight: staff.permissions?.canConfirmOrders ? 700 : 500,
+                                      color: staff.permissions?.canConfirmOrders ? '#059669' : 'var(--slate-500)',
+                                    }}
+                                    onClick={() => isSuperAdmin && handleToggleStaffPermission(staff.id, 'canConfirmOrders')}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(staff.permissions?.canConfirmOrders)}
+                                      disabled={!isSuperAdmin}
+                                      readOnly
+                                      style={{ cursor: isSuperAdmin ? 'pointer' : 'default' }}
+                                    />
+                                    Confirm Orders
+                                  </label>
+
+                                  <label
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.4rem',
+                                      cursor: isSuperAdmin ? 'pointer' : 'default',
+                                      fontWeight: staff.permissions?.canRejectOrders ? 700 : 500,
+                                      color: staff.permissions?.canRejectOrders ? '#DC2626' : 'var(--slate-500)',
+                                    }}
+                                    onClick={() => isSuperAdmin && handleToggleStaffPermission(staff.id, 'canRejectOrders')}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(staff.permissions?.canRejectOrders)}
+                                      disabled={!isSuperAdmin}
+                                      readOnly
+                                      style={{ cursor: isSuperAdmin ? 'pointer' : 'default' }}
+                                    />
+                                    Reject Orders
+                                  </label>
+                                </div>
+                              )}
                             </td>
                             <td style={{ padding: '0.85rem 1rem' }}>
                               <span className="badge badge-green" style={{ fontSize: '0.72rem' }}>
@@ -3903,6 +4671,720 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             alert(`Test payment successful! Captured ID: ${response.razorpay_payment_id}`);
           }}
         />
+      )}
+
+      {/* 1. Complete Order Inspection Modal */}
+      {selectedOrderForInspection && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1050,
+            padding: '1rem',
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              width: '100%',
+              maxWidth: '850px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '1.75rem',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            }}
+          >
+            {/* Modal Header */}
+            <div className="flex justify-between items-start" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                    Order {selectedOrderForInspection.order.orderNumber}
+                  </h3>
+                  <span className={`badge ${selectedOrderForInspection.type === 'b2b' ? 'badge-dark' : 'badge-blue'}`} style={{ fontSize: '0.75rem' }}>
+                    {selectedOrderForInspection.type === 'b2b' ? 'B2B Institutional' : 'B2C Retail'}
+                  </span>
+                  {selectedOrderForInspection.order.orderStatus === 'placed' && (
+                    <span className="badge badge-amber" style={{ fontSize: '0.75rem' }}>
+                      🟡 ORDER PLACED (NEEDS REVIEW)
+                    </span>
+                  )}
+                  {selectedOrderForInspection.order.orderStatus === 'confirmed' && (
+                    <span className="badge badge-green" style={{ fontSize: '0.75rem' }}>
+                      🟢 ORDER CONFIRMED
+                    </span>
+                  )}
+                  {selectedOrderForInspection.order.orderStatus === 'rejected' && (
+                    <span className="badge badge-red" style={{ fontSize: '0.75rem' }}>
+                      🔴 ORDER REJECTED
+                    </span>
+                  )}
+                  {['processing', 'packed', 'shipped', 'delivered'].includes(selectedOrderForInspection.order.orderStatus) && (
+                    <span className="badge badge-blue" style={{ fontSize: '0.75rem' }}>
+                      {selectedOrderForInspection.order.orderStatus.toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: '0.25rem' }}>
+                  Placed on {new Date(selectedOrderForInspection.order.createdAt).toLocaleString('en-IN', {
+                    dateStyle: 'full',
+                    timeStyle: 'medium',
+                  })}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedOrderForInspection(null)}
+                style={{
+                  background: 'var(--slate-100)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--slate-600)',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Rejection Alert if rejected */}
+            {selectedOrderForInspection.order.orderStatus === 'rejected' && (
+              <div
+                style={{
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1.5px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '10px',
+                  padding: '1rem',
+                  marginBottom: '1.25rem',
+                  display: 'flex',
+                  gap: '0.75rem',
+                  alignItems: 'flex-start',
+                }}
+              >
+                <XCircle size={20} className="text-red-500" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div style={{ fontSize: '0.85rem' }}>
+                  <div style={{ fontWeight: 800, color: '#991B1B' }}>Order Rejected by Admin Desk</div>
+                  <div style={{ color: '#7F1D1D', marginTop: '0.2rem' }}>
+                    Reason: <strong>{selectedOrderForInspection.order.rejectionReason || 'Verification criteria not met.'}</strong>
+                  </div>
+                  {selectedOrderForInspection.order.rejectedBy && (
+                    <div style={{ fontSize: '0.75rem', color: '#991B1B', marginTop: '0.25rem' }}>
+                      Declined by: {selectedOrderForInspection.order.rejectedBy} on{' '}
+                      {selectedOrderForInspection.order.rejectedAt
+                        ? new Date(selectedOrderForInspection.order.rejectedAt).toLocaleString('en-IN')
+                        : 'Recorded'}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Confirmation Alert if confirmed */}
+            {selectedOrderForInspection.order.orderStatus === 'confirmed' && (
+              <div
+                style={{
+                  background: 'rgba(16, 185, 129, 0.08)',
+                  border: '1.5px solid rgba(16, 185, 129, 0.3)',
+                  borderRadius: '10px',
+                  padding: '0.85rem 1rem',
+                  marginBottom: '1.25rem',
+                  display: 'flex',
+                  gap: '0.75rem',
+                  alignItems: 'center',
+                }}
+              >
+                <CheckCircle2 size={18} className="text-emerald-600" />
+                <div style={{ fontSize: '0.85rem', color: '#065F46' }}>
+                  <strong>Order Confirmed & Approved for Dispatch</strong>
+                  {selectedOrderForInspection.order.confirmedBy && (
+                    <span> — Confirmed by {selectedOrderForInspection.order.confirmedBy}</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Customer & Address Details Grid */}
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gap: '1rem',
+                marginBottom: '1.25rem',
+              }}
+            >
+              <div style={{ background: 'var(--slate-50)', padding: '1rem', borderRadius: '10px', fontSize: '0.82rem' }}>
+                <div style={{ fontWeight: 700, color: 'var(--slate-900)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Users size={15} /> Customer & Contact Details
+                </div>
+                <div>
+                  <strong>
+                    {selectedOrderForInspection.type === 'b2b'
+                      ? (selectedOrderForInspection.order as B2BOrder).businessName
+                      : (selectedOrderForInspection.order as B2COrder).customerName}
+                  </strong>
+                </div>
+                {selectedOrderForInspection.type === 'b2b' && (
+                  <div style={{ color: 'var(--slate-600)', marginTop: '0.2rem' }}>
+                    GSTIN: <code>{(selectedOrderForInspection.order as B2BOrder).gstin || 'N/A'}</code>
+                  </div>
+                )}
+                <div style={{ color: 'var(--slate-600)', marginTop: '0.2rem' }}>
+                  Email: {selectedOrderForInspection.type === 'b2b'
+                    ? (selectedOrderForInspection.order as B2BOrder).businessName + ' Enterprise'
+                    : (selectedOrderForInspection.order as B2COrder).customerEmail || 'N/A'}
+                </div>
+                <div style={{ color: 'var(--slate-600)', marginTop: '0.2rem' }}>
+                  Phone: {selectedOrderForInspection.type === 'b2b'
+                    ? (selectedOrderForInspection.order as B2BOrder).billingAddress?.phone || 'N/A'
+                    : (selectedOrderForInspection.order as B2COrder).customerPhone || (selectedOrderForInspection.order as B2COrder).shippingAddress?.phone || 'N/A'}
+                </div>
+              </div>
+
+              <div style={{ background: 'var(--slate-50)', padding: '1rem', borderRadius: '10px', fontSize: '0.82rem' }}>
+                <div style={{ fontWeight: 700, color: 'var(--slate-900)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Truck size={15} /> Shipping & Delivery Address
+                </div>
+                {selectedOrderForInspection.type === 'b2b' ? (
+                  <div>
+                    <div>{(selectedOrderForInspection.order as B2BOrder).shippingAddress?.street}</div>
+                    <div>
+                      {(selectedOrderForInspection.order as B2BOrder).shippingAddress?.city},{' '}
+                      {(selectedOrderForInspection.order as B2BOrder).shippingAddress?.state} -{' '}
+                      {(selectedOrderForInspection.order as B2BOrder).shippingAddress?.pincode}
+                    </div>
+                    <div style={{ color: 'var(--slate-500)', marginTop: '0.2rem' }}>India</div>
+                  </div>
+                ) : (
+                  <div>
+                    <div>{(selectedOrderForInspection.order as B2COrder).shippingAddress?.street}</div>
+                    <div>
+                      {(selectedOrderForInspection.order as B2COrder).shippingAddress?.city},{' '}
+                      {(selectedOrderForInspection.order as B2COrder).shippingAddress?.state} -{' '}
+                      {(selectedOrderForInspection.order as B2COrder).shippingAddress?.pincode}
+                    </div>
+                    <div style={{ color: 'var(--slate-500)', marginTop: '0.2rem' }}>India</div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ background: 'var(--slate-50)', padding: '1rem', borderRadius: '10px', fontSize: '0.82rem' }}>
+                <div style={{ fontWeight: 700, color: 'var(--slate-900)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <CreditCard size={15} /> Payment Gateway Audit
+                </div>
+                <div className="flex justify-between" style={{ marginBottom: '0.25rem' }}>
+                  <span style={{ color: 'var(--slate-500)' }}>Method:</span>
+                  <strong>
+                    {selectedOrderForInspection.type === 'b2b'
+                      ? (selectedOrderForInspection.order as B2BOrder).paymentTerms || 'Prepaid'
+                      : (selectedOrderForInspection.order as B2COrder).paymentMethod === 'razorpay'
+                      ? 'Razorpay Secure'
+                      : (selectedOrderForInspection.order as B2COrder).paymentMethod.toUpperCase()}
+                  </strong>
+                </div>
+                <div className="flex justify-between" style={{ marginBottom: '0.25rem' }}>
+                  <span style={{ color: 'var(--slate-500)' }}>Payment Status:</span>
+                  <span className={`badge ${selectedOrderForInspection.order.paymentStatus === 'paid' ? 'badge-green' : 'badge-amber'}`} style={{ fontSize: '0.7rem' }}>
+                    {selectedOrderForInspection.order.paymentStatus.toUpperCase()}
+                  </span>
+                </div>
+                {selectedOrderForInspection.order.paymentDetails?.transactionId && (
+                  <div style={{ marginTop: '0.4rem', fontSize: '0.75rem', color: 'var(--slate-600)' }}>
+                    Payment ID: <code style={{ background: 'var(--slate-200)', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>{selectedOrderForInspection.order.paymentDetails.transactionId}</code>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Products Table */}
+            <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden', marginBottom: '1.25rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                <thead>
+                  <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                    <th style={{ padding: '0.65rem 0.85rem' }}>Product</th>
+                    <th style={{ padding: '0.65rem 0.85rem' }}>Unit Price</th>
+                    <th style={{ padding: '0.65rem 0.85rem' }}>Qty</th>
+                    <th style={{ padding: '0.65rem 0.85rem', textAlign: 'right' }}>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedOrderForInspection.order.items.map((item, idx) => {
+                    const unitPrice =
+                      selectedOrderForInspection.type === 'b2b'
+                        ? (item as B2BOrderItemSummary).effectiveUnitPrice || (item as B2BOrderItemSummary).wholesalePrice
+                        : (item as OrderItemSummary).unitPrice;
+
+                    return (
+                      <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                        <td style={{ padding: '0.65rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                          {item.image && (
+                            <img
+                              src={item.image}
+                              alt={item.productName}
+                              style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '6px', border: '1px solid var(--border-color)' }}
+                            />
+                          )}
+                          <div>
+                            <div style={{ fontWeight: 700, color: 'var(--slate-800)' }}>{item.productName}</div>
+                            {item.sku && <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>SKU: {item.sku}</div>}
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.65rem 0.85rem' }}>₹{unitPrice.toLocaleString('en-IN')}</td>
+                        <td style={{ padding: '0.65rem 0.85rem', fontWeight: 700 }}>{item.quantity}</td>
+                        <td style={{ padding: '0.65rem 0.85rem', textAlign: 'right', fontWeight: 700 }}>
+                          ₹{item.total.toLocaleString('en-IN')}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Financial Totals */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+              <div style={{ width: '100%', maxWidth: '320px', fontSize: '0.85rem' }}>
+                <div className="flex justify-between" style={{ padding: '0.3rem 0', color: 'var(--slate-600)' }}>
+                  <span>Subtotal (Taxable):</span>
+                  <span>
+                    ₹
+                    {(selectedOrderForInspection.type === 'b2b'
+                      ? (selectedOrderForInspection.order as B2BOrder).taxableAmount
+                      : (selectedOrderForInspection.order as B2COrder).subtotal
+                    ).toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                {selectedOrderForInspection.type === 'b2c' && (selectedOrderForInspection.order as B2COrder).discount > 0 && (
+                  <div className="flex justify-between" style={{ padding: '0.3rem 0', color: '#059669', fontWeight: 600 }}>
+                    <span>
+                      Coupon Discount {(selectedOrderForInspection.order as B2COrder).couponCode ? `(${(selectedOrderForInspection.order as B2COrder).couponCode})` : ''}:
+                    </span>
+                    <span>-₹{(selectedOrderForInspection.order as B2COrder).discount.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+
+                {selectedOrderForInspection.type === 'b2b' && (selectedOrderForInspection.order as B2BOrder).bulkDiscountTotal > 0 && (
+                  <div className="flex justify-between" style={{ padding: '0.3rem 0', color: '#059669', fontWeight: 600 }}>
+                    <span>Bulk Tier Discount:</span>
+                    <span>-₹{(selectedOrderForInspection.order as B2BOrder).bulkDiscountTotal.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between" style={{ padding: '0.3rem 0', color: 'var(--slate-600)' }}>
+                  <span>GST / Tax:</span>
+                  <span>
+                    ₹
+                    {(selectedOrderForInspection.type === 'b2b'
+                      ? (selectedOrderForInspection.order as B2BOrder).totalGst
+                      : (selectedOrderForInspection.order as B2COrder).gstAmount
+                    ).toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                <div className="flex justify-between" style={{ padding: '0.3rem 0', color: 'var(--slate-600)' }}>
+                  <span>Shipping Charges:</span>
+                  <span>
+                    {(selectedOrderForInspection.type === 'b2b'
+                      ? (selectedOrderForInspection.order as B2BOrder).shippingFee
+                      : (selectedOrderForInspection.order as B2COrder).shippingFee
+                    ) === 0 ? (
+                      <span style={{ color: '#059669', fontWeight: 600 }}>FREE</span>
+                    ) : (
+                      `₹${(selectedOrderForInspection.type === 'b2b'
+                        ? (selectedOrderForInspection.order as B2BOrder).shippingFee
+                        : (selectedOrderForInspection.order as B2COrder).shippingFee
+                      ).toLocaleString('en-IN')}`
+                    )}
+                  </span>
+                </div>
+
+                <div
+                  className="flex justify-between"
+                  style={{
+                    padding: '0.6rem 0',
+                    borderTop: '1.5px solid var(--border-color)',
+                    marginTop: '0.4rem',
+                    fontSize: '1.05rem',
+                    fontWeight: 800,
+                    color: 'var(--slate-900)',
+                  }}
+                >
+                  <span>Grand Total:</span>
+                  <span style={{ color: 'var(--primary)' }}>
+                    ₹
+                    {(selectedOrderForInspection.type === 'b2b'
+                      ? (selectedOrderForInspection.order as B2BOrder).grandTotal
+                      : (selectedOrderForInspection.order as B2COrder).total
+                    ).toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div
+              className="flex justify-between items-center flex-wrap gap-3"
+              style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}
+            >
+              <div className="flex items-center gap-2">
+                {canConfirmOrders && selectedOrderForInspection.order.orderStatus !== 'confirmed' && selectedOrderForInspection.order.orderStatus !== 'delivered' && (
+                  <button
+                    onClick={() => handleConfirmOrder(selectedOrderForInspection.type, selectedOrderForInspection.order.id)}
+                    className="btn btn-primary"
+                    style={{ background: '#059669', borderColor: '#059669', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    <CheckCircle2 size={16} /> Confirm Order
+                  </button>
+                )}
+
+                {canRejectOrders && selectedOrderForInspection.order.orderStatus !== 'rejected' && selectedOrderForInspection.order.orderStatus !== 'delivered' && (
+                  <button
+                    onClick={() => {
+                      handleOpenRejectOrderModal(
+                        selectedOrderForInspection.type,
+                        selectedOrderForInspection.order.id,
+                        selectedOrderForInspection.order.orderNumber
+                      );
+                    }}
+                    className="btn btn-secondary"
+                    style={{ color: '#DC2626', borderColor: '#DC2626', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    <XCircle size={16} /> Reject Order
+                  </button>
+                )}
+
+                {selectedOrderForInspection.type === 'b2b' && (
+                  <button
+                    onClick={() => {
+                      setSelectedB2bOrderForInvoice(selectedOrderForInspection.order as B2BOrder);
+                    }}
+                    className="btn btn-secondary"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    <FileText size={16} /> View B2B Tax Invoice
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedOrderForInspection(null)}
+                className="btn btn-secondary"
+              >
+                Close Inspection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Order Rejection Reason Modal */}
+      {orderRejectionModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            padding: '1rem',
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              width: '100%',
+              maxWidth: '500px',
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '1.75rem',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            }}
+          >
+            <div className="flex items-center gap-2" style={{ marginBottom: '1rem' }}>
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: 'rgba(239, 68, 68, 0.12)',
+                  color: '#DC2626',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <AlertCircle size={20} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  Reject Order {orderRejectionModal.orderNumber}
+                </h3>
+                <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)' }}>
+                  This will mark the order as Rejected and update the customer tracking status.
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label className="form-label">Select Standard Reason</label>
+              <select
+                onChange={(e) => setOrderRejectionReason(e.target.value)}
+                className="form-select"
+                defaultValue="Verification criteria not met / Address unserviceable"
+              >
+                <option value="Verification criteria not met / Address unserviceable">
+                  Verification criteria not met / Address unserviceable
+                </option>
+                <option value="Inventory stock unavailable or discontinued">
+                  Inventory stock unavailable or discontinued
+                </option>
+                <option value="Compliance or GST documentation incomplete">
+                  Compliance or GST documentation incomplete
+                </option>
+                <option value="Customer requested cancellation prior to dispatch">
+                  Customer requested cancellation prior to dispatch
+                </option>
+                <option value="Other administrative grounds">
+                  Other administrative grounds
+                </option>
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+              <label className="form-label">Detailed Notes / Custom Reason</label>
+              <textarea
+                value={orderRejectionReason}
+                onChange={(e) => setOrderRejectionReason(e.target.value)}
+                rows={3}
+                className="form-textarea"
+                placeholder="Specify precise reason for rejecting this order..."
+                required
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setOrderRejectionModal(null);
+                  setOrderRejectionReason('');
+                }}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmOrderRejection}
+                className="btn btn-primary"
+                style={{ background: '#DC2626', borderColor: '#DC2626' }}
+              >
+                Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Create / Edit Coupon Modal */}
+      {showCouponModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1060,
+            padding: '1rem',
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              width: '100%',
+              maxWidth: '560px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '1.75rem',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            }}
+          >
+            <div className="flex justify-between items-center" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                {editingCoupon ? `Edit Coupon: ${editingCoupon.code}` : 'Create New Promotional Coupon'}
+              </h3>
+              <button
+                onClick={() => setShowCouponModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: 'var(--slate-500)' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveCouponSubmit}>
+              <div className="form-group">
+                <label className="form-label">Coupon Code *</label>
+                <input
+                  type="text"
+                  value={couponCodeInput}
+                  onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+                  placeholder="e.g. FESTIVE20, DIWALI500"
+                  className="form-input"
+                  style={{ textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 700 }}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Description / Offer Details</label>
+                <input
+                  type="text"
+                  value={couponDescriptionInput}
+                  onChange={(e) => setCouponDescriptionInput(e.target.value)}
+                  placeholder="e.g. 20% discount on orders above ₹1,000"
+                  className="form-input"
+                />
+              </div>
+
+              <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Discount Type *</label>
+                  <select
+                    value={couponTypeInput}
+                    onChange={(e) => setCouponTypeInput(e.target.value as 'percent' | 'flat')}
+                    className="form-select"
+                  >
+                    <option value="percent">Percentage (% OFF)</option>
+                    <option value="flat">Fixed Flat Amount (₹ OFF)</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    Discount Value {couponTypeInput === 'percent' ? '(%)' : '(₹)'} *
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={couponTypeInput === 'percent' ? 100 : 100000}
+                    value={couponValueInput}
+                    onChange={(e) => setCouponValueInput(Number(e.target.value))}
+                    className="form-input"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Min Cart Value (₹) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={couponMinOrderInput}
+                    onChange={(e) => setCouponMinOrderInput(Number(e.target.value))}
+                    className="form-input"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Max Discount Cap (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder={couponTypeInput === 'percent' ? 'Optional cap (e.g. 500)' : 'N/A for flat'}
+                    value={couponMaxDiscountInput}
+                    onChange={(e) => setCouponMaxDiscountInput(e.target.value)}
+                    className="form-input"
+                    disabled={couponTypeInput === 'flat'}
+                  />
+                </div>
+              </div>
+
+              <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Start Date</label>
+                  <input
+                    type="date"
+                    value={couponStartDateInput}
+                    onChange={(e) => setCouponStartDateInput(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Expiry Date</label>
+                  <input
+                    type="date"
+                    value={couponExpiryDateInput}
+                    onChange={(e) => setCouponExpiryDateInput(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'center' }}>
+                <div className="form-group">
+                  <label className="form-label">Usage Limit (Total times)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Unlimited if left empty"
+                    value={couponUsageLimitInput}
+                    onChange={(e) => setCouponUsageLimitInput(e.target.value)}
+                    className="form-input"
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0, marginTop: '1rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={couponIsActiveInput}
+                      onChange={(e) => setCouponIsActiveInput(e.target.checked)}
+                    />
+                    Coupon Active for Checkout
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem', marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCouponModal(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  {editingCoupon ? 'Update Coupon' : 'Create & Activate Coupon'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

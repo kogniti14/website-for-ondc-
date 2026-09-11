@@ -144,10 +144,44 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // --- Coupon Logic ---
   const applyCoupon = (code: string): { success: boolean; message: string } => {
+    const cleanCode = code.trim().toUpperCase();
+    if (!cleanCode) {
+      return { success: false, message: 'Please enter a coupon code.' };
+    }
+
     const coupons = storageService.getCoupons();
-    const found = coupons.find((c) => c.code.toUpperCase() === code.trim().toUpperCase());
+    const found = coupons.find((c) => c.code.toUpperCase() === cleanCode);
     if (!found) {
-      return { success: false, message: 'Invalid coupon code. Try WELCOME10 or KOGNITI15.' };
+      return { success: false, message: 'Invalid coupon code.' };
+    }
+
+    if (found.isActive === false) {
+      return { success: false, message: `Coupon '${found.code}' is currently inactive.` };
+    }
+
+    const now = new Date();
+    if (found.startDate) {
+      const start = new Date(found.startDate);
+      if (now < start) {
+        return {
+          success: false,
+          message: `Coupon '${found.code}' is valid starting from ${start.toLocaleDateString('en-IN')}.`,
+        };
+      }
+    }
+
+    if (found.expiryDate) {
+      const expiry = new Date(found.expiryDate);
+      if (found.expiryDate.length === 10) {
+        expiry.setHours(23, 59, 59, 999);
+      }
+      if (now > expiry) {
+        return { success: false, message: `Coupon '${found.code}' has expired.` };
+      }
+    }
+
+    if (found.usageLimit && (found.usageCount || 0) >= found.usageLimit) {
+      return { success: false, message: `Coupon '${found.code}' has reached its total usage limit.` };
     }
 
     const b2cTotals = getB2CCalculations();
@@ -177,11 +211,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     let discount = 0;
-    if (appliedCoupon && subtotal >= appliedCoupon.minOrderValue) {
+    if (appliedCoupon && subtotal >= appliedCoupon.minOrderValue && appliedCoupon.isActive !== false) {
       if (appliedCoupon.discountType === 'percent') {
         discount = Math.round((subtotal * appliedCoupon.value) / 100);
+        if (appliedCoupon.maxDiscountAmount && appliedCoupon.maxDiscountAmount > 0) {
+          discount = Math.min(discount, appliedCoupon.maxDiscountAmount);
+        }
       } else {
-        discount = appliedCoupon.value;
+        discount = Math.min(subtotal, appliedCoupon.value);
       }
     }
 

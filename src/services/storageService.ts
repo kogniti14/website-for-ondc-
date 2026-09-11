@@ -221,139 +221,9 @@ const SEED_B2B_BUSINESSES: B2BBusiness[] = [
   },
 ];
 
-const SEED_B2C_ORDERS: B2COrder[] = [
-  {
-    id: 'b2c_ord_101',
-    orderNumber: 'KM-B2C-2026-8941',
-    customerName: 'Utkarsh Sharma',
-    customerEmail: 'customer@kognitiminds.com',
-    customerPhone: '+91 98765 43210',
-    shippingAddress: SEED_B2C_USERS[0].addresses[0],
-    billingAddress: SEED_B2C_USERS[0].addresses[0],
-    items: [
-      {
-        productId: 'km-agri-a4-75',
-        productName: 'Kogniti AgroPrint 75 GSM A4 Sustainable Copier Paper (500 Sheets)',
-        sku: 'KM-PAP-AG75',
-        image: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=400&q=80',
-        quantity: 2,
-        unitPrice: 289,
-        mrp: 399,
-        hsn: '48025610',
-        gstRate: 12,
-        total: 578,
-      },
-      {
-        productId: 'km-notebook-spiral-a5',
-        productName: 'Kogniti AgroLeaf Spiral Bound Executive Notebook (A5, 160 Pages)',
-        sku: 'KM-NB-SP160',
-        image: 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=400&q=80',
-        quantity: 3,
-        unitPrice: 199,
-        mrp: 299,
-        hsn: '48201000',
-        gstRate: 12,
-        total: 597,
-      },
-      {
-        productId: 'km-stat-desk-organizer',
-        productName: 'Kogniti EcoCraft Recycled Kraft Desk Organizer & Memo Caddy Set',
-        sku: 'KM-ST-ORG01',
-        image: 'https://images.unsplash.com/photo-1507842229451-7f01be837a27?auto=format&fit=crop&w=400&q=80',
-        quantity: 1,
-        unitPrice: 599,
-        mrp: 899,
-        hsn: '48209090',
-        gstRate: 18,
-        total: 599,
-      },
-    ],
-    subtotal: 1774,
-    discount: 177,
-    couponCode: 'WELCOME10',
-    gstAmount: 213,
-    shippingFee: 0,
-    total: 1597,
-    paymentMethod: 'upi',
-    paymentStatus: 'paid',
-    paymentDetails: {
-      transactionId: 'UPI-RAZOR-90823412',
-      upiId: 'utkarsh@oksbi',
-    },
-    orderStatus: 'shipped',
-    trackingNumber: 'DEL-IN-893041920',
-    courierPartner: 'Delhivery',
-    createdAt: '2026-09-04T11:20:00Z',
-    statusTimeline: [
-      { status: 'Order Placed', timestamp: '2026-09-04 11:20 AM', note: 'Order placed via UPI Payment' },
-      { status: 'Payment Confirmed', timestamp: '2026-09-04 11:21 AM', note: 'Payment verified: ₹1,597' },
-      { status: 'Processing & QC', timestamp: '2026-09-04 02:40 PM', note: 'Sustainable paper stock allocated at Greater Noida Fulfilment Center' },
-      { status: 'Packed', timestamp: '2026-09-05 09:15 AM', note: 'Eco-friendly cardboard carton with water-activated kraft paper tape' },
-      { status: 'Shipped', timestamp: '2026-09-05 04:30 PM', note: 'Handed over to Delhivery Express (AWB: DEL-IN-893041920)' },
-    ],
-  },
-];
+const SEED_B2C_ORDERS: B2COrder[] = [];
 
-const SEED_B2B_ORDERS: B2BOrder[] = [
-  {
-    id: 'b2b_ord_201',
-    orderNumber: 'KM-B2B-2026-0428',
-    poNumber: 'PO-EDU-2026-089',
-    businessId: 'biz_edutech',
-    businessName: 'EduTech Solutions Private Limited',
-    gstin: '29AAACE1234F1Z8',
-    shippingAddress: SEED_B2B_BUSINESSES[0].shippingAddress,
-    billingAddress: SEED_B2B_BUSINESSES[0].billingAddress,
-    items: [
-      {
-        productId: 'km-copier-a4-carton',
-        productName: 'Kogniti EcoCopier A4 75 GSM Commercial Office Carton (5 Reams / 2,500 Sheets)',
-        sku: 'KM-PAP-CTN05',
-        image: 'https://images.unsplash.com/photo-1589330694653-dad6ef495b54?auto=format&fit=crop&w=400&q=80',
-        quantity: 50,
-        wholesalePrice: 960,
-        tierDiscountPercent: 16,
-        effectiveUnitPrice: 806.4,
-        hsn: '48025610',
-        gstRate: 12,
-        total: 40320,
-      },
-      {
-        productId: 'km-notebook-subject-b5',
-        productName: 'Kogniti CampusPro 5-Subject Perforated Spiral Notebook (B5, 300 Pages)',
-        sku: 'KM-NB-SUB300',
-        image: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=400&q=80',
-        quantity: 200,
-        wholesalePrice: 220,
-        tierDiscountPercent: 18,
-        effectiveUnitPrice: 180.4,
-        hsn: '48201000',
-        gstRate: 12,
-        total: 36080,
-      },
-    ],
-    subtotal: 76400,
-    bulkDiscountTotal: 14720,
-    taxableAmount: 76400,
-    cgst: 4584,
-    sgst: 4584,
-    igst: 0,
-    totalGst: 9168,
-    shippingFee: 0,
-    grandTotal: 85568,
-    paymentTerms: 'Net 30',
-    paymentStatus: 'credit_approved',
-    orderStatus: 'processing',
-    trackingNumber: 'BLUEDART-FREIGHT-772910',
-    courierPartner: 'Blue Dart Freight',
-    createdAt: '2026-09-02T16:00:00Z',
-    statusTimeline: [
-      { status: 'PO Received', timestamp: '2026-09-02 04:00 PM', note: 'Purchase Order PO-EDU-2026-089 validated' },
-      { status: 'Credit Approved', timestamp: '2026-09-02 05:15 PM', note: 'Net 30 terms approved against active credit line' },
-      { status: 'Processing Allocation', timestamp: '2026-09-03 10:00 AM', note: 'Pallet allocation at Greater Noida Manufacturing Facility' },
-    ],
-  },
-];
+const SEED_B2B_ORDERS: B2BOrder[] = [];
 
 const SEED_B2B_QUOTATIONS: B2BQuotation[] = [
   {
@@ -567,7 +437,8 @@ class StorageService {
 
   // --- B2C Orders ---
   getB2COrders(): B2COrder[] {
-    return this.getItem<B2COrder[]>(KEYS.B2C_ORDERS, SEED_B2C_ORDERS);
+    const raw = this.getItem<B2COrder[]>(KEYS.B2C_ORDERS, []);
+    return raw.filter((o) => o.id !== 'b2c_ord_101');
   }
 
   getB2COrderById(id: string): B2COrder | undefined {
@@ -576,7 +447,12 @@ class StorageService {
 
   saveB2COrder(order: B2COrder): void {
     const orders = this.getB2COrders();
-    orders.unshift(order);
+    const existingIndex = orders.findIndex((o) => o.id === order.id);
+    if (existingIndex >= 0) {
+      orders[existingIndex] = order;
+    } else {
+      orders.unshift(order);
+    }
     this.setItem(KEYS.B2C_ORDERS, orders);
   }
 
@@ -587,16 +463,52 @@ class StorageService {
       order.orderStatus = status;
       order.statusTimeline.push({
         status: status.replace('_', ' ').toUpperCase(),
-        timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-        note: note || `Status updated to ${status}`,
+        timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        note: note || `Status updated to ${status.replace('_', ' ').toUpperCase()}`,
       });
       this.setItem(KEYS.B2C_ORDERS, orders);
     }
   }
 
+  confirmB2COrder(id: string, adminName: string): B2COrder | null {
+    const orders = this.getB2COrders();
+    const order = orders.find((o) => o.id === id);
+    if (!order) return null;
+
+    order.orderStatus = 'confirmed';
+    order.confirmedAt = new Date().toISOString();
+    order.confirmedBy = adminName;
+    order.statusTimeline.push({
+      status: 'ORDER CONFIRMED',
+      timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      note: `Order confirmed by ${adminName}. Proceeding to packaging and dispatch.`,
+    });
+    this.setItem(KEYS.B2C_ORDERS, orders);
+    return order;
+  }
+
+  rejectB2COrder(id: string, adminName: string, reason?: string): B2COrder | null {
+    const orders = this.getB2COrders();
+    const order = orders.find((o) => o.id === id);
+    if (!order) return null;
+
+    order.orderStatus = 'rejected';
+    order.rejectionReason = reason || 'Order rejected during admin verification';
+    order.rejectedAt = new Date().toISOString();
+    order.rejectedBy = adminName;
+    order.statusTimeline.push({
+      status: 'ORDER REJECTED',
+      timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      note: `Order rejected by ${adminName}. Reason: ${reason || 'Not specified'}`,
+    });
+    this.setItem(KEYS.B2C_ORDERS, orders);
+    return order;
+  }
+
   // --- B2B Orders ---
   getB2BOrders(): B2BOrder[] {
-    return this.getItem<B2BOrder[]>(KEYS.B2B_ORDERS, SEED_B2B_ORDERS);
+    const raw = this.getItem<B2BOrder[]>(KEYS.B2B_ORDERS, []);
+    return raw.filter((o) => o.id !== 'b2b_ord_01');
   }
 
   getB2BOrderById(id: string): B2BOrder | undefined {
@@ -605,7 +517,12 @@ class StorageService {
 
   saveB2BOrder(order: B2BOrder): void {
     const orders = this.getB2BOrders();
-    orders.unshift(order);
+    const existingIndex = orders.findIndex((o) => o.id === order.id);
+    if (existingIndex >= 0) {
+      orders[existingIndex] = order;
+    } else {
+      orders.unshift(order);
+    }
     this.setItem(KEYS.B2B_ORDERS, orders);
   }
 
@@ -616,11 +533,46 @@ class StorageService {
       order.orderStatus = status;
       order.statusTimeline.push({
         status: status.replace('_', ' ').toUpperCase(),
-        timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
-        note: note || `Status updated to ${status}`,
+        timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        note: note || `Status updated to ${status.replace('_', ' ').toUpperCase()}`,
       });
       this.setItem(KEYS.B2B_ORDERS, orders);
     }
+  }
+
+  confirmB2BOrder(id: string, adminName: string): B2BOrder | null {
+    const orders = this.getB2BOrders();
+    const order = orders.find((o) => o.id === id);
+    if (!order) return null;
+
+    order.orderStatus = 'confirmed';
+    order.confirmedAt = new Date().toISOString();
+    order.confirmedBy = adminName;
+    order.statusTimeline.push({
+      status: 'ORDER CONFIRMED',
+      timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      note: `B2B purchase order verified and confirmed by ${adminName}. Proceeding to wholesale allocation.`,
+    });
+    this.setItem(KEYS.B2B_ORDERS, orders);
+    return order;
+  }
+
+  rejectB2BOrder(id: string, adminName: string, reason?: string): B2BOrder | null {
+    const orders = this.getB2BOrders();
+    const order = orders.find((o) => o.id === id);
+    if (!order) return null;
+
+    order.orderStatus = 'rejected';
+    order.rejectionReason = reason || 'PO rejected by administration';
+    order.rejectedAt = new Date().toISOString();
+    order.rejectedBy = adminName;
+    order.statusTimeline.push({
+      status: 'ORDER REJECTED',
+      timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      note: `B2B Order rejected by ${adminName}. Reason: ${reason || 'Not specified'}`,
+    });
+    this.setItem(KEYS.B2B_ORDERS, orders);
+    return order;
   }
 
   // --- B2B Quotations (RFQ) ---
@@ -669,18 +621,56 @@ class StorageService {
 
   // --- Coupons ---
   getCoupons(): Coupon[] {
-    return this.getItem<Coupon[]>(KEYS.COUPONS, MOCK_COUPONS);
+    const raw = this.getItem<Coupon[]>(KEYS.COUPONS, []);
+    // Ensure no legacy demo coupons are lingering in local storage
+    return raw.filter(
+      (c) => c.code !== 'WELCOME10' && c.code !== 'KOGNITI15' && c.code !== 'FLAT200'
+    );
   }
 
   saveCoupon(coupon: Coupon): void {
     const coupons = this.getCoupons();
-    const index = coupons.findIndex((c) => c.code === coupon.code);
+    const cleanCode = coupon.code.trim().toUpperCase();
+    const index = coupons.findIndex((c) => c.id === coupon.id || c.code.toUpperCase() === cleanCode);
+    const newCoupon: Coupon = {
+      ...coupon,
+      id: coupon.id || `cpn_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`,
+      code: cleanCode,
+      isActive: coupon.isActive !== undefined ? coupon.isActive : true,
+      usageCount: coupon.usageCount || 0,
+      createdAt: coupon.createdAt || new Date().toISOString(),
+    };
     if (index >= 0) {
-      coupons[index] = coupon;
+      coupons[index] = newCoupon;
     } else {
-      coupons.push(coupon);
+      coupons.unshift(newCoupon);
     }
     this.setItem(KEYS.COUPONS, coupons);
+  }
+
+  deleteCoupon(idOrCode: string): void {
+    const coupons = this.getCoupons().filter(
+      (c) => c.id !== idOrCode && c.code.toUpperCase() !== idOrCode.toUpperCase()
+    );
+    this.setItem(KEYS.COUPONS, coupons);
+  }
+
+  toggleCouponStatus(idOrCode: string): void {
+    const coupons = this.getCoupons();
+    const c = coupons.find((item) => item.id === idOrCode || item.code.toUpperCase() === idOrCode.toUpperCase());
+    if (c) {
+      c.isActive = !c.isActive;
+      this.setItem(KEYS.COUPONS, coupons);
+    }
+  }
+
+  incrementCouponUsage(code: string): void {
+    const coupons = this.getCoupons();
+    const c = coupons.find((item) => item.code.toUpperCase() === code.trim().toUpperCase());
+    if (c) {
+      c.usageCount = (c.usageCount || 0) + 1;
+      this.setItem(KEYS.COUPONS, coupons);
+    }
   }
 
   // --- Admin Staff & Governance ---

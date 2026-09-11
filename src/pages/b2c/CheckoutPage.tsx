@@ -145,7 +145,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
         upiId: upiVal,
         bankName: bankName,
       },
-      orderStatus: 'confirmed',
+      orderStatus: 'placed',
       trackingNumber: `DEL-IN-${Math.floor(100000000 + Math.random() * 900000000)}`,
       courierPartner: 'Delhivery',
       createdAt: new Date().toISOString(),
@@ -153,7 +153,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
         {
           status: 'ORDER PLACED',
           timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-          note: `Order placed successfully via ${paymentMethodUsed.toUpperCase()}`,
+          note: `Order placed successfully via ${paymentMethodUsed.toUpperCase()}. Awaiting admin verification and confirmation.`,
         },
         {
           status: 'PAYMENT CONFIRMED VIA RAZORPAY',
@@ -162,6 +162,10 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
         },
       ],
     };
+
+    if (appliedCoupon?.code) {
+      storageService.incrementCouponUsage(appliedCoupon.code);
+    }
 
     storageService.saveB2COrder(newOrder);
     clearB2CCart();

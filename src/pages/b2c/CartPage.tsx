@@ -368,22 +368,6 @@ export const CartPage: React.FC<CartPageProps> = ({
                   </div>
                 )}
 
-                <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={() => applyCoupon('WELCOME10')}
-                    className="badge badge-blue"
-                    style={{ cursor: 'pointer', border: 'none' }}
-                  >
-                    WELCOME10 (10% Off)
-                  </button>
-                  <button
-                    onClick={() => applyCoupon('KOGNITI15')}
-                    className="badge badge-amber"
-                    style={{ cursor: 'pointer', border: 'none' }}
-                  >
-                    KOGNITI15 (15% Off)
-                  </button>
-                </div>
               </div>
 
               {/* Price Breakdown */}
