@@ -424,7 +424,7 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
                 }}
               >
                 <CreditCard size={18} className={activeTab === 'card' ? 'text-sky-400' : 'text-slate-500'} />
-                <span>Cards (RuPay/Visa)</span>
+                <span>Credit & Debit Cards</span>
               </button>
 
               <button

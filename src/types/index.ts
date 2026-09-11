@@ -142,7 +142,7 @@ export interface B2COrder {
   gstAmount: number;
   shippingFee: number;
   total: number;
-  paymentMethod: 'upi' | 'card' | 'netbanking' | 'wallet' | 'cod';
+  paymentMethod: 'razorpay' | 'upi' | 'card' | 'netbanking' | 'wallet' | 'cod';
   paymentStatus: 'paid' | 'pending' | 'failed';
   paymentDetails: {
     transactionId?: string;

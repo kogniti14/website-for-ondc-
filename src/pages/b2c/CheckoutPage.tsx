@@ -76,11 +76,8 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
   const [companyName, setCompanyName] = useState('');
   const [gstin, setGstin] = useState('');
 
-  // Payment Method (Online Razorpay Gateway Only)
-  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'netbanking' | 'wallet'>('upi');
-  const [upiId, setUpiId] = useState('utkarsh@oksbi');
-  const [selectedBank, setSelectedBank] = useState('HDFC Bank');
-  const [cardNumber, setCardNumber] = useState('4532 •••• •••• 8901');
+  // Payment Method (Direct Razorpay Gateway)
+  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'upi' | 'card' | 'netbanking' | 'wallet'>('razorpay');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showRazorpayModal, setShowRazorpayModal] = useState(false);
   const [pendingOrderNum, setPendingOrderNum] = useState('');
@@ -141,12 +138,12 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
       gstAmount: calculations.totalGst,
       shippingFee: calculations.shippingFee,
       total: calculations.total,
-      paymentMethod,
+      paymentMethod: 'razorpay',
       paymentStatus: isPaid ? 'paid' : 'pending',
       paymentDetails: {
         transactionId,
-        upiId: upiVal || (paymentMethod === 'upi' ? upiId : undefined),
-        bankName: bankName || (paymentMethod === 'netbanking' ? selectedBank : undefined),
+        upiId: upiVal,
+        bankName: bankName,
       },
       orderStatus: 'confirmed',
       trackingNumber: `DEL-IN-${Math.floor(100000000 + Math.random() * 900000000)}`,
@@ -219,8 +216,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
             response.razorpay_payment_id,
             response.method || 'Razorpay Gateway',
             true,
-            response.method,
-            upiId
+            response.method
           );
         },
         onDismiss: () => {
@@ -546,158 +542,152 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                 </div>
               </div>
 
-              {/* Payment Tabs */}
-              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('upi')}
-                  style={{
-                    padding: '0.75rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: paymentMethod === 'upi' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                    background: paymentMethod === 'upi' ? 'var(--primary-light)' : '#ffffff',
-                    color: paymentMethod === 'upi' ? 'var(--primary)' : 'var(--slate-700)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    fontSize: '0.82rem',
-                  }}
-                >
-                  <QrCode size={20} />
-                  <span>UPI (QR / VPA)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('card')}
-                  style={{
-                    padding: '0.75rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: paymentMethod === 'card' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                    background: paymentMethod === 'card' ? 'var(--primary-light)' : '#ffffff',
-                    color: paymentMethod === 'card' ? 'var(--primary)' : 'var(--slate-700)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    fontSize: '0.82rem',
-                  }}
-                >
-                  <CreditCard size={20} />
-                  <span>Cards (RuPay/Visa)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('netbanking')}
-                  style={{
-                    padding: '0.75rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: paymentMethod === 'netbanking' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                    background: paymentMethod === 'netbanking' ? 'var(--primary-light)' : '#ffffff',
-                    color: paymentMethod === 'netbanking' ? 'var(--primary)' : 'var(--slate-700)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    fontSize: '0.82rem',
-                  }}
-                >
-                  <Building size={20} />
-                  <span>Net Banking</span>
-                </button>
-              </div>
-
-              {/* Payment Details Sub-section */}
-              <div style={{ background: 'var(--slate-50)', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
-                {paymentMethod === 'upi' && (
-                  <div>
-                    <div className="flex items-center gap-3" style={{ marginBottom: '0.75rem' }}>
-                      <div
-                        style={{
-                          width: '75px',
-                          height: '75px',
-                          background: '#FFFFFF',
-                          border: '1px solid var(--border-color)',
-                          borderRadius: '8px',
-                          padding: '6px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <QrCode size={60} className="text-slate-800" />
-                      </div>
-                      <div style={{ fontSize: '0.82rem' }}>
-                        <div style={{ fontWeight: 700, color: 'var(--slate-900)' }}>
-                          Scan UPI QR with any App
-                        </div>
-                        <div style={{ color: 'var(--slate-500)' }}>
-                          Google Pay, PhonePe, Paytm, BHIM, CRED
-                        </div>
-                        <span className="badge badge-green" style={{ fontSize: '0.65rem', marginTop: '0.25rem' }}>
-                          Instant 0% UPI Fee
+              {/* Direct Razorpay Gateway Selection */}
+              <div
+                style={{
+                  border: '2px solid #0284C7',
+                  borderRadius: 'var(--radius-lg)',
+                  background: 'linear-gradient(135deg, #F0F9FF 0%, #FFFFFF 100%)',
+                  padding: '1.35rem 1.5rem',
+                  boxShadow: '0 4px 14px rgba(2, 132, 199, 0.08)',
+                }}
+              >
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <label
+                    htmlFor="payment-method-razorpay"
+                    className="flex items-start gap-3 cursor-pointer"
+                    style={{ flex: '1 1 320px' }}
+                  >
+                    <input
+                      type="radio"
+                      id="payment-method-razorpay"
+                      name="paymentMethodSelect"
+                      checked={true}
+                      readOnly
+                      style={{
+                        marginTop: '0.25rem',
+                        width: '20px',
+                        height: '20px',
+                        accentColor: '#0284C7',
+                        cursor: 'pointer',
+                      }}
+                    />
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span style={{ fontSize: '1.08rem', fontWeight: 800, color: '#0F172A' }}>
+                          Razorpay Secure Payment Gateway
+                        </span>
+                        <span
+                          style={{
+                            background: '#16A34A',
+                            color: '#FFFFFF',
+                            fontSize: '0.68rem',
+                            fontWeight: 700,
+                            padding: '0.15rem 0.5rem',
+                            borderRadius: '4px',
+                            letterSpacing: '0.03em',
+                          }}
+                        >
+                          OFFICIAL GATEWAY
                         </span>
                       </div>
+                      <p style={{ fontSize: '0.84rem', color: '#475569', marginTop: '0.4rem', lineHeight: 1.55 }}>
+                        Pay safely and seamlessly via <strong>Razorpay</strong>. Instant UPI, Cards, Net Banking, and Wallets are processed securely through the official Razorpay payment gateway window.
+                      </p>
                     </div>
+                  </label>
 
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">Or enter your UPI VPA ID</label>
-                      <input
-                        type="text"
-                        value={upiId}
-                        onChange={(e) => setUpiId(e.target.value)}
-                        placeholder="yourname@upi"
-                        className="form-input"
-                        style={{ fontSize: '0.85rem' }}
-                      />
-                    </div>
+                  <div
+                    style={{
+                      background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+                      color: '#38BDF8',
+                      padding: '0.5rem 0.95rem',
+                      borderRadius: '8px',
+                      fontWeight: 800,
+                      fontSize: '0.9rem',
+                      letterSpacing: '0.02em',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      alignSelf: 'flex-start',
+                      boxShadow: '0 2px 8px rgba(15, 23, 42, 0.15)',
+                    }}
+                  >
+                    <Lock size={15} className="text-sky-400" />
+                    <span>Razorpay</span>
                   </div>
-                )}
+                </div>
 
-                {paymentMethod === 'card' && (
-                  <div className="flex flex-col gap-3">
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label className="form-label">Card Number</label>
-                      <input
-                        type="text"
-                        value={cardNumber}
-                        onChange={(e) => setCardNumber(e.target.value)}
-                        className="form-input"
-                        style={{ fontSize: '0.85rem' }}
-                      />
-                    </div>
-                    <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                      <input type="text" placeholder="MM / YY" defaultValue="08/28" className="form-input" />
-                      <input type="password" placeholder="CVV" defaultValue="123" maxLength={3} className="form-input" />
-                    </div>
-                  </div>
-                )}
-
-                {paymentMethod === 'netbanking' && (
-                  <div>
-                    <label className="form-label" style={{ marginBottom: '0.4rem' }}>Select Bank</label>
-                    <select
-                      value={selectedBank}
-                      onChange={(e) => setSelectedBank(e.target.value)}
-                      className="form-select"
-                      style={{ fontSize: '0.85rem' }}
+                {/* Accepted Payment Modes Breakdown */}
+                <div
+                  style={{
+                    marginTop: '1.25rem',
+                    paddingTop: '1rem',
+                    borderTop: '1px solid #BAE6FD',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '0.85rem',
+                  }}
+                >
+                  <div className="flex items-center gap-2 flex-wrap" style={{ fontSize: '0.78rem', color: '#334155' }}>
+                    <span style={{ fontWeight: 700 }}>Supported via Razorpay:</span>
+                    <span
+                      style={{
+                        background: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
+                        padding: '0.25rem 0.6rem',
+                        borderRadius: '6px',
+                        fontWeight: 700,
+                        color: '#0F172A',
+                      }}
                     >
-                      <option value="HDFC Bank">HDFC Bank</option>
-                      <option value="State Bank of India">State Bank of India (SBI)</option>
-                      <option value="ICICI Bank">ICICI Bank</option>
-                      <option value="Axis Bank">Axis Bank</option>
-                      <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
-                    </select>
+                      UPI
+                    </span>
+                    <span
+                      style={{
+                        background: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
+                        padding: '0.25rem 0.6rem',
+                        borderRadius: '6px',
+                        fontWeight: 700,
+                        color: '#0F172A',
+                      }}
+                    >
+                      Cards
+                    </span>
+                    <span
+                      style={{
+                        background: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
+                        padding: '0.25rem 0.6rem',
+                        borderRadius: '6px',
+                        fontWeight: 700,
+                        color: '#0F172A',
+                      }}
+                    >
+                      Net Banking
+                    </span>
+                    <span
+                      style={{
+                        background: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
+                        padding: '0.25rem 0.6rem',
+                        borderRadius: '6px',
+                        fontWeight: 700,
+                        color: '#0F172A',
+                      }}
+                    >
+                      Wallets
+                    </span>
                   </div>
-                )}
+
+                  <div className="flex items-center gap-1.5" style={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 700 }}>
+                    <ShieldCheck size={15} />
+                    <span>256-Bit SSL Encrypted & RBI Compliant</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -782,7 +772,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                   className="btn btn-primary btn-lg"
                   style={{ width: '100%', borderRadius: 'var(--radius-md)' }}
                 >
-                  {isProcessing ? 'Confirming Payment...' : `Place Order (₹${calculations.total.toLocaleString('en-IN')})`}
+                  {isProcessing ? 'Opening Razorpay Gateway...' : `Pay & Place Order via Razorpay (₹${calculations.total.toLocaleString('en-IN')})`}
                 </button>
               ) : (
                 <div>
@@ -939,8 +929,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
             response.razorpay_payment_id,
             response.method || 'Razorpay Gateway',
             true,
-            response.method,
-            upiId
+            response.method
           );
         }}
       />
