@@ -3028,20 +3028,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       />
                       <span>Wallets (Paytm/CRED)</span>
                     </label>
-
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={razorpayConfig.enabledMethods?.cod ?? true}
-                        onChange={(e) =>
-                          setRazorpayConfig({
-                            ...razorpayConfig,
-                            enabledMethods: { ...razorpayConfig.enabledMethods, cod: e.target.checked },
-                          })
-                        }
-                      />
-                      <span>Cash on Delivery (B2C)</span>
-                    </label>
                   </div>
                 </div>
 

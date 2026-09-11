@@ -7,7 +7,6 @@ import {
   QrCode,
   Building,
   Smartphone,
-  Banknote,
   FileText,
   Lock,
   ArrowRight,
@@ -77,8 +76,8 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
   const [companyName, setCompanyName] = useState('');
   const [gstin, setGstin] = useState('');
 
-  // Payment Method
-  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'netbanking' | 'wallet' | 'cod'>('upi');
+  // Payment Method (Online Razorpay Gateway Only)
+  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'netbanking' | 'wallet'>('upi');
   const [upiId, setUpiId] = useState('utkarsh@oksbi');
   const [selectedBank, setSelectedBank] = useState('HDFC Bank');
   const [cardNumber, setCardNumber] = useState('4532 •••• •••• 8901');
@@ -159,21 +158,11 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
           timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
           note: `Order placed successfully via ${paymentMethodUsed.toUpperCase()}`,
         },
-        ...(isPaid
-          ? [
-              {
-                status: 'PAYMENT CONFIRMED VIA RAZORPAY',
-                timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-                note: `Verified transaction of ₹${calculations.total.toLocaleString('en-IN')} (Razorpay Payment ID: ${transactionId})`,
-              },
-            ]
-          : [
-              {
-                status: 'PAYMENT PENDING (COD)',
-                timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-                note: 'Cash on delivery payment will be collected by courier agent.',
-              },
-            ]),
+        {
+          status: 'PAYMENT CONFIRMED VIA RAZORPAY',
+          timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+          note: `Verified transaction of ₹${calculations.total.toLocaleString('en-IN')} (Razorpay Payment ID: ${transactionId})`,
+        },
       ],
     };
 
@@ -213,15 +202,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
     const orderNum = `KM-B2C-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     setPendingOrderNum(orderNum);
 
-    if (paymentMethod === 'cod') {
-      setIsProcessing(true);
-      setTimeout(() => {
-        processOrderPlacement(`COD-${Date.now()}`, 'Cash on Delivery', false);
-      }, 800);
-      return;
-    }
-
-    // Online Payment via Razorpay
+    // Online Payment via Official Razorpay Gateway
     setIsProcessing(true);
 
     try {
@@ -632,28 +613,6 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                   <Building size={20} />
                   <span>Net Banking</span>
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('cod')}
-                  style={{
-                    padding: '0.75rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: paymentMethod === 'cod' ? '2px solid var(--primary)' : '1px solid var(--border-color)',
-                    background: paymentMethod === 'cod' ? 'var(--primary-light)' : '#ffffff',
-                    color: paymentMethod === 'cod' ? 'var(--primary)' : 'var(--slate-700)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '0.35rem',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    fontSize: '0.82rem',
-                  }}
-                >
-                  <Banknote size={20} />
-                  <span>Cash on Delivery</span>
-                </button>
               </div>
 
               {/* Payment Details Sub-section */}
@@ -737,12 +696,6 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                       <option value="Axis Bank">Axis Bank</option>
                       <option value="Kotak Mahindra Bank">Kotak Mahindra Bank</option>
                     </select>
-                  </div>
-                )}
-
-                {paymentMethod === 'cod' && (
-                  <div style={{ fontSize: '0.82rem', color: 'var(--slate-600)' }}>
-                    Pay cash or UPI upon delivery at your doorstep. Please keep the exact amount ready.
                   </div>
                 )}
               </div>

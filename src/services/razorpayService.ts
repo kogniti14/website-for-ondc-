@@ -11,7 +11,6 @@ export interface RazorpayConfig {
     card: boolean;
     netbanking: boolean;
     wallet: boolean;
-    cod: boolean;
   };
 }
 
@@ -57,9 +56,9 @@ const RAZORPAY_CONFIG_KEY = 'km_razorpay_config_v1';
 const RAZORPAY_TRANSACTIONS_KEY = 'km_razorpay_transactions_v1';
 
 const DEFAULT_CONFIG: RazorpayConfig = {
-  keyId: 'rzp_test_kognitiminds2026',
-  keySecret: '',
-  mode: 'test',
+  keyId: 'rzp_live_TarTjUQ1NhuUru',
+  keySecret: 'bBBZ8zi8iYb5h23x9sca2gO1',
+  mode: 'live',
   merchantName: 'Kogniti Minds Private Limited',
   themeColor: '#0F172A',
   enabledMethods: {
@@ -67,7 +66,6 @@ const DEFAULT_CONFIG: RazorpayConfig = {
     card: true,
     netbanking: true,
     wallet: true,
-    cod: true,
   },
 };
 
@@ -78,7 +76,17 @@ class RazorpayService {
   getConfig(): RazorpayConfig {
     try {
       const saved = localStorage.getItem(RAZORPAY_CONFIG_KEY);
-      if (saved) return { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Automatically ensure the live credentials are active
+        if (!parsed.keyId || parsed.keyId.startsWith('rzp_test_')) {
+          parsed.keyId = DEFAULT_CONFIG.keyId;
+          parsed.keySecret = DEFAULT_CONFIG.keySecret;
+          parsed.mode = 'live';
+          this.saveConfig(parsed);
+        }
+        return { ...DEFAULT_CONFIG, ...parsed };
+      }
     } catch (e) {
       console.error('Error reading Razorpay config:', e);
     }
