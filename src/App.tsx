@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
+import { CartProvider, useCart } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { storageService } from './services/storageService';
 import { Product, B2COrder, Category, B2CUser } from './types';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Lock } from 'lucide-react';
 
 // Layout Components
 import { Navbar } from './components/layout/Navbar';
@@ -37,7 +37,8 @@ import { B2BDashboardPage } from './pages/b2b/B2BDashboardPage';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 
 const MainApp: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { role, b2cUser, b2bBusiness, isAdmin } = useAuth();
+  const { addToB2CCart } = useCart();
 
   // Navigation State
   const [activeTab, setActiveTab] = useState<string>('home');
@@ -86,6 +87,11 @@ const MainApp: React.FC = () => {
   };
 
   const handleBuyNow = (p: Product) => {
+    addToB2CCart(p.id, 1);
+    if (role !== 'b2c' || !b2cUser) {
+      handleOpenAuth('login');
+      return;
+    }
     setActiveTab('checkout');
   };
 
@@ -180,9 +186,16 @@ const MainApp: React.FC = () => {
         {activeTab === 'cart' && (
           <CartPage
             products={products}
-            onProceedToCheckout={() => setActiveTab('checkout')}
+            onProceedToCheckout={() => {
+              if (role !== 'b2c' || !b2cUser) {
+                handleOpenAuth('login');
+              } else {
+                setActiveTab('checkout');
+              }
+            }}
             setActiveTab={setActiveTab}
             onOpenProduct={handleOpenProduct}
+            onOpenAuth={handleOpenAuth}
           />
         )}
 
@@ -191,6 +204,7 @@ const MainApp: React.FC = () => {
             products={products}
             onOrderSuccess={handleOrderSuccess}
             onBackToCart={() => setActiveTab('cart')}
+            onOpenAuth={handleOpenAuth}
           />
         )}
 
@@ -245,6 +259,7 @@ const MainApp: React.FC = () => {
                 selectedProduct={rfqTargetProduct}
                 onSuccess={refreshData}
                 setB2bTab={setB2bTab}
+                openB2BAuthModal={handleOpenB2BAuth}
               />
             )}
 
@@ -281,14 +296,66 @@ const MainApp: React.FC = () => {
                   <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#FFF' }}>
                     Institutional B2B Procurement Cart
                   </h2>
-                  <p style={{ color: '#94A3B8', margin: '1rem 0 2rem' }}>
-                    To finalize B2B orders with Net 30 terms or commercial freight dispatch, submit your order directly via RFQ or contact your Key Account Manager.
-                  </p>
+                  {role !== 'b2b' || !b2bBusiness ? (
+                    <div
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.08)',
+                        border: '1.5px solid rgba(239, 68, 68, 0.35)',
+                        borderRadius: 'var(--radius-lg)',
+                        padding: '1.75rem',
+                        margin: '1.5rem 0 2rem',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '52px',
+                          height: '52px',
+                          borderRadius: '50%',
+                          background: 'rgba(239, 68, 68, 0.2)',
+                          color: '#EF4444',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          margin: '0 auto 1rem',
+                        }}
+                      >
+                        <Lock size={24} />
+                      </div>
+                      <h4 style={{ color: '#FFFFFF', fontSize: '1.15rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                        Business Sign In Compulsory
+                      </h4>
+                      <p style={{ color: '#94A3B8', fontSize: '0.85rem', lineHeight: '1.6', marginBottom: '1.5rem' }}>
+                        You must be signed in with your registered business credentials to finalize institutional orders, download GST invoices, and access direct manufacturer pricing.
+                      </p>
+                      <button
+                        onClick={handleOpenB2BAuth}
+                        className="btn btn-amber"
+                        style={{ borderRadius: 'var(--radius-full)', padding: '0.65rem 1.75rem', fontWeight: 700 }}
+                      >
+                        Sign In to B2B Portal →
+                      </button>
+                    </div>
+                  ) : (
+                    <p style={{ color: '#94A3B8', margin: '1rem 0 2rem' }}>
+                      To finalize B2B orders with Net 30 terms or commercial freight dispatch, submit your order directly via RFQ or contact your Key Account Manager.
+                    </p>
+                  )}
                   <div className="flex justify-center gap-3">
                     <button onClick={() => setB2bTab('catalog')} className="btn btn-amber">
                       Browse Wholesale Slabs
                     </button>
-                    <button onClick={() => setB2bTab('dashboard')} className="btn btn-outline-b2b" style={{ color: '#FFF' }}>
+                    <button
+                      onClick={() => {
+                        if (role !== 'b2b' || !b2bBusiness) {
+                          handleOpenB2BAuth();
+                        } else {
+                          setB2bTab('dashboard');
+                        }
+                      }}
+                      className="btn btn-outline-b2b"
+                      style={{ color: '#FFF' }}
+                    >
                       B2B Dashboard
                     </button>
                   </div>

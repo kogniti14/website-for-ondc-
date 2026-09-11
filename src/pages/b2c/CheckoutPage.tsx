@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   CheckCircle2,
   ShieldCheck,
@@ -25,28 +25,50 @@ interface CheckoutPageProps {
   products: Product[];
   onOrderSuccess: (order: B2COrder) => void;
   onBackToCart: () => void;
+  onOpenAuth?: (mode?: 'login' | 'register') => void;
 }
 
 export const CheckoutPage: React.FC<CheckoutPageProps> = ({
   products,
   onOrderSuccess,
   onBackToCart,
+  onOpenAuth,
 }) => {
   const { b2cCart, getB2CCalculations, clearB2CCart, appliedCoupon } = useCart();
   const { role, b2cUser } = useAuth();
   const calculations = getB2CCalculations();
 
+  const isB2CAuthenticated = role === 'b2c' && !!b2cUser;
+  const [showAuthRequiredPopup, setShowAuthRequiredPopup] = useState(false);
+
   // Contact Info
-  const [customerName, setCustomerName] = useState(b2cUser?.name || 'Utkarsh Sharma');
-  const [customerEmail, setCustomerEmail] = useState(b2cUser?.email || 'customer@kognitiminds.com');
-  const [customerPhone, setCustomerPhone] = useState(b2cUser?.phone || '+91 98765 43210');
+  const [customerName, setCustomerName] = useState(b2cUser?.name || '');
+  const [customerEmail, setCustomerEmail] = useState(b2cUser?.email || '');
+  const [customerPhone, setCustomerPhone] = useState(b2cUser?.phone || '');
 
   // Shipping Address
-  const [street, setStreet] = useState('Flat 402, Green Glen Layout, Outer Ring Road');
-  const [apartment, setApartment] = useState('Prestige Ivy League');
-  const [city, setCity] = useState('Bengaluru');
-  const [state, setState] = useState('Karnataka');
-  const [pincode, setPincode] = useState('560103');
+  const [street, setStreet] = useState(b2cUser?.addresses?.[0]?.street || 'Flat 402, Green Glen Layout, Outer Ring Road');
+  const [apartment, setApartment] = useState(b2cUser?.addresses?.[0]?.apartment || 'Prestige Ivy League');
+  const [city, setCity] = useState(b2cUser?.addresses?.[0]?.city || 'Bengaluru');
+  const [state, setState] = useState(b2cUser?.addresses?.[0]?.state || 'Karnataka');
+  const [pincode, setPincode] = useState(b2cUser?.addresses?.[0]?.pincode || '560103');
+
+  useEffect(() => {
+    if (b2cUser) {
+      setCustomerName(b2cUser.name || '');
+      setCustomerEmail(b2cUser.email || '');
+      setCustomerPhone(b2cUser.phone || '');
+      if (b2cUser.addresses && b2cUser.addresses.length > 0) {
+        const def = b2cUser.addresses.find((a) => a.isDefault) || b2cUser.addresses[0];
+        setStreet(def.street);
+        setApartment(def.apartment || '');
+        setCity(def.city);
+        setState(def.state);
+        setPincode(def.pincode);
+      }
+      setShowAuthRequiredPopup(false);
+    }
+  }, [b2cUser]);
 
   // Business GST option
   const [wantsGstInvoice, setWantsGstInvoice] = useState(false);
@@ -62,6 +84,20 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
 
   const handlePlaceOrder = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isB2CAuthenticated) {
+      setShowAuthRequiredPopup(true);
+      if (onOpenAuth) {
+        onOpenAuth('login');
+      }
+      return;
+    }
+
+    if (!customerName || !customerEmail || !customerPhone || !street || !pincode) {
+      alert('Please fill in all mandatory shipping and contact details.');
+      return;
+    }
+
     setIsProcessing(true);
 
     setTimeout(() => {
@@ -170,6 +206,58 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
           Standard Pan-India Indian Rupee (INR) Express Payment Processing
         </p>
       </div>
+
+      {/* Sign In Compulsory Notification Banner */}
+      {!isB2CAuthenticated && (
+        <div
+          style={{
+            background: 'rgba(239, 68, 68, 0.08)',
+            border: '1.5px solid rgba(239, 68, 68, 0.35)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1.25rem 1.5rem',
+            marginBottom: '2rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.15)',
+                color: '#EF4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Lock size={22} />
+            </div>
+            <div>
+              <div style={{ color: 'var(--slate-900)', fontWeight: 800, fontSize: '1rem' }}>
+                Sign In Compulsory Before Placing Order
+              </div>
+              <div style={{ color: 'var(--slate-600)', fontSize: '0.85rem', marginTop: '0.15rem' }}>
+                You must be signed in to your registered account to place and confirm this order.
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onOpenAuth?.('login')}
+            className="btn btn-primary"
+            style={{ borderRadius: 'var(--radius-full)', padding: '0.6rem 1.4rem' }}
+          >
+            Sign In / Register Now →
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handlePlaceOrder}>
         <div
@@ -647,14 +735,43 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={isProcessing}
-                className="btn btn-primary btn-lg"
-                style={{ width: '100%', borderRadius: 'var(--radius-md)' }}
-              >
-                {isProcessing ? 'Confirming Payment...' : `Place Order (₹${calculations.total.toLocaleString('en-IN')})`}
-              </button>
+              {isB2CAuthenticated ? (
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className="btn btn-primary btn-lg"
+                  style={{ width: '100%', borderRadius: 'var(--radius-md)' }}
+                >
+                  {isProcessing ? 'Confirming Payment...' : `Place Order (₹${calculations.total.toLocaleString('en-IN')})`}
+                </button>
+              ) : (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAuthRequiredPopup(true);
+                      if (onOpenAuth) onOpenAuth('login');
+                    }}
+                    className="btn btn-primary btn-lg"
+                    style={{
+                      width: '100%',
+                      borderRadius: 'var(--radius-md)',
+                      background: 'linear-gradient(135deg, #DC2626 0%, #EA580C 100%)',
+                      boxShadow: '0 8px 24px rgba(220, 38, 38, 0.35)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      fontWeight: 800,
+                    }}
+                  >
+                    <Lock size={18} /> Sign In Compulsory to Place Order
+                  </button>
+                  <p style={{ fontSize: '0.78rem', color: '#DC2626', textAlign: 'center', marginTop: '0.45rem', fontWeight: 600 }}>
+                    🔒 Please sign in or register before placing your order.
+                  </p>
+                </div>
+              )}
 
               <div
                 style={{
@@ -690,6 +807,81 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
           </div>
         </div>
       </form>
+
+      {/* Sign In Compulsory Popup Modal */}
+      {showAuthRequiredPopup && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(6px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              maxWidth: '440px',
+              width: '100%',
+              padding: '2.25rem 2rem',
+              textAlign: 'center',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
+              border: '1.5px solid rgba(239, 68, 68, 0.4)',
+              borderRadius: 'var(--radius-xl)',
+              background: '#0F172A',
+              color: '#FFFFFF',
+            }}
+          >
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.2)',
+                color: '#EF4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1.25rem',
+              }}
+            >
+              <Lock size={28} />
+            </div>
+            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+              Sign In Compulsory
+            </h3>
+            <p style={{ fontSize: '0.92rem', color: '#94A3B8', lineHeight: '1.6', marginBottom: '1.75rem' }}>
+              Before placing your order, signing in to your registered account is compulsory. Please sign in or register your details to proceed.
+            </p>
+            <div className="flex flex-col gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAuthRequiredPopup(false);
+                  if (onOpenAuth) onOpenAuth('login');
+                }}
+                className="btn btn-primary"
+                style={{ width: '100%', padding: '0.8rem', borderRadius: 'var(--radius-full)', fontWeight: 700 }}
+              >
+                Sign In / Register Now →
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAuthRequiredPopup(false)}
+                className="btn btn-outline"
+                style={{ width: '100%', color: '#94A3B8', borderColor: 'rgba(255, 255, 255, 0.2)' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

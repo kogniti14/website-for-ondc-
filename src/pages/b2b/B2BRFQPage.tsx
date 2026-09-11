@@ -10,6 +10,7 @@ import {
   MapPin,
   Tag,
   ArrowRight,
+  Lock,
 } from 'lucide-react';
 import { Product, B2BQuotation } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -20,6 +21,7 @@ interface B2BRFQPageProps {
   selectedProduct?: Product | null;
   onSuccess: () => void;
   setB2bTab: (tab: string) => void;
+  openB2BAuthModal?: () => void;
 }
 
 export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
@@ -27,8 +29,11 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
   selectedProduct,
   onSuccess,
   setB2bTab,
+  openB2BAuthModal,
 }) => {
   const { role, b2bBusiness } = useAuth();
+  const isB2BAuthenticated = role === 'b2b' && !!b2bBusiness;
+  const [showB2BAuthPopup, setShowB2BAuthPopup] = useState(false);
 
   const [productId, setProductId] = useState<string>(selectedProduct?.id || products[0]?.id || '');
   const [requestedQty, setRequestedQty] = useState<number>(selectedProduct?.b2bMoq || 20);
@@ -39,7 +44,7 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
   const [contactPerson, setContactPerson] = useState(b2bBusiness?.contactPerson || '');
   const [email, setEmail] = useState(b2bBusiness?.businessEmail || '');
   const [phone, setPhone] = useState(b2bBusiness?.mobile || '');
-  const [deliveryPincode, setDeliveryPincode] = useState(b2bBusiness?.shippingAddress.pincode || '560100');
+  const [deliveryPincode, setDeliveryPincode] = useState(b2bBusiness?.shippingAddress?.pincode || '560100');
   const [requiredByDate, setRequiredByDate] = useState('2026-09-30');
   const [specialRequirements, setSpecialRequirements] = useState(
     'Required for campus / institutional supply. Please include dispatch schedule and GST breakdown in commercial quote.'
@@ -53,6 +58,13 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!isB2BAuthenticated) {
+      setError('Business Sign In Compulsory: Please sign in to your registered B2B account or register your business before submitting a quotation or placing an order.');
+      setShowB2BAuthPopup(true);
+      if (openB2BAuthModal) openB2BAuthModal();
+      return;
+    }
 
     if (!companyName || !email || !phone || !requestedQty) {
       setError('Please fill in all mandatory quotation request fields.');
@@ -190,6 +202,58 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
                 Direct factory proposals for tenders, institutional supplies, corporate bulk paper procurement, and custom stationery branding.
               </p>
             </div>
+
+            {/* Business Sign In Compulsory Banner */}
+            {!isB2BAuthenticated && (
+              <div
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1.5px solid rgba(239, 68, 68, 0.4)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '1.25rem 1.5rem',
+                  marginBottom: '2rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    style={{
+                      width: '44px',
+                      height: '44px',
+                      borderRadius: '50%',
+                      background: 'rgba(239, 68, 68, 0.2)',
+                      color: '#EF4444',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Lock size={22} />
+                  </div>
+                  <div>
+                    <div style={{ color: '#FFFFFF', fontWeight: 800, fontSize: '1rem' }}>
+                      Business Sign In Compulsory
+                    </div>
+                    <div style={{ color: '#94A3B8', fontSize: '0.85rem', marginTop: '0.15rem' }}>
+                      You must be signed in to your registered B2B account to request official quotes and place institutional orders.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openB2BAuthModal?.()}
+                  className="btn btn-amber"
+                  style={{ borderRadius: 'var(--radius-full)', padding: '0.6rem 1.4rem' }}
+                >
+                  Sign In to B2B Portal →
+                </button>
+              </div>
+            )}
 
             {error && (
               <div
@@ -380,14 +444,118 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
                 />
               </div>
 
-              <button
-                type="submit"
-                className="btn btn-amber btn-lg"
-                style={{ width: '100%', borderRadius: 'var(--radius-md)' }}
-              >
-                <Send size={18} /> Submit Formal RFQ to Kogniti B2B Desk
-              </button>
+              {isB2BAuthenticated ? (
+                <button
+                  type="submit"
+                  className="btn btn-amber btn-lg"
+                  style={{ width: '100%', borderRadius: 'var(--radius-md)' }}
+                >
+                  <Send size={18} /> Submit Formal RFQ to Kogniti B2B Desk
+                </button>
+              ) : (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowB2BAuthPopup(true);
+                      if (openB2BAuthModal) openB2BAuthModal();
+                    }}
+                    className="btn btn-primary btn-lg"
+                    style={{
+                      width: '100%',
+                      borderRadius: 'var(--radius-md)',
+                      background: 'linear-gradient(135deg, #DC2626 0%, #EA580C 100%)',
+                      boxShadow: '0 8px 24px rgba(220, 38, 38, 0.35)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      fontWeight: 800,
+                    }}
+                  >
+                    <Lock size={18} /> Sign In Compulsory to Place RFQ Order
+                  </button>
+                  <p style={{ fontSize: '0.78rem', color: '#EF4444', textAlign: 'center', marginTop: '0.45rem', fontWeight: 600 }}>
+                    🔒 Please sign in to your verified B2B account before requesting quotations.
+                  </p>
+                </div>
+              )}
             </form>
+          </div>
+        )}
+
+        {/* Business Sign In Compulsory Popup Modal */}
+        {showB2BAuthPopup && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              backdropFilter: 'blur(6px)',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '1rem',
+            }}
+          >
+            <div
+              className="card"
+              style={{
+                maxWidth: '440px',
+                width: '100%',
+                padding: '2.25rem 2rem',
+                textAlign: 'center',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
+                border: '1.5px solid rgba(239, 68, 68, 0.4)',
+                borderRadius: 'var(--radius-xl)',
+                background: '#0F172A',
+                color: '#FFFFFF',
+              }}
+            >
+              <div
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  color: '#EF4444',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 1.25rem',
+                }}
+              >
+                <Lock size={28} />
+              </div>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+                Business Sign In Compulsory
+              </h3>
+              <p style={{ fontSize: '0.92rem', color: '#94A3B8', lineHeight: '1.6', marginBottom: '1.75rem' }}>
+                Before submitting a quotation request or placing an order, signing in to your verified business account is compulsory. Please sign in or register your business details.
+              </p>
+              <div className="flex flex-col gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowB2BAuthPopup(false);
+                    if (openB2BAuthModal) openB2BAuthModal();
+                  }}
+                  className="btn btn-amber"
+                  style={{ width: '100%', padding: '0.8rem', borderRadius: 'var(--radius-full)', fontWeight: 700 }}
+                >
+                  Sign In to B2B Portal →
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowB2BAuthPopup(false)}
+                  className="btn btn-outline"
+                  style={{ width: '100%', color: '#94A3B8', borderColor: 'rgba(255, 255, 255, 0.2)' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

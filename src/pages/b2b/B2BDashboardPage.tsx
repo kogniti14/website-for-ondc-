@@ -43,6 +43,10 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
   const isApproved = b2bBusiness?.status === 'approved';
 
   const handleAcceptQuotation = (q: B2BQuotation) => {
+    if (!b2bBusiness) {
+      alert('Sign In Compulsory: You must be signed in to an authorized B2B account to place and confirm this order.');
+      return;
+    }
     if (!q.adminQuotation) return;
 
     // Convert quotation into an official B2B Order!

@@ -12,15 +12,18 @@ import {
   Briefcase,
   Building2,
 } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { Product } from '../../types';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface CartPageProps {
   products: Product[];
   onProceedToCheckout: () => void;
   setActiveTab: (tab: string) => void;
   onOpenProduct: (product: Product) => void;
+  onOpenAuth?: (mode?: 'login' | 'register') => void;
 }
 
 export const CartPage: React.FC<CartPageProps> = ({
@@ -28,7 +31,9 @@ export const CartPage: React.FC<CartPageProps> = ({
   onProceedToCheckout,
   setActiveTab,
   onOpenProduct,
+  onOpenAuth,
 }) => {
+  const { role, b2cUser } = useAuth();
   const {
     b2cCart,
     updateB2CQty,
@@ -434,13 +439,57 @@ export const CartPage: React.FC<CartPageProps> = ({
                 </div>
               </div>
 
+              {/* Sign In Required Notice */}
+              {(!b2cUser || role !== 'b2c') && (
+                <div
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '0.75rem',
+                    marginBottom: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.6rem',
+                    fontSize: '0.78rem',
+                    color: '#DC2626',
+                    fontWeight: 600,
+                  }}
+                >
+                  <Lock size={16} className="flex-shrink-0" />
+                  <span>Sign in is compulsory before placing an order.</span>
+                </div>
+              )}
+
               {/* Proceed Button */}
               <button
-                onClick={onProceedToCheckout}
+                onClick={() => {
+                  if (!b2cUser || role !== 'b2c') {
+                    if (onOpenAuth) onOpenAuth('login');
+                  } else {
+                    onProceedToCheckout();
+                  }
+                }}
                 className="btn btn-primary btn-lg"
-                style={{ width: '100%', borderRadius: 'var(--radius-md)', padding: '0.85rem' }}
+                style={{
+                  width: '100%',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                }}
               >
-                Proceed to Checkout <ArrowRight size={18} />
+                {!b2cUser || role !== 'b2c' ? (
+                  <>
+                    <Lock size={18} /> Sign In to Proceed to Checkout
+                  </>
+                ) : (
+                  <>
+                    Proceed to Checkout <ArrowRight size={18} />
+                  </>
+                )}
               </button>
 
               {/* Security & GST Note */}
