@@ -11,9 +11,13 @@ import {
   ArrowLeft,
   X,
   MapPin,
+  CreditCard,
+  ShieldCheck,
 } from 'lucide-react';
 import { B2COrder } from '../../types';
 import { storageService } from '../../services/storageService';
+import { RazorpayCheckoutModal } from '../../components/payment/RazorpayCheckoutModal';
+import { razorpayService } from '../../services/razorpayService';
 
 interface OrdersPageProps {
   orders: B2COrder[];
@@ -23,9 +27,34 @@ interface OrdersPageProps {
 export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) => {
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<B2COrder | null>(null);
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<B2COrder | null>(null);
+  const [orderToPay, setOrderToPay] = useState<B2COrder | null>(null);
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handlePaymentSuccess = (response: any) => {
+    if (!orderToPay) return;
+    const updatedOrder: B2COrder = {
+      ...orderToPay,
+      paymentStatus: 'paid',
+      paymentDetails: {
+        ...orderToPay.paymentDetails,
+        transactionId: response.razorpay_payment_id,
+        bankName: response.method,
+      },
+      statusTimeline: [
+        ...orderToPay.statusTimeline,
+        {
+          status: 'PAYMENT CONFIRMED VIA RAZORPAY',
+          timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+          note: `Settled online via Razorpay (Payment ID: ${response.razorpay_payment_id})`,
+        },
+      ],
+    };
+    storageService.saveB2COrder(updatedOrder);
+    setOrderToPay(null);
+    alert(`Payment of ₹${updatedOrder.total.toLocaleString('en-IN')} successful via Razorpay!`);
   };
 
   return (
@@ -135,6 +164,28 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                     >
                       <Truck size={13} /> {order.orderStatus.replace('_', ' ').toUpperCase()}
                     </span>
+
+                    {/* Payment Status / Action */}
+                    {order.paymentStatus === 'paid' ? (
+                      <span className="badge badge-green" style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}>
+                        <ShieldCheck size={13} /> PAID (RAZORPAY)
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setOrderToPay(order)}
+                        className="btn btn-primary btn-sm"
+                        style={{
+                          borderRadius: 'var(--radius-sm)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          fontWeight: 700,
+                          background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+                        }}
+                      >
+                        <CreditCard size={14} /> Pay Now via Razorpay
+                      </button>
+                    )}
 
                     {/* View Invoice Button */}
                     <button
@@ -484,6 +535,22 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
             </div>
           </div>
         </div>
+      )}
+
+      {/* Razorpay Settlement Modal for Pending Orders */}
+      {orderToPay && (
+        <RazorpayCheckoutModal
+          isOpen={!!orderToPay}
+          onClose={() => setOrderToPay(null)}
+          amount={orderToPay.total}
+          orderNumber={orderToPay.orderNumber}
+          customerName={orderToPay.customerName}
+          customerEmail={orderToPay.customerEmail}
+          customerPhone={orderToPay.customerPhone}
+          description={`Payment settlement for Order #${orderToPay.orderNumber}`}
+          isB2B={false}
+          onSuccess={handlePaymentSuccess}
+        />
       )}
     </div>
   );

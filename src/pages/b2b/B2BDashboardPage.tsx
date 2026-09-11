@@ -16,12 +16,14 @@ import {
   ArrowRight,
   TrendingUp,
   Tag,
+  CreditCard,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { B2BOrder, B2BQuotation } from '../../types';
 import { storageService } from '../../services/storageService';
 import { B2BInvoiceModal } from '../../components/b2b/B2BInvoiceModal';
 import { ImageUpload } from '../../components/common/ImageUpload';
+import { RazorpayCheckoutModal } from '../../components/payment/RazorpayCheckoutModal';
 
 interface B2BDashboardPageProps {
   b2bOrders: B2BOrder[];
@@ -39,8 +41,33 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
   const { b2bBusiness, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'quotations' | 'orders' | 'invoices'>('quotations');
   const [selectedB2bInvoice, setSelectedB2bInvoice] = useState<B2BOrder | null>(null);
+  const [orderToPay, setOrderToPay] = useState<B2BOrder | null>(null);
   const [orderCreatedMsg, setOrderCreatedMsg] = useState<string | null>(null);
   const [logoSuccess, setLogoSuccess] = useState(false);
+
+  const handleB2BPaymentSuccess = (response: any) => {
+    if (!orderToPay) return;
+    const updated: B2BOrder = {
+      ...orderToPay,
+      paymentStatus: 'paid',
+      paymentDetails: {
+        transactionId: response.razorpay_payment_id,
+        bankName: response.method,
+      },
+      statusTimeline: [
+        ...(orderToPay.statusTimeline || []),
+        {
+          status: 'COMMERCIAL PAYMENT SETTLED VIA RAZORPAY',
+          timestamp: new Date().toLocaleTimeString('en-IN'),
+          note: `Settled online via Razorpay Gateway (Payment ID: ${response.razorpay_payment_id})`,
+        },
+      ],
+    };
+    storageService.saveB2BOrder(updated);
+    setOrderToPay(null);
+    onRefresh();
+    alert(`B2B Order ${updated.orderNumber} successfully settled via Razorpay!`);
+  };
 
   const handleLogoUpload = (imgVal: string | string[]) => {
     const avatar = typeof imgVal === 'string' ? imgVal : imgVal[0] || '';
@@ -640,13 +667,48 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                             <strong>{ord.courierPartner} (AWB: {ord.trackingNumber})</strong>
                           </div>
 
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-3 flex-wrap">
                             <div className="flex items-baseline gap-2">
                               <span style={{ color: '#94A3B8' }}>Total:</span>
                               <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#34D399' }}>
                                 ₹{ord.grandTotal.toLocaleString('en-IN')}
                               </span>
                             </div>
+
+                            {ord.paymentStatus === 'paid' ? (
+                              <span
+                                style={{
+                                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                                  color: '#34D399',
+                                  border: '1px solid rgba(16, 185, 129, 0.35)',
+                                  padding: '0.35rem 0.65rem',
+                                  borderRadius: '6px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 800,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.35rem',
+                                }}
+                              >
+                                <CheckCircle2 size={13} /> PAID (RAZORPAY)
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => setOrderToPay(ord)}
+                                className="btn btn-sm"
+                                style={{
+                                  background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+                                  color: '#FFFFFF',
+                                  borderRadius: '6px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.35rem',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                <CreditCard size={14} /> Settle via Razorpay
+                              </button>
+                            )}
 
                             <button
                               onClick={() => setSelectedB2bInvoice(ord)}
@@ -785,7 +847,7 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-6 flex-wrap">
+                        <div className="flex items-center gap-4 flex-wrap">
                           <div style={{ textAlign: 'right' }}>
                             <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Taxable Base: ₹{ord.taxableAmount.toLocaleString('en-IN')}</div>
                             <div style={{ fontSize: '0.75rem', color: '#38BDF8' }}>GST (18%): ₹{ord.totalGst.toLocaleString('en-IN')}</div>
@@ -793,6 +855,41 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                               ₹{ord.grandTotal.toLocaleString('en-IN')}
                             </div>
                           </div>
+
+                          {ord.paymentStatus === 'paid' ? (
+                            <span
+                              style={{
+                                backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                                color: '#34D399',
+                                border: '1px solid rgba(16, 185, 129, 0.35)',
+                                padding: '0.35rem 0.65rem',
+                                borderRadius: '6px',
+                                fontSize: '0.75rem',
+                                fontWeight: 800,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                              }}
+                            >
+                              <CheckCircle2 size={13} /> PAID
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => setOrderToPay(ord)}
+                              className="btn btn-sm"
+                              style={{
+                                background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+                                color: '#FFFFFF',
+                                borderRadius: '6px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                fontWeight: 700,
+                              }}
+                            >
+                              <CreditCard size={14} /> Pay via Razorpay
+                            </button>
+                          )}
 
                           <button
                             onClick={() => setSelectedB2bInvoice(ord)}
@@ -908,6 +1005,23 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
         <B2BInvoiceModal
           order={selectedB2bInvoice}
           onClose={() => setSelectedB2bInvoice(null)}
+          onOrderUpdated={onRefresh}
+        />
+      )}
+
+      {/* Razorpay Settlement Modal for B2B Orders */}
+      {orderToPay && (
+        <RazorpayCheckoutModal
+          isOpen={!!orderToPay}
+          onClose={() => setOrderToPay(null)}
+          amount={orderToPay.grandTotal}
+          orderNumber={orderToPay.orderNumber}
+          customerName={orderToPay.businessName}
+          customerEmail={orderToPay.billingAddress?.fullName || 'accounts@kognitiminds.com'}
+          customerPhone={orderToPay.billingAddress?.phone || '9931648595'}
+          description={`B2B Commercial Order #${orderToPay.orderNumber} Settlement`}
+          isB2B={true}
+          onSuccess={handleB2BPaymentSuccess}
         />
       )}
     </div>

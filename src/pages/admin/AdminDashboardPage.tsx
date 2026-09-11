@@ -30,6 +30,8 @@ import {
   Check,
   Search,
   Image as ImageIcon,
+  CreditCard,
+  RefreshCw,
 } from 'lucide-react';
 import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, Category, B2CUser, SiteMedia } from '../../types';
 import { storageService } from '../../services/storageService';
@@ -37,6 +39,8 @@ import { useAuth } from '../../context/AuthContext';
 import { B2BInvoiceModal } from '../../components/b2b/B2BInvoiceModal';
 import { isFirebaseConfigured } from '../../services/firebase';
 import { ImageUpload } from '../../components/common/ImageUpload';
+import { razorpayService, RazorpayConfig, RazorpayTransactionRecord } from '../../services/razorpayService';
+import { RazorpayCheckoutModal } from '../../components/payment/RazorpayCheckoutModal';
 
 interface AdminDashboardPageProps {
   products: Product[];
@@ -66,8 +70,26 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const { currentAdminUser, isSuperAdmin, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'categories' | 'orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media'
+    'overview' | 'products' | 'categories' | 'orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay'
   >('overview');
+
+  // Razorpay Gateway State
+  const [razorpayConfig, setRazorpayConfig] = useState<RazorpayConfig>(() => razorpayService.getConfig());
+  const [razorpayTransactions, setRazorpayTransactions] = useState<RazorpayTransactionRecord[]>(() => razorpayService.getTransactions());
+  const [rzpSavedMsg, setRzpSavedMsg] = useState(false);
+  const [rzpSearchQuery, setRzpSearchQuery] = useState('');
+  const [showKeySecret, setShowKeySecret] = useState(false);
+  const [adminTestCheckoutOpen, setAdminTestCheckoutOpen] = useState(false);
+
+  const handleSaveRazorpayConfig = () => {
+    razorpayService.saveConfig(razorpayConfig);
+    setRzpSavedMsg(true);
+    setTimeout(() => setRzpSavedMsg(false), 3500);
+  };
+
+  const refreshRazorpayTransactions = () => {
+    setRazorpayTransactions(razorpayService.getTransactions());
+  };
 
   // Site Media State
   const [siteMedia, setSiteMedia] = useState<SiteMedia>(() => storageService.getSiteMedia());
@@ -746,6 +768,33 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             }}
           >
             <ImageIcon size={16} /> Storefront Banners & Media
+          </button>
+          <button
+            onClick={() => setActiveTab('razorpay')}
+            style={{
+              padding: '0.5rem 0.2rem',
+              color: activeTab === 'razorpay' ? '#0284C7' : 'var(--slate-600)',
+              borderBottom: activeTab === 'razorpay' ? '2px solid #0284C7' : '2px solid transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              fontWeight: activeTab === 'razorpay' ? 700 : 600,
+            }}
+          >
+            <CreditCard size={16} /> Razorpay Gateway ({razorpayTransactions.length})
+            <span
+              style={{
+                backgroundColor: razorpayConfig.mode === 'live' ? '#DCFCE7' : '#FEF3C7',
+                color: razorpayConfig.mode === 'live' ? '#15803D' : '#B45309',
+                fontSize: '0.62rem',
+                fontWeight: 800,
+                padding: '0.1rem 0.4rem',
+                borderRadius: '4px',
+                textTransform: 'uppercase',
+              }}
+            >
+              {razorpayConfig.mode}
+            </span>
           </button>
         </div>
       </div>
@@ -2674,6 +2723,515 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             </div>
           </div>
         )}
+
+        {/* Razorpay Payment Gateway & Live Transactions Ledger Tab */}
+        {activeTab === 'razorpay' && (
+          <div>
+            <div className="flex items-center justify-between gap-4 flex-wrap" style={{ marginBottom: '2rem' }}>
+              <div>
+                <span
+                  style={{
+                    backgroundColor: '#E0F2FE',
+                    color: '#0284C7',
+                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                    padding: '0.2rem 0.6rem',
+                    borderRadius: '4px',
+                    display: 'inline-block',
+                    marginBottom: '0.4rem',
+                  }}
+                >
+                  Official Payment Gateway Integration
+                </span>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Razorpay Control Center & Transaction Ledger</h2>
+                <p style={{ color: 'var(--slate-500)', fontSize: '0.92rem', marginTop: '0.2rem' }}>
+                  Manage merchant API credentials, toggle live vs sandbox test environment, customize checkout themes, and review real-time transaction settlements.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setAdminTestCheckoutOpen(true)}
+                  className="btn btn-outline"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+                >
+                  <CreditCard size={15} /> Test Checkout Modal
+                </button>
+                <button
+                  type="button"
+                  onClick={refreshRazorpayTransactions}
+                  className="btn btn-secondary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+                >
+                  <RefreshCw size={15} /> Refresh Ledger
+                </button>
+                {rzpSavedMsg && (
+                  <span className="badge badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <CheckCircle2 size={14} /> Settings Saved!
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSaveRazorpayConfig}
+                  className="btn btn-primary"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+                  }}
+                >
+                  <Check size={16} /> Save Gateway Config
+                </button>
+              </div>
+            </div>
+
+            {/* Razorpay Gateway Analytics KPIs */}
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: '1.25rem',
+                marginBottom: '2rem',
+              }}
+            >
+              <div className="card" style={{ padding: '1.25rem', borderRadius: 'var(--radius-lg)', background: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', textTransform: 'uppercase', fontWeight: 600 }}>
+                  Total Captured Revenue
+                </div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--primary)', marginTop: '0.25rem' }}>
+                  ₹{razorpayTransactions.reduce((acc, t) => acc + (t.status === 'captured' ? t.amount : 0), 0).toLocaleString('en-IN')}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#16A34A', marginTop: '0.2rem', fontWeight: 600 }}>
+                  ✓ 100% Settled & Reconciled
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: '1.25rem', borderRadius: 'var(--radius-lg)', background: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', textTransform: 'uppercase', fontWeight: 600 }}>
+                  Settled Transactions
+                </div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#0F172A', marginTop: '0.25rem' }}>
+                  {razorpayTransactions.length}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
+                  B2C Consumer & B2B Procurement
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: '1.25rem', borderRadius: 'var(--radius-lg)', background: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', textTransform: 'uppercase', fontWeight: 600 }}>
+                  Gateway Environment
+                </div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, marginTop: '0.25rem', color: razorpayConfig.mode === 'live' ? '#16A34A' : '#D97706' }}>
+                  {razorpayConfig.mode === 'live' ? '🟢 LIVE PRODUCTION' : '🟡 SANDBOX TEST'}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
+                  Active Key: <code>{razorpayConfig.keyId.slice(0, 14)}...</code>
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: '1.25rem', borderRadius: 'var(--radius-lg)', background: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', textTransform: 'uppercase', fontWeight: 600 }}>
+                  Instruments Online
+                </div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A', marginTop: '0.25rem' }}>
+                  UPI, Cards, NetBanking, NEFT
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#0284C7', marginTop: '0.2rem', fontWeight: 600 }}>
+                  Instant Automated Settlement
+                </div>
+              </div>
+            </div>
+
+            {/* Split Grid: Settings Form & Transaction History */}
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+                gap: '1.75rem',
+                marginBottom: '2rem',
+                alignItems: 'start',
+              }}
+            >
+              {/* Configuration Form Card */}
+              <div className="card" style={{ padding: '1.75rem', borderRadius: 'var(--radius-lg)', background: '#FFFFFF' }}>
+                <div className="flex items-center gap-2" style={{ marginBottom: '1.25rem' }}>
+                  <ShieldCheck size={20} className="text-sky-600" />
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800 }}>Razorpay API Credentials & Settings</h3>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Gateway Environment Mode</label>
+                  <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setRazorpayConfig({ ...razorpayConfig, mode: 'test' })}
+                      style={{
+                        padding: '0.75rem',
+                        borderRadius: '8px',
+                        border: razorpayConfig.mode === 'test' ? '2px solid #D97706' : '1px solid #CBD5E1',
+                        background: razorpayConfig.mode === 'test' ? '#FEF3C7' : '#FFFFFF',
+                        color: razorpayConfig.mode === 'test' ? '#92400E' : '#475569',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                      }}
+                    >
+                      🟡 Test Mode (Sandbox)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRazorpayConfig({ ...razorpayConfig, mode: 'live' })}
+                      style={{
+                        padding: '0.75rem',
+                        borderRadius: '8px',
+                        border: razorpayConfig.mode === 'live' ? '2px solid #16A34A' : '1px solid #CBD5E1',
+                        background: razorpayConfig.mode === 'live' ? '#DCFCE7' : '#FFFFFF',
+                        color: razorpayConfig.mode === 'live' ? '#15803D' : '#475569',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                      }}
+                    >
+                      🟢 Live Production
+                    </button>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Razorpay Key ID *</label>
+                  <input
+                    type="text"
+                    value={razorpayConfig.keyId}
+                    onChange={(e) => setRazorpayConfig({ ...razorpayConfig, keyId: e.target.value.trim() })}
+                    placeholder="rzp_test_... or rzp_live_..."
+                    className="form-input"
+                    style={{ fontFamily: 'monospace', fontSize: '0.88rem' }}
+                    required
+                  />
+                  <span style={{ fontSize: '0.72rem', color: 'var(--slate-400)' }}>
+                    Provided in your Razorpay Dashboard &gt; Settings &gt; API Keys
+                  </span>
+                </div>
+
+                <div className="form-group">
+                  <div className="flex justify-between items-center">
+                    <label className="form-label">Razorpay Key Secret (Server-Side)</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowKeySecret(!showKeySecret)}
+                      className="flex items-center gap-1 text-slate-500 hover:text-slate-900"
+                      style={{ fontSize: '0.75rem', background: 'none', border: 'none', cursor: 'pointer' }}
+                    >
+                      {showKeySecret ? <EyeOff size={13} /> : <Eye size={13} />}
+                      <span>{showKeySecret ? 'Hide' : 'Show'}</span>
+                    </button>
+                  </div>
+                  <input
+                    type={showKeySecret ? 'text' : 'password'}
+                    value={razorpayConfig.keySecret || ''}
+                    onChange={(e) => setRazorpayConfig({ ...razorpayConfig, keySecret: e.target.value.trim() })}
+                    placeholder="Enter Key Secret"
+                    className="form-input"
+                    style={{ fontFamily: 'monospace', fontSize: '0.88rem' }}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Merchant Name Displayed on Checkout</label>
+                  <input
+                    type="text"
+                    value={razorpayConfig.merchantName}
+                    onChange={(e) => setRazorpayConfig({ ...razorpayConfig, merchantName: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Checkout Modal Theme Color</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={razorpayConfig.themeColor}
+                      onChange={(e) => setRazorpayConfig({ ...razorpayConfig, themeColor: e.target.value })}
+                      style={{ width: '42px', height: '38px', borderRadius: '6px', border: '1px solid #CBD5E1', cursor: 'pointer' }}
+                    />
+                    <input
+                      type="text"
+                      value={razorpayConfig.themeColor}
+                      onChange={(e) => setRazorpayConfig({ ...razorpayConfig, themeColor: e.target.value })}
+                      className="form-input"
+                      style={{ fontFamily: 'monospace' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border-subtle)' }}>
+                  <label className="form-label" style={{ marginBottom: '0.6rem' }}>Enabled Payment Methods</label>
+                  <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0.6rem', fontSize: '0.82rem' }}>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={razorpayConfig.enabledMethods?.upi ?? true}
+                        onChange={(e) =>
+                          setRazorpayConfig({
+                            ...razorpayConfig,
+                            enabledMethods: { ...razorpayConfig.enabledMethods, upi: e.target.checked },
+                          })
+                        }
+                      />
+                      <span>UPI (GPay / PhonePe)</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={razorpayConfig.enabledMethods?.card ?? true}
+                        onChange={(e) =>
+                          setRazorpayConfig({
+                            ...razorpayConfig,
+                            enabledMethods: { ...razorpayConfig.enabledMethods, card: e.target.checked },
+                          })
+                        }
+                      />
+                      <span>Credit / Debit Cards</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={razorpayConfig.enabledMethods?.netbanking ?? true}
+                        onChange={(e) =>
+                          setRazorpayConfig({
+                            ...razorpayConfig,
+                            enabledMethods: { ...razorpayConfig.enabledMethods, netbanking: e.target.checked },
+                          })
+                        }
+                      />
+                      <span>Net Banking (50+ Banks)</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={razorpayConfig.enabledMethods?.wallet ?? true}
+                        onChange={(e) =>
+                          setRazorpayConfig({
+                            ...razorpayConfig,
+                            enabledMethods: { ...razorpayConfig.enabledMethods, wallet: e.target.checked },
+                          })
+                        }
+                      />
+                      <span>Wallets (Paytm/CRED)</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={razorpayConfig.enabledMethods?.cod ?? true}
+                        onChange={(e) =>
+                          setRazorpayConfig({
+                            ...razorpayConfig,
+                            enabledMethods: { ...razorpayConfig.enabledMethods, cod: e.target.checked },
+                          })
+                        }
+                      />
+                      <span>Cash on Delivery (B2C)</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '1.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={handleSaveRazorpayConfig}
+                    className="btn btn-primary"
+                    style={{ width: '100%', padding: '0.75rem', fontWeight: 700 }}
+                  >
+                    Save Gateway Configuration
+                  </button>
+                </div>
+              </div>
+
+              {/* Instructions & Help Card */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div
+                  className="card"
+                  style={{
+                    padding: '1.5rem',
+                    borderRadius: 'var(--radius-lg)',
+                    background: '#0F172A',
+                    color: '#FFFFFF',
+                    border: '1px solid #1E293B',
+                  }}
+                >
+                  <div className="flex items-center gap-2" style={{ marginBottom: '0.8rem' }}>
+                    <Lock size={18} className="text-sky-400" />
+                    <h4 style={{ fontSize: '1rem', fontWeight: 800, color: '#FFFFFF' }}>
+                      Razorpay Production Verification Checklist
+                    </h4>
+                  </div>
+                  <div style={{ fontSize: '0.82rem', color: '#94A3B8', lineHeight: '1.6' }}>
+                    <p style={{ marginBottom: '0.6rem' }}>
+                      To accept live Indian Rupee (INR) payments into Kogniti Minds Private Limited's HDFC Bank Current Account:
+                    </p>
+                    <ul style={{ paddingLeft: '1.2rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <li>Ensure Company KYC is approved on Razorpay Dashboard using CIN <code>U46496UP2024PTC213997</code> & GSTIN <code>09AALCK4750F1ZC</code>.</li>
+                      <li>Generate Live API Keys (starting with <code>rzp_live_...</code>) under <strong>Settings &gt; API Keys</strong>.</li>
+                      <li>Paste the Live Key ID above and switch environment mode to <strong>🟢 Live Production</strong>.</li>
+                      <li>All B2C orders and B2B invoices will automatically capture funds via Razorpay.</li>
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Webhook & Auto-Reconciliation Info */}
+                <div
+                  className="card"
+                  style={{
+                    padding: '1.5rem',
+                    borderRadius: 'var(--radius-lg)',
+                    background: '#F8FAFC',
+                    border: '1px solid var(--border-color)',
+                  }}
+                >
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.4rem' }}>
+                    Automated Webhook & Smart Collect Status
+                  </h4>
+                  <p style={{ fontSize: '0.8rem', color: '#64748B', lineHeight: '1.5', marginBottom: '0.8rem' }}>
+                    Razorpay Smart Collect automatically reconciles virtual account NEFT / RTGS transfers against B2B commercial purchase orders without manual entry.
+                  </p>
+                  <div style={{ fontSize: '0.78rem', background: '#FFFFFF', padding: '0.75rem', borderRadius: '6px', border: '1px solid #CBD5E1' }}>
+                    <div><strong>Webhook Endpoint:</strong> <code>https://kognitiminds.com/api/razorpay-webhook</code></div>
+                    <div style={{ marginTop: '0.25rem' }}><strong>Subscribed Events:</strong> <code>payment.captured</code>, <code>order.paid</code></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Transaction Ledger Table */}
+            <div className="card" style={{ padding: '1.75rem', borderRadius: 'var(--radius-lg)', background: '#FFFFFF' }}>
+              <div className="flex justify-between items-center flex-wrap gap-3" style={{ marginBottom: '1.25rem' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Live Transactions Ledger & Settlement Log</h3>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: '0.15rem' }}>
+                    Audited ledger of all payment attempts, customer names, methods, and bank transaction references
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div style={{ position: 'relative' }}>
+                    <Search size={15} style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--slate-400)' }} />
+                    <input
+                      type="text"
+                      placeholder="Search payment ID, order #, or customer..."
+                      value={rzpSearchQuery}
+                      onChange={(e) => setRzpSearchQuery(e.target.value)}
+                      className="form-input"
+                      style={{ paddingLeft: '2rem', fontSize: '0.82rem', width: '280px' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Transactions Table */}
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--slate-50)', borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
+                      <th style={{ padding: '0.75rem' }}>Payment ID</th>
+                      <th style={{ padding: '0.75rem' }}>Order Ref</th>
+                      <th style={{ padding: '0.75rem' }}>Portal</th>
+                      <th style={{ padding: '0.75rem' }}>Customer & Contact</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'right' }}>Amount</th>
+                      <th style={{ padding: '0.75rem' }}>Method & Bank RRN</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center' }}>Gateway Mode</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'center' }}>Status</th>
+                      <th style={{ padding: '0.75rem' }}>Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {razorpayTransactions
+                      .filter((t) => {
+                        if (!rzpSearchQuery) return true;
+                        const q = rzpSearchQuery.toLowerCase();
+                        return (
+                          t.paymentId.toLowerCase().includes(q) ||
+                          t.orderNumber.toLowerCase().includes(q) ||
+                          t.customerName.toLowerCase().includes(q) ||
+                          t.customerEmail.toLowerCase().includes(q) ||
+                          t.bankRrn.toLowerCase().includes(q)
+                        );
+                      })
+                      .map((t) => (
+                        <tr key={t.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                          <td style={{ padding: '0.75rem', fontFamily: 'monospace', fontWeight: 700, color: '#0284C7' }}>
+                            {t.paymentId}
+                          </td>
+                          <td style={{ padding: '0.75rem', fontWeight: 600 }}>
+                            {t.orderNumber}
+                          </td>
+                          <td style={{ padding: '0.75rem' }}>
+                            <span
+                              className={`badge ${t.orderType === 'b2b' ? 'badge-purple' : 'badge-blue'}`}
+                              style={{ fontSize: '0.68rem', padding: '0.2rem 0.5rem' }}
+                            >
+                              {t.orderType.toUpperCase()}
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.75rem' }}>
+                            <div style={{ fontWeight: 600, color: 'var(--slate-900)' }}>{t.customerName}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>{t.customerEmail} • {t.customerPhone}</div>
+                          </td>
+                          <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 800, color: 'var(--slate-900)' }}>
+                            ₹{t.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td style={{ padding: '0.75rem' }}>
+                            <div style={{ fontWeight: 600 }}>{t.method}</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--slate-400)', fontFamily: 'monospace' }}>
+                              RRN: {t.bankRrn}
+                            </div>
+                          </td>
+                          <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                            <span
+                              style={{
+                                backgroundColor: t.gatewayMode === 'live' ? '#DCFCE7' : '#FEF3C7',
+                                color: t.gatewayMode === 'live' ? '#15803D' : '#B45309',
+                                fontSize: '0.65rem',
+                                fontWeight: 800,
+                                padding: '0.15rem 0.45rem',
+                                borderRadius: '4px',
+                                textTransform: 'uppercase',
+                              }}
+                            >
+                              {t.gatewayMode}
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                            <span className="badge badge-green" style={{ fontSize: '0.7rem' }}>
+                              <CheckCircle2 size={12} /> CAPTURED
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.75rem', fontSize: '0.76rem', color: 'var(--slate-500)' }}>
+                            {new Date(t.createdAt).toLocaleString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* RFQ Formulate Modal */}
@@ -3340,6 +3898,25 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Admin Test Razorpay Checkout Modal */}
+      {adminTestCheckoutOpen && (
+        <RazorpayCheckoutModal
+          isOpen={adminTestCheckoutOpen}
+          onClose={() => setAdminTestCheckoutOpen(false)}
+          amount={1599}
+          orderNumber={`KM-TEST-${Math.floor(1000 + Math.random() * 9000)}`}
+          customerName="Admin Portal Tester"
+          customerEmail="admin@kognitiminds.com"
+          customerPhone="9931648595"
+          description="Admin Gateway Diagnostic Test Transaction"
+          isB2B={false}
+          onSuccess={(response) => {
+            refreshRazorpayTransactions();
+            alert(`Test payment successful! Captured ID: ${response.razorpay_payment_id}`);
+          }}
+        />
       )}
     </div>
   );

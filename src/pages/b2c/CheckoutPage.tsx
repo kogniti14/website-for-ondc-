@@ -20,6 +20,8 @@ import { Product, B2COrder, B2CAddress } from '../../types';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { storageService } from '../../services/storageService';
+import { razorpayService, RazorpayPaymentSuccessResponse } from '../../services/razorpayService';
+import { RazorpayCheckoutModal } from '../../components/payment/RazorpayCheckoutModal';
 
 interface CheckoutPageProps {
   products: Product[];
@@ -81,8 +83,118 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
   const [selectedBank, setSelectedBank] = useState('HDFC Bank');
   const [cardNumber, setCardNumber] = useState('4532 •••• •••• 8901');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showRazorpayModal, setShowRazorpayModal] = useState(false);
+  const [pendingOrderNum, setPendingOrderNum] = useState('');
 
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  const processOrderPlacement = (
+    transactionId: string,
+    paymentMethodUsed: string,
+    isPaid: boolean,
+    bankName?: string,
+    upiVal?: string
+  ) => {
+    const orderItems = b2cCart
+      .map((item) => {
+        const p = products.find((prod) => prod.id === item.productId);
+        if (!p) return null;
+        return {
+          productId: p.id,
+          productName: p.name,
+          sku: p.sku,
+          image: p.images[0],
+          quantity: item.quantity,
+          unitPrice: p.b2cPrice,
+          mrp: p.b2cMrp,
+          hsn: p.hsn,
+          gstRate: p.gstRate,
+          total: p.b2cPrice * item.quantity,
+        };
+      })
+      .filter(Boolean) as any[];
+
+    const shippingAddr: B2CAddress = {
+      id: `addr_${Date.now()}`,
+      fullName: customerName,
+      phone: customerPhone,
+      street,
+      apartment,
+      city,
+      state,
+      pincode,
+      addressType: 'home',
+    };
+
+    const finalOrderNum = pendingOrderNum || `KM-B2C-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newOrder: B2COrder = {
+      id: `b2c_ord_${Date.now()}`,
+      orderNumber: finalOrderNum,
+      customerName,
+      customerEmail,
+      customerPhone,
+      shippingAddress: shippingAddr,
+      billingAddress: shippingAddr,
+      optionalGstin: wantsGstInvoice && gstin ? gstin.toUpperCase() : undefined,
+      items: orderItems,
+      subtotal: calculations.subtotal,
+      discount: calculations.discount,
+      couponCode: appliedCoupon?.code,
+      gstAmount: calculations.totalGst,
+      shippingFee: calculations.shippingFee,
+      total: calculations.total,
+      paymentMethod,
+      paymentStatus: isPaid ? 'paid' : 'pending',
+      paymentDetails: {
+        transactionId,
+        upiId: upiVal || (paymentMethod === 'upi' ? upiId : undefined),
+        bankName: bankName || (paymentMethod === 'netbanking' ? selectedBank : undefined),
+      },
+      orderStatus: 'confirmed',
+      trackingNumber: `DEL-IN-${Math.floor(100000000 + Math.random() * 900000000)}`,
+      courierPartner: 'Delhivery',
+      createdAt: new Date().toISOString(),
+      statusTimeline: [
+        {
+          status: 'ORDER PLACED',
+          timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+          note: `Order placed successfully via ${paymentMethodUsed.toUpperCase()}`,
+        },
+        ...(isPaid
+          ? [
+              {
+                status: 'PAYMENT CONFIRMED VIA RAZORPAY',
+                timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+                note: `Verified transaction of ₹${calculations.total.toLocaleString('en-IN')} (Razorpay Payment ID: ${transactionId})`,
+              },
+            ]
+          : [
+              {
+                status: 'PAYMENT PENDING (COD)',
+                timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+                note: 'Cash on delivery payment will be collected by courier agent.',
+              },
+            ]),
+      ],
+    };
+
+    storageService.saveB2COrder(newOrder);
+    clearB2CCart();
+
+    try {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    } catch (e) {
+      // Fallback if canvas-confetti is not loaded
+    }
+
+    setIsProcessing(false);
+    onOrderSuccess(newOrder);
+  };
+
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!isB2CAuthenticated) {
@@ -98,97 +210,53 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
       return;
     }
 
+    const orderNum = `KM-B2C-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    setPendingOrderNum(orderNum);
+
+    if (paymentMethod === 'cod') {
+      setIsProcessing(true);
+      setTimeout(() => {
+        processOrderPlacement(`COD-${Date.now()}`, 'Cash on Delivery', false);
+      }, 800);
+      return;
+    }
+
+    // Online Payment via Razorpay
     setIsProcessing(true);
 
-    setTimeout(() => {
-      const orderItems = b2cCart
-        .map((item) => {
-          const p = products.find((prod) => prod.id === item.productId);
-          if (!p) return null;
-          return {
-            productId: p.id,
-            productName: p.name,
-            sku: p.sku,
-            image: p.images[0],
-            quantity: item.quantity,
-            unitPrice: p.b2cPrice,
-            mrp: p.b2cMrp,
-            hsn: p.hsn,
-            gstRate: p.gstRate,
-            total: p.b2cPrice * item.quantity,
-          };
-        })
-        .filter(Boolean) as any[];
-
-      const shippingAddr: B2CAddress = {
-        id: `addr_${Date.now()}`,
-        fullName: customerName,
-        phone: customerPhone,
-        street,
-        apartment,
-        city,
-        state,
-        pincode,
-        addressType: 'home',
-      };
-
-      const newOrder: B2COrder = {
-        id: `b2c_ord_${Date.now()}`,
-        orderNumber: `KM-B2C-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+    try {
+      const opened = await razorpayService.openOfficialCheckout({
+        amount: calculations.total,
+        orderNumber: orderNum,
         customerName,
         customerEmail,
         customerPhone,
-        shippingAddress: shippingAddr,
-        billingAddress: shippingAddr,
-        optionalGstin: wantsGstInvoice && gstin ? gstin.toUpperCase() : undefined,
-        items: orderItems,
-        subtotal: calculations.subtotal,
-        discount: calculations.discount,
-        couponCode: appliedCoupon?.code,
-        gstAmount: calculations.totalGst,
-        shippingFee: calculations.shippingFee,
-        total: calculations.total,
-        paymentMethod,
-        paymentStatus: paymentMethod === 'cod' ? 'pending' : 'paid',
-        paymentDetails: {
-          transactionId: `TXN-KM-${Date.now()}`,
-          upiId: paymentMethod === 'upi' ? upiId : undefined,
-          bankName: paymentMethod === 'netbanking' ? selectedBank : undefined,
+        description: `Pan-India Order #${orderNum}`,
+        isB2B: false,
+        onSuccess: (response: RazorpayPaymentSuccessResponse) => {
+          processOrderPlacement(
+            response.razorpay_payment_id,
+            response.method || 'Razorpay Gateway',
+            true,
+            response.method,
+            upiId
+          );
         },
-        orderStatus: 'confirmed',
-        trackingNumber: `DEL-IN-${Math.floor(100000000 + Math.random() * 900000000)}`,
-        courierPartner: 'Delhivery',
-        createdAt: new Date().toISOString(),
-        statusTimeline: [
-          {
-            status: 'ORDER PLACED',
-            timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-            note: `Order placed successfully via ${paymentMethod.toUpperCase()}`,
-          },
-          {
-            status: 'PAYMENT CONFIRMED',
-            timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-            note: `Verified transaction of ₹${calculations.total.toLocaleString('en-IN')}`,
-          },
-        ],
-      };
+        onDismiss: () => {
+          setIsProcessing(false);
+        },
+      });
 
-      storageService.saveB2COrder(newOrder);
-      clearB2CCart();
-
-      try {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-        });
-      } catch (e) {
-        // Fallback if canvas-confetti is not loaded
+      if (!opened) {
+        // Fallback to embedded Razorpay modal
+        setIsProcessing(false);
+        setShowRazorpayModal(true);
       }
-
+    } catch (err) {
+      console.error('Error invoking Razorpay:', err);
       setIsProcessing(false);
-      onOrderSuccess(newOrder);
-    }, 1200);
+      setShowRazorpayModal(true);
+    }
   };
 
   return (
@@ -475,7 +543,26 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                 >
                   3
                 </div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Payment Method</h3>
+                <div className="flex items-center justify-between w-full flex-wrap gap-2">
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Payment Method</h3>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      backgroundColor: '#E0F2FE',
+                      color: '#0369A1',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '4px',
+                      border: '1px solid #BAE6FD',
+                    }}
+                  >
+                    <ShieldCheck size={13} className="text-sky-600" />
+                    <span>Razorpay Secure Gateway</span>
+                  </span>
+                </div>
               </div>
 
               {/* Payment Tabs */}
@@ -882,6 +969,28 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* Razorpay Interactive Checkout Modal */}
+      <RazorpayCheckoutModal
+        isOpen={showRazorpayModal}
+        onClose={() => setShowRazorpayModal(false)}
+        amount={calculations.total}
+        orderNumber={pendingOrderNum || 'KM-B2C-2026-PENDING'}
+        customerName={customerName}
+        customerEmail={customerEmail}
+        customerPhone={customerPhone}
+        description={`Pan-India Order #${pendingOrderNum || 'KM-B2C-2026-PENDING'}`}
+        isB2B={false}
+        onSuccess={(response) => {
+          processOrderPlacement(
+            response.razorpay_payment_id,
+            response.method || 'Razorpay Gateway',
+            true,
+            response.method,
+            upiId
+          );
+        }}
+      />
     </div>
   );
 };

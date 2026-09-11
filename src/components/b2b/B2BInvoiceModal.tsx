@@ -1,10 +1,13 @@
-import React from 'react';
-import { Printer, X, Building2, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Printer, X, Building2, CheckCircle2, CreditCard, ShieldCheck } from 'lucide-react';
 import { B2BOrder } from '../../types';
+import { storageService } from '../../services/storageService';
+import { RazorpayCheckoutModal } from '../payment/RazorpayCheckoutModal';
 
 interface B2BInvoiceModalProps {
   order: B2BOrder;
   onClose: () => void;
+  onOrderUpdated?: (order: B2BOrder) => void;
 }
 
 // Convert numbers into Indian Rupee Words (Crores, Lakhs, Thousands, Hundreds)
@@ -72,13 +75,41 @@ function numberToIndianWords(num: number): string {
   return result + ' Only';
 }
 
-export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose }) => {
+export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose, onOrderUpdated }) => {
+  const [currentOrder, setCurrentOrder] = useState<B2BOrder>(order);
+  const [showRazorpay, setShowRazorpay] = useState(false);
+
   const handlePrint = () => {
     window.print();
   };
 
-  const isInterState = !order.billingAddress.state.toLowerCase().includes('uttar') && order.billingAddress.state.toLowerCase() !== 'up';
-  const invoiceDate = new Date(order.createdAt).toLocaleDateString('en-IN', {
+  const handleB2BPaymentSuccess = (response: any) => {
+    const updated: B2BOrder = {
+      ...currentOrder,
+      paymentStatus: 'paid',
+      paymentDetails: {
+        transactionId: response.razorpay_payment_id,
+        bankName: response.method,
+      },
+      statusTimeline: [
+        ...(currentOrder.statusTimeline || []),
+        {
+          status: 'COMMERCIAL PAYMENT SETTLED VIA RAZORPAY',
+          timestamp: new Date().toLocaleTimeString('en-IN'),
+          note: `Settled online via Razorpay Gateway (Payment ID: ${response.razorpay_payment_id})`,
+        },
+      ],
+    };
+
+    storageService.saveB2BOrder(updated);
+    setCurrentOrder(updated);
+    setShowRazorpay(false);
+    if (onOrderUpdated) onOrderUpdated(updated);
+    alert(`B2B Commercial Tax Invoice INV-${updated.orderNumber} successfully settled via Razorpay!`);
+  };
+
+  const isInterState = !currentOrder.billingAddress.state.toLowerCase().includes('uttar') && currentOrder.billingAddress.state.toLowerCase() !== 'up';
+  const invoiceDate = new Date(currentOrder.createdAt).toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -166,6 +197,41 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
           </div>
 
           <div className="flex items-center gap-3">
+            {currentOrder.paymentStatus !== 'paid' ? (
+              <button
+                onClick={() => setShowRazorpay(true)}
+                className="btn btn-sm"
+                style={{
+                  background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+                  color: '#FFFFFF',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  fontWeight: 700,
+                  boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)',
+                }}
+              >
+                <CreditCard size={15} /> Settle via Razorpay
+              </button>
+            ) : (
+              <span
+                style={{
+                  backgroundColor: '#DCFCE7',
+                  color: '#15803D',
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '6px',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                }}
+              >
+                <ShieldCheck size={14} /> PAID (RAZORPAY)
+              </span>
+            )}
+
             <button
               onClick={handlePrint}
               className="btn btn-sm"
@@ -667,6 +733,22 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
             }
           }
         `}</style>
+
+        {/* Razorpay Commercial Checkout Modal */}
+        {showRazorpay && (
+          <RazorpayCheckoutModal
+            isOpen={showRazorpay}
+            onClose={() => setShowRazorpay(false)}
+            amount={currentOrder.grandTotal}
+            orderNumber={currentOrder.orderNumber}
+            customerName={currentOrder.businessName}
+            customerEmail={currentOrder.billingAddress.fullName || 'accounts@kognitiminds.com'}
+            customerPhone={currentOrder.billingAddress.phone || '9931648595'}
+            description={`Commercial Invoice INV-${currentOrder.orderNumber} Settlement`}
+            isB2B={true}
+            onSuccess={handleB2BPaymentSuccess}
+          />
+        )}
       </div>
     </div>
   );

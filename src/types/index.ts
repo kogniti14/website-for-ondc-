@@ -203,6 +203,11 @@ export interface B2BOrder {
   grandTotal: number;
   paymentTerms: 'Prepaid' | 'Net 15' | 'Net 30';
   paymentStatus: 'paid' | 'pending_po_approval' | 'credit_approved';
+  paymentDetails?: {
+    transactionId: string;
+    bankName?: string;
+    upiId?: string;
+  };
   orderStatus:
     | 'placed'
     | 'confirmed'
