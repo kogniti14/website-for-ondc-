@@ -8,6 +8,7 @@ export interface Product {
   b2cMrp: number;
   b2cPrice: number;
   b2bWholesalePrice: number;
+  wholesalePrice?: number;
   b2bMoq: number;
   b2bDiscountSlabs: {
     minQty: number;
@@ -188,6 +189,20 @@ export interface B2BOrderItemSummary {
   total: number;
 }
 
+export interface B2BPaymentRecord {
+  id: string;
+  amount: number;
+  paymentDate: string;
+  paymentMode: 'razorpay' | 'bank_transfer' | 'neft' | 'rtgs' | 'imps' | 'cheque' | 'other' | string;
+  transactionReference?: string;
+  transactionRef?: string;
+  chequeNumber?: string;
+  bankName?: string;
+  notes?: string;
+  recordedBy: string;
+  recordedAt: string;
+}
+
 export interface B2BOrder {
   id: string;
   orderNumber: string;
@@ -207,8 +222,19 @@ export interface B2BOrder {
   totalGst: number;
   shippingFee: number;
   grandTotal: number;
-  paymentTerms: 'Prepaid' | 'Net 15' | 'Net 30';
-  paymentStatus: 'paid' | 'pending_po_approval' | 'credit_approved';
+  paymentTerms: string;
+  paymentStatus:
+    | 'paid'
+    | 'partially_paid'
+    | 'payment_due'
+    | 'pending_po_approval'
+    | 'credit_approved'
+    | 'failed'
+    | 'refunded';
+  paymentMode?: 'razorpay' | 'bank_transfer' | 'neft' | 'rtgs' | 'imps' | 'cheque' | 'other' | string;
+  amountPaid?: number;
+  amountDue?: number;
+  paymentRecords?: B2BPaymentRecord[];
   paymentDetails?: {
     transactionId: string;
     bankName?: string;
@@ -239,23 +265,55 @@ export interface B2BOrder {
   }[];
 }
 
+export interface B2BQuotationItem {
+  productId?: string;
+  productName: string;
+  sku?: string;
+  hsn?: string;
+  quantity: number;
+  unitPrice: number;
+  discount?: number;
+  discountPercent?: number;
+  gstRate: number;
+  taxableAmount?: number;
+  taxableValue?: number;
+  gstAmount: number;
+  total: number;
+}
+
 export interface B2BQuotation {
   id: string;
   rfqNumber: string;
-  businessId: string;
+  businessId?: string;
   businessName: string;
   contactPerson: string;
   email: string;
   phone: string;
-  productId: string;
-  productName: string;
-  sku: string;
-  requestedQty: number;
-  targetUnitPrice: number;
-  deliveryPincode: string;
-  requiredByDate: string;
-  specialRequirements: string;
-  status: 'submitted' | 'quoted' | 'accepted' | 'rejected' | 'ordered';
+  billingAddress?: B2CAddress;
+  shippingAddress?: B2CAddress;
+  gstin?: string;
+  items?: B2BQuotationItem[];
+  productId?: string;
+  productName?: string;
+  sku?: string;
+  requestedQty?: number;
+  targetUnitPrice?: number;
+  deliveryPincode?: string;
+  requiredByDate?: string;
+  specialRequirements?: string;
+  status: 'submitted' | 'quoted' | 'accepted' | 'rejected' | 'ordered' | 'converted_to_order';
+  subtotal?: number;
+  discount?: number;
+  taxableAmount?: number;
+  gstAmount?: number;
+  shippingCharges?: number;
+  grandTotal?: number;
+  paymentTerms?: string;
+  deliveryTerms?: string;
+  notes?: string;
+  convertedOrderId?: string;
+  convertedAt?: string;
+  convertedBy?: string;
   adminQuotation?: {
     quotedUnitPrice: number;
     totalTaxable: number;
@@ -266,7 +324,8 @@ export interface B2BQuotation {
     adminNotes: string;
     quotedAt: string;
   };
-  submittedAt: string;
+  submittedAt?: string;
+  createdAt?: string;
 }
 
 export interface Coupon {

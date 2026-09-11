@@ -37,10 +37,10 @@ import {
   Filter,
   X,
 } from 'lucide-react';
-import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, Category, B2CUser, SiteMedia, B2BOrderItemSummary, OrderItemSummary } from '../../types';
+import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, Category, B2CUser, SiteMedia, B2BOrderItemSummary, OrderItemSummary, B2BQuotationItem, B2BPaymentRecord, B2CAddress } from '../../types';
 import { storageService } from '../../services/storageService';
 import { useAuth } from '../../context/AuthContext';
-import { B2BInvoiceModal } from '../../components/b2b/B2BInvoiceModal';
+import { OrderInvoiceModal } from '../../components/common/OrderInvoiceModal';
 import { isFirebaseConfigured } from '../../services/firebase';
 import { ImageUpload } from '../../components/common/ImageUpload';
 import { razorpayService, RazorpayConfig, RazorpayTransactionRecord } from '../../services/razorpayService';
@@ -234,8 +234,318 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     }
   };
 
-  // Selected B2B Order for Tax Invoice
-  const [selectedB2bOrderForInvoice, setSelectedB2bOrderForInvoice] = useState<B2BOrder | null>(null);
+  // Selected Order for Official Tax Invoice (B2C and B2B)
+  const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<{
+    order: B2COrder | B2BOrder;
+    isB2B: boolean;
+  } | null>(null);
+
+  // B2B Offline Payment Management State
+  const [showOfflinePaymentModal, setShowOfflinePaymentModal] = useState(false);
+  const [orderForOfflinePayment, setOrderForOfflinePayment] = useState<B2BOrder | null>(null);
+  const [offlinePaymentAmount, setOfflinePaymentAmount] = useState<number>(0);
+  const [offlinePaymentDate, setOfflinePaymentDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [offlinePaymentMode, setOfflinePaymentMode] = useState<string>('bank_transfer');
+  const [offlinePaymentRef, setOfflinePaymentRef] = useState<string>('');
+  const [offlinePaymentChequeNo, setOfflinePaymentChequeNo] = useState<string>('');
+  const [offlinePaymentBank, setOfflinePaymentBank] = useState<string>('');
+  const [offlinePaymentNotes, setOfflinePaymentNotes] = useState<string>('');
+
+  const handleOpenOfflinePayment = (order: B2BOrder) => {
+    setOrderForOfflinePayment(order);
+    const due = order.amountDue !== undefined ? order.amountDue : (order.paymentStatus === 'paid' ? 0 : order.grandTotal);
+    setOfflinePaymentAmount(due > 0 ? due : order.grandTotal);
+    setOfflinePaymentDate(new Date().toISOString().split('T')[0]);
+    setOfflinePaymentMode(order.paymentMode || 'bank_transfer');
+    setOfflinePaymentRef('');
+    setOfflinePaymentChequeNo('');
+    setOfflinePaymentBank('');
+    setOfflinePaymentNotes('');
+    setShowOfflinePaymentModal(true);
+  };
+
+  const handleSaveOfflinePayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orderForOfflinePayment) return;
+    if (offlinePaymentAmount <= 0) {
+      alert('Please enter a valid payment amount greater than 0.');
+      return;
+    }
+
+    const updated = storageService.recordB2BOfflinePayment(
+      orderForOfflinePayment.id,
+      {
+        amount: Number(offlinePaymentAmount),
+        paymentDate: offlinePaymentDate,
+        paymentMode: offlinePaymentMode as any,
+        transactionRef: offlinePaymentRef,
+        chequeNumber: offlinePaymentChequeNo,
+        bankName: offlinePaymentBank,
+        notes: offlinePaymentNotes,
+      },
+      currentAdminUser?.name || 'Super Admin'
+    );
+
+    if (updated) {
+      if (selectedOrderForInspection && selectedOrderForInspection.order.id === updated.id) {
+        setSelectedOrderForInspection({ type: 'b2b', order: updated });
+      }
+      onRefresh();
+      setShowOfflinePaymentModal(false);
+      setOrderForOfflinePayment(null);
+      alert(`Payment of ₹${offlinePaymentAmount.toLocaleString('en-IN')} successfully logged! New Status: ${updated.paymentStatus.toUpperCase()} (Remaining Due: ₹${(updated.amountDue || 0).toLocaleString('en-IN')})`);
+    }
+  };
+
+  // B2B Manual Quotation Management State
+  const [showManualQuoteModal, setShowManualQuoteModal] = useState(false);
+  const [quoteBusinessName, setQuoteBusinessName] = useState('');
+  const [quoteContactPerson, setQuoteContactPerson] = useState('');
+  const [quoteContactPhone, setQuoteContactPhone] = useState('');
+  const [quoteContactEmail, setQuoteContactEmail] = useState('');
+  const [quoteGstin, setQuoteGstin] = useState('');
+  const [quoteBillingStreet, setQuoteBillingStreet] = useState('');
+  const [quoteBillingCity, setQuoteBillingCity] = useState('');
+  const [quoteBillingState, setQuoteBillingState] = useState('');
+  const [quoteBillingPincode, setQuoteBillingPincode] = useState('');
+  const [quoteShippingSameAsBilling, setQuoteShippingSameAsBilling] = useState(true);
+  const [quoteShippingStreet, setQuoteShippingStreet] = useState('');
+  const [quoteShippingCity, setQuoteShippingCity] = useState('');
+  const [quoteShippingState, setQuoteShippingState] = useState('');
+  const [quoteShippingPincode, setQuoteShippingPincode] = useState('');
+
+  interface ManualQuoteLineItem {
+    productId?: string;
+    productName: string;
+    sku: string;
+    hsn: string;
+    quantity: number;
+    unitPrice: number;
+    discountPercent: number;
+  }
+  const [quoteLineItems, setQuoteLineItems] = useState<ManualQuoteLineItem[]>([
+    {
+      productId: products[0]?.id || '',
+      productName: products[0]?.name || 'Interactive Flat Panel 75 Inch 4K',
+      sku: products[0]?.sku || 'KM-IFP-75-PRO',
+      hsn: products[0]?.hsn || '8471',
+      quantity: 5,
+      unitPrice: products[0]?.b2bWholesalePrice || 85000,
+      discountPercent: 0,
+    },
+  ]);
+  const [quoteShippingFee, setQuoteShippingFee] = useState<number>(0);
+  const [quotePaymentTerms, setQuotePaymentTerms] = useState<string>('Prepaid');
+  const [quoteDeliveryTerms, setQuoteDeliveryTerms] = useState<string>('Ex-Warehouse Noida / Doorstep Delivery within 5-7 business days');
+  const [quoteProposalNotes, setQuoteProposalNotes] = useState<string>('Official Institutional Proposal valid for 30 calendar days. 18% GST input tax credit applicable under Section 31.');
+  const [quoteProposalValidDays, setQuoteProposalValidDays] = useState<number>(30);
+
+  const handleOpenManualQuoteModal = () => {
+    setQuoteBusinessName('');
+    setQuoteContactPerson('');
+    setQuoteContactPhone('');
+    setQuoteContactEmail('');
+    setQuoteGstin('');
+    setQuoteBillingStreet('');
+    setQuoteBillingCity('Noida');
+    setQuoteBillingState('Uttar Pradesh');
+    setQuoteBillingPincode('201301');
+    setQuoteShippingSameAsBilling(true);
+    setQuoteShippingStreet('');
+    setQuoteShippingCity('Noida');
+    setQuoteShippingState('Uttar Pradesh');
+    setQuoteShippingPincode('201301');
+    setQuoteLineItems([
+      {
+        productId: products[0]?.id || '',
+        productName: products[0]?.name || 'Interactive Flat Panel 75 Inch 4K',
+        sku: products[0]?.sku || 'KM-IFP-75-PRO',
+        hsn: products[0]?.hsn || '8471',
+        quantity: 5,
+        unitPrice: products[0]?.b2bWholesalePrice || 85000,
+        discountPercent: 0,
+      },
+    ]);
+    setQuoteShippingFee(0);
+    setQuotePaymentTerms('Prepaid');
+    setQuoteDeliveryTerms('Ex-Warehouse Noida / Doorstep Delivery within 5-7 business days');
+    setQuoteProposalNotes('Official Institutional Proposal valid for 30 calendar days. 18% GST input tax credit applicable under Section 31.');
+    setQuoteProposalValidDays(30);
+    setShowManualQuoteModal(true);
+  };
+
+  const handleSaveManualQuotation = (andConvert: boolean = false) => {
+    if (!quoteBusinessName.trim() || !quoteContactPerson.trim() || !quoteContactPhone.trim()) {
+      alert('Please fill in required business and contact details (Company Name, Contact Person, Mobile).');
+      return;
+    }
+    if (quoteLineItems.length === 0) {
+      alert('Please add at least one line item to the quotation.');
+      return;
+    }
+
+    let totalTaxable = 0;
+    const processedItems: B2BQuotationItem[] = quoteLineItems.map((item) => {
+      const taxable = Math.round(item.quantity * item.unitPrice * (1 - item.discountPercent / 100) * 100) / 100;
+      const gst = Math.round(taxable * 0.18 * 100) / 100;
+      const total = taxable + gst;
+      totalTaxable += taxable;
+      return {
+        productId: item.productId || `prod_${Date.now()}`,
+        productName: item.productName,
+        sku: item.sku,
+        hsn: item.hsn,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        discount: item.discountPercent,
+        discountPercent: item.discountPercent,
+        taxableAmount: taxable,
+        taxableValue: taxable,
+        gstRate: 18,
+        gstAmount: gst,
+        total,
+      };
+    });
+
+    const totalGst = Math.round(totalTaxable * 0.18 * 100) / 100;
+    const grandTotal = totalTaxable + totalGst + (Number(quoteShippingFee) || 0);
+    const validUntilDate = new Date();
+    validUntilDate.setDate(validUntilDate.getDate() + (Number(quoteProposalValidDays) || 30));
+
+    const billingAddress: B2CAddress = {
+      id: `addr_bill_${Date.now()}`,
+      fullName: quoteContactPerson || quoteBusinessName,
+      phone: quoteContactPhone || '9931648595',
+      street: quoteBillingStreet || 'Commercial Hub',
+      city: quoteBillingCity || 'Noida',
+      state: quoteBillingState || 'Uttar Pradesh',
+      pincode: quoteBillingPincode || '201301',
+      addressType: 'work',
+    };
+
+    const shippingAddress: B2CAddress = quoteShippingSameAsBilling
+      ? { ...billingAddress, id: `addr_ship_${Date.now()}` }
+      : {
+          id: `addr_ship_${Date.now()}`,
+          fullName: quoteContactPerson || quoteBusinessName,
+          phone: quoteContactPhone || '9931648595',
+          street: quoteShippingStreet || quoteBillingStreet || 'Commercial Hub',
+          city: quoteShippingCity || quoteBillingCity || 'Noida',
+          state: quoteShippingState || quoteBillingState || 'Uttar Pradesh',
+          pincode: quoteShippingPincode || quoteBillingPincode || '201301',
+          addressType: 'work',
+        };
+
+    const newQuotation: B2BQuotation = {
+      id: `quote_${Date.now()}`,
+      businessId: `biz_${Date.now()}`,
+      businessName: quoteBusinessName,
+      contactPerson: quoteContactPerson,
+      email: quoteContactEmail,
+      phone: quoteContactPhone,
+      gstin: quoteGstin ? quoteGstin.trim().toUpperCase() : undefined,
+      rfqNumber: `RFQ-MAN-${Math.floor(100000 + Math.random() * 900000)}`,
+      productId: processedItems[0]?.productId || '',
+      productName: processedItems.length === 1 ? processedItems[0].productName : `${processedItems[0].productName} + ${processedItems.length - 1} more items`,
+      sku: processedItems[0]?.sku || 'VARIOUS',
+      requestedQty: processedItems.reduce((acc, i) => acc + i.quantity, 0),
+      targetUnitPrice: processedItems[0]?.unitPrice || 0,
+      deliveryPincode: shippingAddress.pincode,
+      requiredByDate: validUntilDate.toISOString().split('T')[0],
+      specialRequirements: quoteProposalNotes,
+      status: 'quoted',
+      createdAt: new Date().toISOString(),
+      items: processedItems,
+      billingAddress,
+      shippingAddress,
+      deliveryTerms: quoteDeliveryTerms,
+      paymentTerms: quotePaymentTerms,
+      adminQuotation: {
+        quotedUnitPrice: processedItems[0]?.unitPrice || 0,
+        totalTaxable,
+        gstAmount: totalGst,
+        shippingCharges: Number(quoteShippingFee) || 0,
+        grandTotal,
+        validUntil: validUntilDate.toISOString().split('T')[0],
+        adminNotes: quoteProposalNotes,
+        quotedAt: new Date().toISOString(),
+      },
+    };
+
+    storageService.saveB2BQuotation(newQuotation);
+
+    if (andConvert) {
+      const convertedOrder = storageService.convertQuotationToB2BOrder(
+        newQuotation.id,
+        currentAdminUser?.name || 'Super Admin'
+      );
+      setShowManualQuoteModal(false);
+      onRefresh();
+      alert(`Manual B2B Quotation created and converted directly to Confirmed B2B Order #${convertedOrder?.orderNumber}! Statutory Tax Invoice is now generated.`);
+    } else {
+      setShowManualQuoteModal(false);
+      onRefresh();
+      alert(`Manual B2B Quotation ${newQuotation.rfqNumber} published successfully for ${quoteBusinessName}!`);
+    }
+  };
+
+  const handleLineItemProductChange = (index: number, productId: string) => {
+    const prod = products.find((p) => p.id === productId);
+    if (!prod) return;
+    const updated = [...quoteLineItems];
+    updated[index] = {
+      ...updated[index],
+      productId: prod.id,
+      productName: prod.name,
+      sku: prod.sku,
+      hsn: prod.hsn || '8471',
+      unitPrice: prod.b2bWholesalePrice,
+    };
+    setQuoteLineItems(updated);
+  };
+
+  const handleAddLineItem = () => {
+    const firstProd = products[0];
+    setQuoteLineItems([
+      ...quoteLineItems,
+      {
+        productId: firstProd?.id || '',
+        productName: firstProd?.name || 'Interactive Flat Panel 75 Inch 4K',
+        sku: firstProd?.sku || 'KM-IFP-75-PRO',
+        hsn: firstProd?.hsn || '8471',
+        quantity: 1,
+        unitPrice: firstProd?.b2bWholesalePrice || 85000,
+        discountPercent: 0,
+      },
+    ]);
+  };
+
+  const handleRemoveLineItem = (index: number) => {
+    if (quoteLineItems.length <= 1) {
+      alert('At least one line item is required.');
+      return;
+    }
+    setQuoteLineItems(quoteLineItems.filter((_, i) => i !== index));
+  };
+
+  const handleConvertQuotationToOrder = (quotationId: string) => {
+    if (window.confirm('Are you sure you want to convert this Quotation directly into a Confirmed B2B Order?')) {
+      const ord = storageService.convertQuotationToB2BOrder(quotationId, currentAdminUser?.name || 'Super Admin');
+      if (ord) {
+        onRefresh();
+        alert(`Quotation successfully converted to Confirmed B2B Order #${ord.orderNumber}! Statutory Tax Invoice is now available.`);
+      } else {
+        alert('Could not convert quotation. Please check if the quotation exists.');
+      }
+    }
+  };
+
+  const handleDeleteQuotation = (quotationId: string, rfqNum: string) => {
+    if (window.confirm(`Delete quotation ${rfqNum}? This action cannot be undone.`)) {
+      storageService.deleteB2BQuotation(quotationId);
+      onRefresh();
+    }
+  };
 
   // Super Admin Self Password Change State
   const [showChangeSuperAdminPasswordModal, setShowChangeSuperAdminPasswordModal] = useState(false);
@@ -518,7 +828,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     e.preventDefault();
     if (!activeRfqForQuote) return;
 
-    const totalTaxable = quotePrice * activeRfqForQuote.requestedQty;
+    const qty = activeRfqForQuote.requestedQty || (activeRfqForQuote.items ? activeRfqForQuote.items.reduce((acc, it) => acc + it.quantity, 0) : 1);
+    const totalTaxable = quotePrice * qty;
     const gstAmount = Math.round(totalTaxable * 0.18 * 100) / 100;
     const grandTotal = totalTaxable + gstAmount;
 
@@ -1162,7 +1473,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     b2bWholesalePrice: 240,
                     b2bMoq: 10,
                     b2bDiscountSlabs: [{ minQty: 10, maxQty: 49, discountPercent: 0, label: 'Base' }],
-                    gstRate: 12,
+                    gstRate: 18,
                     stock: 500,
                     rating: 4.8,
                     reviewCount: 1,
@@ -1673,14 +1984,36 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                             <div style={{ fontWeight: 800, color: 'var(--slate-900)', fontSize: '0.92rem' }}>
                               ₹{o.totalAmount.toLocaleString('en-IN')}
                             </div>
-                            <span
-                              className={`badge ${
-                                o.paymentStatus === 'paid' ? 'badge-green' : 'badge-amber'
-                              }`}
-                              style={{ fontSize: '0.68rem', marginTop: '0.2rem' }}
-                            >
-                              {o.paymentStatus === 'paid' ? 'PAID (ONLINE)' : o.paymentStatus.toUpperCase()}
-                            </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', marginTop: '0.2rem' }}>
+                              <span
+                                className={`badge ${
+                                  o.paymentStatus === 'paid'
+                                    ? 'badge-green'
+                                    : o.paymentStatus === 'partially_paid'
+                                    ? 'badge-blue'
+                                    : 'badge-amber'
+                                }`}
+                                style={{ fontSize: '0.68rem', width: 'fit-content' }}
+                              >
+                                {o.paymentStatus === 'paid'
+                                  ? 'PAID'
+                                  : o.paymentStatus === 'partially_paid'
+                                  ? 'PARTIALLY PAID'
+                                  : o.paymentStatus === 'payment_due'
+                                  ? 'PAYMENT DUE'
+                                  : o.paymentStatus.toUpperCase()}
+                              </span>
+                              {isB2B && (o.rawOrder as B2BOrder).amountPaid !== undefined && (o.rawOrder as B2BOrder).amountPaid! > 0 && o.paymentStatus !== 'paid' && (
+                                <div style={{ fontSize: '0.68rem', color: '#0284C7', fontWeight: 600 }}>
+                                  Paid: ₹{(o.rawOrder as B2BOrder).amountPaid?.toLocaleString('en-IN')} | Due: ₹{(o.rawOrder as B2BOrder).amountDue?.toLocaleString('en-IN')}
+                                </div>
+                              )}
+                              {isB2B && (o.rawOrder as B2BOrder).paymentMode && (
+                                <div style={{ fontSize: '0.68rem', color: 'var(--slate-500)' }}>
+                                  Mode: {(o.rawOrder as B2BOrder).paymentMode?.replace('_', ' ').toUpperCase()}
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td style={{ padding: '0.85rem 1rem' }}>
                             <div style={{ marginBottom: '0.35rem' }}>
@@ -1807,9 +2140,42 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                 <Eye size={13} /> Inspect
                               </button>
 
-                              {isB2B && (
+                              {/* Official Tax Invoice Button (Confirmation Gated) */}
+                              {o.orderStatus === 'placed' ? (
+                                <span
+                                  style={{
+                                    fontSize: '0.72rem',
+                                    fontWeight: 600,
+                                    color: '#92400e',
+                                    background: '#fef3c7',
+                                    border: '1px solid #fde68a',
+                                    borderRadius: '4px',
+                                    padding: '0.3rem 0.5rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.2rem',
+                                  }}
+                                  title="Official Statutory Tax Invoice generated upon order confirmation"
+                                >
+                                  🔒 Invoice Pending
+                                </span>
+                              ) : o.orderStatus === 'rejected' ? (
+                                <span
+                                  style={{
+                                    fontSize: '0.72rem',
+                                    fontWeight: 600,
+                                    color: '#991b1b',
+                                    background: '#fef2f2',
+                                    border: '1px solid #fecaca',
+                                    borderRadius: '4px',
+                                    padding: '0.3rem 0.5rem',
+                                  }}
+                                >
+                                  🚫 Rejected
+                                </span>
+                              ) : (
                                 <button
-                                  onClick={() => setSelectedB2bOrderForInvoice(o.rawOrder as B2BOrder)}
+                                  onClick={() => setSelectedOrderForInvoice({ order: o.rawOrder, isB2B })}
                                   className="btn btn-sm"
                                   style={{
                                     background: 'rgba(2, 132, 199, 0.1)',
@@ -1822,9 +2188,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                     fontWeight: 700,
                                     padding: '0.35rem 0.65rem',
                                   }}
-                                  title="View Tax Invoice"
+                                  title="View Official Statutory Tax Invoice"
                                 >
-                                  <FileText size={13} /> Invoice
+                                  <FileText size={13} /> Tax Invoice
                                 </button>
                               )}
                             </div>
@@ -1937,59 +2303,209 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         {/* 5. RFQs Desk Tab */}
         {activeTab === 'rfqs' && (
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>
-              B2B Quotations Desk (Commercial Proposals)
-            </h2>
+            <div className="flex justify-between items-center flex-wrap gap-3" style={{ marginBottom: '1.5rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  B2B Quotations & Proposals Desk
+                </h2>
+                <p style={{ fontSize: '0.85rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
+                  Create manual institutional proposals, configure line items with 18% GST, manage RFQs, and convert accepted quotations directly into confirmed B2B orders.
+                </p>
+              </div>
 
-            <div className="flex flex-col gap-3">
-              {quotations.map((q) => (
-                <div key={q.id} className="card" style={{ padding: '1.5rem', background: '#FFFFFF' }}>
-                  <div className="flex justify-between items-center flex-wrap gap-2" style={{ marginBottom: '1rem' }}>
-                    <div>
-                      <strong style={{ fontSize: '1.05rem' }}>{q.rfqNumber}</strong>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginLeft: '0.5rem' }}>
-                        From: {q.businessName} ({q.contactPerson})
-                      </span>
-                    </div>
-                    <span className={`badge ${q.status === 'quoted' ? 'badge-green' : 'badge-amber'}`}>
-                      {q.status.toUpperCase()}
-                    </span>
-                  </div>
-
-                  <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                    <div>
-                      <span style={{ color: 'var(--slate-400)' }}>Product Requested:</span>
-                      <div style={{ fontWeight: 700 }}>{q.productName}</div>
-                      <div>SKU: {q.sku}</div>
-                    </div>
-                    <div>
-                      <span style={{ color: 'var(--slate-400)' }}>Volume & Target:</span>
-                      <div><strong>{q.requestedQty} Units</strong> @ Target ₹{q.targetUnitPrice} / unit</div>
-                    </div>
-                    <div>
-                      <span style={{ color: 'var(--slate-400)' }}>Destination:</span>
-                      <div>PIN: {q.deliveryPincode} • By: {q.requiredByDate}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem' }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', maxWidth: '500px' }}>
-                      "{q.specialRequirements}"
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        setActiveRfqForQuote(q);
-                        setQuotePrice(q.targetUnitPrice);
-                      }}
-                      className="btn btn-primary btn-sm"
-                    >
-                      <Send size={14} /> {q.status === 'quoted' ? 'Update Quotation' : 'Formulate Proposal'}
-                    </button>
-                  </div>
-                </div>
-              ))}
+              <button
+                onClick={handleOpenManualQuoteModal}
+                className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+              >
+                <Plus size={16} /> Create Manual B2B Quotation
+              </button>
             </div>
+
+            {quotations.length === 0 ? (
+              <div className="card" style={{ padding: '3rem 1.5rem', textAlign: 'center', background: '#FFFFFF' }}>
+                <p style={{ color: 'var(--slate-500)', marginBottom: '1rem' }}>No quotations or RFQs logged yet.</p>
+                <button onClick={handleOpenManualQuoteModal} className="btn btn-primary btn-sm">
+                  <Plus size={14} /> Create First B2B Quotation
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {quotations.map((q) => (
+                  <div key={q.id} className="card" style={{ padding: '1.5rem', background: '#FFFFFF', border: '1px solid var(--border-color)' }}>
+                    <div className="flex justify-between items-center flex-wrap gap-2" style={{ marginBottom: '1rem' }}>
+                      <div>
+                        <strong style={{ fontSize: '1.05rem', color: 'var(--slate-900)' }}>{q.rfqNumber}</strong>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--slate-600)', marginLeft: '0.5rem', fontWeight: 600 }}>
+                          Client: {q.businessName} ({q.contactPerson})
+                        </span>
+                        {q.gstin && (
+                          <span style={{ fontSize: '0.75rem', color: 'var(--primary)', marginLeft: '0.5rem', fontWeight: 700 }}>
+                            GSTIN: {q.gstin}
+                          </span>
+                        )}
+                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginTop: '0.15rem' }}>
+                          Phone: {q.phone || 'N/A'} | Email: {q.email || 'N/A'} | Created: {q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-IN') : (q.submittedAt ? new Date(q.submittedAt).toLocaleDateString('en-IN') : 'N/A')}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {q.status === 'converted_to_order' ? (
+                          <span className="badge badge-green" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+                            ✅ CONVERTED TO ORDER ({q.convertedOrderId})
+                          </span>
+                        ) : q.status === 'quoted' ? (
+                          <span className="badge badge-blue" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+                            PROPOSAL ISSUED
+                          </span>
+                        ) : q.status === 'accepted' ? (
+                          <span className="badge badge-green" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+                            ACCEPTED BY CLIENT
+                          </span>
+                        ) : (
+                          <span className="badge badge-amber" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+                            {q.status.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quotation Line Items or Summary */}
+                    {q.items && q.items.length > 0 ? (
+                      <div style={{ marginBottom: '1rem' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--slate-500)', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                          Itemized Line Items ({q.items.length} Product{q.items.length !== 1 ? 's' : ''}):
+                        </div>
+                        <div style={{ border: '1px solid var(--border-subtle)', borderRadius: '6px', overflow: 'hidden' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                            <thead>
+                              <tr style={{ background: 'var(--slate-50)', textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
+                                <th style={{ padding: '0.4rem 0.6rem' }}>Product</th>
+                                <th style={{ padding: '0.4rem 0.6rem' }}>HSN</th>
+                                <th style={{ padding: '0.4rem 0.6rem', textAlign: 'center' }}>Qty</th>
+                                <th style={{ padding: '0.4rem 0.6rem', textAlign: 'right' }}>Agreed Rate (₹)</th>
+                                <th style={{ padding: '0.4rem 0.6rem', textAlign: 'right' }}>GST</th>
+                                <th style={{ padding: '0.4rem 0.6rem', textAlign: 'right' }}>Total (₹)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {q.items.map((it, idx) => (
+                                <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                  <td style={{ padding: '0.4rem 0.6rem', fontWeight: 600 }}>{it.productName}</td>
+                                  <td style={{ padding: '0.4rem 0.6rem', color: 'var(--slate-500)' }}>{it.hsn || '8471'}</td>
+                                  <td style={{ padding: '0.4rem 0.6rem', textAlign: 'center' }}>{it.quantity}</td>
+                                  <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right' }}>₹{it.unitPrice.toLocaleString('en-IN')}</td>
+                                  <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right' }}>{it.gstRate || 18}%</td>
+                                  <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', fontWeight: 700 }}>₹{it.total.toLocaleString('en-IN')}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                        <div>
+                          <span style={{ color: 'var(--slate-400)' }}>Product Requested:</span>
+                          <div style={{ fontWeight: 700 }}>{q.productName}</div>
+                          <div>SKU: {q.sku}</div>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--slate-400)' }}>Volume & Target:</span>
+                          <div><strong>{q.requestedQty} Units</strong> @ Target ₹{q.targetUnitPrice} / unit</div>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--slate-400)' }}>Destination:</span>
+                          <div>PIN: {q.deliveryPincode} • By: {q.requiredByDate}</div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Financial Figures */}
+                    {q.adminQuotation && (
+                      <div
+                        style={{
+                          background: 'var(--slate-50)',
+                          borderRadius: '8px',
+                          padding: '0.75rem 1rem',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '1rem',
+                          fontSize: '0.85rem',
+                          marginBottom: '1rem',
+                        }}
+                      >
+                        <div>
+                          <span style={{ color: 'var(--slate-500)' }}>Taxable Base: </span>
+                          <strong>₹{q.adminQuotation.totalTaxable.toLocaleString('en-IN')}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--slate-500)' }}>GST (18%): </span>
+                          <strong style={{ color: '#0284C7' }}>₹{q.adminQuotation.gstAmount.toLocaleString('en-IN')}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--slate-500)' }}>Freight / Shipping: </span>
+                          <strong>{q.adminQuotation.shippingCharges ? `₹${q.adminQuotation.shippingCharges.toLocaleString('en-IN')}` : 'FREE'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ color: 'var(--slate-500)' }}>Quotation Grand Total: </span>
+                          <strong style={{ color: '#059669', fontSize: '1rem' }}>₹{q.adminQuotation.grandTotal.toLocaleString('en-IN')}</strong>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center flex-wrap gap-2" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem' }}>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', maxWidth: '550px' }}>
+                        {q.specialRequirements ? `"${q.specialRequirements}"` : 'Standard commercial terms apply.'}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {/* Convert to B2B Order Button */}
+                        {q.status !== 'converted_to_order' && (
+                          <button
+                            onClick={() => handleConvertQuotationToOrder(q.id)}
+                            className="btn btn-sm"
+                            style={{
+                              background: '#059669',
+                              color: '#FFFFFF',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              fontWeight: 700,
+                            }}
+                            title="Convert this quotation directly into a confirmed B2B order"
+                          >
+                            ⚡ Convert to B2B Order
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => {
+                            setActiveRfqForQuote(q);
+                            setQuotePrice(q.targetUnitPrice || 0);
+                          }}
+                          className="btn btn-primary btn-sm"
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                        >
+                          <Send size={14} /> {q.status === 'quoted' ? 'Update Proposal' : 'Formulate Proposal'}
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteQuotation(q.id, q.rfqNumber)}
+                          className="btn btn-secondary btn-sm"
+                          style={{ color: '#DC2626', borderColor: '#DC2626' }}
+                          title="Delete Quotation"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -4286,11 +4802,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         </div>
       )}
 
-      {/* Printable B2B GST Tax Invoice Modal */}
-      {selectedB2bOrderForInvoice && (
-        <B2BInvoiceModal
-          order={selectedB2bOrderForInvoice}
-          onClose={() => setSelectedB2bOrderForInvoice(null)}
+      {/* Official Printable Statutory GST Tax Invoice Modal */}
+      {selectedOrderForInvoice && (
+        <OrderInvoiceModal
+          order={selectedOrderForInvoice.order}
+          isB2B={selectedOrderForInvoice.isB2B}
+          onClose={() => setSelectedOrderForInvoice(null)}
         />
       )}
 
@@ -4880,25 +5397,81 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               </div>
 
               <div style={{ background: 'var(--slate-50)', padding: '1rem', borderRadius: '10px', fontSize: '0.82rem' }}>
-                <div style={{ fontWeight: 700, color: 'var(--slate-900)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <CreditCard size={15} /> Payment Gateway Audit
+                <div style={{ fontWeight: 700, color: 'var(--slate-900)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <CreditCard size={15} /> Payment Gateway & Settlement Audit
+                  </span>
+                  {selectedOrderForInspection.type === 'b2b' && (
+                    <button
+                      onClick={() => handleOpenOfflinePayment(selectedOrderForInspection.order as B2BOrder)}
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
+                    >
+                      💰 Record Payment
+                    </button>
+                  )}
                 </div>
                 <div className="flex justify-between" style={{ marginBottom: '0.25rem' }}>
-                  <span style={{ color: 'var(--slate-500)' }}>Method:</span>
+                  <span style={{ color: 'var(--slate-500)' }}>Method / Channel:</span>
                   <strong>
                     {selectedOrderForInspection.type === 'b2b'
-                      ? (selectedOrderForInspection.order as B2BOrder).paymentTerms || 'Prepaid'
+                      ? ((selectedOrderForInspection.order as B2BOrder).paymentMode
+                          ? (selectedOrderForInspection.order as B2BOrder).paymentMode?.replace('_', ' ').toUpperCase()
+                          : (selectedOrderForInspection.order as B2BOrder).paymentTerms || 'PREPAID')
                       : (selectedOrderForInspection.order as B2COrder).paymentMethod === 'razorpay'
-                      ? 'Razorpay Secure'
+                      ? 'Razorpay Online'
                       : (selectedOrderForInspection.order as B2COrder).paymentMethod.toUpperCase()}
                   </strong>
                 </div>
                 <div className="flex justify-between" style={{ marginBottom: '0.25rem' }}>
                   <span style={{ color: 'var(--slate-500)' }}>Payment Status:</span>
-                  <span className={`badge ${selectedOrderForInspection.order.paymentStatus === 'paid' ? 'badge-green' : 'badge-amber'}`} style={{ fontSize: '0.7rem' }}>
+                  <span
+                    className={`badge ${
+                      selectedOrderForInspection.order.paymentStatus === 'paid'
+                        ? 'badge-green'
+                        : selectedOrderForInspection.order.paymentStatus === 'partially_paid'
+                        ? 'badge-blue'
+                        : 'badge-amber'
+                    }`}
+                    style={{ fontSize: '0.7rem' }}
+                  >
                     {selectedOrderForInspection.order.paymentStatus.toUpperCase()}
                   </span>
                 </div>
+
+                {selectedOrderForInspection.type === 'b2b' && (
+                  <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-subtle)' }}>
+                    <div className="flex justify-between" style={{ marginBottom: '0.2rem' }}>
+                      <span style={{ color: 'var(--slate-500)' }}>Order Total:</span>
+                      <strong>₹{(selectedOrderForInspection.order as B2BOrder).grandTotal.toLocaleString('en-IN')}</strong>
+                    </div>
+                    <div className="flex justify-between" style={{ marginBottom: '0.2rem' }}>
+                      <span style={{ color: 'var(--slate-500)' }}>Amount Paid:</span>
+                      <strong style={{ color: '#059669' }}>
+                        ₹{((selectedOrderForInspection.order as B2BOrder).amountPaid || ((selectedOrderForInspection.order as B2BOrder).paymentStatus === 'paid' ? (selectedOrderForInspection.order as B2BOrder).grandTotal : 0)).toLocaleString('en-IN')}
+                      </strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span style={{ color: 'var(--slate-500)' }}>Remaining Balance Due:</span>
+                      <strong style={{ color: ((selectedOrderForInspection.order as B2BOrder).amountDue || 0) > 0 ? '#DC2626' : '#059669' }}>
+                        ₹{((selectedOrderForInspection.order as B2BOrder).amountDue !== undefined ? (selectedOrderForInspection.order as B2BOrder).amountDue : ((selectedOrderForInspection.order as B2BOrder).paymentStatus === 'paid' ? 0 : (selectedOrderForInspection.order as B2BOrder).grandTotal))?.toLocaleString('en-IN')}
+                      </strong>
+                    </div>
+
+                    {(selectedOrderForInspection.order as B2BOrder).paymentRecords && (selectedOrderForInspection.order as B2BOrder).paymentRecords!.length > 0 && (
+                      <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: 'var(--slate-600)' }}>
+                        <strong>Payment History ({(selectedOrderForInspection.order as B2BOrder).paymentRecords!.length} logged):</strong>
+                        {(selectedOrderForInspection.order as B2BOrder).paymentRecords!.map((rec, i) => (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.15rem', color: 'var(--slate-500)' }}>
+                            <span>• {rec.paymentDate}: ₹{rec.amount.toLocaleString('en-IN')} ({rec.paymentMode.replace('_', ' ').toUpperCase()})</span>
+                            <span>{rec.transactionReference || rec.transactionRef || rec.chequeNumber || ''}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {selectedOrderForInspection.order.paymentDetails?.transactionId && (
                   <div style={{ marginTop: '0.4rem', fontSize: '0.75rem', color: 'var(--slate-600)' }}>
                     Payment ID: <code style={{ background: 'var(--slate-200)', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>{selectedOrderForInspection.order.paymentDetails.transactionId}</code>
@@ -5065,15 +5638,43 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   </button>
                 )}
 
-                {selectedOrderForInspection.type === 'b2b' && (
+                {/* View Official Tax Invoice (Confirmation Gated) */}
+                {selectedOrderForInspection.order.orderStatus !== 'placed' && selectedOrderForInspection.order.orderStatus !== 'rejected' ? (
                   <button
                     onClick={() => {
-                      setSelectedB2bOrderForInvoice(selectedOrderForInspection.order as B2BOrder);
+                      setSelectedOrderForInvoice({
+                        order: selectedOrderForInspection.order,
+                        isB2B: selectedOrderForInspection.type === 'b2b',
+                      });
                     }}
                     className="btn btn-secondary"
                     style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                   >
-                    <FileText size={16} /> View B2B Tax Invoice
+                    <FileText size={16} /> View Tax Invoice
+                  </button>
+                ) : (
+                  <span
+                    style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: '#92400e',
+                      background: '#fef3c7',
+                      border: '1px solid #fde68a',
+                      borderRadius: '6px',
+                      padding: '0.45rem 0.65rem',
+                    }}
+                  >
+                    🔒 Invoice on Confirmation
+                  </span>
+                )}
+
+                {selectedOrderForInspection.type === 'b2b' && (
+                  <button
+                    onClick={() => handleOpenOfflinePayment(selectedOrderForInspection.order as B2BOrder)}
+                    className="btn btn-primary"
+                    style={{ background: '#0284C7', borderColor: '#0284C7', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    <CreditCard size={16} /> Record Offline Payment
                   </button>
                 )}
               </div>
@@ -5381,6 +5982,709 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <button type="submit" className="btn btn-primary">
                   {editingCoupon ? 'Update Coupon' : 'Create & Activate Coupon'}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Record B2B Offline Payment Modal */}
+      {showOfflinePaymentModal && orderForOfflinePayment && (
+        <div className="modal-overlay" onClick={() => setShowOfflinePaymentModal(false)}>
+          <div
+            className="modal-content"
+            style={{ maxWidth: '540px', padding: '2rem', background: '#FFFFFF' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.25rem' }}>
+              <div className="flex items-center gap-2.5">
+                <div
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    background: 'rgba(2, 132, 199, 0.12)',
+                    color: '#0284C7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <CreditCard size={20} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                    Record Offline Payment
+                  </h3>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)' }}>
+                    Order #{orderForOfflinePayment.orderNumber} • {orderForOfflinePayment.businessName}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowOfflinePaymentModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <X size={20} className="text-slate-500" />
+              </button>
+            </div>
+
+            {/* Financial Overview Card */}
+            <div
+              style={{
+                background: 'var(--slate-50)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '10px',
+                padding: '0.85rem 1rem',
+                marginBottom: '1.25rem',
+                fontSize: '0.82rem',
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr 1fr',
+                gap: '0.5rem',
+                textAlign: 'center',
+              }}
+            >
+              <div>
+                <div style={{ color: 'var(--slate-500)', fontSize: '0.72rem' }}>Order Grand Total</div>
+                <div style={{ fontWeight: 800, color: 'var(--slate-900)', fontSize: '0.95rem' }}>
+                  ₹{orderForOfflinePayment.grandTotal.toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div>
+                <div style={{ color: 'var(--slate-500)', fontSize: '0.72rem' }}>Already Settled</div>
+                <div style={{ fontWeight: 800, color: '#059669', fontSize: '0.95rem' }}>
+                  ₹{((orderForOfflinePayment.amountPaid || (orderForOfflinePayment.paymentStatus === 'paid' ? orderForOfflinePayment.grandTotal : 0))).toLocaleString('en-IN')}
+                </div>
+              </div>
+              <div>
+                <div style={{ color: 'var(--slate-500)', fontSize: '0.72rem' }}>Current Balance Due</div>
+                <div
+                  style={{
+                    fontWeight: 800,
+                    color:
+                      ((orderForOfflinePayment.amountDue !== undefined
+                        ? orderForOfflinePayment.amountDue
+                        : (orderForOfflinePayment.paymentStatus === 'paid' ? 0 : orderForOfflinePayment.grandTotal))) > 0
+                        ? '#DC2626'
+                        : '#059669',
+                    fontSize: '0.95rem',
+                  }}
+                >
+                  ₹{((orderForOfflinePayment.amountDue !== undefined
+                    ? orderForOfflinePayment.amountDue
+                    : (orderForOfflinePayment.paymentStatus === 'paid' ? 0 : orderForOfflinePayment.grandTotal))).toLocaleString('en-IN')}
+                </div>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveOfflinePayment}>
+              <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Payment Amount Received (₹) *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    value={offlinePaymentAmount}
+                    onChange={(e) => setOfflinePaymentAmount(Number(e.target.value))}
+                    className="form-input"
+                    required
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Payment Settlement Date *</label>
+                  <input
+                    type="date"
+                    value={offlinePaymentDate}
+                    onChange={(e) => setOfflinePaymentDate(e.target.value)}
+                    className="form-input"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Payment Mode / Channel *</label>
+                  <select
+                    value={offlinePaymentMode}
+                    onChange={(e) => setOfflinePaymentMode(e.target.value)}
+                    className="form-select"
+                    required
+                  >
+                    <option value="bank_transfer">Bank Transfer / NEFT</option>
+                    <option value="rtgs">RTGS</option>
+                    <option value="imps">IMPS</option>
+                    <option value="cheque">Cheque</option>
+                    <option value="razorpay">Online – Razorpay</option>
+                    <option value="other">Other / Commercial Credit</option>
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Transaction / UTR Reference No.</label>
+                  <input
+                    type="text"
+                    value={offlinePaymentRef}
+                    onChange={(e) => setOfflinePaymentRef(e.target.value)}
+                    placeholder="e.g. UTR1234567890"
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              {offlinePaymentMode === 'cheque' && (
+                <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Cheque Number *</label>
+                    <input
+                      type="text"
+                      value={offlinePaymentChequeNo}
+                      onChange={(e) => setOfflinePaymentChequeNo(e.target.value)}
+                      placeholder="e.g. CHQ004521"
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Drawee Bank Name</label>
+                    <input
+                      type="text"
+                      value={offlinePaymentBank}
+                      onChange={(e) => setOfflinePaymentBank(e.target.value)}
+                      placeholder="e.g. HDFC Bank Ltd"
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {offlinePaymentMode !== 'cheque' && (
+                <div className="form-group" style={{ marginBottom: '1rem' }}>
+                  <label className="form-label">Remitting Bank Name</label>
+                  <input
+                    type="text"
+                    value={offlinePaymentBank}
+                    onChange={(e) => setOfflinePaymentBank(e.target.value)}
+                    placeholder="e.g. State Bank of India"
+                    className="form-input"
+                  />
+                </div>
+              )}
+
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label">Internal Accounting Notes / Remarks</label>
+                <textarea
+                  rows={2}
+                  value={offlinePaymentNotes}
+                  onChange={(e) => setOfflinePaymentNotes(e.target.value)}
+                  placeholder="e.g. Verified with bank statement by Accounts Desk"
+                  className="form-textarea"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowOfflinePaymentModal(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ background: '#0284C7', borderColor: '#0284C7' }}
+                >
+                  Save Payment & Update Balance
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Manual B2B Quotation Creation Modal */}
+      {showManualQuoteModal && (
+        <div className="modal-overlay" onClick={() => setShowManualQuoteModal(false)}>
+          <div
+            className="modal-content"
+            style={{
+              maxWidth: '920px',
+              maxHeight: '92vh',
+              overflowY: 'auto',
+              padding: '2rem',
+              background: '#FFFFFF',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  Create Manual B2B Quotation (Institutional Proposal)
+                </h3>
+                <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
+                  Generate official institutional proposals with itemized products, 18% GST calculation, and commercial terms.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowManualQuoteModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <X size={22} className="text-slate-500" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveManualQuotation(false);
+              }}
+            >
+              {/* Section 1: Business Details */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
+                  1. Business & Client Profile
+                </div>
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Company / Institution Name *</label>
+                    <input
+                      type="text"
+                      value={quoteBusinessName}
+                      onChange={(e) => setQuoteBusinessName(e.target.value)}
+                      placeholder="e.g. Apex Learning Solutions Pvt Ltd"
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Contact Person *</label>
+                    <input
+                      type="text"
+                      value={quoteContactPerson}
+                      onChange={(e) => setQuoteContactPerson(e.target.value)}
+                      placeholder="e.g. Vikram Sharma (Procurement Head)"
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Phone / Mobile *</label>
+                    <input
+                      type="tel"
+                      value={quoteContactPhone}
+                      onChange={(e) => setQuoteContactPhone(e.target.value)}
+                      placeholder="e.g. 9876543210"
+                      className="form-input"
+                      required
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Email Address</label>
+                    <input
+                      type="email"
+                      value={quoteContactEmail}
+                      onChange={(e) => setQuoteContactEmail(e.target.value)}
+                      placeholder="e.g. procurement@apexlearning.in"
+                      className="form-input"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Client GSTIN (15 Digits)</label>
+                    <input
+                      type="text"
+                      value={quoteGstin}
+                      onChange={(e) => setQuoteGstin(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+                      placeholder="e.g. 07AAACE1234F1Z8"
+                      className="form-input"
+                      style={{ textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 600 }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Addresses */}
+              <div style={{ marginBottom: '1.5rem', background: 'var(--slate-50)', padding: '1rem', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
+                  2. Billing & Delivery Locations
+                </div>
+                <div className="grid" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Billing Street Address</label>
+                    <input
+                      type="text"
+                      value={quoteBillingStreet}
+                      onChange={(e) => setQuoteBillingStreet(e.target.value)}
+                      placeholder="Plot No. 42, Tech Zone IV"
+                      className="form-input"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">City</label>
+                    <input
+                      type="text"
+                      value={quoteBillingCity}
+                      onChange={(e) => setQuoteBillingCity(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">State</label>
+                    <input
+                      type="text"
+                      value={quoteBillingState}
+                      onChange={(e) => setQuoteBillingState(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Pincode</label>
+                    <input
+                      type="text"
+                      value={quoteBillingPincode}
+                      onChange={(e) => setQuoteBillingPincode(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '0.5rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600 }}>
+                    <input
+                      type="checkbox"
+                      checked={quoteShippingSameAsBilling}
+                      onChange={(e) => setQuoteShippingSameAsBilling(e.target.checked)}
+                    />
+                    Shipping address is identical to Billing address
+                  </label>
+                </div>
+
+                {!quoteShippingSameAsBilling && (
+                  <div className="grid" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Shipping Street Address</label>
+                      <input
+                        type="text"
+                        value={quoteShippingStreet}
+                        onChange={(e) => setQuoteShippingStreet(e.target.value)}
+                        placeholder="Warehouse 3, Logistic Park"
+                        className="form-input"
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Shipping City</label>
+                      <input
+                        type="text"
+                        value={quoteShippingCity}
+                        onChange={(e) => setQuoteShippingCity(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Shipping State</label>
+                      <input
+                        type="text"
+                        value={quoteShippingState}
+                        onChange={(e) => setQuoteShippingState(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Shipping Pincode</label>
+                      <input
+                        type="text"
+                        value={quoteShippingPincode}
+                        onChange={(e) => setQuoteShippingPincode(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Section 3: Line Items */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div className="flex justify-between items-center" style={{ marginBottom: '0.75rem' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    3. Quotation Line Items (18% Statutory GST Applied)
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddLineItem}
+                    className="btn btn-secondary btn-sm"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.78rem' }}
+                  >
+                    <Plus size={14} /> Add Line Item
+                  </button>
+                </div>
+
+                <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--slate-100)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                        <th style={{ padding: '0.6rem 0.75rem' }}>Product Selection</th>
+                        <th style={{ padding: '0.6rem 0.5rem', width: '90px' }}>HSN</th>
+                        <th style={{ padding: '0.6rem 0.5rem', width: '80px', textAlign: 'center' }}>Qty</th>
+                        <th style={{ padding: '0.6rem 0.5rem', width: '120px', textAlign: 'right' }}>Agreed Unit ₹</th>
+                        <th style={{ padding: '0.6rem 0.5rem', width: '70px', textAlign: 'center' }}>Disc %</th>
+                        <th style={{ padding: '0.6rem 0.5rem', width: '80px', textAlign: 'center' }}>GST Rate</th>
+                        <th style={{ padding: '0.6rem 0.75rem', width: '110px', textAlign: 'right' }}>Line Total ₹</th>
+                        <th style={{ padding: '0.6rem 0.5rem', width: '40px' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {quoteLineItems.map((item, idx) => {
+                        const taxable = Math.round(item.quantity * item.unitPrice * (1 - item.discountPercent / 100) * 100) / 100;
+                        const gst = Math.round(taxable * 0.18 * 100) / 100;
+                        const lineTotal = taxable + gst;
+
+                        return (
+                          <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '0.5rem 0.75rem' }}>
+                              <select
+                                value={item.productId}
+                                onChange={(e) => handleLineItemProductChange(idx, e.target.value)}
+                                className="form-select"
+                                style={{ fontSize: '0.8rem', padding: '0.35rem 0.5rem' }}
+                              >
+                                {products.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.name} (Wholesale: ₹{(p.b2bWholesalePrice || (p as any).wholesalePrice || 0).toLocaleString('en-IN')})
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td style={{ padding: '0.5rem' }}>
+                              <input
+                                type="text"
+                                value={item.hsn}
+                                onChange={(e) => {
+                                  const upd = [...quoteLineItems];
+                                  upd[idx].hsn = e.target.value;
+                                  setQuoteLineItems(upd);
+                                }}
+                                className="form-input"
+                                style={{ fontSize: '0.78rem', padding: '0.35rem' }}
+                              />
+                            </td>
+                            <td style={{ padding: '0.5rem' }}>
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.quantity}
+                                onChange={(e) => {
+                                  const upd = [...quoteLineItems];
+                                  upd[idx].quantity = Math.max(1, Number(e.target.value));
+                                  setQuoteLineItems(upd);
+                                }}
+                                className="form-input"
+                                style={{ fontSize: '0.78rem', padding: '0.35rem', textAlign: 'center' }}
+                                required
+                              />
+                            </td>
+                            <td style={{ padding: '0.5rem' }}>
+                              <input
+                                type="number"
+                                min="0"
+                                value={item.unitPrice}
+                                onChange={(e) => {
+                                  const upd = [...quoteLineItems];
+                                  upd[idx].unitPrice = Math.max(0, Number(e.target.value));
+                                  setQuoteLineItems(upd);
+                                }}
+                                className="form-input"
+                                style={{ fontSize: '0.78rem', padding: '0.35rem', textAlign: 'right' }}
+                                required
+                              />
+                            </td>
+                            <td style={{ padding: '0.5rem' }}>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={item.discountPercent}
+                                onChange={(e) => {
+                                  const upd = [...quoteLineItems];
+                                  upd[idx].discountPercent = Math.min(100, Math.max(0, Number(e.target.value)));
+                                  setQuoteLineItems(upd);
+                                }}
+                                className="form-input"
+                                style={{ fontSize: '0.78rem', padding: '0.35rem', textAlign: 'center' }}
+                              />
+                            </td>
+                            <td style={{ padding: '0.5rem', textAlign: 'center', fontWeight: 600, color: '#0284C7' }}>
+                              18%
+                            </td>
+                            <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: 700, color: 'var(--slate-900)' }}>
+                              ₹{lineTotal.toLocaleString('en-IN')}
+                            </td>
+                            <td style={{ padding: '0.5rem', textAlign: 'center' }}>
+                              {quoteLineItems.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveLineItem(idx)}
+                                  style={{ color: '#DC2626', background: 'none', border: 'none', cursor: 'pointer' }}
+                                  title="Remove line"
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Section 4: Commercial & Delivery Terms */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
+                  4. Commercial Terms & Logistics
+                </div>
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '0.75rem' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Payment Terms</label>
+                    <select
+                      value={quotePaymentTerms}
+                      onChange={(e) => setQuotePaymentTerms(e.target.value)}
+                      className="form-select"
+                    >
+                      <option value="Prepaid">100% Advance Prepaid (Online / RTGS)</option>
+                      <option value="Net 15">Net 15 Days Commercial Credit</option>
+                      <option value="Net 30">Net 30 Days Commercial Credit</option>
+                      <option value="Net 45">Net 45 Days Commercial Credit</option>
+                      <option value="50% Advance / 50% on Delivery">50% Advance / 50% on Delivery</option>
+                      <option value="Custom Commercial Terms">Custom Commercial Terms</option>
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Delivery & Dispatch Terms</label>
+                    <input
+                      type="text"
+                      value={quoteDeliveryTerms}
+                      onChange={(e) => setQuoteDeliveryTerms(e.target.value)}
+                      className="form-input"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Shipping / Freight Charges (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={quoteShippingFee}
+                      onChange={(e) => setQuoteShippingFee(Number(e.target.value))}
+                      className="form-input"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Quotation Validity (Days)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={quoteProposalValidDays}
+                      onChange={(e) => setQuoteProposalValidDays(Number(e.target.value))}
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Proposal Notes / Specifications</label>
+                  <textarea
+                    rows={2}
+                    value={quoteProposalNotes}
+                    onChange={(e) => setQuoteProposalNotes(e.target.value)}
+                    className="form-textarea"
+                  />
+                </div>
+              </div>
+
+              {/* Section 5: Real-time Live Calculation Summary */}
+              {(() => {
+                const totalTaxable = quoteLineItems.reduce(
+                  (acc, it) => acc + (it.quantity * it.unitPrice * (1 - it.discountPercent / 100)),
+                  0
+                );
+                const totalGst = Math.round(totalTaxable * 0.18 * 100) / 100;
+                const grandTotal = totalTaxable + totalGst + (Number(quoteShippingFee) || 0);
+
+                return (
+                  <div
+                    style={{
+                      background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
+                      border: '1.5px solid var(--border-color)',
+                      borderRadius: '10px',
+                      padding: '1rem 1.5rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '1rem',
+                      marginBottom: '1.5rem',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', fontWeight: 600 }}>Total Taxable Value</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--slate-800)' }}>
+                        ₹{Math.round(totalTaxable).toLocaleString('en-IN')}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: '#0284C7', fontWeight: 600 }}>Statutory GST (18%)</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0284C7' }}>
+                        ₹{totalGst.toLocaleString('en-IN')}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', fontWeight: 600 }}>Freight / Shipping</div>
+                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--slate-800)' }}>
+                        {quoteShippingFee ? `₹${Number(quoteShippingFee).toLocaleString('en-IN')}` : 'FREE'}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', fontWeight: 600 }}>Grand Total (Incl. 18% GST)</div>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#059669' }}>
+                        ₹{Math.round(grandTotal).toLocaleString('en-IN')}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Section 6: Action Buttons */}
+              <div className="flex justify-between items-center flex-wrap gap-2" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowManualQuoteModal(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    className="btn btn-outline"
+                    style={{ fontWeight: 700 }}
+                  >
+                    Save as Active Quotation
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSaveManualQuotation(true)}
+                    className="btn btn-primary"
+                    style={{ background: '#059669', borderColor: '#059669', fontWeight: 700 }}
+                  >
+                    ⚡ Save & Convert to Confirmed B2B Order
+                  </button>
+                </div>
               </div>
             </form>
           </div>

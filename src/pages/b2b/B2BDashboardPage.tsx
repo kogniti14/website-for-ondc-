@@ -21,7 +21,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { B2BOrder, B2BQuotation } from '../../types';
 import { storageService } from '../../services/storageService';
-import { B2BInvoiceModal } from '../../components/b2b/B2BInvoiceModal';
+import { OrderInvoiceModal } from '../../components/common/OrderInvoiceModal';
 import { ImageUpload } from '../../components/common/ImageUpload';
 import { RazorpayCheckoutModal } from '../../components/payment/RazorpayCheckoutModal';
 
@@ -119,11 +119,11 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
       },
       items: [
         {
-          productId: q.productId,
-          productName: q.productName,
-          sku: q.sku,
+          productId: q.productId || 'prod_1',
+          productName: q.productName || 'Institutional Product',
+          sku: q.sku || 'KM-PRO',
           image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=400&q=80',
-          quantity: q.requestedQty,
+          quantity: q.requestedQty || 1,
           wholesalePrice: q.adminQuotation.quotedUnitPrice,
           tierDiscountPercent: 0,
           effectiveUnitPrice: q.adminQuotation.quotedUnitPrice,
@@ -486,7 +486,7 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                             </span>
                           </div>
                           <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>
-                            Submitted on {new Date(q.submittedAt).toLocaleDateString('en-IN')}
+                            Submitted on {new Date(q.submittedAt || q.createdAt || Date.now()).toLocaleDateString('en-IN')}
                           </span>
                         </div>
 
@@ -502,7 +502,7 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                           </div>
                           <div>
                             <span style={{ color: '#94A3B8', fontSize: '0.75rem', display: 'block' }}>Client Target Price</span>
-                            <strong style={{ color: '#FBBF24' }}>₹{q.targetUnitPrice.toLocaleString('en-IN')} / unit</strong>
+                            <strong style={{ color: '#FBBF24' }}>₹{(q.targetUnitPrice || 0).toLocaleString('en-IN')} / unit</strong>
                           </div>
                           <div>
                             <span style={{ color: '#94A3B8', fontSize: '0.75rem', display: 'block' }}>Destination PIN</span>
@@ -742,20 +742,54 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                               </button>
                             )}
 
-                            <button
-                              onClick={() => setSelectedB2bInvoice(ord)}
-                              className="btn btn-outline-b2b btn-sm"
-                              style={{
-                                color: '#38BDF8',
-                                borderColor: 'rgba(56, 189, 248, 0.4)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.4rem',
-                                fontWeight: 700,
-                              }}
-                            >
-                              <FileText size={14} /> Generate B2B Tax Invoice
-                            </button>
+                            {ord.orderStatus === 'placed' ? (
+                              <span
+                                style={{
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  color: '#F59E0B',
+                                  background: 'rgba(245, 158, 11, 0.1)',
+                                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                                  borderRadius: '6px',
+                                  padding: '0.4rem 0.75rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.35rem',
+                                }}
+                                title="Official Tax Invoice will be generated upon Super Admin confirmation"
+                              >
+                                🔒 Invoice on Confirmation
+                              </span>
+                            ) : ord.orderStatus === 'rejected' ? (
+                              <span
+                                style={{
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  color: '#EF4444',
+                                  background: 'rgba(239, 68, 68, 0.1)',
+                                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                                  borderRadius: '6px',
+                                  padding: '0.4rem 0.75rem',
+                                }}
+                              >
+                                🚫 Order Rejected
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => setSelectedB2bInvoice(ord)}
+                                className="btn btn-outline-b2b btn-sm"
+                                style={{
+                                  color: '#38BDF8',
+                                  borderColor: 'rgba(56, 189, 248, 0.4)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.4rem',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                <FileText size={14} /> Official B2B Tax Invoice
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -923,13 +957,47 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                             </button>
                           )}
 
-                          <button
-                            onClick={() => setSelectedB2bInvoice(ord)}
-                            className="btn btn-amber btn-sm"
-                            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
-                          >
-                            <Printer size={15} /> Generate B2B Tax Invoice (PDF)
-                          </button>
+                          {ord.orderStatus === 'placed' ? (
+                            <span
+                              style={{
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                color: '#F59E0B',
+                                background: 'rgba(245, 158, 11, 0.1)',
+                                border: '1px solid rgba(245, 158, 11, 0.3)',
+                                borderRadius: '6px',
+                                padding: '0.4rem 0.75rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                              }}
+                              title="Official Tax Invoice will be generated upon Super Admin confirmation"
+                            >
+                              🔒 Invoice on Confirmation
+                            </span>
+                          ) : ord.orderStatus === 'rejected' ? (
+                            <span
+                              style={{
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                color: '#EF4444',
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '6px',
+                                padding: '0.4rem 0.75rem',
+                              }}
+                            >
+                              🚫 Order Rejected
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => setSelectedB2bInvoice(ord)}
+                              className="btn btn-amber btn-sm"
+                              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+                            >
+                              <FileText size={15} /> Official B2B Tax Invoice (PDF)
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1032,12 +1100,12 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
         </div>
       </div>
 
-      {/* Printable B2B GST Tax Invoice Modal */}
+      {/* Printable Official B2B GST Tax Invoice Modal */}
       {selectedB2bInvoice && (
-        <B2BInvoiceModal
+        <OrderInvoiceModal
           order={selectedB2bInvoice}
+          isB2B={true}
           onClose={() => setSelectedB2bInvoice(null)}
-          onOrderUpdated={onRefresh}
         />
       )}
 

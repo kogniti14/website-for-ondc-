@@ -5,7 +5,6 @@ import {
   Truck,
   CheckCircle2,
   FileText,
-  Printer,
   ExternalLink,
   ChevronRight,
   ArrowLeft,
@@ -18,6 +17,7 @@ import { B2COrder } from '../../types';
 import { storageService } from '../../services/storageService';
 import { RazorpayCheckoutModal } from '../../components/payment/RazorpayCheckoutModal';
 import { razorpayService } from '../../services/razorpayService';
+import { OrderInvoiceModal } from '../../components/common/OrderInvoiceModal';
 
 interface OrdersPageProps {
   orders: B2COrder[];
@@ -28,10 +28,6 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<B2COrder | null>(null);
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<B2COrder | null>(null);
   const [orderToPay, setOrderToPay] = useState<B2COrder | null>(null);
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   const handlePaymentSuccess = (response: any) => {
     if (!orderToPay) return;
@@ -196,14 +192,48 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                       </button>
                     )}
 
-                    {/* View Invoice Button */}
-                    <button
-                      onClick={() => setSelectedOrderForInvoice(order)}
-                      className="btn btn-outline btn-sm"
-                      style={{ borderRadius: 'var(--radius-sm)' }}
-                    >
-                      <FileText size={14} /> Tax Invoice
-                    </button>
+                    {/* View Invoice Button (Official Invoice available only after confirmation) */}
+                    {order.orderStatus === 'placed' ? (
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          color: '#92400e',
+                          background: '#fef3c7',
+                          border: '1px solid #fde68a',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '0.35rem 0.65rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                        }}
+                        title="Official Tax Invoice will be generated upon confirmation by operations team"
+                      >
+                        🔒 Tax Invoice on Confirmation
+                      </span>
+                    ) : order.orderStatus === 'rejected' ? (
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          color: '#991b1b',
+                          background: '#fef2f2',
+                          border: '1px solid #fecaca',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '0.35rem 0.65rem',
+                        }}
+                      >
+                        🚫 Order Rejected
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setSelectedOrderForInvoice(order)}
+                        className="btn btn-outline btn-sm"
+                        style={{ borderRadius: 'var(--radius-sm)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                      >
+                        <FileText size={14} /> Tax Invoice
+                      </button>
+                    )}
 
                     {/* Track Details */}
                     <button
@@ -438,189 +468,13 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
         </div>
       )}
 
-      {/* 2. Official Printable GST Tax Invoice Modal */}
+      {/* 2. Official Statutory GST Tax Invoice Modal */}
       {selectedOrderForInvoice && (
-        <div className="modal-overlay" onClick={() => setSelectedOrderForInvoice(null)}>
-          <div
-            className="modal-content"
-            style={{
-              maxWidth: '820px',
-              padding: '2.5rem',
-              backgroundColor: '#FFFFFF',
-              color: '#0F172A',
-            }}
-            onClick={(e) => e.stopPropagation()}
-            id="printable-gst-invoice"
-          >
-            {/* Top Invoice Actions */}
-            <div className="flex justify-between items-center hide-on-print" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
-              <span className="badge badge-green" style={{ fontSize: '0.75rem' }}>
-                Tax Invoice (Original for Recipient)
-              </span>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handlePrint}
-                  className="btn btn-primary btn-sm"
-                  style={{ borderRadius: 'var(--radius-sm)' }}
-                >
-                  <Printer size={15} /> Print / Save PDF
-                </button>
-                <button
-                  onClick={() => setSelectedOrderForInvoice(null)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-                >
-                  <X size={20} className="text-slate-500" />
-                </button>
-              </div>
-            </div>
-
-            {/* Official GST Invoice Document Header */}
-            <div className="flex justify-between items-start" style={{ marginBottom: '2rem' }}>
-              <div>
-                <div className="flex items-center gap-3" style={{ marginBottom: '0.5rem' }}>
-                  <img src="/logo.png" alt="Kogniti Minds" style={{ height: '42px', width: 'auto', objectFit: 'contain' }} />
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)' }}>
-                    KOGNITI MINDS PRIVATE LIMITED
-                  </div>
-                </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--slate-600)', lineHeight: '1.4' }}>
-                  Registered Office: Panchsheel Greens-2, Sec-16 B, Gr. Noida West, Bisrakh, Gautam Buddha Nagar, Uttar Pradesh, India - 201306<br />
-                  <strong>GSTIN:</strong> 09AALCK4750F1ZC | <strong>CIN:</strong> U46496UP2024PTC213997<br />
-                  <strong>PAN:</strong> AALCK4750F | <strong>State Code:</strong> 09 (Uttar Pradesh)<br />
-                  <strong>Support:</strong> support@kognitiminds.com | <strong>Accounts:</strong> accounts@kognitiminds.com | <strong>Helpline:</strong> +91 9931648595
-                </div>
-              </div>
-
-              <div style={{ textAlign: 'right' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--primary)' }}>TAX INVOICE</h2>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, marginTop: '0.2rem' }}>
-                  Invoice No: INV-{selectedOrderForInvoice.orderNumber}
-                </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)' }}>
-                  Date: {new Date(selectedOrderForInvoice.createdAt).toLocaleDateString('en-IN')}
-                </div>
-              </div>
-            </div>
-
-            {/* Buyer Details */}
-            <div
-              className="grid"
-              style={{
-                gridTemplateColumns: '1fr 1fr',
-                gap: '1.5rem',
-                padding: '1rem',
-                backgroundColor: 'var(--slate-50)',
-                borderRadius: 'var(--radius-md)',
-                marginBottom: '1.5rem',
-                fontSize: '0.82rem',
-              }}
-            >
-              <div>
-                <strong style={{ color: 'var(--slate-900)', display: 'block', marginBottom: '0.25rem' }}>Billed To:</strong>
-                <div>{selectedOrderForInvoice.customerName}</div>
-                <div>{selectedOrderForInvoice.billingAddress.street}</div>
-                <div>{selectedOrderForInvoice.billingAddress.city}, {selectedOrderForInvoice.billingAddress.state} - {selectedOrderForInvoice.billingAddress.pincode}</div>
-                <div>Phone: {selectedOrderForInvoice.customerPhone}</div>
-                {selectedOrderForInvoice.optionalGstin && (
-                  <div style={{ color: 'var(--primary)', fontWeight: 700, marginTop: '0.25rem' }}>
-                    Buyer GSTIN: {selectedOrderForInvoice.optionalGstin}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <strong style={{ color: 'var(--slate-900)', display: 'block', marginBottom: '0.25rem' }}>Shipped To:</strong>
-                <div>{selectedOrderForInvoice.shippingAddress.fullName}</div>
-                <div>{selectedOrderForInvoice.shippingAddress.street}</div>
-                <div>{selectedOrderForInvoice.shippingAddress.city}, {selectedOrderForInvoice.shippingAddress.state} - {selectedOrderForInvoice.shippingAddress.pincode}</div>
-                <div>AWB Tracking: {selectedOrderForInvoice.trackingNumber} ({selectedOrderForInvoice.courierPartner})</div>
-              </div>
-            </div>
-
-            {/* Itemized Table */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-              <thead>
-                <tr style={{ background: 'var(--slate-100)', borderBottom: '2px solid var(--slate-300)', textAlign: 'left' }}>
-                  <th style={{ padding: '0.6rem' }}>#</th>
-                  <th style={{ padding: '0.6rem' }}>Item Description</th>
-                  <th style={{ padding: '0.6rem' }}>HSN</th>
-                  <th style={{ padding: '0.6rem', textAlign: 'center' }}>Qty</th>
-                  <th style={{ padding: '0.6rem', textAlign: 'right' }}>Taxable Val</th>
-                  <th style={{ padding: '0.6rem', textAlign: 'right' }}>GST Rate</th>
-                  <th style={{ padding: '0.6rem', textAlign: 'right' }}>Total (₹)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selectedOrderForInvoice.items.map((item, idx) => {
-                  const taxable = Math.round((item.total / 1.18) * 100) / 100;
-                  return (
-                    <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                      <td style={{ padding: '0.6rem' }}>{idx + 1}</td>
-                      <td style={{ padding: '0.6rem', fontWeight: 600 }}>{item.productName}</td>
-                      <td style={{ padding: '0.6rem', color: 'var(--slate-500)' }}>{item.hsn}</td>
-                      <td style={{ padding: '0.6rem', textAlign: 'center' }}>{item.quantity}</td>
-                      <td style={{ padding: '0.6rem', textAlign: 'right' }}>₹{taxable.toLocaleString('en-IN')}</td>
-                      <td style={{ padding: '0.6rem', textAlign: 'right' }}>18%</td>
-                      <td style={{ padding: '0.6rem', textAlign: 'right', fontWeight: 700 }}>₹{item.total.toLocaleString('en-IN')}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {/* Total Calculations */}
-            <div className="flex justify-end" style={{ marginBottom: '2rem' }}>
-              <div style={{ width: '280px', display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.85rem' }}>
-                <div className="flex justify-between text-slate-600">
-                  <span>Taxable Base Value:</span>
-                  <span>₹{Math.round((selectedOrderForInvoice.total / 1.18) * 100 / 100).toLocaleString('en-IN')}</span>
-                </div>
-                {selectedOrderForInvoice.shippingAddress.state.toLowerCase().includes('uttar') || selectedOrderForInvoice.shippingAddress.state.toLowerCase() === 'up' ? (
-                  <>
-                    <div className="flex justify-between text-slate-600">
-                      <span>CGST (9%):</span>
-                      <span>₹{Math.round((selectedOrderForInvoice.gstAmount / 2) * 100 / 100).toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="flex justify-between text-slate-600">
-                      <span>SGST (9%):</span>
-                      <span>₹{Math.round((selectedOrderForInvoice.gstAmount / 2) * 100 / 100).toLocaleString('en-IN')}</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex justify-between text-slate-600">
-                    <span>IGST (18%):</span>
-                    <span>₹{Math.round(selectedOrderForInvoice.gstAmount * 100 / 100).toLocaleString('en-IN')}</span>
-                  </div>
-                )}
-                <div
-                  className="flex justify-between items-baseline"
-                  style={{
-                    paddingTop: '0.5rem',
-                    borderTop: '2px solid var(--slate-900)',
-                    fontWeight: 800,
-                    fontSize: '1.1rem',
-                  }}
-                >
-                  <span>Grand Total:</span>
-                  <span>₹{selectedOrderForInvoice.total.toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Signatory Footer */}
-            <div className="flex justify-between items-end" style={{ paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)', fontSize: '0.78rem', color: 'var(--slate-500)' }}>
-              <div>
-                * This is a computer-generated tax invoice issued by Kogniti Minds Private Limited.<br />
-                Goods once sold carry manufacturer replacement warranty against manufacturing defects.
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: 700, color: 'var(--slate-900)' }}>For Kogniti Minds Private Limited</div>
-                <div style={{ height: '40px' }} />
-                <div>Authorized Signatory</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <OrderInvoiceModal
+          order={selectedOrderForInvoice}
+          isB2B={false}
+          onClose={() => setSelectedOrderForInvoice(null)}
+        />
       )}
 
       {/* Razorpay Settlement Modal for Pending Orders */}

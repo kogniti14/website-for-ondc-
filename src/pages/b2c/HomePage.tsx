@@ -717,8 +717,8 @@ export const HomePage: React.FC<HomePageProps> = ({
                   <span style={{ color: '#34D399', fontWeight: 700 }}>- ₹4,752</span>
                 </div>
                 <div className="flex justify-between" style={{ fontSize: '0.85rem' }}>
-                  <span style={{ color: '#38BDF8' }}>Input Tax Credit (12% GST):</span>
-                  <span style={{ color: '#38BDF8', fontWeight: 700 }}>₹4,181 Claimable</span>
+                  <span style={{ color: '#38BDF8' }}>Input Tax Credit (18% GST):</span>
+                  <span style={{ color: '#38BDF8', fontWeight: 700 }}>₹6,273 Claimable</span>
                 </div>
                 <div
                   className="flex justify-between items-baseline"
@@ -729,7 +729,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 >
                   <span style={{ fontWeight: 700, color: '#FFFFFF' }}>Total Net Savings:</span>
                   <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FBBF24' }}>
-                    Save ₹44,950+
+                    Save ₹51,000+
                   </span>
                 </div>
               </div>

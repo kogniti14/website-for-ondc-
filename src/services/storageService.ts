@@ -12,6 +12,9 @@ import {
   Category,
   PasswordResetOtp,
   SiteMedia,
+  B2BPaymentRecord,
+  B2BOrderItemSummary,
+  B2CAddress,
 } from '../types';
 import { MOCK_PRODUCTS, MOCK_COUPONS, CATEGORIES } from '../data/mockProducts';
 
@@ -305,6 +308,21 @@ class StorageService {
       this.setItem(KEYS.PRODUCTS, MOCK_PRODUCTS);
       return MOCK_PRODUCTS;
     }
+
+    // Auto-migrate any cached products with 12% GST to 18% GST
+    let hasGst12 = false;
+    const updatedProducts = products.map((p) => {
+      if (p.gstRate === 12) {
+        hasGst12 = true;
+        return { ...p, gstRate: 18 };
+      }
+      return p;
+    });
+    if (hasGst12) {
+      this.setItem(KEYS.PRODUCTS, updatedProducts);
+      return updatedProducts;
+    }
+
     return products;
   }
 
@@ -575,6 +593,69 @@ class StorageService {
     return order;
   }
 
+  recordB2BOfflinePayment(
+    orderId: string,
+    paymentData: {
+      amount: number;
+      paymentDate: string;
+      paymentMode: 'razorpay' | 'bank_transfer' | 'neft' | 'rtgs' | 'imps' | 'cheque' | 'other' | string;
+      transactionReference?: string;
+      transactionRef?: string;
+      chequeNumber?: string;
+      bankName?: string;
+      notes?: string;
+      newPaymentStatus?: 'paid' | 'partially_paid' | 'payment_due' | 'failed' | 'refunded';
+    },
+    adminName: string
+  ): B2BOrder | null {
+    const orders = this.getB2BOrders();
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return null;
+
+    const currentPaid = Number(order.amountPaid || (order.paymentStatus === 'paid' ? order.grandTotal : 0));
+    const newAmountPaid = Math.min(order.grandTotal, currentPaid + Number(paymentData.amount));
+    const newAmountDue = Math.max(0, order.grandTotal - newAmountPaid);
+
+    let status = paymentData.newPaymentStatus;
+    if (!status) {
+      if (newAmountDue <= 0) {
+        status = 'paid';
+      } else if (newAmountPaid > 0) {
+        status = 'partially_paid';
+      } else {
+        status = 'payment_due';
+      }
+    }
+
+    const newRecord: B2BPaymentRecord = {
+      id: `pay_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      amount: Number(paymentData.amount),
+      paymentDate: paymentData.paymentDate || new Date().toISOString().slice(0, 10),
+      paymentMode: paymentData.paymentMode,
+      transactionReference: paymentData.transactionReference || paymentData.transactionRef,
+      transactionRef: paymentData.transactionRef || paymentData.transactionReference,
+      chequeNumber: paymentData.chequeNumber,
+      bankName: paymentData.bankName,
+      notes: paymentData.notes,
+      recordedBy: adminName,
+      recordedAt: new Date().toISOString(),
+    };
+
+    order.paymentStatus = status;
+    order.paymentMode = paymentData.paymentMode;
+    order.amountPaid = newAmountPaid;
+    order.amountDue = newAmountDue;
+    order.paymentRecords = [...(order.paymentRecords || []), newRecord];
+    order.statusTimeline.push({
+      status: `OFFLINE PAYMENT RECORDED (${paymentData.paymentMode.replace('_', ' ').toUpperCase()})`,
+      timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      note: `Recorded payment of ₹${Number(paymentData.amount).toLocaleString('en-IN')} via ${paymentData.paymentMode.replace('_', ' ').toUpperCase()}. Total Settled: ₹${newAmountPaid.toLocaleString('en-IN')}, Remaining Due: ₹${newAmountDue.toLocaleString('en-IN')}. Admin: ${adminName}.`,
+    });
+
+    this.setItem(KEYS.B2B_ORDERS, orders);
+    return order;
+  }
+
   // --- B2B Quotations (RFQ) ---
   getB2BQuotations(): B2BQuotation[] {
     return this.getItem<B2BQuotation[]>(KEYS.B2B_QUOTATIONS, SEED_B2B_QUOTATIONS);
@@ -589,6 +670,116 @@ class StorageService {
       quotations.unshift(quotation);
     }
     this.setItem(KEYS.B2B_QUOTATIONS, quotations);
+  }
+
+  deleteB2BQuotation(id: string): void {
+    const quotations = this.getB2BQuotations().filter((q) => q.id !== id);
+    this.setItem(KEYS.B2B_QUOTATIONS, quotations);
+  }
+
+  convertQuotationToB2BOrder(quotationId: string, adminName: string): B2BOrder | null {
+    const quotations = this.getB2BQuotations();
+    const quote = quotations.find((q) => q.id === quotationId);
+    if (!quote) return null;
+
+    const orderNumber = `KM-B2B-${Math.floor(100000 + Math.random() * 900000)}`;
+    const items: B2BOrderItemSummary[] = (quote.items && quote.items.length > 0)
+      ? quote.items.map((it, idx) => ({
+          productId: it.productId || `prod_quote_${idx}`,
+          productName: it.productName,
+          sku: it.sku || `SKU-${idx + 1}`,
+          image: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=600&q=80',
+          quantity: it.quantity,
+          wholesalePrice: it.unitPrice,
+          tierDiscountPercent: it.discount || 0,
+          effectiveUnitPrice: Math.round(it.unitPrice * (1 - (it.discount || 0) / 100)),
+          hsn: '4802',
+          gstRate: it.gstRate || 18,
+          total: it.total,
+        }))
+      : [
+          {
+            productId: quote.productId || 'km-agri-a4-75',
+            productName: quote.productName || 'B2B Custom Procurement Batch',
+            sku: quote.sku || 'KM-B2B-CUSTOM',
+            image: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=600&q=80',
+            quantity: quote.requestedQty || 10,
+            wholesalePrice: quote.adminQuotation?.quotedUnitPrice || quote.targetUnitPrice || 200,
+            tierDiscountPercent: 0,
+            effectiveUnitPrice: quote.adminQuotation?.quotedUnitPrice || quote.targetUnitPrice || 200,
+            hsn: '4802',
+            gstRate: 18,
+            total: (quote.adminQuotation?.totalTaxable) || ((quote.requestedQty || 10) * (quote.adminQuotation?.quotedUnitPrice || quote.targetUnitPrice || 200)),
+          },
+        ];
+
+    const subtotal = quote.subtotal || quote.adminQuotation?.totalTaxable || items.reduce((s, i) => s + i.total, 0);
+    const bulkDiscountTotal = quote.discount || 0;
+    const taxableAmount = quote.taxableAmount || (subtotal - bulkDiscountTotal);
+    const totalGst = quote.gstAmount || quote.adminQuotation?.gstAmount || Math.round(taxableAmount * 0.18 * 100) / 100;
+    const cgst = Math.round((totalGst / 2) * 100) / 100;
+    const sgst = Math.round((totalGst / 2) * 100) / 100;
+    const shippingFee = quote.shippingCharges !== undefined ? quote.shippingCharges : (quote.adminQuotation?.shippingCharges || 0);
+    const grandTotal = quote.grandTotal || quote.adminQuotation?.grandTotal || (taxableAmount + totalGst + shippingFee);
+
+    const defaultAddress: B2CAddress = {
+      id: `addr_${Date.now()}`,
+      fullName: quote.contactPerson,
+      phone: quote.phone,
+      street: 'Commercial Delivery Address',
+      city: 'Noida',
+      state: 'Uttar Pradesh',
+      pincode: quote.deliveryPincode || '201301',
+      addressType: 'work',
+    };
+
+    const newOrder: B2BOrder = {
+      id: `b2b_ord_${Date.now()}`,
+      orderNumber,
+      poNumber: `PO-${quote.rfqNumber}`,
+      businessId: quote.businessId || `biz_${Date.now()}`,
+      businessName: quote.businessName,
+      gstin: quote.gstin || '09AAECK1234F1Z5',
+      shippingAddress: quote.shippingAddress || defaultAddress,
+      billingAddress: quote.billingAddress || defaultAddress,
+      items,
+      subtotal,
+      bulkDiscountTotal,
+      taxableAmount,
+      cgst,
+      sgst,
+      igst: 0,
+      totalGst,
+      shippingFee,
+      grandTotal,
+      paymentTerms: quote.paymentTerms || 'Prepaid',
+      paymentStatus: 'payment_due',
+      paymentMode: 'bank_transfer',
+      amountPaid: 0,
+      amountDue: grandTotal,
+      orderStatus: 'confirmed',
+      confirmedAt: new Date().toISOString(),
+      confirmedBy: adminName,
+      createdAt: new Date().toISOString(),
+      statusTimeline: [
+        {
+          status: 'ORDER CREATED FROM QUOTATION',
+          timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+          note: `Commercial order converted from proposal ${quote.rfqNumber} and confirmed by ${adminName}.`,
+        },
+      ],
+    };
+
+    this.saveB2BOrder(newOrder);
+
+    // Update quotation status to 'ordered'
+    quote.status = 'ordered';
+    quote.convertedOrderId = newOrder.orderNumber;
+    quote.convertedAt = new Date().toISOString();
+    quote.convertedBy = adminName;
+    this.saveB2BQuotation(quote);
+
+    return newOrder;
   }
 
   // --- Cart System (Separate B2C & B2B) ---
