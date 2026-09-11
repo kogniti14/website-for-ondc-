@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider, useCart } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { storageService } from './services/storageService';
-import { Product, B2COrder, Category, B2CUser } from './types';
+import { Product, B2COrder, B2BOrder, Category, B2CUser } from './types';
 import { ShieldCheck, Lock } from 'lucide-react';
 
 // Layout Components
@@ -30,6 +30,7 @@ import { CustomerDashboardPage } from './pages/b2c/CustomerDashboardPage';
 // B2B Pages
 import { B2BHomePage } from './pages/b2b/B2BHomePage';
 import { B2BCatalogPage } from './pages/b2b/B2BCatalogPage';
+import { B2BCartPage } from './pages/b2b/B2BCartPage';
 import { B2BRFQPage } from './pages/b2b/B2BRFQPage';
 import { B2BDashboardPage } from './pages/b2b/B2BDashboardPage';
 
@@ -38,11 +39,12 @@ import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 
 const MainApp: React.FC = () => {
   const { role, b2cUser, b2bBusiness, isAdmin } = useAuth();
-  const { addToB2CCart } = useCart();
+  const { addToB2CCart, addToB2BCart } = useCart();
 
   // Navigation State
   const [activeTab, setActiveTab] = useState<string>('home');
   const [b2bTab, setB2bTab] = useState<string>('overview');
+  const [isB2BCheckout, setIsB2BCheckout] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
@@ -86,12 +88,27 @@ const MainApp: React.FC = () => {
     setSelectedProduct(p);
   };
 
+  const handleB2BBuyNow = (p: Product) => {
+    addToB2BCart(p.id, p.b2bMoq || 1);
+    if (role !== 'b2b' || !b2bBusiness) {
+      handleOpenB2BAuth();
+      return;
+    }
+    setIsB2BCheckout(true);
+    setActiveTab('checkout');
+  };
+
   const handleBuyNow = (p: Product) => {
+    if (activeTab === 'b2b') {
+      handleB2BBuyNow(p);
+      return;
+    }
     addToB2CCart(p.id, 1);
     if (role !== 'b2c' || !b2cUser) {
       handleOpenAuth('login');
       return;
     }
+    setIsB2BCheckout(false);
     setActiveTab('checkout');
   };
 
@@ -187,6 +204,7 @@ const MainApp: React.FC = () => {
           <CartPage
             products={products}
             onProceedToCheckout={() => {
+              setIsB2BCheckout(false);
               if (role !== 'b2c' || !b2cUser) {
                 handleOpenAuth('login');
               } else {
@@ -202,9 +220,24 @@ const MainApp: React.FC = () => {
         {activeTab === 'checkout' && (
           <CheckoutPage
             products={products}
+            isB2B={isB2BCheckout}
             onOrderSuccess={handleOrderSuccess}
-            onBackToCart={() => setActiveTab('cart')}
+            onB2BOrderSuccess={() => {
+              refreshData();
+              setIsB2BCheckout(false);
+              setActiveTab('b2b');
+              setB2bTab('dashboard');
+            }}
+            onBackToCart={() => {
+              if (isB2BCheckout) {
+                setActiveTab('b2b');
+                setB2bTab('cart');
+              } else {
+                setActiveTab('cart');
+              }
+            }}
             onOpenAuth={handleOpenAuth}
+            onOpenB2BAuth={handleOpenB2BAuth}
           />
         )}
 
@@ -250,6 +283,7 @@ const MainApp: React.FC = () => {
                 onOpenProduct={handleOpenProduct}
                 openB2BAuthModal={handleOpenB2BAuth}
                 onOpenRfqModal={handleOpenRfqModal}
+                onBuyNow={handleB2BBuyNow}
               />
             )}
 
@@ -273,94 +307,20 @@ const MainApp: React.FC = () => {
             )}
 
             {b2bTab === 'cart' && (
-              <div className="container" style={{ padding: '4rem 1.25rem' }}>
-                <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      background: 'rgba(16, 185, 129, 0.15)',
-                      color: '#34D399',
-                      border: '1px solid rgba(16, 185, 129, 0.35)',
-                      padding: '0.35rem 0.9rem',
-                      borderRadius: 'var(--radius-full)',
-                      fontSize: '0.78rem',
-                      fontWeight: 800,
-                      marginBottom: '1rem',
-                      letterSpacing: '0.03em',
-                    }}
-                  >
-                    DIRECT MANUFACTURER PRICING
-                  </div>
-                  <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#FFF' }}>
-                    Institutional B2B Procurement Cart
-                  </h2>
-                  {role !== 'b2b' || !b2bBusiness ? (
-                    <div
-                      style={{
-                        background: 'rgba(239, 68, 68, 0.08)',
-                        border: '1.5px solid rgba(239, 68, 68, 0.35)',
-                        borderRadius: 'var(--radius-lg)',
-                        padding: '1.75rem',
-                        margin: '1.5rem 0 2rem',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: '52px',
-                          height: '52px',
-                          borderRadius: '50%',
-                          background: 'rgba(239, 68, 68, 0.2)',
-                          color: '#EF4444',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          margin: '0 auto 1rem',
-                        }}
-                      >
-                        <Lock size={24} />
-                      </div>
-                      <h4 style={{ color: '#FFFFFF', fontSize: '1.15rem', fontWeight: 700, marginBottom: '0.35rem' }}>
-                        Business Sign In Compulsory
-                      </h4>
-                      <p style={{ color: '#94A3B8', fontSize: '0.85rem', lineHeight: '1.6', marginBottom: '1.5rem' }}>
-                        You must be signed in with your registered business credentials to finalize institutional orders, download GST invoices, and access direct manufacturer pricing.
-                      </p>
-                      <button
-                        onClick={handleOpenB2BAuth}
-                        className="btn btn-amber"
-                        style={{ borderRadius: 'var(--radius-full)', padding: '0.65rem 1.75rem', fontWeight: 700 }}
-                      >
-                        Sign In to B2B Portal →
-                      </button>
-                    </div>
-                  ) : (
-                    <p style={{ color: '#94A3B8', margin: '1rem 0 2rem' }}>
-                      To finalize B2B orders with Net 30 terms or commercial freight dispatch, submit your order directly via RFQ or contact your Key Account Manager.
-                    </p>
-                  )}
-                  <div className="flex justify-center gap-3">
-                    <button onClick={() => setB2bTab('catalog')} className="btn btn-amber">
-                      Browse Wholesale Slabs
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (role !== 'b2b' || !b2bBusiness) {
-                          handleOpenB2BAuth();
-                        } else {
-                          setB2bTab('dashboard');
-                        }
-                      }}
-                      className="btn btn-outline-b2b"
-                      style={{ color: '#FFF' }}
-                    >
-                      B2B Dashboard
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <B2BCartPage
+                products={products}
+                onProceedToCheckout={() => {
+                  setIsB2BCheckout(true);
+                  setActiveTab('checkout');
+                }}
+                setB2bTab={setB2bTab}
+                onOpenProduct={handleOpenProduct}
+                openB2BAuthModal={handleOpenB2BAuth}
+                onRfqCreated={() => {
+                  refreshData();
+                  setB2bTab('dashboard');
+                }}
+              />
             )}
           </div>
         )}

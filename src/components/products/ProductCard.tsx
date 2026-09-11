@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, ShoppingCart, Star, Eye, ShieldCheck, Briefcase } from 'lucide-react';
+import { Heart, ShoppingCart, Star, Eye, ShieldCheck, Briefcase, FileText } from 'lucide-react';
 import { Product } from '../../types';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -42,10 +42,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   const handleBuyNow = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onBuyNow) {
-      onBuyNow(product);
+    if (isB2BMode) {
+      addToB2BCart(product.id, product.b2bMoq);
     } else {
       addToB2CCart(product.id, 1);
+    }
+    if (onBuyNow) {
+      onBuyNow(product);
     }
   };
 
@@ -254,42 +257,53 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2" style={{ marginTop: '0.75rem' }}>
+          <div className="flex flex-col gap-1.5" style={{ marginTop: '0.75rem' }}>
             {isB2BMode ? (
-              isB2BApproved ? (
-                <>
+              <>
+                <div className="flex items-center gap-1.5">
                   <button
                     onClick={handleAddToCart}
-                    className="btn btn-b2b btn-sm flex-1"
-                    style={{ fontSize: '0.8rem', padding: '0.5rem 0.6rem' }}
+                    className="btn btn-outline-b2b btn-sm flex-1"
+                    style={{ fontSize: '0.78rem', padding: '0.45rem 0.5rem', fontWeight: 700 }}
+                    title={`Add minimum order quantity (${product.b2bMoq}) to B2B cart`}
                   >
-                    <ShoppingCart size={14} /> Add MOQ ({product.b2bMoq})
+                    <ShoppingCart size={13} /> Add MOQ ({product.b2bMoq})
                   </button>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onRequestQuote) onRequestQuote(product);
-                    }}
-                    className="btn btn-outline btn-sm"
-                    style={{ fontSize: '0.8rem', padding: '0.5rem 0.6rem' }}
+                    onClick={handleBuyNow}
+                    className="btn btn-b2b btn-sm flex-1"
+                    style={{ fontSize: '0.78rem', padding: '0.45rem 0.5rem', fontWeight: 700 }}
+                    title="Buy now at listed wholesale price via online checkout"
                   >
-                    Request Quote
+                    ⚡ Buy Now
                   </button>
-                </>
-              ) : (
+                </div>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     if (onRequestQuote) onRequestQuote(product);
                   }}
-                  className="btn btn-amber btn-sm flex-1"
-                  style={{ fontSize: '0.8rem' }}
+                  className="btn btn-sm"
+                  style={{
+                    fontSize: '0.74rem',
+                    padding: '0.35rem 0.6rem',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    color: '#D97706',
+                    border: '1px dashed rgba(245, 158, 11, 0.4)',
+                    fontWeight: 700,
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.35rem',
+                  }}
+                  title="Need higher volume or special negotiated rate? Submit an RFQ"
                 >
-                  <Briefcase size={14} /> Request Quote / Register
+                  <FileText size={13} /> Request Bulk Quote / Lower Price
                 </button>
-              )
+              </>
             ) : (
-              <>
+              <div className="flex items-center gap-2">
                 <button
                   onClick={handleAddToCart}
                   className="btn btn-outline btn-sm flex-1"
@@ -304,7 +318,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 >
                   Buy Now
                 </button>
-              </>
+              </div>
             )}
           </div>
         </div>

@@ -255,6 +255,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [offlinePaymentNotes, setOfflinePaymentNotes] = useState<string>('');
 
   const handleOpenOfflinePayment = (order: B2BOrder) => {
+    if (!order.source || order.source === 'web') {
+      alert('Payment Rule Notice: For automated website orders (B2C/B2B), payments are processed directly through the integrated Razorpay online gateway. Manual recording or altering payment modes for website orders is disabled to preserve statutory tax and audit integrity.');
+      return;
+    }
     setOrderForOfflinePayment(order);
     const due = order.amountDue !== undefined ? order.amountDue : (order.paymentStatus === 'paid' ? 0 : order.grandTotal);
     setOfflinePaymentAmount(due > 0 ? due : order.grandTotal);
@@ -2896,25 +2900,45 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
                           <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
                             <div className="flex items-center justify-end gap-1.5">
-                              {/* Record Offline Payment Button */}
-                              <button
-                                onClick={() => handleOpenOfflinePayment(o)}
-                                className="btn btn-sm"
-                                style={{
-                                  background: 'rgba(16, 185, 129, 0.1)',
-                                  color: '#059669',
-                                  border: '1px solid rgba(16, 185, 129, 0.3)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '0.3rem',
-                                  fontSize: '0.75rem',
-                                  fontWeight: 700,
-                                  padding: '0.35rem 0.65rem',
-                                }}
-                                title="Record Offline Bank Transfer / NEFT / Cheque Payment"
-                              >
-                                <CreditCard size={13} /> Record Payment
-                              </button>
+                              {/* Record Offline Payment Button (Restricted to Manual Orders Only) */}
+                              {o.source && o.source !== 'web' ? (
+                                <button
+                                  onClick={() => handleOpenOfflinePayment(o)}
+                                  className="btn btn-sm"
+                                  style={{
+                                    background: 'rgba(16, 185, 129, 0.1)',
+                                    color: '#059669',
+                                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    padding: '0.35rem 0.65rem',
+                                  }}
+                                  title="Record Manual Offline Payment (Bank Transfer / NEFT / Cheque / Cash)"
+                                >
+                                  <CreditCard size={13} /> Record Payment
+                                </button>
+                              ) : (
+                                <span
+                                  className="badge"
+                                  style={{
+                                    background: 'rgba(59, 130, 246, 0.1)',
+                                    color: '#2563EB',
+                                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                                    fontSize: '0.7rem',
+                                    padding: '0.35rem 0.65rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem',
+                                    fontWeight: 700,
+                                  }}
+                                  title="Automated Website Order: Processed via Razorpay Gateway. Manual alteration disabled."
+                                >
+                                  <Lock size={11} /> Razorpay Online
+                                </span>
+                              )}
 
                               <button
                                 onClick={() => setSelectedOrderForInspection({ type: 'b2b', order: o })}
@@ -6231,13 +6255,33 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     <CreditCard size={15} /> Payment Gateway & Settlement Audit
                   </span>
                   {selectedOrderForInspection.type === 'b2b' && (
-                    <button
-                      onClick={() => handleOpenOfflinePayment(selectedOrderForInspection.order as B2BOrder)}
-                      className="btn btn-primary btn-sm"
-                      style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem' }}
-                    >
-                      💰 Record Payment
-                    </button>
+                    (selectedOrderForInspection.order as B2BOrder).source &&
+                    (selectedOrderForInspection.order as B2BOrder).source !== 'web' ? (
+                      <button
+                        onClick={() => handleOpenOfflinePayment(selectedOrderForInspection.order as B2BOrder)}
+                        className="btn btn-primary btn-sm"
+                        style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', background: '#059669', borderColor: '#059669' }}
+                      >
+                        💰 Record Payment
+                      </button>
+                    ) : (
+                      <span
+                        className="badge"
+                        style={{
+                          background: 'rgba(59, 130, 246, 0.1)',
+                          color: '#2563EB',
+                          border: '1px solid rgba(59, 130, 246, 0.3)',
+                          fontSize: '0.7rem',
+                          padding: '0.2rem 0.5rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                        }}
+                        title="Automated Website Order: Processed via Razorpay Gateway. Manual alteration disabled."
+                      >
+                        <Lock size={11} /> Razorpay Online Gateway
+                      </span>
+                    )
                   )}
                 </div>
                 <div className="flex justify-between" style={{ marginBottom: '0.25rem' }}>
@@ -6498,13 +6542,34 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 )}
 
                 {selectedOrderForInspection.type === 'b2b' && (
-                  <button
-                    onClick={() => handleOpenOfflinePayment(selectedOrderForInspection.order as B2BOrder)}
-                    className="btn btn-primary"
-                    style={{ background: '#0284C7', borderColor: '#0284C7', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                  >
-                    <CreditCard size={16} /> Record Offline Payment
-                  </button>
+                  (selectedOrderForInspection.order as B2BOrder).source &&
+                  (selectedOrderForInspection.order as B2BOrder).source !== 'web' ? (
+                    <button
+                      onClick={() => handleOpenOfflinePayment(selectedOrderForInspection.order as B2BOrder)}
+                      className="btn btn-primary"
+                      style={{ background: '#0284C7', borderColor: '#0284C7', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                    >
+                      <CreditCard size={16} /> Record Offline Payment
+                    </button>
+                  ) : (
+                    <span
+                      className="badge"
+                      style={{
+                        background: 'rgba(59, 130, 246, 0.1)',
+                        color: '#2563EB',
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        padding: '0.5rem 0.85rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                      }}
+                      title="Automated Website Order: Payments are processed via Razorpay online gateway."
+                    >
+                      <Lock size={14} /> Razorpay Online Gateway (Manual Alteration Prohibited)
+                    </span>
+                  )
                 )}
               </div>
 

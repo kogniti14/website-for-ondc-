@@ -343,25 +343,23 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
               <button
                 onClick={handleAddToCart}
-                className={`btn ${isB2BMode ? 'btn-b2b' : 'btn-outline'} flex-1`}
-                style={{ padding: '0.75rem 1rem' }}
+                className={`btn ${isB2BMode ? 'btn-outline-b2b' : 'btn-outline'} flex-1`}
+                style={{ padding: '0.75rem 1rem', fontWeight: 700 }}
               >
                 <ShoppingCart size={17} /> Add to {isB2BMode ? 'B2B Cart' : 'Cart'}
               </button>
 
-              {!isB2BMode && (
-                <button
-                  onClick={() => {
-                    handleAddToCart();
-                    onBuyNow(product);
-                    onClose();
-                  }}
-                  className="btn btn-primary flex-1"
-                  style={{ padding: '0.75rem 1rem' }}
-                >
-                  Buy Now
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  handleAddToCart();
+                  if (onBuyNow) onBuyNow(product);
+                  onClose();
+                }}
+                className={`btn ${isB2BMode ? 'btn-amber' : 'btn-primary'} flex-1`}
+                style={{ padding: '0.75rem 1rem', fontWeight: 800 }}
+              >
+                ⚡ Buy Now
+              </button>
 
               <button
                 onClick={() => toggleWishlist(product.id)}
@@ -372,6 +370,43 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <Heart size={18} color={isFavorited ? '#E11D48' : 'var(--slate-600)'} fill={isFavorited ? '#E11D48' : 'none'} />
               </button>
             </div>
+
+            {/* Prominent B2B Request a Quote Section */}
+            {isB2BMode && (
+              <div
+                style={{
+                  background: 'rgba(245, 158, 11, 0.08)',
+                  border: '1.5px dashed rgba(245, 158, 11, 0.35)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.85rem 1.1rem',
+                  marginBottom: '1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#D97706', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <FileText size={16} /> Need Larger Volume or Special Pricing?
+                  </div>
+                  <div style={{ fontSize: '0.76rem', color: 'var(--slate-600)', marginTop: '0.2rem' }}>
+                    Submit an RFQ for bulk quantities, lower unit pricing, custom requirements, or Net credit terms.
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    onClose();
+                    if (onRequestQuote) onRequestQuote(product);
+                  }}
+                  className="btn btn-sm btn-amber"
+                  style={{ flexShrink: 0, fontWeight: 700 }}
+                >
+                  Request a Quote →
+                </button>
+              </div>
+            )}
 
             {/* Pincode Delivery Checker */}
             <form

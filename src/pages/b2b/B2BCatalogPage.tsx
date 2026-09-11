@@ -24,6 +24,7 @@ interface B2BCatalogPageProps {
   onOpenProduct: (product: Product) => void;
   openB2BAuthModal: () => void;
   onOpenRfqModal: (product: Product) => void;
+  onBuyNow?: (product: Product) => void;
 }
 
 export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
@@ -32,6 +33,7 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
   onOpenProduct,
   openB2BAuthModal,
   onOpenRfqModal,
+  onBuyNow,
 }) => {
   const categoryList = categories && categories.length > 0 ? categories : CATEGORIES;
   const { role, b2bBusiness } = useAuth();
@@ -386,24 +388,46 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
                     </div>
 
                     <div className="flex flex-col gap-2" style={{ marginTop: '0.85rem' }}>
-                      <button
-                        onClick={() => handleAddToCart(product)}
-                        className="btn btn-amber btn-sm"
-                        style={{ width: '100%' }}
-                      >
-                        <ShoppingCart size={15} /> Add MOQ ({product.b2bMoq})
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleAddToCart(product)}
+                          className="btn btn-outline-b2b btn-sm flex-1"
+                          style={{ fontSize: '0.78rem', padding: '0.45rem 0.5rem', fontWeight: 700 }}
+                          title={`Add MOQ (${product.b2bMoq}) to B2B Cart`}
+                        >
+                          <ShoppingCart size={14} /> Add MOQ ({product.b2bMoq})
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleAddToCart(product);
+                            if (onBuyNow) onBuyNow(product);
+                          }}
+                          className="btn btn-amber btn-sm flex-1"
+                          style={{ fontSize: '0.78rem', padding: '0.45rem 0.5rem', fontWeight: 800 }}
+                          title="Buy Now at listed wholesale price via Razorpay"
+                        >
+                          ⚡ Buy Now
+                        </button>
+                      </div>
                       <button
                         onClick={() => onOpenRfqModal(product)}
                         className="btn btn-sm"
                         style={{
                           width: '100%',
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          color: '#FFFFFF',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          background: 'rgba(245, 158, 11, 0.12)',
+                          color: '#FCD34D',
+                          border: '1px dashed rgba(245, 158, 11, 0.4)',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.35rem',
+                          fontSize: '0.75rem',
+                          padding: '0.4rem 0.6rem',
                         }}
+                        title="Need higher volume or special pricing? Request a formal quotation"
                       >
-                        <FileText size={14} /> Request Quote
+                        <FileText size={14} /> Request a Quote (Bulk / Custom Terms)
                       </button>
                     </div>
                   </div>
@@ -427,13 +451,22 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => onOpenRfqModal(product)}
-                      className="btn btn-amber btn-sm"
-                      style={{ width: '100%', marginTop: '0.75rem' }}
-                    >
-                      <FileText size={14} /> Request Quote
-                    </button>
+                    <div className="flex flex-col gap-2" style={{ marginTop: '0.75rem' }}>
+                      <button
+                        onClick={openB2BAuthModal}
+                        className="btn btn-outline-b2b btn-sm"
+                        style={{ width: '100%', fontSize: '0.78rem' }}
+                      >
+                        Sign In to Buy Online
+                      </button>
+                      <button
+                        onClick={() => onOpenRfqModal(product)}
+                        className="btn btn-amber btn-sm"
+                        style={{ width: '100%', fontSize: '0.78rem', fontWeight: 700 }}
+                      >
+                        <FileText size={14} /> Request a Quote
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
