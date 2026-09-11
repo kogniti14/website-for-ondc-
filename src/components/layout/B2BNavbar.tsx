@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { storageService } from '../../services/storageService';
 
 interface B2BNavbarProps {
   b2bTab: string;
@@ -103,7 +104,7 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
               }}
             >
               <img
-                src="/logo.png"
+                src={storageService.getSiteMedia()?.logo || '/logo.png'}
                 alt="Kogniti Minds"
                 style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
               />

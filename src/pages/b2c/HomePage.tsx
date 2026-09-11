@@ -19,6 +19,7 @@ import {
 import { Product, UserRole, Category } from '../../types';
 import { CATEGORIES } from '../../data/mockProducts';
 import { ProductCard } from '../../components/products/ProductCard';
+import { storageService } from '../../services/storageService';
 
 interface HomePageProps {
   products: Product[];
@@ -222,7 +223,10 @@ export const HomePage: React.FC<HomePageProps> = ({
                 }}
               >
                 <img
-                  src="https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1200&q=80"
+                  src={
+                    storageService.getSiteMedia()?.heroBanner ||
+                    'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1200&q=80'
+                  }
                   alt="Kogniti Minds Flagship Sustainable Agro-Waste Paper"
                   style={{ width: '100%', height: '340px', objectFit: 'cover' }}
                 />
@@ -389,69 +393,78 @@ export const HomePage: React.FC<HomePageProps> = ({
               gap: '1.25rem',
             }}
           >
-            {(categories && categories.length > 0 ? categories : CATEGORIES).map((cat) => (
-              <div
-                key={cat.id}
-                onClick={() => {
-                  onSelectCategory(cat.name);
-                  setActiveTab('products');
-                }}
-                className="card"
-                style={{
-                  padding: '1.25rem',
-                  borderRadius: 'var(--radius-lg)',
-                  cursor: 'pointer',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  background: '#ffffff',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  height: '240px',
-                }}
-              >
+            {(categories && categories.length > 0 ? categories : CATEGORIES).map((cat) => {
+              const productCount = products.filter((p) => p.category === cat.name).length;
+              const isComingSoon = productCount === 0;
+
+              return (
                 <div
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundImage: `linear-gradient(to top, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.2) 100%), url(${cat.image})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    transition: 'transform 0.4s ease',
+                  key={cat.id}
+                  onClick={() => {
+                    onSelectCategory(cat.name);
+                    setActiveTab('products');
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                />
-
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                  <span
+                  className="card"
+                  style={{
+                    padding: '1.25rem',
+                    borderRadius: 'var(--radius-lg)',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    background: '#ffffff',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    height: '240px',
+                  }}
+                >
+                  <div
                     style={{
-                      background: 'rgba(255, 255, 255, 0.2)',
-                      backdropFilter: 'blur(8px)',
-                      color: '#FFFFFF',
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      padding: '0.25rem 0.65rem',
-                      borderRadius: 'var(--radius-full)',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      backgroundImage: `linear-gradient(to top, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.2) 100%), url(${cat.image})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      transition: 'transform 0.4s ease',
                     }}
-                  >
-                    {cat.count}+ Products
-                  </span>
-                </div>
+                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  />
 
-                <div style={{ position: 'relative', zIndex: 1, color: '#FFFFFF' }}>
-                  <h4 style={{ color: '#FFFFFF', fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.25rem' }}>
-                    {cat.name}
-                  </h4>
-                  <p style={{ fontSize: '0.75rem', color: '#CBD5E1', lineHeight: '1.4' }}>
-                    {cat.description}
-                  </p>
+                  <div style={{ position: 'relative', zIndex: 1 }}>
+                    <span
+                      style={{
+                        background: isComingSoon ? 'rgba(217, 119, 6, 0.92)' : 'rgba(255, 255, 255, 0.2)',
+                        backdropFilter: 'blur(8px)',
+                        color: '#FFFFFF',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        padding: '0.25rem 0.65rem',
+                        borderRadius: 'var(--radius-full)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        boxShadow: isComingSoon ? '0 2px 8px rgba(217, 119, 6, 0.4)' : 'none',
+                      }}
+                    >
+                      {isComingSoon ? '✨ Coming Soon' : `${productCount > 0 ? productCount : cat.count}+ Products`}
+                    </span>
+                  </div>
+
+                  <div style={{ position: 'relative', zIndex: 1, color: '#FFFFFF' }}>
+                    <h4 style={{ color: '#FFFFFF', fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.25rem' }}>
+                      {cat.name}
+                    </h4>
+                    <p style={{ fontSize: '0.75rem', color: '#CBD5E1', lineHeight: '1.4' }}>
+                      {cat.description}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

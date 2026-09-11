@@ -12,6 +12,7 @@ import {
   Building2,
   Tag,
 } from 'lucide-react';
+import { storageService } from '../../services/storageService';
 
 interface FooterProps {
   setActiveTab: (tab: string) => void;
@@ -205,7 +206,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal, i
                 }}
               >
                 <img
-                  src="/logo.png"
+                  src={storageService.getSiteMedia()?.logo || '/logo.png'}
                   alt="Kogniti Minds"
                   style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
                 />

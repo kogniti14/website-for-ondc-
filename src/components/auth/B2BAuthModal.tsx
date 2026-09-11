@@ -18,6 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import { B2BBusiness } from '../../types';
 import { storageService } from '../../services/storageService';
 import { UnregisteredUserModal } from './UnregisteredUserModal';
+import { ImageUpload } from '../common/ImageUpload';
 
 interface B2BAuthModalProps {
   onClose: () => void;
@@ -46,6 +47,7 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
   const [state, setState] = useState('Karnataka');
   const [pincode, setPincode] = useState('');
   const [docUploaded, setDocUploaded] = useState(false);
+  const [docImage, setDocImage] = useState('');
 
   // Forgot Password via OTP State
   const [forgotEmail, setForgotEmail] = useState('');
@@ -225,6 +227,17 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
           addressType: 'work',
           isDefault: true,
         },
+        documents: docImage
+          ? [
+              {
+                name: 'GST Registration Certificate',
+                type: 'image',
+                uploadedAt: new Date().toISOString(),
+                status: 'pending' as const,
+              },
+            ]
+          : [],
+        avatarUrl: docImage || undefined,
       },
       password || 'B2bEdu@123'
     );
@@ -906,26 +919,19 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
               </div>
             </div>
 
-            {/* Document Upload Simulation */}
-            <div
-              style={{
-                border: '1.5px dashed rgba(255, 255, 255, 0.2)',
-                borderRadius: 'var(--radius-md)',
-                padding: '0.85rem',
-                textAlign: 'center',
-                background: 'rgba(255, 255, 255, 0.02)',
-                marginBottom: '1.25rem',
-                cursor: 'pointer',
-              }}
-              onClick={() => setDocUploaded(true)}
-            >
-              <Upload size={20} className="text-amber-400" style={{ margin: '0 auto 0.25rem' }} />
-              <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#E2E8F0' }}>
-                {docUploaded ? '✓ GST Registration Certificate Attached (Simulated)' : 'Attach GST Certificate / Incorporation Proof (PDF/JPG)'}
-              </div>
-              <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>
-                Click to attach compliance verification documents
-              </div>
+            {/* Device Document Upload */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <ImageUpload
+                label="Attach GST Certificate / Incorporation Proof"
+                helperText="Upload official business registration proof directly from device (JPG, PNG, WebP)."
+                variant="dark"
+                value={docImage}
+                onChange={(val) => {
+                  const img = typeof val === 'string' ? val : val[0] || '';
+                  setDocImage(img);
+                  setDocUploaded(!!img);
+                }}
+              />
             </div>
 
             <button type="submit" className="btn btn-amber" style={{ width: '100%' }}>

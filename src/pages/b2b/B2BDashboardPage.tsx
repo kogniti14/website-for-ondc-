@@ -21,6 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 import { B2BOrder, B2BQuotation } from '../../types';
 import { storageService } from '../../services/storageService';
 import { B2BInvoiceModal } from '../../components/b2b/B2BInvoiceModal';
+import { ImageUpload } from '../../components/common/ImageUpload';
 
 interface B2BDashboardPageProps {
   b2bOrders: B2BOrder[];
@@ -37,8 +38,20 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
 }) => {
   const { b2bBusiness, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'quotations' | 'orders' | 'invoices'>('quotations');
-  const [selectedQuotation, setSelectedQuotation] = useState<B2BQuotation | null>(null);
   const [selectedB2bInvoice, setSelectedB2bInvoice] = useState<B2BOrder | null>(null);
+  const [orderCreatedMsg, setOrderCreatedMsg] = useState<string | null>(null);
+  const [logoSuccess, setLogoSuccess] = useState(false);
+
+  const handleLogoUpload = (imgVal: string | string[]) => {
+    const avatar = typeof imgVal === 'string' ? imgVal : imgVal[0] || '';
+    if (b2bBusiness) {
+      const updated = { ...b2bBusiness, avatarUrl: avatar };
+      storageService.saveB2BBusiness(updated);
+      setLogoSuccess(true);
+      setTimeout(() => setLogoSuccess(false), 3000);
+      onRefresh();
+    }
+  };
 
   const isApproved = b2bBusiness?.status === 'approved';
 
@@ -861,6 +874,28 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                       </div>
                     ))}
                   </div>
+                </div>
+
+                <div style={{ marginTop: '2rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '1.5rem', maxWidth: '440px' }}>
+                  <h4 style={{ color: '#FFFFFF', fontSize: '1rem', fontWeight: 700, marginBottom: '0.4rem' }}>
+                    Corporate Entity Brand Logo
+                  </h4>
+                  <p style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '1rem' }}>
+                    Upload your official company logo directly from device (PNG, JPG, WebP) to reflect across institutional invoices and quotations.
+                  </p>
+                  <ImageUpload
+                    label="Company Brand Logo"
+                    helperText="Select or drag-and-drop corporate logo from device."
+                    variant="dark"
+                    aspectRatio="square"
+                    value={b2bBusiness?.avatarUrl || ''}
+                    onChange={handleLogoUpload}
+                  />
+                  {logoSuccess && (
+                    <div className="badge badge-green" style={{ marginTop: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <CheckCircle2 size={13} /> Corporate logo saved successfully!
+                    </div>
+                  )}
                 </div>
               </div>
             )}

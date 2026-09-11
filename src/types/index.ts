@@ -298,3 +298,12 @@ export interface PasswordResetOtp {
   expiresAt: string;
   userType: 'admin' | 'b2c' | 'b2b';
 }
+
+export interface SiteMedia {
+  heroBanner?: string;
+  assuranceBanner?: string;
+  logo?: string;
+  gemLogo?: string;
+  ondcLogo?: string;
+  promotionalBanner?: string;
+}

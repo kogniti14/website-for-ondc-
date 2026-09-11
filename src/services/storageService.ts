@@ -11,6 +11,7 @@ import {
   AdminUser,
   Category,
   PasswordResetOtp,
+  SiteMedia,
 } from '../types';
 import { MOCK_PRODUCTS, MOCK_COUPONS, CATEGORIES } from '../data/mockProducts';
 
@@ -29,6 +30,7 @@ const KEYS = {
   ADMIN_USERS: 'km_admin_users_v1',
   RESET_OTPS: 'km_reset_otps_v1',
   CURRENT_USER_SESSION: 'km_user_session_v1',
+  SITE_MEDIA: 'km_site_media_v2',
 };
 
 // Initial Seed Data
@@ -951,6 +953,22 @@ class StorageService {
     superAdmin.password = newPassword;
     this.setItem(KEYS.ADMIN_USERS, admins);
     return { success: true, message: 'Super Admin password updated successfully!' };
+  }
+
+  // --- Site Media & Banners ---
+  getSiteMedia(): SiteMedia {
+    return this.getItem<SiteMedia>(KEYS.SITE_MEDIA, {
+      heroBanner: '',
+      assuranceBanner: '',
+      logo: '',
+      gemLogo: '',
+      ondcLogo: '',
+      promotionalBanner: '',
+    });
+  }
+
+  saveSiteMedia(media: SiteMedia): void {
+    this.setItem(KEYS.SITE_MEDIA, media);
   }
 }
 

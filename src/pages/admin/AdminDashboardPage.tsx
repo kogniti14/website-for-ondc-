@@ -29,12 +29,14 @@ import {
   Copy,
   Check,
   Search,
+  Image as ImageIcon,
 } from 'lucide-react';
-import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, Category, B2CUser } from '../../types';
+import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, Category, B2CUser, SiteMedia } from '../../types';
 import { storageService } from '../../services/storageService';
 import { useAuth } from '../../context/AuthContext';
 import { B2BInvoiceModal } from '../../components/b2b/B2BInvoiceModal';
 import { isFirebaseConfigured } from '../../services/firebase';
+import { ImageUpload } from '../../components/common/ImageUpload';
 
 interface AdminDashboardPageProps {
   products: Product[];
@@ -64,8 +66,18 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const { currentAdminUser, isSuperAdmin, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'categories' | 'orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials'
+    'overview' | 'products' | 'categories' | 'orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media'
   >('overview');
+
+  // Site Media State
+  const [siteMedia, setSiteMedia] = useState<SiteMedia>(() => storageService.getSiteMedia());
+  const [mediaSavedMsg, setMediaSavedMsg] = useState(false);
+
+  const handleSaveSiteMedia = () => {
+    storageService.saveSiteMedia(siteMedia);
+    setMediaSavedMsg(true);
+    setTimeout(() => setMediaSavedMsg(false), 3000);
+  };
 
   // Admin Users & Super Admin Approvals State
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>(() => storageService.getAdminUsers());
@@ -722,6 +734,19 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             <KeyRound size={16} /> User Credentials ({adminUsers.length + businesses.length + b2cUsers.length})
             {isSuperAdmin && <span className="badge badge-purple" style={{ fontSize: '0.65rem' }}>👑 Master Rights</span>}
           </button>
+          <button
+            onClick={() => setActiveTab('media')}
+            style={{
+              padding: '0.5rem 0.2rem',
+              color: activeTab === 'media' ? 'var(--primary)' : 'var(--slate-600)',
+              borderBottom: activeTab === 'media' ? '2px solid var(--primary)' : '2px solid transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+            }}
+          >
+            <ImageIcon size={16} /> Storefront Banners & Media
+          </button>
         </div>
       </div>
 
@@ -1054,18 +1079,36 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       </div>
 
                       <div className="flex justify-between items-end">
-                        <span
-                          style={{
-                            background: 'rgba(99, 102, 241, 0.9)',
-                            color: '#FFFFFF',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            padding: '0.2rem 0.6rem',
-                            borderRadius: '9999px',
-                          }}
-                        >
-                          {productCount} {productCount === 1 ? 'Product' : 'Products'}
-                        </span>
+                        {productCount === 0 ? (
+                          <span
+                            style={{
+                              background: '#D97706',
+                              color: '#FFFFFF',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              padding: '0.2rem 0.65rem',
+                              borderRadius: '9999px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                            }}
+                          >
+                            ✨ Coming Soon (0 Products)
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              background: 'rgba(99, 102, 241, 0.9)',
+                              color: '#FFFFFF',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              padding: '0.2rem 0.6rem',
+                              borderRadius: '9999px',
+                            }}
+                          >
+                            {productCount} {productCount === 1 ? 'Product' : 'Products'}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -1089,6 +1132,47 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                           gap: '0.5rem',
                         }}
                       >
+                        {productCount === 0 && (
+                          <button
+                            onClick={() => {
+                              setEditingProduct({
+                                id: `prod_${Date.now()}`,
+                                name: '',
+                                tagline: '',
+                                sku: `KM-${cat.name.replace(/[^A-Za-z]/g, '').substring(0, 4).toUpperCase()}-01`,
+                                hsn: '4802',
+                                category: cat.name,
+                                b2cMrp: 499,
+                                b2cPrice: 349,
+                                b2bWholesalePrice: 249,
+                                b2bMoq: 20,
+                                b2bDiscountSlabs: [
+                                  { minQty: 20, maxQty: 50, discountPercent: 5, label: '5% Tier 1' },
+                                  { minQty: 51, discountPercent: 12, label: '12% Tier 2' },
+                                ],
+                                gstRate: 18,
+                                stock: 100,
+                                rating: 4.8,
+                                reviewCount: 1,
+                                images: [],
+                                shortDescription: '',
+                                description: '',
+                                specifications: {},
+                                features: [],
+                                dimensions: '',
+                                weight: '',
+                                warranty: '1 Year Warranty',
+                                leadTimeDays: 3,
+                              });
+                              setShowProductModal(true);
+                            }}
+                            className="btn btn-primary btn-sm"
+                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                            title="Add first product to launch this category live"
+                          >
+                            <Plus size={13} /> Add Product
+                          </button>
+                        )}
                         <button
                           onClick={() => handleOpenEditCategory(cat)}
                           className="btn btn-outline btn-sm"
@@ -2458,6 +2542,138 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             </div>
           </div>
         )}
+
+        {/* Storefront Banners & Media Tab */}
+        {activeTab === 'media' && (
+          <div>
+            <div className="flex items-center justify-between gap-4 flex-wrap" style={{ marginBottom: '2rem' }}>
+              <div>
+                <span className="badge badge-blue" style={{ marginBottom: '0.4rem' }}>
+                  Media Asset Management
+                </span>
+                <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Storefront Banners & Promotional Media</h2>
+                <p style={{ color: 'var(--slate-500)', fontSize: '0.92rem', marginTop: '0.2rem' }}>
+                  Upload high-resolution promotional banners, hero graphics, and official platform logos directly from your device.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {mediaSavedMsg && (
+                  <span className="badge badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <CheckCircle2 size={14} /> Media Saved & Applied!
+                  </span>
+                )}
+                <button
+                  onClick={handleSaveSiteMedia}
+                  className="btn btn-primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <Check size={16} /> Save Media Assets
+                </button>
+              </div>
+            </div>
+
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+                gap: '1.5rem',
+              }}
+            >
+              {/* Homepage Hero Banner */}
+              <div className="card" style={{ background: '#FFFFFF', padding: '1.5rem', borderRadius: 'var(--radius-lg)' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                  1. Homepage Hero Visual Banner
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: 'var(--slate-500)', marginBottom: '1.25rem' }}>
+                  Primary high-impact visual presented on the right side of the B2C Homepage Hero section.
+                </p>
+                <ImageUpload
+                  label="Hero Banner Image"
+                  helperText="Recommended 1200x800px. JPG, PNG, or WebP."
+                  aspectRatio="banner"
+                  value={siteMedia.heroBanner || ''}
+                  onChange={(val) => {
+                    const img = typeof val === 'string' ? val : val[0] || '';
+                    setSiteMedia({ ...siteMedia, heroBanner: img });
+                  }}
+                />
+              </div>
+
+              {/* Brand Value Assurance Banner */}
+              <div className="card" style={{ background: '#FFFFFF', padding: '1.5rem', borderRadius: 'var(--radius-lg)' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                  2. Brand Value Assurance Banner
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: 'var(--slate-500)', marginBottom: '1.25rem' }}>
+                  Horizontal banner highlighting pan-India delivery, GST invoicing, and institutional pricing.
+                </p>
+                <ImageUpload
+                  label="Assurance Banner Image"
+                  helperText="Recommended 1200x320px. JPG, PNG, or WebP."
+                  aspectRatio="banner"
+                  value={siteMedia.assuranceBanner || ''}
+                  onChange={(val) => {
+                    const img = typeof val === 'string' ? val : val[0] || '';
+                    setSiteMedia({ ...siteMedia, assuranceBanner: img });
+                  }}
+                />
+              </div>
+
+              {/* Official Brand Logo */}
+              <div className="card" style={{ background: '#FFFFFF', padding: '1.5rem', borderRadius: 'var(--radius-lg)' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                  3. Official Platform Brand Logo
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: 'var(--slate-500)', marginBottom: '1.25rem' }}>
+                  Transparent PNG / SVG logo displayed on top navigations, invoice printouts, and footers.
+                </p>
+                <ImageUpload
+                  label="Brand Logo"
+                  helperText="Recommended transparent PNG or WebP. Square or 4:3 proportion."
+                  aspectRatio="square"
+                  value={siteMedia.logo || ''}
+                  onChange={(val) => {
+                    const img = typeof val === 'string' ? val : val[0] || '';
+                    setSiteMedia({ ...siteMedia, logo: img });
+                  }}
+                />
+              </div>
+
+              {/* GeM & ONDC Platform Logos */}
+              <div className="card" style={{ background: '#FFFFFF', padding: '1.5rem', borderRadius: 'var(--radius-lg)' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.35rem' }}>
+                  4. GeM & ONDC Accreditations
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: 'var(--slate-500)', marginBottom: '1.25rem' }}>
+                  Official trust badge images shown in "Available On" hero blocks and portal footers.
+                </p>
+                <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <ImageUpload
+                    label="GeM Logo"
+                    helperText="GeM emblem"
+                    aspectRatio="square"
+                    value={siteMedia.gemLogo || ''}
+                    onChange={(val) => {
+                      const img = typeof val === 'string' ? val : val[0] || '';
+                      setSiteMedia({ ...siteMedia, gemLogo: img });
+                    }}
+                  />
+                  <ImageUpload
+                    label="ONDC Logo"
+                    helperText="ONDC emblem"
+                    aspectRatio="square"
+                    value={siteMedia.ondcLogo || ''}
+                    onChange={(val) => {
+                      const img = typeof val === 'string' ? val : val[0] || '';
+                      setSiteMedia({ ...siteMedia, ondcLogo: img });
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* RFQ Formulate Modal */}
@@ -2614,12 +2830,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               </div>
 
               <div className="form-group">
-                <label className="form-label">Image URL</label>
-                <input
-                  type="text"
-                  value={editingProduct.images[0] || ''}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, images: [e.target.value] })}
-                  className="form-input"
+                <ImageUpload
+                  label="Product Images (Upload Directly from Device)"
+                  helperText="Upload product photos from device (JPG, PNG, WebP). The first image serves as the main catalog cover photo."
+                  value={editingProduct.images}
+                  multiple={true}
+                  maxFiles={5}
+                  onChange={(val) => {
+                    const imgs = Array.isArray(val) ? val.filter(Boolean) : val ? [val] : [];
+                    setEditingProduct({ ...editingProduct, images: imgs });
+                  }}
                 />
               </div>
 
@@ -2729,19 +2949,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               </div>
 
               <div className="form-group">
-                <label className="form-label">Cover Banner Image URL</label>
-                <input
-                  type="text"
+                <ImageUpload
+                  label="Category Cover Banner Image (Upload Directly from Device)"
+                  helperText="Upload category card banner or cover photo directly from your device (JPG, PNG, WebP)."
                   value={categoryForm.image}
-                  onChange={(e) => setCategoryForm({ ...categoryForm, image: e.target.value })}
-                  placeholder="https://images.unsplash.com/photo-..."
-                  className="form-input"
+                  aspectRatio="banner"
+                  onChange={(val) => {
+                    const img = Array.isArray(val) ? val[0] || '' : val;
+                    setCategoryForm({ ...categoryForm, image: img });
+                  }}
                 />
-                {categoryForm.image && (
-                  <div style={{ marginTop: '0.5rem', height: '90px', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-                    <img src={categoryForm.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-                )}
               </div>
 
               <div className="flex justify-end gap-3" style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>

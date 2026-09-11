@@ -18,6 +18,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
+import { storageService } from '../../services/storageService';
 
 interface NavbarProps {
   activeTab: string;
@@ -84,7 +85,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => setActiveTab('home')}
           >
             <img
-              src="/logo.png"
+              src={storageService.getSiteMedia()?.logo || '/logo.png'}
               alt="Kogniti Minds Logo"
               style={{ height: '44px', width: 'auto', objectFit: 'contain' }}
             />

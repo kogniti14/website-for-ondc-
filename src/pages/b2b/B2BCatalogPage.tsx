@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Product, Category } from '../../types';
 import { CATEGORIES } from '../../data/mockProducts';
+import { CategoryComingSoon } from '../../components/common/CategoryComingSoon';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 
@@ -42,6 +43,12 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [feedback, setFeedback] = useState<string | null>(null);
+
+  const currentCategoryObj = categoryList.find((c) => c.name === selectedCategory);
+  const selectedCategoryTotalProducts =
+    selectedCategory === 'All'
+      ? products.length
+      : products.filter((p) => p.category === selectedCategory).length;
 
   const filtered = products.filter((p) => {
     if (selectedCategory !== 'All' && p.category !== selectedCategory) return false;
@@ -142,30 +149,14 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
         {/* Header Title */}
         <div className="flex items-center justify-between flex-wrap gap-4" style={{ marginBottom: '2rem' }}>
           <div>
-            <div className="flex items-center gap-2 flex-wrap" style={{ marginBottom: '0.4rem' }}>
-              <span style={{ color: '#38BDF8', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>
-                Institutional Sourcing Desk
-              </span>
-              <span
-                style={{
-                  background: 'rgba(16, 185, 129, 0.15)',
-                  color: '#34D399',
-                  border: '1px solid rgba(16, 185, 129, 0.35)',
-                  padding: '0.2rem 0.65rem',
-                  borderRadius: 'var(--radius-full)',
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  letterSpacing: '0.03em',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.3rem',
-                }}
-              >
-                <Tag size={12} /> DIRECT MANUFACTURER PRICING
+            <div className="flex items-center gap-2" style={{ marginBottom: '0.5rem' }}>
+              <span className="badge badge-amber">B2B Wholesale Catalog</span>
+              <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
+                {products.length} Products Available
               </span>
             </div>
-            <h1 style={{ fontSize: '2.2rem', fontWeight: 800, color: '#FFFFFF' }}>
-              Wholesale Sustainable Paper & Institutional Supplies Catalog
+            <h1 style={{ fontSize: '2.2rem', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
+              Institutional Bulk Procurement
             </h1>
             <p style={{ color: '#94A3B8', fontSize: '0.92rem', marginTop: '0.2rem' }}>
               Direct manufacturer procurement for schools, offices, universities, corporate enterprises, and resellers.
@@ -220,26 +211,74 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
             >
               All Items
             </button>
-            {categoryList.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setSelectedCategory(c.name)}
-                className="btn btn-sm"
-                style={{
-                  borderRadius: 'var(--radius-full)',
-                  background: selectedCategory === c.name ? 'var(--primary)' : 'rgba(255, 255, 255, 0.08)',
-                  color: '#FFFFFF',
-                }}
-              >
-                {c.name}
-              </button>
-            ))}
+            {categoryList.map((c) => {
+              const catCount = products.filter((p) => p.category === c.name).length;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedCategory(c.name)}
+                  className="btn btn-sm"
+                  style={{
+                    borderRadius: 'var(--radius-full)',
+                    background: selectedCategory === c.name ? 'var(--primary)' : 'rgba(255, 255, 255, 0.08)',
+                    color: '#FFFFFF',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                  }}
+                >
+                  {c.name}
+                  {catCount === 0 && (
+                    <span style={{ fontSize: '0.62rem', background: 'rgba(245, 158, 11, 0.25)', color: '#FCD34D', padding: '0.05rem 0.35rem', borderRadius: '4px', fontWeight: 700 }}>
+                      Soon
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Catalog Table / Grid */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {filtered.map((product) => (
+          {selectedCategory !== 'All' && selectedCategoryTotalProducts === 0 ? (
+            <CategoryComingSoon
+              categoryName={selectedCategory}
+              categoryDescription={currentCategoryObj?.description}
+              categoryIcon={currentCategoryObj?.icon}
+              isB2B={true}
+              onResetCategory={() => setSelectedCategory('All')}
+            />
+          ) : filtered.length === 0 ? (
+            <div
+              style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: 'var(--radius-xl)',
+                padding: '4rem 2rem',
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔍</div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+                No Wholesale Products Found
+              </h3>
+              <p style={{ color: '#94A3B8', fontSize: '0.9rem', maxWidth: '450px', margin: '0 auto 1.5rem' }}>
+                No institutional items match your search query. Try clearing the search keyword or selecting another category.
+              </p>
+              <button
+                onClick={() => {
+                  setSearch('');
+                  setSelectedCategory('All');
+                }}
+                className="btn btn-sm btn-amber"
+                style={{ borderRadius: 'var(--radius-full)' }}
+              >
+                Clear Filters
+              </button>
+            </div>
+          ) : (
+            filtered.map((product) => (
             <div
               key={product.id}
               style={{
@@ -399,7 +438,7 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
                 )}
               </div>
             </div>
-          ))}
+          )))}
         </div>
       </div>
     </div>

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Product, Category } from '../../types';
 import { CATEGORIES } from '../../data/mockProducts';
+import { CategoryComingSoon } from '../../components/common/CategoryComingSoon';
 import { ProductCard } from '../../components/products/ProductCard';
 
 interface ProductListingPageProps {
@@ -104,46 +105,44 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
     setSortBy('recommended');
   };
 
+  const currentCategoryObj = categoryList.find((c) => c.name === selectedCategory);
+  const selectedCategoryTotalProducts =
+    selectedCategory === 'All'
+      ? products.length
+      : products.filter((p) => p.category === selectedCategory).length;
+
   return (
     <div className="container" style={{ padding: '2.5rem 1.25rem 4rem' }}>
       {/* Header Banner */}
       <div style={{ marginBottom: '2rem' }}>
-        <div className="flex items-center gap-2" style={{ marginBottom: '0.4rem' }}>
-          <span className="badge badge-blue">
-            {isShopNowView ? 'Special Deals & Offers' : 'Product Marketplace'}
-          </span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--slate-500)' }}>
-            Showing {filteredProducts.length} Products
-          </span>
-        </div>
-        <h1 style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--slate-900)' }}>
-          {isShopNowView ? 'Shop Now — Official Store' : 'Browse Sustainable Paper & Stationery'}
+        <h1 style={{ fontSize: '2.2rem', fontWeight: 800, marginBottom: '0.5rem' }}>
+          Sustainable Paper & Eco-Stationery Catalog
         </h1>
-        <p style={{ color: 'var(--slate-600)', fontSize: '0.95rem', marginTop: '0.35rem' }}>
-          Find sustainable paper from agricultural waste, printing & copy paper, notebooks, journals, office stationery, and institutional supplies.
+        <p style={{ color: 'var(--slate-500)', fontSize: '0.95rem' }}>
+          100% Tree-Free Agro-Waste Copier Paper, Executive Notebooks, Artisan Journals & Office Supplies
         </p>
       </div>
 
-      {/* Main Search & Control Bar */}
+      {/* Top Search & Filter Bar */}
       <div
         className="card"
         style={{
-          padding: '1rem',
-          borderRadius: 'var(--radius-lg)',
+          padding: '1rem 1.25rem',
           marginBottom: '2rem',
+          borderRadius: 'var(--radius-lg)',
           background: '#ffffff',
         }}
       >
         <div className="flex items-center justify-between gap-4 flex-wrap">
-          {/* Search Input */}
-          <div style={{ position: 'relative', flex: '1 1 300px' }}>
+          {/* Search */}
+          <div style={{ position: 'relative', flex: '1 1 280px' }}>
             <Search
               size={18}
               style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--slate-400)' }}
             />
             <input
               type="text"
-              placeholder="Search sustainable paper, printing paper, notebooks, journals, stationery & more..."
+              placeholder="Search by product name, SKU, HSN, or eco specifications..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="form-input"
@@ -160,16 +159,24 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
             >
               All Items
             </button>
-            {categoryList.slice(0, 4).map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setSelectedCategory(c.name)}
-                className={`btn btn-sm ${selectedCategory === c.name ? 'btn-primary' : 'btn-outline'}`}
-                style={{ borderRadius: 'var(--radius-full)' }}
-              >
-                {c.name}
-              </button>
-            ))}
+            {categoryList.slice(0, 5).map((c) => {
+              const catCount = products.filter((p) => p.category === c.name).length;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedCategory(c.name)}
+                  className={`btn btn-sm ${selectedCategory === c.name ? 'btn-primary' : 'btn-outline'}`}
+                  style={{ borderRadius: 'var(--radius-full)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  {c.name}
+                  {catCount === 0 && (
+                    <span style={{ fontSize: '0.65rem', opacity: 0.9, background: 'rgba(245, 158, 11, 0.25)', color: '#B45309', padding: '0.05rem 0.35rem', borderRadius: '4px', fontWeight: 700 }}>
+                      Soon
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Sort Dropdown */}
@@ -230,26 +237,41 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
           <div style={{ marginBottom: '1.5rem' }}>
             <label className="form-label" style={{ marginBottom: '0.5rem' }}>Categories</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.85rem' }}>
-              <label className="flex items-center gap-2" style={{ cursor: 'pointer' }}>
-                <input
-                  type="radio"
-                  name="cat"
-                  checked={selectedCategory === 'All'}
-                  onChange={() => setSelectedCategory('All')}
-                />
-                <span>All Categories ({products.length})</span>
-              </label>
-              {categoryList.map((c) => (
-                <label key={c.id} className="flex items-center gap-2" style={{ cursor: 'pointer' }}>
+              <label className="flex items-center justify-between gap-2" style={{ cursor: 'pointer' }}>
+                <div className="flex items-center gap-2">
                   <input
                     type="radio"
                     name="cat"
-                    checked={selectedCategory === c.name}
-                    onChange={() => setSelectedCategory(c.name)}
+                    checked={selectedCategory === 'All'}
+                    onChange={() => setSelectedCategory('All')}
                   />
-                  <span>{c.name}</span>
-                </label>
-              ))}
+                  <span>All Categories</span>
+                </div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>({products.length})</span>
+              </label>
+              {categoryList.map((c) => {
+                const catCount = products.filter((p) => p.category === c.name).length;
+                return (
+                  <label key={c.id} className="flex items-center justify-between gap-2" style={{ cursor: 'pointer' }}>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="cat"
+                        checked={selectedCategory === c.name}
+                        onChange={() => setSelectedCategory(c.name)}
+                      />
+                      <span>{c.name}</span>
+                    </div>
+                    {catCount === 0 ? (
+                      <span className="badge badge-amber" style={{ fontSize: '0.62rem', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                        Soon
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>({catCount})</span>
+                    )}
+                  </label>
+                );
+              })}
             </div>
           </div>
 
@@ -319,7 +341,14 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
 
         {/* Product Grid Area */}
         <div>
-          {filteredProducts.length === 0 ? (
+          {selectedCategory !== 'All' && selectedCategoryTotalProducts === 0 ? (
+            <CategoryComingSoon
+              categoryName={selectedCategory}
+              categoryDescription={currentCategoryObj?.description}
+              categoryIcon={currentCategoryObj?.icon}
+              onResetCategory={handleResetFilters}
+            />
+          ) : filteredProducts.length === 0 ? (
             <div
               className="card"
               style={{
