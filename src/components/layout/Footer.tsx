@@ -225,6 +225,37 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal, i
                 <strong>GSTIN (Bihar):</strong> 10AALCK4750F1ZT
               </div>
             </div>
+
+            <div
+              style={{
+                marginTop: '1.25rem',
+                paddingTop: '1rem',
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  color: '#CBD5E1',
+                  marginBottom: '0.5rem',
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Available On Official Platforms
+              </div>
+              <img
+                src="/available-on-hero.png"
+                alt="Available on GeM (Government e-Marketplace) and ONDC (Open Network for Digital Commerce)"
+                style={{
+                  height: '46px',
+                  width: 'auto',
+                  display: 'block',
+                  objectFit: 'contain',
+                }}
+              />
+            </div>
           </div>
 
           {/* Quick Links B2C */}
@@ -422,6 +453,16 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal, i
         >
           <div>
             © {new Date().getFullYear()} Kogniti Minds Private Limited. All Rights Reserved. Built for Indian Individuals & Enterprises.
+          </div>
+
+          {/* Official Commerce Channels */}
+          <div className="flex items-center gap-2" style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '0.25rem 0.75rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+            <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>Available On:</span>
+            <img
+              src="/gem-ondc-logos.png"
+              alt="GeM & ONDC Network"
+              style={{ height: '28px', width: 'auto', display: 'block', objectFit: 'contain' }}
+            />
           </div>
 
           {/* Payment Methods */}

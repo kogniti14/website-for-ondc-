@@ -185,104 +185,26 @@ export const HomePage: React.FC<HomePageProps> = ({
               </div>
 
               {/* Key Trust Metrics */}
-              <div className="hero-trust-metrics">
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '1.5rem',
+                  paddingTop: '1.75rem',
+                  borderTop: '1px solid rgba(255, 255, 255, 0.12)',
+                }}
+              >
                 <div>
-                  <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.2 }}>50,000+</div>
-                  <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '0.25rem' }}>Units Delivered Pan-India</div>
+                  <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.2 }}>50,000+</div>
+                  <div style={{ fontSize: '0.78rem', color: '#94A3B8', marginTop: '0.25rem' }}>Units Delivered Pan-India</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#34D399', lineHeight: 1.2 }}>100%</div>
-                  <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '0.25rem' }}>GST Input Tax Credit</div>
+                  <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#34D399', lineHeight: 1.2 }}>100%</div>
+                  <div style={{ fontSize: '0.78rem', color: '#94A3B8', marginTop: '0.25rem' }}>GST Input Tax Credit</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#FBBF24', lineHeight: 1.2 }}>4.8 ★</div>
-                  <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '0.25rem' }}>Consumer & B2B Rating</div>
-                </div>
-                <div>
-                  <div
-                    style={{
-                      fontSize: '0.82rem',
-                      fontWeight: 800,
-                      color: '#38BDF8',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.04em',
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    Available On
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      marginTop: '0.35rem',
-                      flexWrap: 'nowrap',
-                    }}
-                  >
-                    {/* GeM — Government e-Marketplace */}
-                    <div
-                      title="GeM — Government e-Marketplace"
-                      style={{
-                        height: '32px',
-                        padding: '2px 4px',
-                        borderRadius: '6px',
-                        background: '#071625',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 2px 5px rgba(0, 0, 0, 0.35)',
-                        overflow: 'hidden',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <img
-                        src="/gem-logo.png"
-                        alt="GeM — Government e-Marketplace"
-                        style={{
-                          height: '26px',
-                          width: 'auto',
-                          maxWidth: '66px',
-                          objectFit: 'contain',
-                          display: 'block',
-                        }}
-                      />
-                    </div>
-
-                    {/* ONDC — Open Network for Digital Commerce */}
-                    <div
-                      title="ONDC — Open Network for Digital Commerce"
-                      style={{
-                        height: '32px',
-                        padding: '2px 6px',
-                        borderRadius: '6px',
-                        background: '#CFD6DE',
-                        border: '1px solid rgba(255, 255, 255, 0.3)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 2px 5px rgba(0, 0, 0, 0.35)',
-                        overflow: 'hidden',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <img
-                        src="/ondc-logo.png"
-                        alt="ONDC — Open Network for Digital Commerce"
-                        style={{
-                          height: '24px',
-                          width: 'auto',
-                          maxWidth: '66px',
-                          objectFit: 'contain',
-                          display: 'block',
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '0.35rem' }}>
-                    GeM & ONDC Network
-                  </div>
+                  <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#FBBF24', lineHeight: 1.2 }}>4.8 ★</div>
+                  <div style={{ fontSize: '0.78rem', color: '#94A3B8', marginTop: '0.25rem' }}>Consumer & B2B Rating</div>
                 </div>
               </div>
             </div>
@@ -302,7 +224,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 <img
                   src="https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1200&q=80"
                   alt="Kogniti Minds Flagship Sustainable Agro-Waste Paper"
-                  style={{ width: '100%', height: '420px', objectFit: 'cover' }}
+                  style={{ width: '100%', height: '340px', objectFit: 'cover' }}
                 />
                 <div
                   style={{
@@ -369,6 +291,26 @@ export const HomePage: React.FC<HomePageProps> = ({
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#94A3B8' }}>Automatic 18% Input Tax Benefit</div>
                 </div>
+              </div>
+
+              {/* Available On Section (Exact match from reference image) */}
+              <div
+                style={{
+                  marginTop: '1.35rem',
+                  paddingLeft: '0.25rem',
+                }}
+              >
+                <img
+                  src="/available-on-hero.png"
+                  alt="Available on GeM — Government e-Marketplace and ONDC — Open Network for Digital Commerce"
+                  style={{
+                    height: '68px',
+                    width: 'auto',
+                    maxWidth: '100%',
+                    objectFit: 'contain',
+                    display: 'block',
+                  }}
+                />
               </div>
             </div>
           </div>

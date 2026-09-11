@@ -156,6 +156,62 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
               </button>
             </div>
 
+            {/* GeM & ONDC Official Procurement Channels */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '2rem',
+              }}
+            >
+              <div
+                style={{
+                  background: 'rgba(15, 23, 42, 0.85)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: 'var(--radius-xl)',
+                  padding: '0.65rem 1.5rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '1.25rem',
+                  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.35)',
+                  backdropFilter: 'blur(12px)',
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                }}
+              >
+                <div style={{ textAlign: 'left' }}>
+                  <div
+                    style={{
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.06em',
+                      color: '#38BDF8',
+                    }}
+                  >
+                    Institutional & Government Tenders
+                  </div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#FFFFFF' }}>
+                    Procure via GeM & ONDC
+                  </div>
+                </div>
+                <div
+                  style={{
+                    height: '38px',
+                    width: '1px',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                  }}
+                  className="hide-on-mobile"
+                />
+                <img
+                  src="/available-on-hero.png"
+                  alt="Available on GeM (Government e-Marketplace) and ONDC (Open Network for Digital Commerce)"
+                  style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
+                />
+              </div>
+            </div>
+
             {/* Pillar Grid Strip */}
             <div
               className="grid"
@@ -341,6 +397,44 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
               <p style={{ color: '#94A3B8', fontSize: '0.82rem', lineHeight: '1.6' }}>
                 Tiered distribution discounts, neutral drop-shipping options, high margins, and priority inventory allocation.
               </p>
+            </div>
+          </div>
+
+          {/* Government & Public Procurement via GeM / ONDC */}
+          <div
+            style={{
+              marginTop: '2.5rem',
+              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 58, 138, 0.25) 100%)',
+              border: '1px solid rgba(56, 189, 248, 0.25)',
+              borderRadius: 'var(--radius-xl)',
+              padding: '2rem 2.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '2rem',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ maxWidth: '620px' }}>
+              <span className="badge badge-blue" style={{ marginBottom: '0.65rem', fontSize: '0.72rem' }}>
+                Government & Public Procurement
+              </span>
+              <h3 style={{ color: '#FFFFFF', fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem' }}>
+                Direct Procurement via GeM Portal & ONDC Network
+              </h3>
+              <p style={{ color: '#94A3B8', fontSize: '0.88rem', lineHeight: '1.6', margin: 0 }}>
+                Kogniti Minds is an onboarded manufacturer on <strong>Government e-Marketplace (GeM)</strong> and the <strong>Open Network for Digital Commerce (ONDC)</strong>. Government departments, PSUs, defense, and public educational institutions can order tree-free agro-paper reams directly compliant with GFR 2017 guidelines.
+              </p>
+            </div>
+            <div style={{ flexShrink: 0, textAlign: 'center' }}>
+              <div style={{ fontSize: '0.8rem', color: '#CBD5E1', fontWeight: 600, marginBottom: '0.5rem' }}>
+                Official Verified Portals
+              </div>
+              <img
+                src="/available-on-hero.png"
+                alt="Available on GeM (Government e-Marketplace) and ONDC (Open Network for Digital Commerce)"
+                style={{ height: '58px', width: 'auto', display: 'block', objectFit: 'contain' }}
+              />
             </div>
           </div>
         </div>
