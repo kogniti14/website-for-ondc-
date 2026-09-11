@@ -217,10 +217,13 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal, i
             <p style={{ fontSize: '0.85rem', lineHeight: '1.6', marginBottom: '1.2rem', color: '#94A3B8' }}>
               Kogniti Minds Private Limited is an Indian manufacturer pioneering the transformation of agricultural waste into next-generation paper products. We combine material innovation with responsible manufacturing to create quality paper solutions that give agricultural residue a new purpose serving consumers, businesses, institutions, and organizations across India.
             </p>
-            <div style={{ fontSize: '0.78rem', color: '#64748B', lineHeight: '1.5' }}>
-              <strong>CIN:</strong> U46496UP2024PTC213997<br />
-              <strong>GSTIN:</strong> 09AALCK4750F1ZC (Uttar Pradesh)<br />
-              <strong>PAN:</strong> AALCK4750F
+            <div style={{ fontSize: '0.78rem', color: '#64748B', lineHeight: '1.6' }}>
+              <div><strong>CIN:</strong> U46496UP2024PTC213997</div>
+              <div><strong>PAN:</strong> AALCK4750F</div>
+              <div style={{ marginTop: '0.25rem' }}>
+                <strong>GSTIN (Uttar Pradesh):</strong> 09AALCK4750F1ZC<br />
+                <strong>GSTIN (Bihar):</strong> 10AALCK4750F1ZT
+              </div>
             </div>
           </div>
 
@@ -333,9 +336,19 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal, i
               <div className="flex items-center gap-2">
                 <Phone size={14} className="text-emerald-400" /> <span>Enquiries / Helpline: <a href="tel:+919931648595" style={{ color: '#F1F5F9', fontWeight: 600 }}>+91 9931648595</a></span>
               </div>
-              <div className="flex items-start gap-2" style={{ marginTop: '0.15rem' }}>
-                <MapPin size={14} className="text-amber-400" style={{ flexShrink: 0, marginTop: '2px' }} />
-                <span>Panchsheel Greens-2, Sec-16 B, Gr. Noida West, Bisrakh, Gautam Buddha Nagar, Uttar Pradesh, India - 201306</span>
+              <div className="flex items-start gap-2" style={{ marginTop: '0.35rem' }}>
+                <MapPin size={14} className="text-amber-400" style={{ flexShrink: 0, marginTop: '3px' }} />
+                <div>
+                  <div style={{ fontSize: '0.74rem', color: '#CBD5E1', fontWeight: 700 }}>Registered Office (Uttar Pradesh):</div>
+                  <span>Panchsheel Greens-2, Sec-16 B, Gr. Noida West, Bisrakh, Bishrakh, Gautam Buddha Nagar, Uttar Pradesh, India - 201306</span>
+                </div>
+              </div>
+              <div className="flex items-start gap-2" style={{ marginTop: '0.35rem' }}>
+                <MapPin size={14} className="text-emerald-400" style={{ flexShrink: 0, marginTop: '3px' }} />
+                <div>
+                  <div style={{ fontSize: '0.74rem', color: '#CBD5E1', fontWeight: 700 }}>Branch / Operational Office (Bihar):</div>
+                  <span>4th Floor, VBSS New Building, Bihiya Chaurasta, Bhojpur (Bihar) - 802154</span>
+                </div>
               </div>
             </div>
           </div>
