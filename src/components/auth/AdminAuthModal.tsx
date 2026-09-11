@@ -1049,18 +1049,8 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
       {showUnregisteredModal && (
         <UnregisteredUserModal
           identifier={unregisteredIdentifier}
-          portalName="Kogniti Minds Admin Access"
+          portalType="b2b"
           onClose={() => setShowUnregisteredModal(false)}
-          onCreateAccount={() => {
-            setShowUnregisteredModal(false);
-            setMode('register');
-            if (unregisteredIdentifier.includes('@')) {
-              setRegEmail(unregisteredIdentifier);
-            } else {
-              setRegUserId(unregisteredIdentifier);
-            }
-            setErrorMsg(null);
-          }}
           onRegisterNow={() => {
             setShowUnregisteredModal(false);
             setMode('register');

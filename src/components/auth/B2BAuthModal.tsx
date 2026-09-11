@@ -961,18 +961,8 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
       {showUnregisteredModal && (
         <UnregisteredUserModal
           identifier={unregisteredIdentifier}
-          portalName="Kogniti Minds Corporate Portal"
+          portalType="b2b"
           onClose={() => setShowUnregisteredModal(false)}
-          onCreateAccount={() => {
-            setShowUnregisteredModal(false);
-            setTab('register');
-            if (unregisteredIdentifier.includes('@')) {
-              setBusinessEmail(unregisteredIdentifier);
-            } else {
-              setMobile(unregisteredIdentifier.replace(/\D/g, '').slice(-10));
-            }
-            setError(null);
-          }}
           onRegisterNow={() => {
             setShowUnregisteredModal(false);
             setTab('register');

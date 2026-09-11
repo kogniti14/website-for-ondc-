@@ -242,12 +242,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
             style={{ height: '56px', width: 'auto', margin: '0 auto 0.5rem', objectFit: 'contain' }}
           />
           <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)' }}>
-            {mode === 'login' ? 'Welcome to Kogniti Minds' : 'Create Your Account'}
+            {mode === 'login' ? 'Welcome to Kogniti Minds' : 'New Customer Registration'}
           </h3>
           <p style={{ fontSize: '0.82rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
             {mode === 'login'
               ? 'Access your orders, saved wishlist and fast checkout'
-              : 'Join thousands of individuals & offices shopping smart'}
+              : 'Register your details to enjoy instant orders, tracking & fast checkout'}
           </p>
         </div>
 
@@ -829,18 +829,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
       {showUnregisteredModal && (
         <UnregisteredUserModal
           identifier={unregisteredIdentifier}
-          portalName="Kogniti Minds"
+          portalType="b2c"
           onClose={() => setShowUnregisteredModal(false)}
-          onCreateAccount={() => {
-            setShowUnregisteredModal(false);
-            setMode('register');
-            if (unregisteredIdentifier.includes('@')) {
-              setEmail(unregisteredIdentifier);
-            } else {
-              setPhone(unregisteredIdentifier.replace(/\D/g, '').slice(-10));
-            }
-            setError(null);
-          }}
           onRegisterNow={() => {
             setShowUnregisteredModal(false);
             setMode('register');
