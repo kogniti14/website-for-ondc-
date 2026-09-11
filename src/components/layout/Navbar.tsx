@@ -300,22 +300,35 @@ export const Navbar: React.FC<NavbarProps> = ({
                       gap: '0.4rem',
                     }}
                   >
-                    <div
-                      style={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        background: 'var(--primary)',
-                        color: '#fff',
-                        fontSize: '0.75rem',
-                        fontWeight: 700,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      {b2cUser.name.charAt(0).toUpperCase()}
-                    </div>
+                    {b2cUser.avatarUrl ? (
+                      <img
+                        src={b2cUser.avatarUrl}
+                        alt={b2cUser.name}
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          background: 'var(--primary)',
+                          color: '#fff',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {b2cUser.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     <span
                       className="hide-on-mobile"
                       style={{ fontSize: '0.82rem', fontWeight: 600, maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
@@ -342,8 +355,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                       }}
                     >
                       <div style={{ padding: '0.5rem 1rem', borderBottom: '1px solid var(--border-color)' }}>
-                        <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--slate-900)' }}>
-                          {b2cUser.name}
+                        <div className="flex items-center justify-between">
+                          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--slate-900)' }}>
+                            {b2cUser.name}
+                          </div>
+                          {b2cUser.authProvider === 'firebase_google' && (
+                            <span className="badge badge-blue" style={{ fontSize: '0.62rem' }}>Google</span>
+                          )}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
                           {b2cUser.email}

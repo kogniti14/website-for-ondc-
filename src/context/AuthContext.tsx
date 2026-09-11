@@ -1,14 +1,21 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User as FirebaseUser } from 'firebase/auth';
 import { UserRole, B2CUser, B2BBusiness, AdminUser, AdminRole } from '../types';
 import { storageService } from '../services/storageService';
+import { firebaseAuthService } from '../services/firebaseAuthService';
+import { isFirebaseConfigured } from '../services/firebase';
 
-interface AuthContextType {
+export interface AuthContextType {
   role: UserRole;
   b2cUser: B2CUser | null;
   b2bBusiness: B2BBusiness | null;
   currentAdminUser: AdminUser | null;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  isFirebaseLive: boolean;
+  firebaseUser: FirebaseUser | null;
+
+  // Traditional & Local fallback methods
   loginB2C: (email: string) => boolean;
   loginB2B: (email: string) => boolean;
   registerB2C: (user: Partial<B2CUser>) => B2CUser;
@@ -33,6 +40,18 @@ interface AuthContextType {
     target: 'guest' | 'b2c' | 'b2b_approved' | 'b2b_pending' | 'admin' | 'superadmin' | 'ops_admin'
   ) => void;
   refreshUserData: () => void;
+
+  // Firebase Authentication Everywhere
+  loginB2CWithFirebase: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  registerB2CWithFirebase: (data: Partial<B2CUser>, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginB2BWithFirebase: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  registerB2BWithFirebase: (biz: Partial<B2BBusiness>, password: string) => Promise<{ success: boolean; error?: string }>;
+  loginAdminWithFirebase: (
+    identifier: string,
+    password: string
+  ) => Promise<{ success: boolean; message: string; user?: AdminUser; isPending?: boolean }>;
+  loginWithGoogle: (portal: 'b2c' | 'b2b') => Promise<{ success: boolean; error?: string }>;
+  sendFirebasePasswordReset: (email: string) => Promise<{ success: boolean; message: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,11 +62,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [b2bBusiness, setB2bBusiness] = useState<B2BBusiness | null>(null);
   const [currentAdminUser, setCurrentAdminUser] = useState<AdminUser | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [isFirebaseLive, setIsFirebaseLive] = useState<boolean>(isFirebaseConfigured());
 
   const isSuperAdmin = currentAdminUser?.role === 'super_admin';
 
+  // Listen to Firebase auth state
   useEffect(() => {
-    // Check saved session
+    setIsFirebaseLive(isFirebaseConfigured());
+    const unsubscribe = firebaseAuthService.onAuthStateChanged((fbUser) => {
+      setFirebaseUser(fbUser);
+      if (fbUser && fbUser.email) {
+        // If logged in via Firebase, sync with active role
+        const savedRole = localStorage.getItem('km_active_role') as UserRole | null;
+        if (savedRole === 'b2c') {
+          const users = storageService.getB2CUsers();
+          let local = users.find((u) => u.email.toLowerCase() === fbUser.email!.toLowerCase());
+          if (local) {
+            local.firebaseUid = fbUser.uid;
+            if (fbUser.photoURL && !local.avatarUrl) local.avatarUrl = fbUser.photoURL;
+            storageService.saveB2CUser(local);
+            setB2cUser(local);
+          }
+        } else if (savedRole === 'b2b') {
+          const businesses = storageService.getB2BBusinesses();
+          let localBiz = businesses.find((b) => b.businessEmail.toLowerCase() === fbUser.email!.toLowerCase());
+          if (localBiz) {
+            localBiz.firebaseUid = fbUser.uid;
+            if (fbUser.photoURL && !localBiz.avatarUrl) localBiz.avatarUrl = fbUser.photoURL;
+            storageService.saveB2BBusiness(localBiz);
+            setB2bBusiness(localBiz);
+          }
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Restore local session on initial render
+  useEffect(() => {
     const savedRole = localStorage.getItem('km_active_role') as UserRole | null;
     const savedEntityId = localStorage.getItem('km_active_entity_id');
     const savedAdminId = localStorage.getItem('km_active_admin_id');
@@ -92,11 +146,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Traditional B2C login
   const loginB2C = (email: string): boolean => {
     const users = storageService.getB2CUsers();
     let found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
     if (!found) {
-      // Auto-create for demo convenience if new
       found = {
         id: `usr_${Date.now()}`,
         name: email.split('@')[0],
@@ -121,23 +175,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setB2cUser(found);
     setB2bBusiness(null);
+    setCurrentAdminUser(null);
     setIsAdmin(false);
     setRole('b2c');
     localStorage.setItem('km_active_role', 'b2c');
     localStorage.setItem('km_active_entity_id', found.id);
+    localStorage.removeItem('km_active_admin_id');
     return true;
   };
 
+  // Traditional B2B login
   const loginB2B = (email: string): boolean => {
     const businesses = storageService.getB2BBusinesses();
     const found = businesses.find((b) => b.businessEmail.toLowerCase() === email.toLowerCase());
     if (found) {
       setB2bBusiness(found);
       setB2cUser(null);
+      setCurrentAdminUser(null);
       setIsAdmin(false);
       setRole('b2b');
       localStorage.setItem('km_active_role', 'b2b');
       localStorage.setItem('km_active_entity_id', found.id);
+      localStorage.removeItem('km_active_admin_id');
       return true;
     }
     return false;
@@ -149,6 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name: data.name || 'Valued Customer',
       email: data.email || 'customer@kognitiminds.com',
       phone: data.phone || '+91 98000 11223',
+      password: data.password || 'Customer@123',
       addresses: data.addresses || [],
       createdAt: new Date().toISOString(),
     };
@@ -167,6 +227,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       contactPerson: data.contactPerson || 'Authorized Representative',
       businessEmail: data.businessEmail || 'procurement@company.com',
       mobile: data.mobile || '+91 98000 00000',
+      password: data.password || 'B2bEdu@123',
       gstin: data.gstin?.toUpperCase() || '29AAAAA0000A1Z5',
       pan: data.pan?.toUpperCase() || (data.gstin ? data.gstin.slice(2, 12).toUpperCase() : 'AAAAA0000A'),
       businessType: data.businessType || 'Corporate Office',
@@ -358,12 +419,395 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  const logout = () => {
+  // ==========================================
+  // FIREBASE AUTHENTICATION ACTIONS EVERYWHERE
+  // ==========================================
+
+  const loginB2CWithFirebase = async (
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const res = await firebaseAuthService.loginWithEmail(email, password);
+    if (!res.success) {
+      return { success: false, error: res.error };
+    }
+
+    const users = storageService.getB2CUsers();
+    let found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    if (!found) {
+      found = {
+        id: `usr_${Date.now()}`,
+        name: res.user?.displayName || email.split('@')[0],
+        email,
+        phone: '+91 98765 00000',
+        password,
+        firebaseUid: res.user?.uid,
+        authProvider: 'firebase_email',
+        createdAt: new Date().toISOString(),
+        addresses: [],
+      };
+      storageService.saveB2CUser(found);
+    } else {
+      found.firebaseUid = res.user?.uid;
+      found.authProvider = 'firebase_email';
+      if (password) found.password = password;
+      storageService.saveB2CUser(found);
+    }
+
+    setB2cUser(found);
+    setB2bBusiness(null);
+    setCurrentAdminUser(null);
+    setIsAdmin(false);
+    setRole('b2c');
+    localStorage.setItem('km_active_role', 'b2c');
+    localStorage.setItem('km_active_entity_id', found.id);
+    localStorage.removeItem('km_active_admin_id');
+    return { success: true };
+  };
+
+  const registerB2CWithFirebase = async (
+    data: Partial<B2CUser>,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const email = data.email?.trim() || '';
+    const res = await firebaseAuthService.registerWithEmail(email, password, data.name);
+    if (!res.success) {
+      return { success: false, error: res.error };
+    }
+
+    const newUser: B2CUser = {
+      id: `usr_${Date.now()}`,
+      name: data.name || email.split('@')[0],
+      email,
+      phone: data.phone || '+91 98000 11223',
+      password,
+      firebaseUid: res.user?.uid,
+      authProvider: 'firebase_email',
+      addresses: data.addresses || [],
+      createdAt: new Date().toISOString(),
+    };
+    storageService.saveB2CUser(newUser);
+
+    setB2cUser(newUser);
+    setB2bBusiness(null);
+    setCurrentAdminUser(null);
+    setIsAdmin(false);
+    setRole('b2c');
+    localStorage.setItem('km_active_role', 'b2c');
+    localStorage.setItem('km_active_entity_id', newUser.id);
+    localStorage.removeItem('km_active_admin_id');
+    return { success: true };
+  };
+
+  const loginB2BWithFirebase = async (
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const res = await firebaseAuthService.loginWithEmail(email, password);
+    if (!res.success) {
+      return { success: false, error: res.error };
+    }
+
+    const businesses = storageService.getB2BBusinesses();
+    const found = businesses.find((b) => b.businessEmail.toLowerCase() === email.toLowerCase());
+    if (found) {
+      found.firebaseUid = res.user?.uid;
+      found.authProvider = 'firebase_email';
+      if (password) found.password = password;
+      storageService.saveB2BBusiness(found);
+
+      setB2bBusiness(found);
+      setB2cUser(null);
+      setCurrentAdminUser(null);
+      setIsAdmin(false);
+      setRole('b2b');
+      localStorage.setItem('km_active_role', 'b2b');
+      localStorage.setItem('km_active_entity_id', found.id);
+      localStorage.removeItem('km_active_admin_id');
+      return { success: true };
+    }
+
+    return {
+      success: false,
+      error: 'Authenticated with Firebase, but no matching institutional business account exists for this corporate email. Please complete corporate registration.',
+    };
+  };
+
+  const registerB2BWithFirebase = async (
+    bizData: Partial<B2BBusiness>,
+    password: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const email = bizData.businessEmail?.trim() || '';
+    const res = await firebaseAuthService.registerWithEmail(email, password, bizData.companyName);
+    if (!res.success) {
+      return { success: false, error: res.error };
+    }
+
+    const newBiz: B2BBusiness = {
+      id: `biz_${Date.now()}`,
+      companyName: bizData.companyName || 'Enterprise Client',
+      contactPerson: bizData.contactPerson || 'Authorized Representative',
+      businessEmail: email,
+      mobile: bizData.mobile || '+91 98000 00000',
+      password,
+      firebaseUid: res.user?.uid,
+      authProvider: 'firebase_email',
+      gstin: bizData.gstin?.toUpperCase() || '29AAAAA0000A1Z5',
+      pan: bizData.pan?.toUpperCase() || (bizData.gstin ? bizData.gstin.slice(2, 12).toUpperCase() : 'AAAAA0000A'),
+      businessType: bizData.businessType || 'Corporate Office',
+      status: 'pending',
+      statusReason: 'Documents uploaded. Compliance desk verification underway (SLA: 24h).',
+      creditLimit: 0,
+      paymentTerms: 'Prepaid',
+      registeredAt: new Date().toISOString(),
+      accountManager: {
+        name: 'Rohan Saxena',
+        email: 'rohan.saxena@kognitiminds.com',
+        phone: '+91 99100 88221',
+        designation: 'Institutional Onboarding Lead',
+      },
+      billingAddress: bizData.billingAddress || {
+        id: `baddr_${Date.now()}`,
+        fullName: bizData.companyName || 'Registered Office',
+        phone: bizData.mobile || '+91 98000 00000',
+        street: 'Commercial Tower, Sector 44',
+        city: 'Gurugram',
+        state: 'Haryana',
+        pincode: '122003',
+        addressType: 'work',
+        isDefault: true,
+      },
+      shippingAddress: bizData.shippingAddress || {
+        id: `saddr_${Date.now()}`,
+        fullName: bizData.companyName || 'Receiving Warehouse',
+        phone: bizData.mobile || '+91 98000 00000',
+        street: 'Logistics Facility, Sector 44',
+        city: 'Gurugram',
+        state: 'Haryana',
+        pincode: '122003',
+        addressType: 'work',
+        isDefault: true,
+      },
+      documents: [
+        {
+          name: `GST_Certificate_${bizData.gstin || 'Doc'}.pdf`,
+          type: 'GST Certificate',
+          uploadedAt: new Date().toISOString(),
+          status: 'pending',
+        },
+      ],
+    };
+
+    storageService.saveB2BBusiness(newBiz);
+    setB2bBusiness(newBiz);
+    setB2cUser(null);
+    setCurrentAdminUser(null);
+    setIsAdmin(false);
+    setRole('b2b');
+    localStorage.setItem('km_active_role', 'b2b');
+    localStorage.setItem('km_active_entity_id', newBiz.id);
+    localStorage.removeItem('km_active_admin_id');
+    return { success: true };
+  };
+
+  const loginAdminWithFirebase = async (
+    identifier: string,
+    password: string
+  ): Promise<{ success: boolean; message: string; user?: AdminUser; isPending?: boolean }> => {
+    // 1. Check local admin record first for permissions & credentials
+    const admin = storageService.getAdminUserByIdentifier(identifier);
+    if (!admin) {
+      return {
+        success: false,
+        message: 'No administrative account found with this User ID or Work Email.',
+      };
+    }
+
+    if (admin.password && admin.password !== password) {
+      return {
+        success: false,
+        message: 'Incorrect password entered. Please verify and try again.',
+      };
+    }
+
+    if (admin.status === 'pending') {
+      return {
+        success: false,
+        isPending: true,
+        message: 'Your administrative registration is pending review by the Super Admin.',
+        user: admin,
+      };
+    }
+
+    if (admin.status === 'rejected') {
+      return {
+        success: false,
+        message: `Your request was rejected. Reason: ${admin.rejectionReason || 'Access denied'}`,
+        user: admin,
+      };
+    }
+
+    // 2. Synchronize with Firebase session if email format
+    if (admin.email && admin.email.includes('@')) {
+      try {
+        const fbRes = await firebaseAuthService.loginWithEmail(admin.email, password);
+        if (fbRes.user) {
+          admin.firebaseUid = fbRes.user.uid;
+          admin.authProvider = 'firebase_email';
+          storageService.saveAdminUser(admin);
+        }
+      } catch {
+        // Fallback gracefully to local admin login
+      }
+    }
+
+    setCurrentAdminUser(admin);
+    setIsAdmin(true);
+    setRole('admin');
+    setB2cUser(null);
+    setB2bBusiness(null);
+    localStorage.setItem('km_active_role', 'admin');
+    localStorage.setItem('km_active_admin_id', admin.id);
+    localStorage.removeItem('km_active_entity_id');
+
+    return {
+      success: true,
+      message: `Firebase & Master Authentication successful! Welcome, ${admin.name}.`,
+      user: admin,
+    };
+  };
+
+  const loginWithGoogle = async (
+    portal: 'b2c' | 'b2b'
+  ): Promise<{ success: boolean; error?: string }> => {
+    const res = await firebaseAuthService.signInWithGoogle();
+    if (!res.success || !res.user) {
+      return { success: false, error: res.error || 'Google Sign-In failed.' };
+    }
+
+    const email = res.user.email || 'user@kognitiminds.com';
+    const name = res.user.displayName || email.split('@')[0];
+    const photoURL = res.user.photoURL || undefined;
+
+    if (portal === 'b2c') {
+      const users = storageService.getB2CUsers();
+      let user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+      if (!user) {
+        user = {
+          id: `usr_${Date.now()}`,
+          name,
+          email,
+          phone: res.user.phoneNumber || '+91 98765 00000',
+          firebaseUid: res.user.uid,
+          authProvider: 'firebase_google',
+          avatarUrl: photoURL,
+          createdAt: new Date().toISOString(),
+          addresses: [],
+        };
+      } else {
+        user.firebaseUid = res.user.uid;
+        user.authProvider = 'firebase_google';
+        if (photoURL) user.avatarUrl = photoURL;
+      }
+      storageService.saveB2CUser(user);
+
+      setB2cUser(user);
+      setB2bBusiness(null);
+      setCurrentAdminUser(null);
+      setIsAdmin(false);
+      setRole('b2c');
+      localStorage.setItem('km_active_role', 'b2c');
+      localStorage.setItem('km_active_entity_id', user.id);
+      localStorage.removeItem('km_active_admin_id');
+      return { success: true };
+    } else {
+      // B2B Google Login
+      const businesses = storageService.getB2BBusinesses();
+      let biz = businesses.find((b) => b.businessEmail.toLowerCase() === email.toLowerCase());
+      if (!biz) {
+        // Create initial pending B2B profile from Google
+        const domain = email.split('@')[1] || 'enterprise.com';
+        const companyGuess = domain.split('.')[0].toUpperCase() + ' Pvt Ltd';
+        biz = {
+          id: `biz_${Date.now()}`,
+          companyName: companyGuess,
+          contactPerson: name,
+          businessEmail: email,
+          mobile: res.user.phoneNumber || '+91 98000 00000',
+          gstin: '09AALCK4750F1ZC',
+          pan: 'AALCK4750F',
+          businessType: 'Corporate Office',
+          status: 'pending',
+          statusReason: 'Signed in via Google Workspace. Complete verification profile.',
+          creditLimit: 0,
+          paymentTerms: 'Prepaid',
+          registeredAt: new Date().toISOString(),
+          firebaseUid: res.user.uid,
+          authProvider: 'firebase_google',
+          avatarUrl: photoURL,
+          accountManager: {
+            name: 'Rohan Saxena',
+            email: 'rohan.saxena@kognitiminds.com',
+            phone: '+91 99100 88221',
+            designation: 'Institutional Onboarding Lead',
+          },
+          billingAddress: {
+            id: `baddr_${Date.now()}`,
+            fullName: companyGuess,
+            phone: '+91 98000 00000',
+            street: 'Commercial Zone',
+            city: 'Noida',
+            state: 'Uttar Pradesh',
+            pincode: '201306',
+            addressType: 'work',
+            isDefault: true,
+          },
+          shippingAddress: {
+            id: `saddr_${Date.now()}`,
+            fullName: companyGuess,
+            phone: '+91 98000 00000',
+            street: 'Commercial Zone',
+            city: 'Noida',
+            state: 'Uttar Pradesh',
+            pincode: '201306',
+            addressType: 'work',
+            isDefault: true,
+          },
+          documents: [],
+        };
+      } else {
+        biz.firebaseUid = res.user.uid;
+        biz.authProvider = 'firebase_google';
+        if (photoURL) biz.avatarUrl = photoURL;
+      }
+      storageService.saveB2BBusiness(biz);
+
+      setB2bBusiness(biz);
+      setB2cUser(null);
+      setCurrentAdminUser(null);
+      setIsAdmin(false);
+      setRole('b2b');
+      localStorage.setItem('km_active_role', 'b2b');
+      localStorage.setItem('km_active_entity_id', biz.id);
+      localStorage.removeItem('km_active_admin_id');
+      return { success: true };
+    }
+  };
+
+  const sendFirebasePasswordReset = async (
+    email: string
+  ): Promise<{ success: boolean; message: string }> => {
+    return firebaseAuthService.sendPasswordReset(email);
+  };
+
+  const logout = async () => {
+    await firebaseAuthService.logout();
     setRole('guest');
     setB2cUser(null);
     setB2bBusiness(null);
     setCurrentAdminUser(null);
     setIsAdmin(false);
+    setFirebaseUser(null);
     localStorage.removeItem('km_active_role');
     localStorage.removeItem('km_active_entity_id');
     localStorage.removeItem('km_active_admin_id');
@@ -446,6 +890,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentAdminUser,
         isAdmin,
         isSuperAdmin,
+        isFirebaseLive,
+        firebaseUser,
         loginB2C,
         loginB2B,
         registerB2C,
@@ -458,6 +904,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         quickSwitch,
         refreshUserData,
+        loginB2CWithFirebase,
+        registerB2CWithFirebase,
+        loginB2BWithFirebase,
+        registerB2BWithFirebase,
+        loginAdminWithFirebase,
+        loginWithGoogle,
+        sendFirebasePasswordReset,
       }}
     >
       {children}

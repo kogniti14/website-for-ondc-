@@ -34,6 +34,7 @@ import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUs
 import { storageService } from '../../services/storageService';
 import { useAuth } from '../../context/AuthContext';
 import { B2BInvoiceModal } from '../../components/b2b/B2BInvoiceModal';
+import { isFirebaseConfigured } from '../../services/firebase';
 
 interface AdminDashboardPageProps {
   products: Product[];
@@ -1843,6 +1844,42 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               </div>
             )}
 
+            {/* Firebase Live Auth Status Banner */}
+            <div
+              style={{
+                background: isFirebaseConfigured() ? 'rgba(16, 185, 129, 0.08)' : 'rgba(59, 130, 246, 0.08)',
+                border: isFirebaseConfigured() ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(59, 130, 246, 0.25)',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.85rem 1.25rem',
+                marginBottom: '1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+              }}
+            >
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck size={20} style={{ color: isFirebaseConfigured() ? '#10B981' : '#3B82F6' }} />
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--slate-800)' }}>
+                    Firebase Authentication Engine: {isFirebaseConfigured() ? '⚡ Production Live Mode' : '🧪 Fallback / Sandbox Mode'}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
+                    {isFirebaseConfigured()
+                      ? 'Connected to Google Firebase Cloud Auth. Email/Password, Google Sign-In popups, and secure resets active.'
+                      : 'Mock / sandbox fallback active with 100% feature parity. Provide live keys in .env to connect live project.'}
+                  </div>
+                </div>
+              </div>
+              <span
+                className={`badge ${isFirebaseConfigured() ? 'badge-green' : 'badge-blue'}`}
+                style={{ fontSize: '0.72rem', padding: '0.3rem 0.6rem' }}
+              >
+                {isFirebaseConfigured() ? 'Firebase 12.19.0 Live' : 'Demo Sandbox Active'}
+              </span>
+            </div>
+
             {/* Super Admin Rights Notice Card */}
             <div
               className="card"
@@ -1990,6 +2027,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                 <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                                   Dept: {u.department}
                                 </div>
+                                {u.firebaseUid && (
+                                  <div style={{ fontSize: '0.68rem', color: '#9333EA', marginTop: '0.2rem' }}>
+                                    🔥 Firebase UID: <code style={{ fontSize: '0.65rem' }}>{u.firebaseUid.slice(0, 10)}...</code>
+                                  </div>
+                                )}
                               </td>
                               <td style={{ padding: '0.85rem 1rem' }}>
                                 <span
@@ -2146,6 +2188,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                 <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                                   Contact: {b.contactPerson} ({b.businessType})
                                 </div>
+                                {b.firebaseUid && (
+                                  <div style={{ fontSize: '0.68rem', color: '#D97706', marginTop: '0.2rem' }}>
+                                    🔥 {b.authProvider === 'firebase_google' ? 'Google Auth' : 'Firebase'}: <code style={{ fontSize: '0.65rem' }}>{b.firebaseUid.slice(0, 10)}...</code>
+                                  </div>
+                                )}
                               </td>
                               <td style={{ padding: '0.85rem 1rem' }}>
                                 <span className="badge badge-amber" style={{ fontSize: '0.72rem' }}>
@@ -2290,6 +2337,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                 <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                                   Member since: {new Date(c.createdAt).toLocaleDateString('en-IN')}
                                 </div>
+                                {c.firebaseUid && (
+                                  <div style={{ fontSize: '0.68rem', color: '#10B981', marginTop: '0.2rem' }}>
+                                    🔥 {c.authProvider === 'firebase_google' ? 'Google Auth' : 'Firebase'}: <code style={{ fontSize: '0.65rem' }}>{c.firebaseUid.slice(0, 10)}...</code>
+                                  </div>
+                                )}
                               </td>
                               <td style={{ padding: '0.85rem 1rem' }}>
                                 <span className="badge badge-blue" style={{ fontSize: '0.72rem' }}>

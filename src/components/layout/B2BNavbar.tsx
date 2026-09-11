@@ -251,6 +251,13 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
                     gap: '0.5rem',
                   }}
                 >
+                  {b2bBusiness.avatarUrl && (
+                    <img
+                      src={b2bBusiness.avatarUrl}
+                      alt={b2bBusiness.companyName}
+                      style={{ width: '22px', height: '22px', borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                  )}
                   {b2bBusiness.status === 'approved' ? (
                     <span className="badge badge-green" style={{ fontSize: '0.65rem', padding: '0.15rem 0.45rem' }}>
                       <CheckCircle2 size={11} /> Verified Partner

@@ -30,7 +30,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   onSuccess,
   initialMode = 'login',
 }) => {
-  const { loginAdminWithCredentials, registerAdminUser } = useAuth();
+  const { loginAdminWithCredentials, registerAdminUser, loginAdminWithFirebase, sendFirebasePasswordReset } = useAuth();
 
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
   const [showPassword, setShowPassword] = useState(false);
@@ -38,6 +38,8 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   const [isPendingNotice, setIsPendingNotice] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredUserId, setRegisteredUserId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [firebaseResetSuccess, setFirebaseResetSuccess] = useState<string | null>(null);
 
   // Forgot Password via OTP State
   const [forgotIdentifier, setForgotIdentifier] = useState('');
@@ -65,6 +67,22 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
     setLoginPassword(pass);
     setErrorMsg(null);
     setIsPendingNotice(false);
+  };
+
+  const handleSendAdminFirebaseReset = async () => {
+    if (!forgotIdentifier || !forgotIdentifier.includes('@')) {
+      setErrorMsg('Please enter a valid corporate work email to receive the Firebase reset link.');
+      return;
+    }
+    setErrorMsg(null);
+    setLoading(true);
+    const res = await sendFirebasePasswordReset(forgotIdentifier.trim());
+    setLoading(false);
+    if (res.success) {
+      setFirebaseResetSuccess(res.message);
+    } else {
+      setErrorMsg(res.message);
+    }
   };
 
   const handleSendAdminForgotOtp = (e: React.FormEvent) => {
@@ -109,7 +127,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
     }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setIsPendingNotice(false);
@@ -119,7 +137,10 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
       return;
     }
 
-    const res = loginAdminWithCredentials(loginIdentifier.trim(), loginPassword);
+    setLoading(true);
+    const res = await loginAdminWithFirebase(loginIdentifier.trim(), loginPassword);
+    setLoading(false);
+
     if (res.success) {
       if (onSuccess) onSuccess();
       onClose();
@@ -532,17 +553,85 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
 
                 <button
                   type="submit"
+                  disabled={loading}
                   className="btn btn-purple"
                   style={{
                     padding: '0.75rem',
                     fontWeight: 700,
                     justifyContent: 'center',
                     marginTop: '0.5rem',
+                    opacity: loading ? 0.7 : 1,
                   }}
                 >
-                  Authenticate & Enter Admin Portal <ArrowRight size={16} />
+                  {loading ? 'Authenticating...' : 'Authenticate & Enter Admin Portal'} <ArrowRight size={16} />
                 </button>
               </form>
+
+              {/* Quick Staff Credentials Pre-fill Links */}
+              <div
+                style={{
+                  marginTop: '1.25rem',
+                  padding: '0.85rem',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px dashed rgba(255, 255, 255, 0.15)',
+                }}
+              >
+                <div style={{ fontSize: '0.72rem', color: '#94A3B8', textTransform: 'uppercase', marginBottom: '0.45rem', fontWeight: 700 }}>
+                  Authorized Administrative Credentials
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => fillDemoCredentials('kogniti14', 'kogniti14')}
+                    className="flex items-center justify-between"
+                    style={{
+                      padding: '0.45rem 0.7rem',
+                      borderRadius: '6px',
+                      background: 'rgba(147, 51, 234, 0.12)',
+                      color: '#C084FC',
+                      fontSize: '0.76rem',
+                      textAlign: 'left',
+                      border: '1px solid rgba(147, 51, 234, 0.25)',
+                    }}
+                  >
+                    <span>1. Super Admin: <strong>kogniti14</strong> (Pass: kogniti14)</span>
+                    <span className="badge badge-purple" style={{ fontSize: '0.62rem' }}>Master Root</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fillDemoCredentials('admin_ops', 'OpsAdmin@2026#')}
+                    className="flex items-center justify-between"
+                    style={{
+                      padding: '0.45rem 0.7rem',
+                      borderRadius: '6px',
+                      background: 'rgba(59, 130, 246, 0.12)',
+                      color: '#93C5FD',
+                      fontSize: '0.76rem',
+                      textAlign: 'left',
+                      border: '1px solid rgba(59, 130, 246, 0.25)',
+                    }}
+                  >
+                    <span>2. Operations Admin: <strong>admin_ops</strong></span>
+                    <span className="badge badge-blue" style={{ fontSize: '0.62rem' }}>Approved</span>
+                  </button>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.4rem',
+                  fontSize: '0.72rem',
+                  color: '#94A3B8',
+                  marginTop: '0.9rem',
+                }}
+              >
+                <ShieldCheck size={14} style={{ color: '#C084FC' }} />
+                <span>Protected by <strong>Firebase Auth 12</strong> & Kogniti Governance Protocol</span>
+              </div>
             </div>
           ) : mode === 'forgot' ? (
             /* --- FORGOT PASSWORD VIA OTP TAB --- */
@@ -619,6 +708,23 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                     </span>
                   </div>
 
+                  {firebaseResetSuccess && (
+                    <div
+                      style={{
+                        background: 'rgba(16, 185, 129, 0.15)',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        color: '#34D399',
+                        padding: '0.75rem',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '0.82rem',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <CheckCircle2 size={18} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
+                      {firebaseResetSuccess}
+                    </div>
+                  )}
+
                   <button
                     type="submit"
                     className="btn btn-purple"
@@ -626,6 +732,25 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                   >
                     Generate & Send Verification OTP
                   </button>
+
+                  {forgotIdentifier && forgotIdentifier.includes('@') && (
+                    <button
+                      type="button"
+                      onClick={handleSendAdminFirebaseReset}
+                      className="btn btn-sm btn-outline-b2b"
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.4rem',
+                        color: '#FFFFFF',
+                        borderColor: 'rgba(255, 255, 255, 0.25)',
+                      }}
+                    >
+                      <KeyRound size={14} /> Send Official Firebase Reset Link
+                    </button>
+                  )}
                 </form>
               ) : (
                 <form onSubmit={handleVerifyAdminForgotOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

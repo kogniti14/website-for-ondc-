@@ -52,6 +52,9 @@ export interface B2CUser {
   email: string;
   phone: string;
   password?: string;
+  firebaseUid?: string;
+  authProvider?: 'firebase_email' | 'firebase_google' | 'local';
+  avatarUrl?: string;
   addresses: B2CAddress[];
   createdAt: string;
 }
@@ -63,6 +66,9 @@ export interface B2BBusiness {
   businessEmail: string;
   mobile: string;
   password?: string;
+  firebaseUid?: string;
+  authProvider?: 'firebase_email' | 'firebase_google' | 'local';
+  avatarUrl?: string;
   gstin: string;
   pan: string;
   businessType:
@@ -272,6 +278,9 @@ export interface AdminUser {
   name: string;
   email: string;
   password?: string;
+  firebaseUid?: string;
+  authProvider?: 'firebase_email' | 'firebase_google' | 'local';
+  avatarUrl?: string;
   role: AdminRole;
   department: string;
   status: 'pending' | 'approved' | 'rejected';
