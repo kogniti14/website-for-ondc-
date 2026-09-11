@@ -36,6 +36,9 @@ import {
   Calendar,
   Filter,
   X,
+  Phone,
+  MessageSquare,
+  Mail,
 } from 'lucide-react';
 import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, Category, B2CUser, SiteMedia, B2BOrderItemSummary, OrderItemSummary, B2BQuotationItem, B2BPaymentRecord, B2CAddress } from '../../types';
 import { storageService } from '../../services/storageService';
@@ -74,7 +77,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const { currentAdminUser, isSuperAdmin, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'categories' | 'orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay'
+    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay'
   >('overview');
 
   // Razorpay Gateway State
@@ -547,6 +550,357 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     }
   };
 
+  // Manual B2B Order Management State (Phone, WhatsApp, Email, Sales Rep, Direct/Offline)
+  const [showManualOrderModal, setShowManualOrderModal] = useState(false);
+  const [manualOrderSource, setManualOrderSource] = useState<'phone' | 'whatsapp' | 'email' | 'sales_rep' | 'direct_offline' | 'other'>('phone');
+  const [manualOrderExistingBizId, setManualOrderExistingBizId] = useState<string>('new');
+  const [manualOrderBizName, setManualOrderBizName] = useState('');
+  const [manualOrderContactPerson, setManualOrderContactPerson] = useState('');
+  const [manualOrderMobile, setManualOrderMobile] = useState('');
+  const [manualOrderEmail, setManualOrderEmail] = useState('');
+  const [manualOrderGstin, setManualOrderGstin] = useState('');
+  const [manualOrderBillingStreet, setManualOrderBillingStreet] = useState('');
+  const [manualOrderBillingCity, setManualOrderBillingCity] = useState('Noida');
+  const [manualOrderBillingState, setManualOrderBillingState] = useState('Uttar Pradesh');
+  const [manualOrderBillingPincode, setManualOrderBillingPincode] = useState('201301');
+  const [manualOrderShippingSame, setManualOrderShippingSame] = useState(true);
+  const [manualOrderShippingStreet, setManualOrderShippingStreet] = useState('');
+  const [manualOrderShippingCity, setManualOrderShippingCity] = useState('Noida');
+  const [manualOrderShippingState, setManualOrderShippingState] = useState('Uttar Pradesh');
+  const [manualOrderShippingPincode, setManualOrderShippingPincode] = useState('201301');
+  
+  interface ManualOrderLineItem {
+    productId?: string;
+    productName: string;
+    sku: string;
+    hsn: string;
+    quantity: number;
+    unitPrice: number;
+    discountPercent: number;
+  }
+  const [manualOrderLineItems, setManualOrderLineItems] = useState<ManualOrderLineItem[]>([
+    {
+      productId: products[0]?.id || '',
+      productName: products[0]?.name || 'Interactive Flat Panel 75 Inch 4K',
+      sku: products[0]?.sku || 'KM-IFP-75-PRO',
+      hsn: products[0]?.hsn || '8471',
+      quantity: 2,
+      unitPrice: products[0]?.b2bWholesalePrice || 85000,
+      discountPercent: 0,
+    },
+  ]);
+  const [manualOrderShippingFee, setManualOrderShippingFee] = useState<number>(0);
+  const [manualOrderPaymentTerms, setManualOrderPaymentTerms] = useState<string>('Net 30');
+  const [manualOrderPaymentMode, setManualOrderPaymentMode] = useState<string>('bank_transfer');
+  const [manualOrderPaymentStatus, setManualOrderPaymentStatus] = useState<'paid' | 'partially_paid' | 'payment_due'>('payment_due');
+  const [manualOrderUpfrontPaid, setManualOrderUpfrontPaid] = useState<number>(0);
+  const [manualOrderTxnRef, setManualOrderTxnRef] = useState<string>('');
+  const [manualOrderBankName, setManualOrderBankName] = useState<string>('');
+  const [manualOrderRemarks, setManualOrderRemarks] = useState<string>('');
+
+  const handleOpenManualOrderModal = () => {
+    setManualOrderSource('phone');
+    setManualOrderExistingBizId('new');
+    setManualOrderBizName('');
+    setManualOrderContactPerson('');
+    setManualOrderMobile('');
+    setManualOrderEmail('');
+    setManualOrderGstin('');
+    setManualOrderBillingStreet('');
+    setManualOrderBillingCity('Noida');
+    setManualOrderBillingState('Uttar Pradesh');
+    setManualOrderBillingPincode('201301');
+    setManualOrderShippingSame(true);
+    setManualOrderShippingStreet('');
+    setManualOrderShippingCity('Noida');
+    setManualOrderShippingState('Uttar Pradesh');
+    setManualOrderShippingPincode('201301');
+    const firstP = products[0];
+    setManualOrderLineItems([
+      {
+        productId: firstP?.id || '',
+        productName: firstP?.name || 'Interactive Flat Panel 75 Inch 4K',
+        sku: firstP?.sku || 'KM-IFP-75-PRO',
+        hsn: firstP?.hsn || '8471',
+        quantity: 2,
+        unitPrice: firstP?.b2bWholesalePrice || 85000,
+        discountPercent: 0,
+      },
+    ]);
+    setManualOrderShippingFee(0);
+    setManualOrderPaymentTerms('Net 30');
+    setManualOrderPaymentMode('bank_transfer');
+    setManualOrderPaymentStatus('payment_due');
+    setManualOrderUpfrontPaid(0);
+    setManualOrderTxnRef('');
+    setManualOrderBankName('');
+    setManualOrderRemarks('');
+    setShowManualOrderModal(true);
+  };
+
+  const handleSelectManualOrderBusiness = (bizId: string) => {
+    setManualOrderExistingBizId(bizId);
+    if (bizId === 'new') {
+      setManualOrderBizName('');
+      setManualOrderContactPerson('');
+      setManualOrderMobile('');
+      setManualOrderEmail('');
+      setManualOrderGstin('');
+    } else {
+      const b = businesses.find((x) => x.id === bizId);
+      if (b) {
+        setManualOrderBizName(b.companyName || b.legalName || '');
+        setManualOrderContactPerson(b.contactPerson || '');
+        setManualOrderMobile(b.mobile || '');
+        setManualOrderEmail(b.businessEmail || '');
+        setManualOrderGstin(b.gstin || '');
+      }
+    }
+  };
+
+  const handleManualOrderProductChange = (index: number, productId: string) => {
+    const prod = products.find((p) => p.id === productId);
+    if (!prod) return;
+    const updated = [...manualOrderLineItems];
+    updated[index] = {
+      ...updated[index],
+      productId: prod.id,
+      productName: prod.name,
+      sku: prod.sku,
+      hsn: prod.hsn || '8471',
+      unitPrice: prod.b2bWholesalePrice,
+    };
+    setManualOrderLineItems(updated);
+  };
+
+  const handleAddManualOrderLineItem = () => {
+    const firstP = products[0];
+    setManualOrderLineItems([
+      ...manualOrderLineItems,
+      {
+        productId: firstP?.id || '',
+        productName: firstP?.name || 'Copier Paper',
+        sku: firstP?.sku || 'KM-PAPER',
+        hsn: firstP?.hsn || '4802',
+        quantity: 1,
+        unitPrice: firstP?.b2bWholesalePrice || 1000,
+        discountPercent: 0,
+      },
+    ]);
+  };
+
+  const handleRemoveManualOrderLineItem = (index: number) => {
+    if (manualOrderLineItems.length <= 1) {
+      alert('At least one line item is required.');
+      return;
+    }
+    setManualOrderLineItems(manualOrderLineItems.filter((_, i) => i !== index));
+  };
+
+  const handleSaveManualB2BOrder = (isConfirm: boolean) => {
+    if (!manualOrderBizName.trim() || !manualOrderContactPerson.trim() || !manualOrderMobile.trim()) {
+      alert('Please fill in required business details: Company Name, Contact Person, and Mobile Number.');
+      return;
+    }
+    if (manualOrderLineItems.length === 0) {
+      alert('Please add at least one line item to the order.');
+      return;
+    }
+
+    const billingAddress: B2CAddress = {
+      id: `addr_b_${Date.now()}`,
+      fullName: manualOrderContactPerson,
+      phone: manualOrderMobile,
+      street: manualOrderBillingStreet || 'Commercial Address',
+      city: manualOrderBillingCity || 'Noida',
+      state: manualOrderBillingState || 'Uttar Pradesh',
+      pincode: manualOrderBillingPincode || '201301',
+      addressType: 'work',
+    };
+
+    const shippingAddress: B2CAddress = manualOrderShippingSame
+      ? billingAddress
+      : {
+          id: `addr_s_${Date.now()}`,
+          fullName: manualOrderContactPerson,
+          phone: manualOrderMobile,
+          street: manualOrderShippingStreet || 'Commercial Delivery Address',
+          city: manualOrderShippingCity || 'Noida',
+          state: manualOrderShippingState || 'Uttar Pradesh',
+          pincode: manualOrderShippingPincode || '201301',
+          addressType: 'work',
+        };
+
+    const createdOrder = storageService.createManualB2BOrder(
+      {
+        source: manualOrderSource,
+        businessId: manualOrderExistingBizId !== 'new' ? manualOrderExistingBizId : undefined,
+        businessName: manualOrderBizName.trim(),
+        contactPerson: manualOrderContactPerson.trim(),
+        email: manualOrderEmail.trim(),
+        mobile: manualOrderMobile.trim(),
+        gstin: manualOrderGstin ? manualOrderGstin.trim().toUpperCase() : undefined,
+        billingAddress,
+        shippingAddress,
+        items: manualOrderLineItems.map((it) => ({
+          productId: it.productId,
+          productName: it.productName,
+          sku: it.sku,
+          hsn: it.hsn || '8471',
+          quantity: Number(it.quantity) || 1,
+          unitPrice: Number(it.unitPrice) || 0,
+          discountPercent: Number(it.discountPercent) || 0,
+          gstRate: 18,
+        })),
+        shippingFee: Number(manualOrderShippingFee) || 0,
+        paymentTerms: manualOrderPaymentTerms,
+        paymentMode: manualOrderPaymentMode,
+        paymentStatus: manualOrderPaymentStatus,
+        upfrontAmountPaid: Number(manualOrderUpfrontPaid) || 0,
+        transactionReference: manualOrderTxnRef.trim(),
+        bankName: manualOrderBankName.trim(),
+        internalRemarks: manualOrderRemarks.trim(),
+        orderStatus: isConfirm ? 'confirmed' : 'placed',
+      },
+      currentAdminUser?.name || 'Super Admin'
+    );
+
+    setShowManualOrderModal(false);
+    onRefresh();
+    alert(`Manual B2B Order #${createdOrder.orderNumber} created successfully via ${manualOrderSource.toUpperCase()}! ${isConfirm ? 'Order is Confirmed and Statutory Tax Invoice is available.' : 'Order saved as Draft (Awaiting Confirmation).'}`);
+  };
+
+  // Revise & Send Quotation State
+  const [showReviseQuoteModal, setShowReviseQuoteModal] = useState(false);
+  const [activeQuoteForRevision, setActiveQuoteForRevision] = useState<B2BQuotation | null>(null);
+  const [reviseQuoteItems, setReviseQuoteItems] = useState<ManualQuoteLineItem[]>([]);
+  const [reviseShippingCharges, setReviseShippingCharges] = useState<number>(0);
+  const [revisePaymentTerms, setRevisePaymentTerms] = useState<string>('Prepaid');
+  const [reviseDeliveryTerms, setReviseDeliveryTerms] = useState<string>('Ex-Warehouse Noida / Doorstep Delivery within 5-7 business days');
+  const [reviseValidUntil, setReviseValidUntil] = useState<string>('');
+  const [reviseAdminNotes, setReviseAdminNotes] = useState<string>('');
+
+  const handleOpenReviseQuoteModal = (quote: B2BQuotation) => {
+    setActiveQuoteForRevision(quote);
+    if (quote.items && quote.items.length > 0) {
+      setReviseQuoteItems(
+        quote.items.map((it) => ({
+          productId: it.productId,
+          productName: it.productName,
+          sku: it.sku || 'SKU',
+          hsn: it.hsn || '8471',
+          quantity: it.quantity,
+          unitPrice: it.unitPrice,
+          discountPercent: it.discountPercent || it.discount || 0,
+        }))
+      );
+    } else {
+      const prod = products.find((p) => p.id === quote.productId);
+      setReviseQuoteItems([
+        {
+          productId: quote.productId || prod?.id || '',
+          productName: quote.productName || prod?.name || 'Institutional Custom Batch',
+          sku: quote.sku || prod?.sku || 'KM-INST-BATCH',
+          hsn: prod?.hsn || '8471',
+          quantity: quote.requestedQty || 5,
+          unitPrice: quote.adminQuotation?.quotedUnitPrice || quote.targetUnitPrice || prod?.b2bWholesalePrice || 50000,
+          discountPercent: 0,
+        },
+      ]);
+    }
+    setReviseShippingCharges(quote.shippingCharges !== undefined ? quote.shippingCharges : (quote.adminQuotation?.shippingCharges || 0));
+    setRevisePaymentTerms(quote.paymentTerms || 'Prepaid');
+    setReviseDeliveryTerms(quote.deliveryTerms || 'Ex-Warehouse Noida / Doorstep Delivery within 5-7 business days');
+    setReviseValidUntil(quote.adminQuotation?.validUntil || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
+    setReviseAdminNotes(quote.adminQuotation?.adminNotes || quote.notes || 'Revised commercial terms with 18% GST input tax credit.');
+    setShowReviseQuoteModal(true);
+  };
+
+  const handleReviseQuoteProductChange = (index: number, productId: string) => {
+    const prod = products.find((p) => p.id === productId);
+    if (!prod) return;
+    const updated = [...reviseQuoteItems];
+    updated[index] = {
+      ...updated[index],
+      productId: prod.id,
+      productName: prod.name,
+      sku: prod.sku,
+      hsn: prod.hsn || '8471',
+      unitPrice: prod.b2bWholesalePrice,
+    };
+    setReviseQuoteItems(updated);
+  };
+
+  const handleAddReviseQuoteItem = () => {
+    const firstP = products[0];
+    setReviseQuoteItems([
+      ...reviseQuoteItems,
+      {
+        productId: firstP?.id || '',
+        productName: firstP?.name || 'Interactive Flat Panel 75 Inch 4K',
+        sku: firstP?.sku || 'KM-IFP-75-PRO',
+        hsn: firstP?.hsn || '8471',
+        quantity: 1,
+        unitPrice: firstP?.b2bWholesalePrice || 85000,
+        discountPercent: 0,
+      },
+    ]);
+  };
+
+  const handleRemoveReviseQuoteItem = (index: number) => {
+    if (reviseQuoteItems.length <= 1) {
+      alert('At least one line item is required.');
+      return;
+    }
+    setReviseQuoteItems(reviseQuoteItems.filter((_, i) => i !== index));
+  };
+
+  const handleSaveRevisedQuotation = () => {
+    if (!activeQuoteForRevision) return;
+    if (reviseQuoteItems.length === 0) {
+      alert('At least one line item is required in the quotation.');
+      return;
+    }
+
+    const processedItems: B2BQuotationItem[] = reviseQuoteItems.map((it) => {
+      const disc = it.discountPercent || 0;
+      const effRate = Math.round(it.unitPrice * (1 - disc / 100));
+      const lineTaxable = effRate * it.quantity;
+      const gstAmt = Math.round(lineTaxable * 0.18 * 100) / 100;
+      return {
+        productId: it.productId,
+        productName: it.productName,
+        sku: it.sku,
+        hsn: it.hsn || '8471',
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        discountPercent: disc,
+        gstRate: 18,
+        taxableAmount: lineTaxable,
+        taxableValue: lineTaxable,
+        gstAmount: gstAmt,
+        total: lineTaxable + gstAmt,
+      };
+    });
+
+    storageService.reviseB2BQuotation(
+      activeQuoteForRevision.id,
+      {
+        items: processedItems,
+        shippingCharges: Number(reviseShippingCharges) || 0,
+        paymentTerms: revisePaymentTerms,
+        deliveryTerms: reviseDeliveryTerms,
+        validUntil: reviseValidUntil,
+        adminNotes: reviseAdminNotes,
+      },
+      currentAdminUser?.name || 'Super Admin'
+    );
+
+    setShowReviseQuoteModal(false);
+    onRefresh();
+    alert(`Revised Quotation ${activeQuoteForRevision.rfqNumber} sent to client successfully! Status updated to "Revised Quotation Sent".`);
+  };
+
   // Super Admin Self Password Change State
   const [showChangeSuperAdminPasswordModal, setShowChangeSuperAdminPasswordModal] = useState(false);
   const [superAdminCurrentPassword, setSuperAdminCurrentPassword] = useState('');
@@ -762,10 +1116,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [couponIsActiveInput, setCouponIsActiveInput] = useState<boolean>(true);
   const [couponSuccessMsg, setCouponSuccessMsg] = useState<string | null>(null);
 
-  // Order Management State
-  const [orderChannelFilter, setOrderChannelFilter] = useState<'all' | 'b2c' | 'b2b'>('all');
-  const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
-  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  // Separate B2C & B2B Order Management State
+  const [b2cStatusFilter, setB2cStatusFilter] = useState<string>('all');
+  const [b2cSearchQuery, setB2cSearchQuery] = useState('');
+
+  const [b2bStatusFilter, setB2bStatusFilter] = useState<string>('all');
+  const [b2bPaymentStatusFilter, setB2bPaymentStatusFilter] = useState<string>('all');
+  const [b2bSourceFilter, setB2bSourceFilter] = useState<string>('all');
+  const [b2bSearchQuery, setB2bSearchQuery] = useState('');
   const [selectedOrderForInspection, setSelectedOrderForInspection] = useState<
     { type: 'b2c'; order: B2COrder } | { type: 'b2b'; order: B2BOrder } | null
   >(null);
@@ -1001,52 +1359,36 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     refreshAdminUsers();
   };
 
-  // Unified Combined Orders for Administration
-  const allOrdersCombined = [
-    ...b2cOrders.map((o) => ({
-      id: o.id,
-      orderNumber: o.orderNumber,
-      channel: 'b2c' as const,
-      createdAt: o.createdAt,
-      customerName: o.customerName,
-      email: o.customerEmail || 'Customer',
-      phone: o.customerPhone || o.shippingAddress?.phone || '',
-      totalAmount: o.total,
-      orderStatus: o.orderStatus,
-      paymentStatus: o.paymentStatus,
-      paymentMethod: o.paymentMethod,
-      itemsCount: o.items.reduce((s, i) => s + i.quantity, 0),
-      items: o.items,
-      rawOrder: o,
-    })),
-    ...b2bOrders.map((o) => ({
-      id: o.id,
-      orderNumber: o.orderNumber,
-      channel: 'b2b' as const,
-      createdAt: o.createdAt,
-      customerName: o.businessName,
-      email: o.gstin || 'B2B Client',
-      phone: o.billingAddress?.phone || '',
-      totalAmount: o.grandTotal,
-      orderStatus: o.orderStatus,
-      paymentStatus: o.paymentStatus,
-      paymentMethod: o.paymentTerms || 'Prepaid',
-      itemsCount: o.items.reduce((s, i) => s + i.quantity, 0),
-      items: o.items,
-      rawOrder: o,
-    })),
-  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-  const filteredOrders = allOrdersCombined.filter((o) => {
-    if (orderChannelFilter !== 'all' && o.channel !== orderChannelFilter) return false;
-    if (orderStatusFilter !== 'all' && o.orderStatus !== orderStatusFilter) return false;
-    if (orderSearchQuery.trim()) {
-      const q = orderSearchQuery.toLowerCase();
+  // Separate Filtered B2C Retail Orders
+  const filteredB2COrders = b2cOrders.filter((o) => {
+    if (b2cStatusFilter !== 'all' && o.orderStatus !== b2cStatusFilter) return false;
+    if (b2cSearchQuery.trim()) {
+      const q = b2cSearchQuery.toLowerCase();
       const matchNum = o.orderNumber.toLowerCase().includes(q);
       const matchCust = o.customerName.toLowerCase().includes(q);
-      const matchEmail = o.email.toLowerCase().includes(q);
-      const matchPhone = o.phone.toLowerCase().includes(q);
+      const matchEmail = (o.customerEmail || '').toLowerCase().includes(q);
+      const matchPhone = (o.customerPhone || o.shippingAddress?.phone || '').toLowerCase().includes(q);
       if (!matchNum && !matchCust && !matchEmail && !matchPhone) return false;
+    }
+    return true;
+  });
+
+  // Separate Filtered B2B Institutional Orders
+  const filteredB2BOrders = b2bOrders.filter((o) => {
+    if (b2bStatusFilter !== 'all' && o.orderStatus !== b2bStatusFilter) return false;
+    if (b2bPaymentStatusFilter !== 'all' && o.paymentStatus !== b2bPaymentStatusFilter) return false;
+    if (b2bSourceFilter !== 'all') {
+      const src = o.source || 'web';
+      if (src !== b2bSourceFilter) return false;
+    }
+    if (b2bSearchQuery.trim()) {
+      const q = b2bSearchQuery.toLowerCase();
+      const matchNum = o.orderNumber.toLowerCase().includes(q);
+      const matchPo = (o.poNumber || '').toLowerCase().includes(q);
+      const matchBiz = o.businessName.toLowerCase().includes(q);
+      const matchGstin = (o.gstin || '').toLowerCase().includes(q);
+      const matchPhone = (o.billingAddress?.phone || o.shippingAddress?.phone || '').toLowerCase().includes(q);
+      if (!matchNum && !matchPo && !matchBiz && !matchGstin && !matchPhone) return false;
     }
     return true;
   });
@@ -1217,17 +1559,46 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             <FolderTree size={16} /> Categories ({categories.length})
           </button>
           <button
-            onClick={() => setActiveTab('orders')}
+            onClick={() => setActiveTab('b2c_orders')}
             style={{
               padding: '0.5rem 0.2rem',
-              color: activeTab === 'orders' ? 'var(--primary)' : 'var(--slate-600)',
-              borderBottom: activeTab === 'orders' ? '2px solid var(--primary)' : '2px solid transparent',
+              color: activeTab === 'b2c_orders' ? 'var(--primary)' : 'var(--slate-600)',
+              borderBottom: activeTab === 'b2c_orders' ? '2px solid var(--primary)' : '2px solid transparent',
               display: 'flex',
               alignItems: 'center',
               gap: '0.4rem',
+              fontWeight: activeTab === 'b2c_orders' ? 700 : 500,
             }}
           >
-            <ShoppingCart size={16} /> Orders ({b2cOrders.length + b2bOrders.length})
+            <ShoppingCart size={16} /> B2C Orders ({b2cOrders.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('b2b_orders')}
+            style={{
+              padding: '0.5rem 0.2rem',
+              color: activeTab === 'b2b_orders' ? 'var(--primary)' : 'var(--slate-600)',
+              borderBottom: activeTab === 'b2b_orders' ? '2px solid var(--primary)' : '2px solid transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              fontWeight: activeTab === 'b2b_orders' ? 700 : 500,
+            }}
+          >
+            <Building2 size={16} /> B2B Orders ({b2bOrders.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('rfqs')}
+            style={{
+              padding: '0.5rem 0.2rem',
+              color: activeTab === 'rfqs' ? 'var(--primary)' : 'var(--slate-600)',
+              borderBottom: activeTab === 'rfqs' ? '2px solid var(--primary)' : '2px solid transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              fontWeight: activeTab === 'rfqs' ? 700 : 500,
+            }}
+          >
+            <FileText size={16} /> Quotations ({quotations.length}) {pendingRfqs > 0 && <span className="badge badge-blue" style={{ fontSize: '0.65rem' }}>{pendingRfqs}</span>}
           </button>
           <button
             onClick={() => setActiveTab('verification')}
@@ -1240,20 +1611,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               gap: '0.4rem',
             }}
           >
-            <Building2 size={16} /> B2B Verification {pendingApprovals > 0 && <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>{pendingApprovals}</span>}
-          </button>
-          <button
-            onClick={() => setActiveTab('rfqs')}
-            style={{
-              padding: '0.5rem 0.2rem',
-              color: activeTab === 'rfqs' ? 'var(--primary)' : 'var(--slate-600)',
-              borderBottom: activeTab === 'rfqs' ? '2px solid var(--primary)' : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
-            <FileText size={16} /> RFQ Quotations {pendingRfqs > 0 && <span className="badge badge-blue" style={{ fontSize: '0.65rem' }}>{pendingRfqs}</span>}
+            <ShieldCheck size={16} /> B2B Verification {pendingApprovals > 0 && <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>{pendingApprovals}</span>}
           </button>
           <button
             onClick={() => setActiveTab('coupons')}
@@ -1793,24 +2151,27 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           </div>
         )}
 
-        {/* 3. Orders Tab */}
-        {activeTab === 'orders' && (
+        {/* 3A. B2C Orders Tab (Retail Only) */}
+        {activeTab === 'b2c_orders' && (
           <div>
             <div className="flex justify-between items-center flex-wrap gap-3" style={{ marginBottom: '1.5rem' }}>
               <div>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--slate-900)' }}>
-                  Enterprise Order Governance & Dispatch
+                  Retail Order Governance (B2C)
                 </h2>
                 <p style={{ fontSize: '0.85rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
-                  Super Admin & Operations Desk: Review incoming retail & institutional orders, verify details, and confirm or reject before fulfillment.
+                  Manage orders placed by retail consumer customers, track dispatch, verify online payment statuses, and issue Section 31 Retail Tax Invoices.
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="badge badge-amber" style={{ fontSize: '0.78rem' }}>
-                  🟡 {allOrdersCombined.filter((o) => o.orderStatus === 'placed').length} Awaiting Confirmation
+                  🟡 {b2cOrders.filter((o) => o.orderStatus === 'placed').length} Awaiting Confirmation
                 </span>
                 <span className="badge badge-green" style={{ fontSize: '0.78rem' }}>
-                  🟢 {allOrdersCombined.filter((o) => o.orderStatus === 'confirmed').length} Confirmed
+                  🟢 {b2cOrders.filter((o) => o.orderStatus === 'confirmed').length} Confirmed
+                </span>
+                <span className="badge badge-blue" style={{ fontSize: '0.78rem' }}>
+                  🚚 {b2cOrders.filter((o) => ['shipped', 'delivered'].includes(o.orderStatus)).length} Shipped / Delivered
                 </span>
               </div>
             </div>
@@ -1835,7 +2196,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               </div>
             )}
 
-            {/* Filter & Search Bar */}
+            {/* B2C Filter & Search Bar */}
             <div
               className="card"
               style={{
@@ -1851,45 +2212,22 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             >
               <div className="flex flex-wrap items-center gap-2">
                 <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--slate-600)', marginRight: '0.25rem' }}>
-                  Channel:
-                </div>
-                {(['all', 'b2c', 'b2b'] as const).map((ch) => (
-                  <button
-                    key={ch}
-                    onClick={() => setOrderChannelFilter(ch)}
-                    className="btn btn-sm"
-                    style={{
-                      background: orderChannelFilter === ch ? 'var(--slate-900)' : 'var(--slate-100)',
-                      color: orderChannelFilter === ch ? '#FFF' : 'var(--slate-700)',
-                      border: 'none',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    {ch === 'all' ? 'All Channels' : ch === 'b2c' ? 'B2C Retail' : 'B2B Institutional'}
-                  </button>
-                ))}
-
-                <div style={{ height: '20px', width: '1px', background: 'var(--border-color)', margin: '0 0.5rem' }} />
-
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--slate-600)', marginRight: '0.25rem' }}>
-                  Status:
+                  Order Status:
                 </div>
                 <select
-                  value={orderStatusFilter}
-                  onChange={(e) => setOrderStatusFilter(e.target.value)}
+                  value={b2cStatusFilter}
+                  onChange={(e) => setB2cStatusFilter(e.target.value)}
                   className="form-select"
                   style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', width: 'auto' }}
                 >
-                  <option value="all">All Statuses</option>
-                  <option value="placed">🟡 Placed (Needs Review)</option>
-                  <option value="confirmed">🟢 Confirmed</option>
-                  <option value="processing">🔵 Processing</option>
-                  <option value="packed">📦 Packed</option>
-                  <option value="shipped">🚚 Shipped</option>
-                  <option value="delivered">🏁 Delivered</option>
-                  <option value="rejected">🔴 Rejected</option>
+                  <option value="all">All Statuses ({b2cOrders.length})</option>
+                  <option value="placed">🟡 Placed ({b2cOrders.filter((o) => o.orderStatus === 'placed').length})</option>
+                  <option value="confirmed">🟢 Confirmed ({b2cOrders.filter((o) => o.orderStatus === 'confirmed').length})</option>
+                  <option value="processing">🔵 Processing ({b2cOrders.filter((o) => o.orderStatus === 'processing').length})</option>
+                  <option value="packed">📦 Packed ({b2cOrders.filter((o) => o.orderStatus === 'packed').length})</option>
+                  <option value="shipped">🚚 Shipped ({b2cOrders.filter((o) => o.orderStatus === 'shipped').length})</option>
+                  <option value="delivered">🏁 Delivered ({b2cOrders.filter((o) => o.orderStatus === 'delivered').length})</option>
+                  <option value="rejected">🔴 Rejected ({b2cOrders.filter((o) => o.orderStatus === 'rejected').length})</option>
                 </select>
               </div>
 
@@ -1897,46 +2235,483 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <Search size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--slate-400)' }} />
                 <input
                   type="text"
-                  placeholder="Search by Order #, customer, phone..."
-                  value={orderSearchQuery}
-                  onChange={(e) => setOrderSearchQuery(e.target.value)}
+                  placeholder="Search by Order #, customer name, phone, email..."
+                  value={b2cSearchQuery}
+                  onChange={(e) => setB2cSearchQuery(e.target.value)}
                   className="form-input"
                   style={{ paddingLeft: '2.2rem', fontSize: '0.82rem', paddingBlock: '0.4rem' }}
                 />
               </div>
             </div>
 
-            {/* Orders Table */}
+            {/* B2C Orders Table */}
             <div className="card" style={{ padding: 0, overflowX: 'auto', background: '#FFFFFF' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                     <th style={{ padding: '0.85rem 1rem' }}>Order Ref & Date</th>
-                    <th style={{ padding: '0.85rem 1rem' }}>Channel</th>
-                    <th style={{ padding: '0.85rem 1rem' }}>Customer / Entity</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Customer & Contact</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Destination</th>
                     <th style={{ padding: '0.85rem 1rem' }}>Items</th>
-                    <th style={{ padding: '0.85rem 1rem' }}>Final Amount</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Amount</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Payment</th>
                     <th style={{ padding: '0.85rem 1rem' }}>Order Status</th>
                     <th style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>Review & Confirmation</th>
                     <th style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredOrders.length === 0 ? (
+                  {filteredB2COrders.length === 0 ? (
                     <tr>
-                      <td colSpan={8} style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--slate-400)' }}>
+                      <td colSpan={9} style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--slate-400)' }}>
                         <ShoppingCart size={36} style={{ margin: '0 auto 0.75rem', opacity: 0.4 }} />
                         <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--slate-700)' }}>
-                          No Orders Found
+                          No Retail Orders Found
                         </div>
                         <p style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                          No matching orders match the current filter or search criteria.
+                          No retail B2C orders match the current filter or search criteria.
                         </p>
                       </td>
                     </tr>
                   ) : (
-                    filteredOrders.map((o) => {
-                      const isB2B = o.channel === 'b2b';
+                    filteredB2COrders.map((o) => (
+                      <tr
+                        key={o.id}
+                        style={{
+                          borderBottom: '1px solid var(--border-color)',
+                          background: o.orderStatus === 'placed' ? 'rgba(245, 158, 11, 0.03)' : 'transparent',
+                        }}
+                      >
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <div style={{ fontWeight: 800, color: 'var(--slate-900)' }}>{o.orderNumber}</div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
+                            {new Date(o.createdAt).toLocaleDateString('en-IN', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <div style={{ fontWeight: 700, color: 'var(--slate-900)' }}>{o.customerName}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
+                            {o.customerPhone || o.shippingAddress?.phone || 'No phone'}
+                          </div>
+                          {o.customerEmail && (
+                            <div style={{ fontSize: '0.7rem', color: 'var(--slate-400)' }}>{o.customerEmail}</div>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--slate-700)' }}>
+                            {o.shippingAddress?.city || 'Noida'}, {o.shippingAddress?.pincode || '201301'}
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--slate-400)' }}>
+                            {o.shippingAddress?.state || 'Uttar Pradesh'}
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <div style={{ fontWeight: 600 }}>{o.items.reduce((s, i) => s + i.quantity, 0)} Units</div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
+                            {o.items.length} unique SKU{o.items.length !== 1 ? 's' : ''}
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <div style={{ fontWeight: 800, color: 'var(--slate-900)', fontSize: '0.92rem' }}>
+                            ₹{o.total.toLocaleString('en-IN')}
+                          </div>
+                          {o.discount > 0 && (
+                            <div style={{ fontSize: '0.68rem', color: '#10B981', fontWeight: 600 }}>
+                              Saved ₹{o.discount.toLocaleString('en-IN')}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                            {o.paymentMethod}
+                          </div>
+                          <span
+                            className={`badge ${
+                              o.paymentStatus === 'paid'
+                                ? 'badge-green'
+                                : o.paymentStatus === 'pending'
+                                ? 'badge-amber'
+                                : 'badge-red'
+                            }`}
+                            style={{ fontSize: '0.65rem' }}
+                          >
+                            {o.paymentStatus.toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.85rem 1rem' }}>
+                          <span
+                            className={`badge ${
+                              o.orderStatus === 'placed'
+                                ? 'badge-amber'
+                                : o.orderStatus === 'confirmed'
+                                ? 'badge-green'
+                                : o.orderStatus === 'delivered'
+                                ? 'badge-green'
+                                : o.orderStatus === 'rejected'
+                                ? 'badge-red'
+                                : 'badge-blue'
+                            }`}
+                            style={{ fontSize: '0.72rem', fontWeight: 700 }}
+                          >
+                            {o.orderStatus.replace('_', ' ').toUpperCase()}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
+                          <div className="flex items-center justify-center gap-1.5">
+                            {canConfirmOrders && o.orderStatus !== 'confirmed' && o.orderStatus !== 'delivered' && (
+                              <button
+                                onClick={() => handleConfirmOrder('b2c', o.id)}
+                                className="btn btn-sm"
+                                style={{
+                                  background: 'rgba(16, 185, 129, 0.12)',
+                                  color: '#059669',
+                                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  padding: '0.35rem 0.65rem',
+                                }}
+                                title="Confirm this retail order and unlock official invoice"
+                              >
+                                <CheckCircle2 size={13} /> Confirm
+                              </button>
+                            )}
+
+                            {canRejectOrders && o.orderStatus !== 'rejected' && o.orderStatus !== 'delivered' && (
+                              <button
+                                onClick={() => handleOpenRejectOrderModal('b2c', o.id, o.orderNumber)}
+                                className="btn btn-sm"
+                                style={{
+                                  background: 'rgba(239, 68, 68, 0.1)',
+                                  color: '#DC2626',
+                                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  padding: '0.35rem 0.65rem',
+                                }}
+                                title="Reject order"
+                              >
+                                <XCircle size={13} /> Reject
+                              </button>
+                            )}
+
+                            {o.orderStatus === 'confirmed' && (
+                              <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600 }}>
+                                ✓ Verified
+                              </span>
+                            )}
+                            {o.orderStatus === 'rejected' && (
+                              <span style={{ fontSize: '0.75rem', color: '#DC2626', fontWeight: 600 }}>
+                                ✕ Declined
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => setSelectedOrderForInspection({ type: 'b2c', order: o })}
+                              className="btn btn-sm"
+                              style={{
+                                background: 'var(--slate-100)',
+                                color: 'var(--slate-800)',
+                                border: '1px solid var(--border-color)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                fontSize: '0.75rem',
+                                fontWeight: 700,
+                                padding: '0.35rem 0.65rem',
+                              }}
+                              title="Inspect Full Retail Order Details"
+                            >
+                              <Eye size={13} /> Inspect
+                            </button>
+
+                            {o.orderStatus === 'placed' ? (
+                              <span
+                                style={{
+                                  fontSize: '0.72rem',
+                                  fontWeight: 600,
+                                  color: '#92400e',
+                                  background: '#fef3c7',
+                                  border: '1px solid #fde68a',
+                                  borderRadius: '4px',
+                                  padding: '0.3rem 0.5rem',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.2rem',
+                                }}
+                                title="Official Statutory Tax Invoice generated upon order confirmation"
+                              >
+                                🔒 Invoice on Confirmation
+                              </span>
+                            ) : o.orderStatus === 'rejected' ? (
+                              <span
+                                style={{
+                                  fontSize: '0.72rem',
+                                  fontWeight: 600,
+                                  color: '#991b1b',
+                                  background: '#fef2f2',
+                                  border: '1px solid #fecaca',
+                                  borderRadius: '4px',
+                                  padding: '0.3rem 0.5rem',
+                                }}
+                              >
+                                🚫 Rejected
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => setSelectedOrderForInvoice({ order: o, isB2B: false })}
+                                className="btn btn-sm"
+                                style={{
+                                  background: 'rgba(2, 132, 199, 0.1)',
+                                  color: '#0284C7',
+                                  border: '1px solid rgba(2, 132, 199, 0.3)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  padding: '0.35rem 0.65rem',
+                                }}
+                                title="View Statutory Section 31 Tax Invoice"
+                              >
+                                <FileText size={13} /> Tax Invoice
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* 3B. B2B Orders Tab (Institutional / Bulk Only) */}
+        {activeTab === 'b2b_orders' && (
+          <div>
+            <div className="flex justify-between items-center flex-wrap gap-3" style={{ marginBottom: '1.5rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  Enterprise & Institutional B2B Orders
+                </h2>
+                <p style={{ fontSize: '0.85rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
+                  Manage corporate, institutional, and bulk procurement orders. Track offline payments (NEFT/RTGS/Cheque), record multi-channel orders (Phone, WhatsApp, Sales Rep), and generate Section 31 Tax Invoices.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleOpenManualOrderModal}
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+                >
+                  <Plus size={16} /> Create Manual B2B Order
+                </button>
+              </div>
+            </div>
+
+            {/* KPI Metric Summary Row */}
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div className="card" style={{ padding: '1.1rem 1.25rem', background: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', fontWeight: 600 }}>Total B2B Orders</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--slate-900)', marginTop: '0.2rem' }}>
+                  {b2bOrders.length}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--slate-400)', marginTop: '0.1rem' }}>
+                  Institutional & Wholesale Volume
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: '1.1rem 1.25rem', background: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', fontWeight: 600 }}>Confirmed Orders</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#059669', marginTop: '0.2rem' }}>
+                  {b2bOrders.filter((o) => o.orderStatus === 'confirmed').length}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#059669', marginTop: '0.1rem' }}>
+                  Tax Invoices Released
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: '1.1rem 1.25rem', background: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', fontWeight: 600 }}>Awaiting Confirmation</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#D97706', marginTop: '0.2rem' }}>
+                  {b2bOrders.filter((o) => o.orderStatus === 'placed').length}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#D97706', marginTop: '0.1rem' }}>
+                  Requires Super Admin PO Verification
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: '1.1rem 1.25rem', background: '#FFFFFF' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', fontWeight: 600 }}>Total Receivables Due</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#DC2626', marginTop: '0.2rem' }}>
+                  ₹{b2bOrders.reduce((sum, o) => sum + (o.amountDue !== undefined ? o.amountDue : (o.paymentStatus === 'paid' ? 0 : o.grandTotal)), 0).toLocaleString('en-IN')}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: '#DC2626', marginTop: '0.1rem' }}>
+                  Pending Offline / Credit Settlement
+                </div>
+              </div>
+            </div>
+
+            {orderSuccessMsg && (
+              <div
+                style={{
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  color: '#065F46',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '8px',
+                  marginBottom: '1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontWeight: 600,
+                  fontSize: '0.88rem',
+                }}
+              >
+                <CheckCircle2 size={18} /> {orderSuccessMsg}
+              </div>
+            )}
+
+            {/* B2B Filter & Search Bar */}
+            <div
+              className="card"
+              style={{
+                padding: '1rem 1.25rem',
+                background: '#FFFFFF',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '1rem',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--slate-600)' }}>Status:</div>
+                <select
+                  value={b2bStatusFilter}
+                  onChange={(e) => setB2bStatusFilter(e.target.value)}
+                  className="form-select"
+                  style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', width: 'auto' }}
+                >
+                  <option value="all">All Statuses ({b2bOrders.length})</option>
+                  <option value="placed">🟡 Placed ({b2bOrders.filter((o) => o.orderStatus === 'placed').length})</option>
+                  <option value="confirmed">🟢 Confirmed ({b2bOrders.filter((o) => o.orderStatus === 'confirmed').length})</option>
+                  <option value="processing">🔵 Processing ({b2bOrders.filter((o) => o.orderStatus === 'processing').length})</option>
+                  <option value="shipped">🚚 Shipped ({b2bOrders.filter((o) => o.orderStatus === 'shipped').length})</option>
+                  <option value="delivered">🏁 Delivered ({b2bOrders.filter((o) => o.orderStatus === 'delivered').length})</option>
+                  <option value="rejected">🔴 Rejected ({b2bOrders.filter((o) => o.orderStatus === 'rejected').length})</option>
+                </select>
+
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--slate-600)', marginLeft: '0.5rem' }}>Payment:</div>
+                <select
+                  value={b2bPaymentStatusFilter}
+                  onChange={(e) => setB2bPaymentStatusFilter(e.target.value)}
+                  className="form-select"
+                  style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', width: 'auto' }}
+                >
+                  <option value="all">All Payments</option>
+                  <option value="paid">🟢 Paid Full</option>
+                  <option value="partially_paid">🟡 Partially Paid</option>
+                  <option value="payment_due">🔴 Payment Due</option>
+                </select>
+
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--slate-600)', marginLeft: '0.5rem' }}>Source:</div>
+                <select
+                  value={b2bSourceFilter}
+                  onChange={(e) => setB2bSourceFilter(e.target.value)}
+                  className="form-select"
+                  style={{ padding: '0.35rem 0.65rem', fontSize: '0.8rem', width: 'auto' }}
+                >
+                  <option value="all">All Channels</option>
+                  <option value="phone">📞 Phone Call</option>
+                  <option value="whatsapp">💬 WhatsApp</option>
+                  <option value="email">✉️ Email</option>
+                  <option value="sales_rep">👔 Sales Representative</option>
+                  <option value="direct_offline">🏬 Direct / Offline</option>
+                  <option value="web">🌐 Web Portal</option>
+                </select>
+              </div>
+
+              <div style={{ position: 'relative', minWidth: '260px', flex: '1 1 260px', maxWidth: '400px' }}>
+                <Search size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--slate-400)' }} />
+                <input
+                  type="text"
+                  placeholder="Search by Order #, PO #, Business, GSTIN..."
+                  value={b2bSearchQuery}
+                  onChange={(e) => setB2bSearchQuery(e.target.value)}
+                  className="form-input"
+                  style={{ paddingLeft: '2.2rem', fontSize: '0.82rem', paddingBlock: '0.4rem' }}
+                />
+              </div>
+            </div>
+
+            {/* B2B Orders Table */}
+            <div className="card" style={{ padding: 0, overflowX: 'auto', background: '#FFFFFF' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                    <th style={{ padding: '0.85rem 1rem' }}>Order Ref & PO</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Business Entity & GSTIN</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Order Channel</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Line Items</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Grand Total (18% GST)</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Payment Status & Balance</th>
+                    <th style={{ padding: '0.85rem 1rem' }}>Order Status</th>
+                    <th style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>PO Verification</th>
+                    <th style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredB2BOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--slate-400)' }}>
+                        <Building2 size={36} style={{ margin: '0 auto 0.75rem', opacity: 0.4 }} />
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--slate-700)' }}>
+                          No Institutional B2B Orders Found
+                        </div>
+                        <p style={{ fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                          No business orders match the filter or search criteria.
+                        </p>
+                        <button onClick={handleOpenManualOrderModal} className="btn btn-primary btn-sm" style={{ marginTop: '0.75rem' }}>
+                          <Plus size={14} /> Create New Manual B2B Order
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredB2BOrders.map((o) => {
+                      const amountPaid = Number(o.amountPaid || (o.paymentStatus === 'paid' ? o.grandTotal : 0));
+                      const amountDue = o.amountDue !== undefined ? o.amountDue : Math.max(0, o.grandTotal - amountPaid);
+                      const sourceLabel =
+                        o.source === 'phone'
+                          ? '📞 Phone Call'
+                          : o.source === 'whatsapp'
+                          ? '💬 WhatsApp'
+                          : o.source === 'email'
+                          ? '✉️ Email'
+                          : o.source === 'sales_rep'
+                          ? '👔 Sales Rep'
+                          : o.source === 'direct_offline'
+                          ? '🏬 Direct Offline'
+                          : '🌐 Web Order';
+
                       return (
                         <tr
                           key={o.id}
@@ -1947,126 +2722,126 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         >
                           <td style={{ padding: '0.85rem 1rem' }}>
                             <div style={{ fontWeight: 800, color: 'var(--slate-900)' }}>{o.orderNumber}</div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
+                            <div style={{ fontSize: '0.75rem', color: '#0284C7', fontWeight: 700 }}>
+                              PO: {o.poNumber || 'N/A'}
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--slate-400)' }}>
                               {new Date(o.createdAt).toLocaleDateString('en-IN', {
                                 day: 'numeric',
                                 month: 'short',
                                 year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
                               })}
                             </div>
-                            {isB2B && (o.rawOrder as B2BOrder).poNumber && (
-                              <div style={{ fontSize: '0.7rem', color: '#0284C7', fontWeight: 600 }}>
-                                PO: {(o.rawOrder as B2BOrder).poNumber}
+                          </td>
+
+                          <td style={{ padding: '0.85rem 1rem' }}>
+                            <div style={{ fontWeight: 800, color: 'var(--slate-900)' }}>{o.businessName}</div>
+                            {o.gstin && (
+                              <div style={{ fontSize: '0.72rem', color: 'var(--primary)', fontWeight: 700 }}>
+                                GSTIN: {o.gstin}
                               </div>
                             )}
-                          </td>
-                          <td style={{ padding: '0.85rem 1rem' }}>
-                            <span className={`badge ${isB2B ? 'badge-dark' : 'badge-blue'}`} style={{ fontSize: '0.72rem' }}>
-                              {isB2B ? 'B2B Institutional' : 'B2C Retail'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '0.85rem 1rem' }}>
-                            <div style={{ fontWeight: 700, color: 'var(--slate-800)' }}>{o.customerName}</div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>{o.email}</div>
-                            {o.phone && <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>📞 {o.phone}</div>}
-                          </td>
-                          <td style={{ padding: '0.85rem 1rem' }}>
-                            <span style={{ fontWeight: 600, color: 'var(--slate-700)' }}>
-                              {o.itemsCount} unit{o.itemsCount !== 1 ? 's' : ''}
-                            </span>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
-                              ({o.items.length} unique SKU{o.items.length !== 1 ? 's' : ''})
+                            <div style={{ fontSize: '0.7rem', color: 'var(--slate-500)' }}>
+                              {o.billingAddress?.fullName || 'Business Desk'} • {o.billingAddress?.phone || 'N/A'}
                             </div>
                           </td>
+
                           <td style={{ padding: '0.85rem 1rem' }}>
-                            <div style={{ fontWeight: 800, color: 'var(--slate-900)', fontSize: '0.92rem' }}>
-                              ₹{o.totalAmount.toLocaleString('en-IN')}
+                            <span
+                              className="badge"
+                              style={{
+                                background:
+                                  o.source === 'whatsapp'
+                                    ? 'rgba(16, 185, 129, 0.15)'
+                                    : o.source === 'phone'
+                                    ? 'rgba(2, 132, 199, 0.15)'
+                                    : 'rgba(241, 245, 249, 1)',
+                                color:
+                                  o.source === 'whatsapp'
+                                    ? '#065F46'
+                                    : o.source === 'phone'
+                                    ? '#0369A1'
+                                    : 'var(--slate-700)',
+                                fontWeight: 700,
+                                fontSize: '0.72rem',
+                              }}
+                            >
+                              {sourceLabel}
+                            </span>
+                          </td>
+
+                          <td style={{ padding: '0.85rem 1rem' }}>
+                            <div style={{ fontWeight: 600 }}>{o.items.reduce((s, i) => s + i.quantity, 0)} Units</div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {o.items[0]?.productName} {o.items.length > 1 ? `+ ${o.items.length - 1} more` : ''}
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', marginTop: '0.2rem' }}>
+                          </td>
+
+                          <td style={{ padding: '0.85rem 1rem' }}>
+                            <div style={{ fontWeight: 800, color: 'var(--slate-900)', fontSize: '0.95rem' }}>
+                              ₹{o.grandTotal.toLocaleString('en-IN')}
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: '#0284C7' }}>
+                              GST (18%): ₹{o.totalGst.toLocaleString('en-IN')}
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '0.85rem 1rem' }}>
+                            <div className="flex items-center gap-1" style={{ marginBottom: '0.2rem' }}>
                               <span
                                 className={`badge ${
                                   o.paymentStatus === 'paid'
                                     ? 'badge-green'
                                     : o.paymentStatus === 'partially_paid'
-                                    ? 'badge-blue'
-                                    : 'badge-amber'
+                                    ? 'badge-amber'
+                                    : 'badge-red'
                                 }`}
-                                style={{ fontSize: '0.68rem', width: 'fit-content' }}
+                                style={{ fontSize: '0.68rem', fontWeight: 700 }}
                               >
-                                {o.paymentStatus === 'paid'
-                                  ? 'PAID'
-                                  : o.paymentStatus === 'partially_paid'
-                                  ? 'PARTIALLY PAID'
-                                  : o.paymentStatus === 'payment_due'
-                                  ? 'PAYMENT DUE'
-                                  : o.paymentStatus.toUpperCase()}
+                                {o.paymentStatus.replace('_', ' ').toUpperCase()}
                               </span>
-                              {isB2B && (o.rawOrder as B2BOrder).amountPaid !== undefined && (o.rawOrder as B2BOrder).amountPaid! > 0 && o.paymentStatus !== 'paid' && (
-                                <div style={{ fontSize: '0.68rem', color: '#0284C7', fontWeight: 600 }}>
-                                  Paid: ₹{(o.rawOrder as B2BOrder).amountPaid?.toLocaleString('en-IN')} | Due: ₹{(o.rawOrder as B2BOrder).amountDue?.toLocaleString('en-IN')}
-                                </div>
-                              )}
-                              {isB2B && (o.rawOrder as B2BOrder).paymentMode && (
-                                <div style={{ fontSize: '0.68rem', color: 'var(--slate-500)' }}>
-                                  Mode: {(o.rawOrder as B2BOrder).paymentMode?.replace('_', ' ').toUpperCase()}
-                                </div>
-                              )}
+                              <span style={{ fontSize: '0.7rem', color: 'var(--slate-500)', textTransform: 'uppercase' }}>
+                                • {(o.paymentMode || o.paymentTerms || 'Bank Transfer').replace('_', ' ')}
+                              </span>
                             </div>
-                          </td>
-                          <td style={{ padding: '0.85rem 1rem' }}>
-                            <div style={{ marginBottom: '0.35rem' }}>
-                              {o.orderStatus === 'placed' && (
-                                <span className="badge badge-amber" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
-                                  🟡 Order Placed
-                                </span>
-                              )}
-                              {o.orderStatus === 'confirmed' && (
-                                <span className="badge badge-green" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
-                                  🟢 Order Confirmed
-                                </span>
-                              )}
-                              {o.orderStatus === 'rejected' && (
-                                <span className="badge badge-red" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
-                                  🔴 Order Rejected
-                                </span>
-                              )}
-                              {['processing', 'packed', 'shipped', 'delivered'].includes(o.orderStatus) && (
-                                <span className="badge badge-blue" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
-                                  {o.orderStatus.toUpperCase()}
-                                </span>
-                              )}
+                            <div style={{ fontSize: '0.7rem', color: '#059669' }}>
+                              Paid: <strong>₹{amountPaid.toLocaleString('en-IN')}</strong>
                             </div>
-                            {o.orderStatus !== 'rejected' && (
-                              <select
-                                value={o.orderStatus}
-                                onChange={(e) => {
-                                  if (isB2B) {
-                                    handleUpdateB2BOrderStatus(o.id, e.target.value);
-                                  } else {
-                                    handleUpdateB2COrderStatus(o.id, e.target.value);
-                                  }
-                                }}
-                                className="form-select"
-                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: 'auto' }}
-                              >
-                                <option value="placed">Placed</option>
-                                <option value="confirmed">Confirmed</option>
-                                <option value="processing">Processing</option>
-                                <option value="packed">Packed</option>
-                                <option value="shipped">Shipped</option>
-                                <option value="delivered">Delivered</option>
-                                <option value="rejected">Rejected</option>
-                              </select>
+                            {amountDue > 0 ? (
+                              <div style={{ fontSize: '0.7rem', color: '#DC2626', fontWeight: 700 }}>
+                                Due: ₹{amountDue.toLocaleString('en-IN')}
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '0.68rem', color: '#059669', fontWeight: 700 }}>
+                                Fully Settled ✓
+                              </div>
                             )}
                           </td>
+
+                          <td style={{ padding: '0.85rem 1rem' }}>
+                            <span
+                              className={`badge ${
+                                o.orderStatus === 'placed'
+                                  ? 'badge-amber'
+                                  : o.orderStatus === 'confirmed'
+                                  ? 'badge-green'
+                                  : o.orderStatus === 'delivered'
+                                  ? 'badge-green'
+                                  : o.orderStatus === 'rejected'
+                                  ? 'badge-red'
+                                  : 'badge-blue'
+                              }`}
+                              style={{ fontSize: '0.72rem', fontWeight: 700 }}
+                            >
+                              {o.orderStatus.replace('_', ' ').toUpperCase()}
+                            </span>
+                          </td>
+
                           <td style={{ padding: '0.85rem 1rem', textAlign: 'center' }}>
                             <div className="flex items-center justify-center gap-1.5">
-                              {/* Confirm Order Button */}
                               {canConfirmOrders && o.orderStatus !== 'confirmed' && o.orderStatus !== 'delivered' && (
                                 <button
-                                  onClick={() => handleConfirmOrder(o.channel, o.id)}
+                                  onClick={() => handleConfirmOrder('b2b', o.id)}
                                   className="btn btn-sm"
                                   style={{
                                     background: 'rgba(16, 185, 129, 0.12)',
@@ -2079,16 +2854,15 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                     fontWeight: 700,
                                     padding: '0.35rem 0.65rem',
                                   }}
-                                  title="Confirm this order and notify customer"
+                                  title="Confirm PO and generate official tax invoice"
                                 >
                                   <CheckCircle2 size={13} /> Confirm
                                 </button>
                               )}
 
-                              {/* Reject Order Button */}
                               {canRejectOrders && o.orderStatus !== 'rejected' && o.orderStatus !== 'delivered' && (
                                 <button
-                                  onClick={() => handleOpenRejectOrderModal(o.channel, o.id, o.orderNumber)}
+                                  onClick={() => handleOpenRejectOrderModal('b2b', o.id, o.orderNumber)}
                                   className="btn btn-sm"
                                   style={{
                                     background: 'rgba(239, 68, 68, 0.1)',
@@ -2101,7 +2875,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                     fontWeight: 700,
                                     padding: '0.35rem 0.65rem',
                                   }}
-                                  title="Reject this order with reason"
+                                  title="Reject PO"
                                 >
                                   <XCircle size={13} /> Reject
                                 </button>
@@ -2119,10 +2893,31 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                               )}
                             </div>
                           </td>
+
                           <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
                             <div className="flex items-center justify-end gap-1.5">
+                              {/* Record Offline Payment Button */}
                               <button
-                                onClick={() => setSelectedOrderForInspection(isB2B ? { type: 'b2b', order: o.rawOrder as B2BOrder } : { type: 'b2c', order: o.rawOrder as B2COrder })}
+                                onClick={() => handleOpenOfflinePayment(o)}
+                                className="btn btn-sm"
+                                style={{
+                                  background: 'rgba(16, 185, 129, 0.1)',
+                                  color: '#059669',
+                                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  padding: '0.35rem 0.65rem',
+                                }}
+                                title="Record Offline Bank Transfer / NEFT / Cheque Payment"
+                              >
+                                <CreditCard size={13} /> Record Payment
+                              </button>
+
+                              <button
+                                onClick={() => setSelectedOrderForInspection({ type: 'b2b', order: o })}
                                 className="btn btn-sm"
                                 style={{
                                   background: 'var(--slate-100)',
@@ -2135,12 +2930,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                   fontWeight: 700,
                                   padding: '0.35rem 0.65rem',
                                 }}
-                                title="Inspect Full Order Details"
+                                title="Inspect Full B2B Order Details"
                               >
                                 <Eye size={13} /> Inspect
                               </button>
 
-                              {/* Official Tax Invoice Button (Confirmation Gated) */}
                               {o.orderStatus === 'placed' ? (
                                 <span
                                   style={{
@@ -2175,7 +2969,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                 </span>
                               ) : (
                                 <button
-                                  onClick={() => setSelectedOrderForInvoice({ order: o.rawOrder, isB2B })}
+                                  onClick={() => setSelectedOrderForInvoice({ order: o, isB2B: true })}
                                   className="btn btn-sm"
                                   style={{
                                     background: 'rgba(2, 132, 199, 0.1)',
@@ -2188,7 +2982,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                     fontWeight: 700,
                                     padding: '0.35rem 0.65rem',
                                   }}
-                                  title="View Official Statutory Tax Invoice"
+                                  title="View Official Statutory Section 31 B2B Tax Invoice"
                                 >
                                   <FileText size={13} /> Tax Invoice
                                 </button>
@@ -2354,6 +3148,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                           <span className="badge badge-green" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
                             ✅ CONVERTED TO ORDER ({q.convertedOrderId})
                           </span>
+                        ) : q.status === 'revised_quoted' ? (
+                          <span className="badge" style={{ fontSize: '0.75rem', fontWeight: 700, background: '#F3E8FF', color: '#7E22CE', border: '1px solid #D8B4FE' }}>
+                            🔄 REVISED QUOTATION SENT
+                          </span>
+                        ) : q.status === 'revision_requested' ? (
+                          <span className="badge" style={{ fontSize: '0.75rem', fontWeight: 700, background: '#FEF3C7', color: '#B45309', border: '1px solid #FCD34D' }}>
+                            ⚠️ REVISION REQUESTED
+                          </span>
                         ) : q.status === 'quoted' ? (
                           <span className="badge badge-blue" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
                             PROPOSAL ISSUED
@@ -2362,13 +3164,31 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                           <span className="badge badge-green" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
                             ACCEPTED BY CLIENT
                           </span>
+                        ) : q.status === 'under_review' ? (
+                          <span className="badge badge-amber" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
+                            UNDER REVIEW
+                          </span>
+                        ) : q.status === 'draft' ? (
+                          <span className="badge" style={{ fontSize: '0.75rem', fontWeight: 700, background: '#F1F5F9', color: '#475569' }}>
+                            DRAFT
+                          </span>
                         ) : (
                           <span className="badge badge-amber" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
-                            {q.status.toUpperCase()}
+                            {q.status.replace('_', ' ').toUpperCase()}
                           </span>
                         )}
                       </div>
                     </div>
+
+                    {/* Revision Tracker Pill */}
+                    {q.revisions && q.revisions.length > 0 && (
+                      <div style={{ fontSize: '0.75rem', color: '#7E22CE', fontWeight: 600, marginBottom: '0.75rem', background: '#FAF5FF', padding: '0.35rem 0.75rem', borderRadius: '6px', border: '1px dashed #D8B4FE', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <span>🔄</span>
+                        <span>
+                          Quotation has been revised <strong>{q.revisions.length} time{q.revisions.length !== 1 ? 's' : ''}</strong>. Last revision: ₹{q.revisions[q.revisions.length - 1].newGrandTotal.toLocaleString('en-IN')} by {q.revisions[q.revisions.length - 1].revisedBy}.
+                        </span>
+                      </div>
+                    )}
 
                     {/* Quotation Line Items or Summary */}
                     {q.items && q.items.length > 0 ? (
@@ -2457,11 +3277,31 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     )}
 
                     <div className="flex justify-between items-center flex-wrap gap-2" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem' }}>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', maxWidth: '550px' }}>
-                        {q.specialRequirements ? `"${q.specialRequirements}"` : 'Standard commercial terms apply.'}
+                      <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', maxWidth: '500px' }}>
+                        {q.specialRequirements ? `Customer Req: "${q.specialRequirements}"` : (q.notes ? `Terms: ${q.notes}` : 'Standard commercial terms apply.')}
+                        {q.paymentTerms && <div style={{ fontSize: '0.72rem', color: '#0284C7', marginTop: '0.15rem' }}>Terms: {q.paymentTerms} • Delivery: {q.deliveryTerms || 'Doorstep Delivery'}</div>}
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {/* Revise Quotation Button */}
+                        {q.status !== 'converted_to_order' && (
+                          <button
+                            onClick={() => handleOpenReviseQuoteModal(q)}
+                            className="btn btn-sm"
+                            style={{
+                              background: '#7E22CE',
+                              color: '#FFFFFF',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              fontWeight: 700,
+                            }}
+                            title="Revise quantities, pricing, discounts, 18% GST, freight, and terms before sending to client"
+                          >
+                            <Edit size={13} /> Revise Quotation
+                          </button>
+                        )}
+
                         {/* Convert to B2B Order Button */}
                         {q.status !== 'converted_to_order' && (
                           <button
@@ -2480,17 +3320,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                             ⚡ Convert to B2B Order
                           </button>
                         )}
-
-                        <button
-                          onClick={() => {
-                            setActiveRfqForQuote(q);
-                            setQuotePrice(q.targetUnitPrice || 0);
-                          }}
-                          className="btn btn-primary btn-sm"
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                        >
-                          <Send size={14} /> {q.status === 'quoted' ? 'Update Proposal' : 'Formulate Proposal'}
-                        </button>
 
                         <button
                           onClick={() => handleDeleteQuotation(q.id, q.rfqNumber)}
@@ -6685,6 +7514,909 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     ⚡ Save & Convert to Confirmed B2B Order
                   </button>
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Manual B2B Order Creation Modal (Phone / WhatsApp / Offline Channels) */}
+      {showManualOrderModal && (
+        <div className="modal-overlay" onClick={() => setShowManualOrderModal(false)}>
+          <div
+            className="modal-content"
+            style={{
+              maxWidth: '960px',
+              maxHeight: '92vh',
+              overflowY: 'auto',
+              padding: '2rem',
+              background: '#FFFFFF',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  Create Manual B2B Order (Direct Sales & Offline Desk)
+                </h3>
+                <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
+                  Record orders placed through Phone Calls, WhatsApp, Email, or Sales Representatives with full GST & partial payment accounting.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowManualOrderModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <X size={22} className="text-slate-500" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveManualB2BOrder(false);
+              }}
+            >
+              {/* Channel & Source Selection */}
+              <div style={{ marginBottom: '1.5rem', background: 'var(--slate-50)', padding: '1rem 1.25rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
+                  1. Order Intake Channel & Source *
+                </div>
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                  {(
+                    [
+                      { id: 'phone', label: '📞 Phone Call' },
+                      { id: 'whatsapp', label: '💬 WhatsApp' },
+                      { id: 'email', label: '✉️ Email' },
+                      { id: 'sales_rep', label: '👔 Sales Representative' },
+                      { id: 'direct_offline', label: '🏬 Direct / Offline' },
+                      { id: 'other', label: '📄 Other' },
+                    ] as const
+                  ).map((src) => (
+                    <button
+                      key={src.id}
+                      type="button"
+                      onClick={() => setManualOrderSource(src.id)}
+                      className="btn"
+                      style={{
+                        background: manualOrderSource === src.id ? 'var(--primary)' : '#FFFFFF',
+                        color: manualOrderSource === src.id ? '#FFFFFF' : 'var(--slate-700)',
+                        border: manualOrderSource === src.id ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        padding: '0.5rem 0.75rem',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {src.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section 2: Business & Customer Profile */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div className="flex justify-between items-center" style={{ marginBottom: '0.75rem' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    2. Business & Customer Profile
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span style={{ fontSize: '0.8rem', color: 'var(--slate-600)', fontWeight: 600 }}>Select Client:</span>
+                    <select
+                      value={manualOrderExistingBizId}
+                      onChange={(e) => handleSelectManualOrderBusiness(e.target.value)}
+                      className="form-select"
+                      style={{ fontSize: '0.8rem', padding: '0.25rem 0.6rem', width: 'auto' }}
+                    >
+                      <option value="new">+ Register New Business Record</option>
+                      {businesses.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.companyName || b.legalName} ({b.gstin || 'No GSTIN'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Company / Institution Name *</label>
+                    <input
+                      type="text"
+                      value={manualOrderBizName}
+                      onChange={(e) => setManualOrderBizName(e.target.value)}
+                      placeholder="e.g. Apex Learning Solutions Pvt Ltd"
+                      className="form-input"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Contact Person Name *</label>
+                    <input
+                      type="text"
+                      value={manualOrderContactPerson}
+                      onChange={(e) => setManualOrderContactPerson(e.target.value)}
+                      placeholder="e.g. Rajiv Menon"
+                      className="form-input"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Mobile Number (Login Identifier) *</label>
+                    <input
+                      type="tel"
+                      value={manualOrderMobile}
+                      onChange={(e) => setManualOrderMobile(e.target.value)}
+                      placeholder="e.g. 9876543210"
+                      className="form-input"
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Business Email</label>
+                    <input
+                      type="email"
+                      value={manualOrderEmail}
+                      onChange={(e) => setManualOrderEmail(e.target.value)}
+                      placeholder="e.g. procurement@apex.com"
+                      className="form-input"
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Client GSTIN (15 Digits)</label>
+                    <input
+                      type="text"
+                      value={manualOrderGstin}
+                      onChange={(e) => setManualOrderGstin(e.target.value.toUpperCase())}
+                      placeholder="e.g. 09AAECK1234F1Z5"
+                      maxLength={15}
+                      className="form-input"
+                      style={{ letterSpacing: '0.05em', fontWeight: 600 }}
+                    />
+                  </div>
+                </div>
+
+                {/* Addresses */}
+                <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.75rem' }}>
+                  <div style={{ background: 'var(--slate-50)', padding: '0.85rem', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.78rem', color: 'var(--slate-700)', marginBottom: '0.4rem' }}>
+                      Billing Address:
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Street / Office Address"
+                      value={manualOrderBillingStreet}
+                      onChange={(e) => setManualOrderBillingStreet(e.target.value)}
+                      className="form-input"
+                      style={{ fontSize: '0.8rem', marginBottom: '0.4rem' }}
+                    />
+                    <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '0.4rem' }}>
+                      <input
+                        type="text"
+                        placeholder="City"
+                        value={manualOrderBillingCity}
+                        onChange={(e) => setManualOrderBillingCity(e.target.value)}
+                        className="form-input"
+                        style={{ fontSize: '0.8rem' }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="State"
+                        value={manualOrderBillingState}
+                        onChange={(e) => setManualOrderBillingState(e.target.value)}
+                        className="form-input"
+                        style={{ fontSize: '0.8rem' }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="PIN"
+                        value={manualOrderBillingPincode}
+                        onChange={(e) => setManualOrderBillingPincode(e.target.value)}
+                        className="form-input"
+                        style={{ fontSize: '0.8rem' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'var(--slate-50)', padding: '0.85rem', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+                    <div className="flex justify-between items-center" style={{ marginBottom: '0.4rem' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.78rem', color: 'var(--slate-700)' }}>Shipping Address:</div>
+                      <label style={{ fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={manualOrderShippingSame}
+                          onChange={(e) => setManualOrderShippingSame(e.target.checked)}
+                        />
+                        Same as Billing
+                      </label>
+                    </div>
+                    {!manualOrderShippingSame ? (
+                      <>
+                        <input
+                          type="text"
+                          placeholder="Delivery Street / Warehouse Address"
+                          value={manualOrderShippingStreet}
+                          onChange={(e) => setManualOrderShippingStreet(e.target.value)}
+                          className="form-input"
+                          style={{ fontSize: '0.8rem', marginBottom: '0.4rem' }}
+                        />
+                        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '0.4rem' }}>
+                          <input
+                            type="text"
+                            placeholder="City"
+                            value={manualOrderShippingCity}
+                            onChange={(e) => setManualOrderShippingCity(e.target.value)}
+                            className="form-input"
+                            style={{ fontSize: '0.8rem' }}
+                          />
+                          <input
+                            type="text"
+                            placeholder="State"
+                            value={manualOrderShippingState}
+                            onChange={(e) => setManualOrderShippingState(e.target.value)}
+                            className="form-input"
+                            style={{ fontSize: '0.8rem' }}
+                          />
+                          <input
+                            type="text"
+                            placeholder="PIN"
+                            value={manualOrderShippingPincode}
+                            onChange={(e) => setManualOrderShippingPincode(e.target.value)}
+                            className="form-input"
+                            style={{ fontSize: '0.8rem' }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)', fontStyle: 'italic', paddingTop: '0.75rem' }}>
+                        ✓ Shipping address matches Billing Address.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Line Items Builder */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div className="flex justify-between items-center" style={{ marginBottom: '0.75rem' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    3. Line Items & Commercial Pricing (18% GST Applicable)
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddManualOrderLineItem}
+                    className="btn btn-sm btn-outline"
+                    style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                  >
+                    <Plus size={13} /> Add Product Line
+                  </button>
+                </div>
+
+                <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--slate-50)', textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>
+                        <th style={{ padding: '0.6rem 0.75rem', width: '38%' }}>Product</th>
+                        <th style={{ padding: '0.6rem 0.75rem', width: '12%' }}>Quantity</th>
+                        <th style={{ padding: '0.6rem 0.75rem', width: '18%' }}>Agreed Rate (₹)</th>
+                        <th style={{ padding: '0.6rem 0.75rem', width: '12%' }}>Disc %</th>
+                        <th style={{ padding: '0.6rem 0.75rem', width: '14%', textAlign: 'right' }}>Taxable Base</th>
+                        <th style={{ padding: '0.6rem 0.75rem', width: '6%', textAlign: 'center' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {manualOrderLineItems.map((item, idx) => {
+                        const lineTaxable = Math.round(item.quantity * item.unitPrice * (1 - (item.discountPercent || 0) / 100));
+                        return (
+                          <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '0.5rem 0.75rem' }}>
+                              <select
+                                value={item.productId}
+                                onChange={(e) => handleManualOrderProductChange(idx, e.target.value)}
+                                className="form-select"
+                                style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
+                              >
+                                {products.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.name} (Wholesale: ₹{p.b2bWholesalePrice.toLocaleString('en-IN')})
+                                  </option>
+                                ))}
+                              </select>
+                              <div style={{ fontSize: '0.68rem', color: 'var(--slate-400)', marginTop: '0.2rem' }}>
+                                SKU: {item.sku} | HSN: {item.hsn}
+                              </div>
+                            </td>
+                            <td style={{ padding: '0.5rem 0.75rem' }}>
+                              <input
+                                type="number"
+                                min={1}
+                                value={item.quantity}
+                                onChange={(e) => {
+                                  const val = Math.max(1, parseInt(e.target.value) || 1);
+                                  const updated = [...manualOrderLineItems];
+                                  updated[idx].quantity = val;
+                                  setManualOrderLineItems(updated);
+                                }}
+                                className="form-input"
+                                style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
+                              />
+                            </td>
+                            <td style={{ padding: '0.5rem 0.75rem' }}>
+                              <input
+                                type="number"
+                                min={0}
+                                value={item.unitPrice}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  const updated = [...manualOrderLineItems];
+                                  updated[idx].unitPrice = val;
+                                  setManualOrderLineItems(updated);
+                                }}
+                                className="form-input"
+                                style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
+                              />
+                            </td>
+                            <td style={{ padding: '0.5rem 0.75rem' }}>
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={item.discountPercent}
+                                onChange={(e) => {
+                                  const val = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0));
+                                  const updated = [...manualOrderLineItems];
+                                  updated[idx].discountPercent = val;
+                                  setManualOrderLineItems(updated);
+                                }}
+                                className="form-input"
+                                style={{ fontSize: '0.8rem', padding: '0.3rem 0.5rem' }}
+                              />
+                            </td>
+                            <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: 700 }}>
+                              ₹{lineTaxable.toLocaleString('en-IN')}
+                            </td>
+                            <td style={{ padding: '0.5rem 0.75rem', textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveManualOrderLineItem(idx)}
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '0.25rem 0.4rem', color: '#DC2626' }}
+                                title="Remove line item"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Section 4: Commercial & Payment Terms */}
+              <div style={{ marginBottom: '1.5rem', background: 'var(--slate-50)', padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.75rem' }}>
+                  4. Commercial Payment Terms & Offline Settlement
+                </div>
+
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Payment Terms</label>
+                    <select
+                      value={manualOrderPaymentTerms}
+                      onChange={(e) => setManualOrderPaymentTerms(e.target.value)}
+                      className="form-select"
+                      style={{ fontSize: '0.82rem' }}
+                    >
+                      <option value="Net 30">Net 30 (Commercial Credit)</option>
+                      <option value="Net 15">Net 15</option>
+                      <option value="50% Advance, 50% on Delivery">50% Advance, 50% on Delivery</option>
+                      <option value="100% Advance (Prepaid)">100% Advance (Prepaid)</option>
+                      <option value="Immediate COD / Delivery">Immediate COD / Delivery</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Payment Mode *</label>
+                    <select
+                      value={manualOrderPaymentMode}
+                      onChange={(e) => setManualOrderPaymentMode(e.target.value)}
+                      className="form-select"
+                      style={{ fontSize: '0.82rem' }}
+                    >
+                      <option value="bank_transfer">Bank Transfer / NEFT</option>
+                      <option value="rtgs">RTGS</option>
+                      <option value="imps">IMPS</option>
+                      <option value="cheque">Cheque</option>
+                      <option value="razorpay">Online – Razorpay</option>
+                      <option value="cash_offline">Cash / Offline Settlement</option>
+                      <option value="other">Other / Corporate Credit</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Payment Status *</label>
+                    <select
+                      value={manualOrderPaymentStatus}
+                      onChange={(e) => setManualOrderPaymentStatus(e.target.value as any)}
+                      className="form-select"
+                      style={{ fontSize: '0.82rem' }}
+                    >
+                      <option value="payment_due">🔴 Payment Due (Unsettled)</option>
+                      <option value="partially_paid">🟡 Partially Paid (Upfront Deposit)</option>
+                      <option value="paid">🟢 Paid in Full</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label">Freight / Shipping Charges (₹)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={manualOrderShippingFee}
+                      onChange={(e) => setManualOrderShippingFee(parseFloat(e.target.value) || 0)}
+                      className="form-input"
+                      style={{ fontSize: '0.82rem' }}
+                    />
+                  </div>
+                </div>
+
+                {manualOrderPaymentStatus !== 'payment_due' && (
+                  <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '0.75rem', background: '#FFFFFF', padding: '1rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Amount Paid Upfront (₹) *</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={manualOrderUpfrontPaid}
+                        onChange={(e) => setManualOrderUpfrontPaid(parseFloat(e.target.value) || 0)}
+                        placeholder="e.g. 50000"
+                        className="form-input"
+                        style={{ fontSize: '0.82rem', fontWeight: 700 }}
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Transaction / Cheque / UTR Ref</label>
+                      <input
+                        type="text"
+                        value={manualOrderTxnRef}
+                        onChange={(e) => setManualOrderTxnRef(e.target.value)}
+                        placeholder="e.g. UTR99881122"
+                        className="form-input"
+                        style={{ fontSize: '0.82rem' }}
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label className="form-label">Remitting / Drawee Bank</label>
+                      <input
+                        type="text"
+                        value={manualOrderBankName}
+                        onChange={(e) => setManualOrderBankName(e.target.value)}
+                        placeholder="e.g. State Bank of India"
+                        className="form-input"
+                        style={{ fontSize: '0.82rem' }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="form-group" style={{ marginTop: '0.75rem', marginBottom: 0 }}>
+                  <label className="form-label">Internal Remarks & Order Notes</label>
+                  <textarea
+                    rows={2}
+                    value={manualOrderRemarks}
+                    onChange={(e) => setManualOrderRemarks(e.target.value)}
+                    placeholder="e.g. Order finalized via sales representative phone call. Delivery expected next Tuesday."
+                    className="form-textarea"
+                    style={{ fontSize: '0.82rem' }}
+                  />
+                </div>
+              </div>
+
+              {/* Section 5: Order Financial Summary */}
+              {(() => {
+                const totalTaxable = manualOrderLineItems.reduce(
+                  (sum, it) => sum + Math.round(it.quantity * it.unitPrice * (1 - (it.discountPercent || 0) / 100)),
+                  0
+                );
+                const totalGst = Math.round(totalTaxable * 0.18 * 100) / 100;
+                const shipping = Number(manualOrderShippingFee) || 0;
+                const grandTotal = totalTaxable + totalGst + shipping;
+                const paid = manualOrderPaymentStatus === 'paid' ? grandTotal : (Number(manualOrderUpfrontPaid) || 0);
+                const due = Math.max(0, grandTotal - paid);
+
+                return (
+                  <div
+                    style={{
+                      background: 'var(--slate-900)',
+                      color: '#FFFFFF',
+                      padding: '1.25rem',
+                      borderRadius: '8px',
+                      marginBottom: '1.5rem',
+                    }}
+                  >
+                    <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', textAlign: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: '0.72rem', color: '#94A3B8', textTransform: 'uppercase' }}>Taxable Subtotal</div>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>₹{totalTaxable.toLocaleString('en-IN')}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.72rem', color: '#94A3B8', textTransform: 'uppercase' }}>18% GST (CGST+SGST)</div>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#38BDF8' }}>₹{totalGst.toLocaleString('en-IN')}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.72rem', color: '#94A3B8', textTransform: 'uppercase' }}>Freight / Shipping</div>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 800 }}>{shipping > 0 ? `₹${shipping.toLocaleString('en-IN')}` : 'FREE'}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.72rem', color: '#94A3B8', textTransform: 'uppercase' }}>Grand Total</div>
+                        <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#34D399' }}>₹{grandTotal.toLocaleString('en-IN')}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.72rem', color: '#94A3B8', textTransform: 'uppercase' }}>Remaining Due</div>
+                        <div style={{ fontSize: '1.15rem', fontWeight: 800, color: due > 0 ? '#F87171' : '#34D399' }}>
+                          {due > 0 ? `₹${due.toLocaleString('en-IN')}` : 'PAID IN FULL'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Action Buttons */}
+              <div className="flex justify-between items-center flex-wrap gap-2" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowManualOrderModal(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="submit"
+                    className="btn btn-outline"
+                    style={{ fontWeight: 700 }}
+                  >
+                    Save as Draft (Unconfirmed)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSaveManualB2BOrder(true)}
+                    className="btn btn-primary"
+                    style={{ background: '#059669', borderColor: '#059669', fontWeight: 700 }}
+                  >
+                    ⚡ Create & Confirm Order (Instant Invoice)
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Revise & Send Quotation Modal */}
+      {showReviseQuoteModal && activeQuoteForRevision && (
+        <div className="modal-overlay" onClick={() => setShowReviseQuoteModal(false)}>
+          <div
+            className="modal-content"
+            style={{
+              maxWidth: '920px',
+              maxHeight: '92vh',
+              overflowY: 'auto',
+              padding: '2rem',
+              background: '#FFFFFF',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  Revise & Send Quotation — {activeQuoteForRevision.rfqNumber}
+                </h3>
+                <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
+                  Admin / Super Admin Proposal Review: Adjust products, volume, unit rates, discounts, 18% GST, freight, and commercial terms before issuing to customer.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReviseQuoteModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                <X size={22} className="text-slate-500" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveRevisedQuotation();
+              }}
+            >
+              {/* Client & RFQ Original Request Header */}
+              <div style={{ marginBottom: '1.25rem', background: '#F8FAFC', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                <div className="flex justify-between items-center flex-wrap gap-2" style={{ marginBottom: '0.5rem' }}>
+                  <div>
+                    <strong style={{ fontSize: '1rem', color: 'var(--slate-900)' }}>
+                      {activeQuoteForRevision.businessName}
+                    </strong>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--slate-600)', marginLeft: '0.5rem' }}>
+                      ({activeQuoteForRevision.contactPerson} • {activeQuoteForRevision.phone})
+                    </span>
+                  </div>
+                  {activeQuoteForRevision.gstin && (
+                    <span className="badge badge-dark" style={{ fontSize: '0.72rem' }}>
+                      GSTIN: {activeQuoteForRevision.gstin}
+                    </span>
+                  )}
+                </div>
+
+                {/* Original Customer Request Box */}
+                <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '6px', padding: '0.75rem', fontSize: '0.8rem' }}>
+                  <div style={{ fontWeight: 700, color: '#1E40AF', marginBottom: '0.25rem' }}>
+                    📋 Original Customer Request (RFQ):
+                  </div>
+                  <div style={{ color: '#1E3A8A' }}>
+                    Requested Volume: <strong>{activeQuoteForRevision.requestedQty || activeQuoteForRevision.items?.reduce((s, i) => s + i.quantity, 0) || 1} Units</strong>
+                    {activeQuoteForRevision.targetUnitPrice ? ` • Target Unit Price: ₹${activeQuoteForRevision.targetUnitPrice.toLocaleString('en-IN')}` : ''}
+                    {activeQuoteForRevision.deliveryPincode ? ` • Delivery PIN: ${activeQuoteForRevision.deliveryPincode}` : ''}
+                  </div>
+                  {activeQuoteForRevision.specialRequirements && (
+                    <div style={{ marginTop: '0.25rem', fontStyle: 'italic', color: '#1E3A8A' }}>
+                      "{activeQuoteForRevision.specialRequirements}"
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Line Items Revision */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <div className="flex justify-between items-center" style={{ marginBottom: '0.5rem' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase' }}>
+                    Revise Products, Quantities & Agreed Unit Pricing
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddReviseQuoteItem}
+                    className="btn btn-sm btn-outline"
+                    style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                  >
+                    <Plus size={13} /> Add Line Item
+                  </button>
+                </div>
+
+                <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                        <th style={{ padding: '0.5rem 0.75rem' }}>Product</th>
+                        <th style={{ padding: '0.5rem 0.75rem', width: '12%' }}>Quantity</th>
+                        <th style={{ padding: '0.5rem 0.75rem', width: '20%' }}>Unit Price (₹)</th>
+                        <th style={{ padding: '0.5rem 0.75rem', width: '12%' }}>Disc %</th>
+                        <th style={{ padding: '0.5rem 0.75rem', width: '16%', textAlign: 'right' }}>Taxable Total</th>
+                        <th style={{ padding: '0.5rem 0.75rem', width: '6%' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reviseQuoteItems.map((item, idx) => {
+                        const taxable = Math.round(item.quantity * item.unitPrice * (1 - (item.discountPercent || 0) / 100));
+                        return (
+                          <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <td style={{ padding: '0.5rem 0.75rem' }}>
+                              <select
+                                value={item.productId}
+                                onChange={(e) => handleReviseQuoteProductChange(idx, e.target.value)}
+                                className="form-select"
+                                style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
+                              >
+                                {products.map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.name} (Base Wholesale: ₹{p.b2bWholesalePrice.toLocaleString('en-IN')})
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td style={{ padding: '0.5rem 0.75rem' }}>
+                              <input
+                                type="number"
+                                min={1}
+                                value={item.quantity}
+                                onChange={(e) => {
+                                  const val = Math.max(1, parseInt(e.target.value) || 1);
+                                  const updated = [...reviseQuoteItems];
+                                  updated[idx].quantity = val;
+                                  setReviseQuoteItems(updated);
+                                }}
+                                className="form-input"
+                                style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
+                              />
+                            </td>
+                            <td style={{ padding: '0.5rem 0.75rem' }}>
+                              <input
+                                type="number"
+                                min={0}
+                                value={item.unitPrice}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value) || 0;
+                                  const updated = [...reviseQuoteItems];
+                                  updated[idx].unitPrice = val;
+                                  setReviseQuoteItems(updated);
+                                }}
+                                className="form-input"
+                                style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
+                              />
+                            </td>
+                            <td style={{ padding: '0.5rem 0.75rem' }}>
+                              <input
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={item.discountPercent}
+                                onChange={(e) => {
+                                  const val = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0));
+                                  const updated = [...reviseQuoteItems];
+                                  updated[idx].discountPercent = val;
+                                  setReviseQuoteItems(updated);
+                                }}
+                                className="form-input"
+                                style={{ fontSize: '0.8rem', padding: '0.25rem 0.5rem' }}
+                              />
+                            </td>
+                            <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: 700 }}>
+                              ₹{taxable.toLocaleString('en-IN')}
+                            </td>
+                            <td style={{ padding: '0.5rem 0.75rem', textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveReviseQuoteItem(idx)}
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '0.2rem 0.35rem', color: '#DC2626' }}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Commercial Terms */}
+              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Freight / Shipping Charges (₹)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={reviseShippingCharges}
+                    onChange={(e) => setReviseShippingCharges(parseFloat(e.target.value) || 0)}
+                    className="form-input"
+                    style={{ fontSize: '0.82rem' }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Payment Terms</label>
+                  <input
+                    type="text"
+                    value={revisePaymentTerms}
+                    onChange={(e) => setRevisePaymentTerms(e.target.value)}
+                    placeholder="e.g. Net 30 Commercial Credit"
+                    className="form-input"
+                    style={{ fontSize: '0.82rem' }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Delivery Timeline / Terms</label>
+                  <input
+                    type="text"
+                    value={reviseDeliveryTerms}
+                    onChange={(e) => setReviseDeliveryTerms(e.target.value)}
+                    placeholder="e.g. Doorstep Delivery in 5-7 days"
+                    className="form-input"
+                    style={{ fontSize: '0.82rem' }}
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Quotation Validity Until</label>
+                  <input
+                    type="date"
+                    value={reviseValidUntil}
+                    onChange={(e) => setReviseValidUntil(e.target.value)}
+                    className="form-input"
+                    style={{ fontSize: '0.82rem' }}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <label className="form-label">Admin Notes / Revision Remarks for Client *</label>
+                <textarea
+                  rows={2}
+                  value={reviseAdminNotes}
+                  onChange={(e) => setReviseAdminNotes(e.target.value)}
+                  placeholder="e.g. Revised quote with 10% institutional tier discount and free factory dispatch."
+                  className="form-textarea"
+                  style={{ fontSize: '0.82rem' }}
+                  required
+                />
+              </div>
+
+              {/* Financial Calculation Bar */}
+              {(() => {
+                const totalTaxable = reviseQuoteItems.reduce(
+                  (s, it) => s + Math.round(it.quantity * it.unitPrice * (1 - (it.discountPercent || 0) / 100)),
+                  0
+                );
+                const gst = Math.round(totalTaxable * 0.18 * 100) / 100;
+                const shipping = Number(reviseShippingCharges) || 0;
+                const grandTotal = totalTaxable + gst + shipping;
+
+                return (
+                  <div
+                    style={{
+                      background: 'var(--slate-900)',
+                      color: '#FFFFFF',
+                      padding: '1rem',
+                      borderRadius: '8px',
+                      marginBottom: '1.25rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '1rem',
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>TAXABLE BASE: </span>
+                      <strong style={{ fontSize: '1rem' }}>₹{totalTaxable.toLocaleString('en-IN')}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>18% GST: </span>
+                      <strong style={{ fontSize: '1rem', color: '#38BDF8' }}>₹{gst.toLocaleString('en-IN')}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>FREIGHT: </span>
+                      <strong style={{ fontSize: '1rem' }}>{shipping > 0 ? `₹${shipping.toLocaleString('en-IN')}` : 'FREE'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>NEW QUOTED TOTAL: </span>
+                      <strong style={{ fontSize: '1.2rem', color: '#34D399' }}>₹{grandTotal.toLocaleString('en-IN')}</strong>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div className="flex justify-between items-center" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowReviseQuoteModal(false)}
+                  className="btn btn-secondary"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ background: '#7E22CE', borderColor: '#7E22CE', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+                >
+                  <Send size={15} /> Send Revised Quotation to Client
+                </button>
               </div>
             </form>
           </div>

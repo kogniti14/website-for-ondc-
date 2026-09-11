@@ -5,6 +5,7 @@ import {
   B2COrder,
   B2BOrder,
   B2BQuotation,
+  B2BQuotationItem,
   CartItem,
   WishlistItem,
   Coupon,
@@ -656,6 +657,184 @@ class StorageService {
     return order;
   }
 
+  createManualB2BOrder(
+    orderData: {
+      source: 'web' | 'phone' | 'whatsapp' | 'email' | 'sales_rep' | 'direct_offline' | 'other';
+      businessId?: string;
+      businessName: string;
+      contactPerson: string;
+      email: string;
+      mobile: string;
+      gstin?: string;
+      billingAddress: B2CAddress;
+      shippingAddress: B2CAddress;
+      items: {
+        productId?: string;
+        productName: string;
+        sku?: string;
+        hsn?: string;
+        image?: string;
+        quantity: number;
+        unitPrice: number;
+        discountPercent?: number;
+        gstRate?: number;
+      }[];
+      shippingFee?: number;
+      paymentTerms?: string;
+      paymentMode?: string;
+      paymentStatus: 'paid' | 'partially_paid' | 'payment_due';
+      upfrontAmountPaid?: number;
+      transactionReference?: string;
+      bankName?: string;
+      internalRemarks?: string;
+      orderStatus?: 'placed' | 'confirmed';
+    },
+    adminName: string
+  ): B2BOrder {
+    // 1. Check or auto-register B2BBusiness
+    let business = orderData.businessId ? this.getB2BBusinessById(orderData.businessId) : undefined;
+    if (!business) {
+      business = this.getB2BBusinessByIdentifier(orderData.email) || this.getB2BBusinessByIdentifier(orderData.mobile);
+    }
+    if (!business) {
+      const newBizId = `biz_man_${Date.now()}`;
+      const defaultAddr: B2CAddress = {
+        id: `addr_${Date.now()}`,
+        fullName: orderData.contactPerson,
+        phone: orderData.mobile,
+        street: 'Commercial Facility',
+        city: 'Noida',
+        state: 'Uttar Pradesh',
+        pincode: '201301',
+        addressType: 'work',
+      };
+      const newBiz: B2BBusiness = {
+        id: newBizId,
+        companyName: orderData.businessName,
+        legalName: orderData.businessName,
+        contactPerson: orderData.contactPerson,
+        businessEmail: orderData.email || `contact@${orderData.businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+        mobile: orderData.mobile,
+        gstin: orderData.gstin || '09AAECK1234F1Z5',
+        pan: orderData.gstin ? orderData.gstin.slice(2, 12) : 'AAECK1234F',
+        businessType: 'Corporate Office',
+        status: 'approved',
+        billingAddress: defaultAddr,
+        shippingAddress: defaultAddr,
+        documents: [],
+        creditLimit: 500000,
+        paymentTerms: orderData.paymentTerms === 'Net 15' ? 'Net 15' : orderData.paymentTerms === 'Net 30' ? 'Net 30' : 'Prepaid',
+        accountManager: {
+          name: 'Direct Sales Desk',
+          email: 'sales@kognitiminds.com',
+          phone: '+91 99316 48595',
+          designation: 'Senior Account Officer',
+        },
+        registeredAt: new Date().toISOString(),
+        approvedAt: new Date().toISOString(),
+      };
+      this.saveB2BBusiness(newBiz);
+      business = newBiz;
+    }
+
+    const orderNumber = `KM-B2B-${Math.floor(100000 + Math.random() * 900000)}`;
+    const poNumber = `PO-MAN-${orderData.source.toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const items: B2BOrderItemSummary[] = orderData.items.map((it, idx) => {
+      const discount = it.discountPercent || 0;
+      const effUnitPrice = Math.round(it.unitPrice * (1 - discount / 100));
+      const lineTaxable = effUnitPrice * it.quantity;
+      return {
+        productId: it.productId || `prod_man_${idx}`,
+        productName: it.productName,
+        sku: it.sku || `SKU-MAN-${idx + 1}`,
+        image: it.image || 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=600&q=80',
+        quantity: it.quantity,
+        wholesalePrice: it.unitPrice,
+        tierDiscountPercent: discount,
+        effectiveUnitPrice: effUnitPrice,
+        hsn: it.hsn || '8471',
+        gstRate: it.gstRate || 18,
+        total: lineTaxable,
+      };
+    });
+
+    const subtotal = items.reduce((s, i) => s + (i.wholesalePrice * i.quantity), 0);
+    const taxableAmount = items.reduce((s, i) => s + i.total, 0);
+    const bulkDiscountTotal = Math.max(0, subtotal - taxableAmount);
+    const totalGst = Math.round(taxableAmount * 0.18 * 100) / 100;
+    const cgst = Math.round((totalGst / 2) * 100) / 100;
+    const sgst = Math.round((totalGst / 2) * 100) / 100;
+    const shippingFee = Number(orderData.shippingFee) || 0;
+    const grandTotal = taxableAmount + totalGst + shippingFee;
+
+    const upfrontPaid = orderData.paymentStatus === 'paid'
+      ? grandTotal
+      : (orderData.paymentStatus === 'partially_paid' ? (Number(orderData.upfrontAmountPaid) || 0) : 0);
+    const amountDue = Math.max(0, grandTotal - upfrontPaid);
+
+    const paymentRecords: B2BPaymentRecord[] = [];
+    if (upfrontPaid > 0) {
+      paymentRecords.push({
+        id: `pay_${Date.now()}_init`,
+        amount: upfrontPaid,
+        paymentDate: new Date().toISOString().slice(0, 10),
+        paymentMode: orderData.paymentMode || 'bank_transfer',
+        transactionReference: orderData.transactionReference || `INIT-${Date.now()}`,
+        transactionRef: orderData.transactionReference || `INIT-${Date.now()}`,
+        bankName: orderData.bankName || 'Direct / Bank',
+        notes: `Upfront payment captured during manual order creation (${orderData.source.toUpperCase()}).`,
+        recordedBy: adminName,
+        recordedAt: new Date().toISOString(),
+      });
+    }
+
+    const isConfirmed = orderData.orderStatus === 'confirmed';
+
+    const newOrder: B2BOrder = {
+      id: `b2b_ord_${Date.now()}`,
+      orderNumber,
+      poNumber,
+      businessId: business.id,
+      businessName: orderData.businessName,
+      gstin: orderData.gstin || business.gstin || '09AAECK1234F1Z5',
+      source: orderData.source,
+      internalRemarks: orderData.internalRemarks,
+      shippingAddress: orderData.shippingAddress,
+      billingAddress: orderData.billingAddress,
+      items,
+      subtotal,
+      bulkDiscountTotal,
+      taxableAmount,
+      cgst,
+      sgst,
+      igst: 0,
+      totalGst,
+      shippingFee,
+      grandTotal,
+      paymentTerms: orderData.paymentTerms || 'Prepaid',
+      paymentStatus: orderData.paymentStatus,
+      paymentMode: orderData.paymentMode || 'bank_transfer',
+      amountPaid: upfrontPaid,
+      amountDue,
+      paymentRecords,
+      orderStatus: isConfirmed ? 'confirmed' : 'placed',
+      confirmedAt: isConfirmed ? new Date().toISOString() : undefined,
+      confirmedBy: isConfirmed ? adminName : undefined,
+      createdAt: new Date().toISOString(),
+      statusTimeline: [
+        {
+          status: isConfirmed ? 'MANUAL ORDER CREATED & CONFIRMED' : 'MANUAL ORDER DRAFT CREATED',
+          timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+          note: `Order booked manually via ${orderData.source.replace('_', ' ').toUpperCase()} by ${adminName}. Total: ₹${grandTotal.toLocaleString('en-IN')}, Paid: ₹${upfrontPaid.toLocaleString('en-IN')}.`,
+        },
+      ],
+    };
+
+    this.saveB2BOrder(newOrder);
+    return newOrder;
+  }
+
   // --- B2B Quotations (RFQ) ---
   getB2BQuotations(): B2BQuotation[] {
     return this.getItem<B2BQuotation[]>(KEYS.B2B_QUOTATIONS, SEED_B2B_QUOTATIONS);
@@ -675,6 +854,79 @@ class StorageService {
   deleteB2BQuotation(id: string): void {
     const quotations = this.getB2BQuotations().filter((q) => q.id !== id);
     this.setItem(KEYS.B2B_QUOTATIONS, quotations);
+  }
+
+  reviseB2BQuotation(
+    quotationId: string,
+    revisionData: {
+      items: B2BQuotationItem[];
+      shippingCharges?: number;
+      paymentTerms?: string;
+      deliveryTerms?: string;
+      validUntil?: string;
+      adminNotes?: string;
+    },
+    adminName: string
+  ): B2BQuotation | null {
+    const quotations = this.getB2BQuotations();
+    const q = quotations.find((item) => item.id === quotationId);
+    if (!q) return null;
+
+    // Snapshot original request if not already captured
+    if (!q.originalRequest) {
+      q.originalRequest = {
+        requestedQty: q.requestedQty || (q.items?.reduce((s, i) => s + i.quantity, 0) || 1),
+        targetUnitPrice: q.targetUnitPrice || (q.items?.[0]?.unitPrice || 0),
+        deliveryPincode: q.deliveryPincode || q.shippingAddress?.pincode,
+        specialRequirements: q.specialRequirements,
+        items: q.items?.map((it) => ({
+          productName: it.productName,
+          quantity: it.quantity,
+          targetUnitPrice: it.unitPrice,
+        })),
+      };
+    }
+
+    const previousGrandTotal = q.grandTotal || (q.adminQuotation?.grandTotal || 0);
+
+    const totalTaxable = revisionData.items.reduce((s, it) => s + it.total, 0);
+    const totalGst = Math.round(totalTaxable * 0.18 * 100) / 100;
+    const shipping = Number(revisionData.shippingCharges) || 0;
+    const newGrandTotal = totalTaxable + totalGst + shipping;
+
+    q.items = revisionData.items;
+    q.subtotal = totalTaxable;
+    q.taxableAmount = totalTaxable;
+    q.gstAmount = totalGst;
+    q.shippingCharges = shipping;
+    q.grandTotal = newGrandTotal;
+    q.paymentTerms = revisionData.paymentTerms || q.paymentTerms || 'Prepaid';
+    q.deliveryTerms = revisionData.deliveryTerms || q.deliveryTerms || 'Doorstep Delivery within 5-7 business days';
+    q.notes = revisionData.adminNotes || q.notes;
+    q.status = 'revised_quoted';
+
+    q.adminQuotation = {
+      quotedUnitPrice: revisionData.items[0]?.unitPrice || 0,
+      totalTaxable,
+      gstAmount: totalGst,
+      shippingCharges: shipping,
+      grandTotal: newGrandTotal,
+      validUntil: revisionData.validUntil || new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+      adminNotes: revisionData.adminNotes || 'Revised proposal terms submitted by Sales & Quotations desk.',
+      quotedAt: new Date().toISOString(),
+    };
+
+    const newRevision = {
+      revisedAt: new Date().toISOString(),
+      revisedBy: adminName,
+      previousGrandTotal,
+      newGrandTotal,
+      remarks: revisionData.adminNotes || 'Revised quotation issued to client.',
+    };
+    q.revisions = [...(q.revisions || []), newRevision];
+
+    this.saveB2BQuotation(q);
+    return q;
   }
 
   convertQuotationToB2BOrder(quotationId: string, adminName: string): B2BOrder | null {

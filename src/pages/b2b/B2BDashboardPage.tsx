@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Tag,
   CreditCard,
+  RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { B2BOrder, B2BQuotation } from '../../types';
@@ -44,6 +45,29 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
   const [orderToPay, setOrderToPay] = useState<B2BOrder | null>(null);
   const [orderCreatedMsg, setOrderCreatedMsg] = useState<string | null>(null);
   const [logoSuccess, setLogoSuccess] = useState(false);
+  const [revisionModalQuote, setRevisionModalQuote] = useState<B2BQuotation | null>(null);
+  const [revisionNotes, setRevisionNotes] = useState('');
+  const [targetCounterPrice, setTargetCounterPrice] = useState('');
+
+  const handleSubmitCounterRevision = () => {
+    if (!revisionModalQuote) return;
+    if (!revisionNotes.trim()) {
+      alert('Please provide notes or feedback explaining your counter-offer or requested changes.');
+      return;
+    }
+    const updatedQuote: B2BQuotation = {
+      ...revisionModalQuote,
+      status: 'revision_requested',
+      notes: `${revisionModalQuote.notes ? revisionModalQuote.notes + '\n\n' : ''}[Client Counter-Revision Requested on ${new Date().toLocaleDateString('en-IN')}]: ${revisionNotes}${targetCounterPrice ? ` (Target Unit Price: ₹${targetCounterPrice})` : ''}`,
+      targetUnitPrice: targetCounterPrice ? parseFloat(targetCounterPrice) : revisionModalQuote.targetUnitPrice,
+    };
+    storageService.saveB2BQuotation(updatedQuote);
+    setRevisionModalQuote(null);
+    setRevisionNotes('');
+    setTargetCounterPrice('');
+    onRefresh();
+    alert(`Revision request for ${revisionModalQuote.rfqNumber} successfully submitted to the Commercial Desk. Our team will review and update your proposal.`);
+  };
 
   const handleB2BPaymentSuccess = (response: any) => {
     if (!orderToPay) return;
@@ -87,6 +111,15 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
       alert('Sign In Compulsory: You must be signed in to an authorized B2B account to place and confirm this order.');
       return;
     }
+
+    const converted = storageService.convertQuotationToB2BOrder(q.id, b2bBusiness?.companyName || 'Client Accepted');
+    if (converted) {
+      onRefresh();
+      setActiveTab('orders');
+      alert(`Quotation ${q.rfqNumber} successfully accepted! Converted to Confirmed B2B Order ${converted.orderNumber}. Statutory Tax Invoice is now generated.`);
+      return;
+    }
+
     if (!q.adminQuotation) return;
 
     // Convert quotation into an official B2B Order!
@@ -476,13 +509,45 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                               className={`badge ${
                                 q.status === 'quoted'
                                   ? 'badge-green'
-                                  : q.status === 'ordered'
-                                  ? 'badge-blue'
-                                  : 'badge-amber'
+                                  : q.status === 'revised_quoted'
+                                  ? 'badge-purple'
+                                  : q.status === 'revision_requested'
+                                  ? 'badge-amber'
+                                  : q.status === 'ordered' || q.status === 'converted_to_order'
+                                  ? 'badge-green'
+                                  : q.status === 'rejected'
+                                  ? 'badge-red'
+                                  : 'badge-blue'
                               }`}
-                              style={{ fontSize: '0.72rem' }}
+                              style={{
+                                fontSize: '0.72rem',
+                                background:
+                                  q.status === 'revised_quoted'
+                                    ? 'rgba(168, 85, 247, 0.15)'
+                                    : q.status === 'revision_requested'
+                                    ? 'rgba(245, 158, 11, 0.15)'
+                                    : undefined,
+                                color:
+                                  q.status === 'revised_quoted'
+                                    ? '#C084FC'
+                                    : q.status === 'revision_requested'
+                                    ? '#FBBF24'
+                                    : undefined,
+                                borderColor:
+                                  q.status === 'revised_quoted'
+                                    ? 'rgba(168, 85, 247, 0.4)'
+                                    : q.status === 'revision_requested'
+                                    ? 'rgba(245, 158, 11, 0.4)'
+                                    : undefined,
+                              }}
                             >
-                              {q.status.toUpperCase()}
+                              {q.status === 'revised_quoted'
+                                ? '✨ REVISED QUOTATION'
+                                : q.status === 'revision_requested'
+                                ? '🔄 REVISION REQUESTED'
+                                : q.status === 'converted_to_order' || q.status === 'ordered'
+                                ? '✅ CONVERTED TO ORDER'
+                                : q.status.toUpperCase()}
                             </span>
                           </div>
                           <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>
@@ -494,7 +559,7 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                           <div>
                             <span style={{ color: '#94A3B8', fontSize: '0.75rem', display: 'block' }}>Product Requested</span>
                             <strong style={{ color: '#FFFFFF' }}>{q.productName}</strong>
-                            <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>SKU: {q.sku}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>SKU: {q.sku || 'KM-B2B-PRO'}</div>
                           </div>
                           <div>
                             <span style={{ color: '#94A3B8', fontSize: '0.75rem', display: 'block' }}>Requested Volume</span>
@@ -510,8 +575,266 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                           </div>
                         </div>
 
-                        {/* Admin Issued Official Proposal */}
-                        {q.adminQuotation && (
+                        {/* 3-STEP REVISED QUOTATION COMPARISON CARD */}
+                        {(q.status === 'revised_quoted' || (q.revisions && q.revisions.length > 0)) ? (
+                          <div
+                            style={{
+                              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%)',
+                              border: '1px solid rgba(168, 85, 247, 0.35)',
+                              borderRadius: '12px',
+                              padding: '1.25rem',
+                              marginTop: '1rem',
+                              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                            }}
+                          >
+                            <div className="flex justify-between items-center flex-wrap gap-2" style={{ marginBottom: '1rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '0.75rem' }}>
+                              <div className="flex items-center gap-2">
+                                <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#C084FC' }}>
+                                  🔄 Commercial Revision & Transparent Comparison
+                                </span>
+                                <span
+                                  style={{
+                                    background: 'rgba(168, 85, 247, 0.2)',
+                                    color: '#E9D5FF',
+                                    padding: '0.15rem 0.55rem',
+                                    borderRadius: '999px',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 700,
+                                    border: '1px solid rgba(168, 85, 247, 0.4)',
+                                  }}
+                                >
+                                  Revision #{q.revisions?.length || 1}
+                                </span>
+                              </div>
+                              <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
+                                Revised on {new Date(q.revisions?.[q.revisions.length - 1]?.revisedAt || q.createdAt || Date.now()).toLocaleDateString('en-IN')}
+                              </span>
+                            </div>
+
+                            {/* 3 Steps Side-by-Side Progression Grid */}
+                            <div
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))',
+                                gap: '1rem',
+                                marginBottom: '1rem',
+                              }}
+                            >
+                              {/* Step 1: Original Request */}
+                              <div
+                                style={{
+                                  background: 'rgba(255, 255, 255, 0.03)',
+                                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                                  borderRadius: '8px',
+                                  padding: '1rem',
+                                }}
+                              >
+                                <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94A3B8', fontWeight: 800, marginBottom: '0.5rem' }}>
+                                  Step 1 • Original Request
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.82rem' }}>
+                                  <div>
+                                    <span style={{ color: '#94A3B8' }}>Product: </span>
+                                    <strong style={{ color: '#E2E8F0' }}>{q.originalRequest?.productName || q.productName}</strong>
+                                  </div>
+                                  <div>
+                                    <span style={{ color: '#94A3B8' }}>Requested Qty: </span>
+                                    <strong style={{ color: '#E2E8F0' }}>{q.originalRequest?.requestedQty || q.requestedQty} Units</strong>
+                                  </div>
+                                  <div>
+                                    <span style={{ color: '#94A3B8' }}>Target Unit Price: </span>
+                                    <strong style={{ color: '#FBBF24' }}>
+                                      ₹{(q.originalRequest?.targetUnitPrice || q.targetUnitPrice || 0).toLocaleString('en-IN')}
+                                    </strong>
+                                  </div>
+                                  <div>
+                                    <span style={{ color: '#94A3B8' }}>Delivery PIN: </span>
+                                    <strong style={{ color: '#E2E8F0' }}>{q.originalRequest?.deliveryPincode || q.deliveryPincode}</strong>
+                                  </div>
+                                  {(q.originalRequest?.notes || q.notes) && (
+                                    <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: '#94A3B8', fontStyle: 'italic', background: 'rgba(0,0,0,0.2)', padding: '0.35rem', borderRadius: '4px' }}>
+                                      "{q.originalRequest?.notes || q.notes}"
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Step 2: Revised Proposal */}
+                              <div
+                                style={{
+                                  background: 'rgba(168, 85, 247, 0.06)',
+                                  border: '1px solid rgba(168, 85, 247, 0.25)',
+                                  borderRadius: '8px',
+                                  padding: '1rem',
+                                }}
+                              >
+                                <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#C084FC', fontWeight: 800, marginBottom: '0.5rem' }}>
+                                  Step 2 • Revised Commercial Terms
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.82rem' }}>
+                                  <div>
+                                    <span style={{ color: '#94A3B8' }}>Quoted Unit Rate: </span>
+                                    <strong style={{ color: '#FFFFFF' }}>
+                                      ₹{(q.adminQuotation?.quotedUnitPrice || (q.taxableAmount ? Math.round(q.taxableAmount / (q.requestedQty || 1)) : 0)).toLocaleString('en-IN')}
+                                    </strong>
+                                    {Boolean(q.discount) && (
+                                      <span style={{ color: '#34D399', fontSize: '0.72rem', marginLeft: '0.4rem' }}>
+                                        ({q.discount}% Bulk Disc.)
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <span style={{ color: '#94A3B8' }}>Statutory GST: </span>
+                                    <strong style={{ color: '#38BDF8' }}>18% (9% CGST + 9% SGST)</strong>
+                                  </div>
+                                  <div>
+                                    <span style={{ color: '#94A3B8' }}>Logistics / Freight: </span>
+                                    <strong style={{ color: '#E2E8F0' }}>
+                                      {q.shippingCharges ? `₹${q.shippingCharges.toLocaleString('en-IN')}` : 'Included / Free Bulk Freight'}
+                                    </strong>
+                                  </div>
+                                  <div>
+                                    <span style={{ color: '#94A3B8' }}>Delivery Timeline: </span>
+                                    <strong style={{ color: '#E2E8F0' }}>{q.deliveryTimeline || '3 - 5 Business Days'}</strong>
+                                  </div>
+                                  <div>
+                                    <span style={{ color: '#94A3B8' }}>Payment Terms: </span>
+                                    <strong style={{ color: '#E2E8F0' }}>{q.paymentTerms || 'Net 30 Days'}</strong>
+                                  </div>
+                                  {(q.adminRemarks || q.adminQuotation?.adminNotes) && (
+                                    <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: '#CBD5E1', fontStyle: 'italic', background: 'rgba(168, 85, 247, 0.1)', padding: '0.35rem', borderRadius: '4px', borderLeft: '2px solid #C084FC' }}>
+                                      Admin Remarks: "{q.adminRemarks || q.adminQuotation?.adminNotes}"
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Step 3: Final Quoted Amount */}
+                              <div
+                                style={{
+                                  background: 'rgba(16, 185, 129, 0.08)',
+                                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                                  borderRadius: '8px',
+                                  padding: '1rem',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'space-between',
+                                }}
+                              >
+                                <div>
+                                  <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#34D399', fontWeight: 800, marginBottom: '0.5rem' }}>
+                                    Step 3 • Final Quoted Amount
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.82rem' }}>
+                                    <div className="flex justify-between">
+                                      <span style={{ color: '#94A3B8' }}>Taxable Base:</span>
+                                      <strong>₹{(q.taxableAmount || q.adminQuotation?.totalTaxable || 0).toLocaleString('en-IN')}</strong>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span style={{ color: '#94A3B8' }}>18% GST (ITC):</span>
+                                      <strong style={{ color: '#38BDF8' }}>₹{(q.gstAmount || q.adminQuotation?.gstAmount || 0).toLocaleString('en-IN')}</strong>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span style={{ color: '#94A3B8' }}>Freight / Logistics:</span>
+                                      <strong>₹{(q.shippingCharges || q.adminQuotation?.shippingCharges || 0).toLocaleString('en-IN')}</strong>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '0.75rem', marginTop: '0.75rem' }}>
+                                  <div style={{ fontSize: '0.72rem', color: '#94A3B8' }}>Final Net Payable (Inc. GST)</div>
+                                  <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#34D399', marginTop: '0.1rem' }}>
+                                    ₹{(q.grandTotal || q.adminQuotation?.grandTotal || 0).toLocaleString('en-IN')}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Client Decision Actions */}
+                            {(q.status === 'revised_quoted' || q.status === 'quoted') && (
+                              <div className="flex items-center gap-3 flex-wrap" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '0.85rem' }}>
+                                <button
+                                  onClick={() => handleAcceptQuotation(q)}
+                                  className="btn btn-amber btn-sm"
+                                  style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                                >
+                                  <Check size={15} /> Accept Revised Quotation & Convert to Order
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setRevisionModalQuote(q);
+                                    setTargetCounterPrice(String(q.targetUnitPrice || ''));
+                                  }}
+                                  className="btn btn-outline-b2b btn-sm"
+                                  style={{ borderColor: 'rgba(168, 85, 247, 0.5)', color: '#C084FC', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+                                >
+                                  <RefreshCw size={14} /> Request Counter-Revision
+                                </button>
+                                <button
+                                  onClick={() => handleRejectQuotation(q)}
+                                  className="btn btn-sm"
+                                  style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#F87171', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                                >
+                                  <X size={14} /> Decline
+                                </button>
+                              </div>
+                            )}
+
+                            {q.status === 'revision_requested' && (
+                              <div
+                                style={{
+                                  background: 'rgba(245, 158, 11, 0.12)',
+                                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                                  borderRadius: '6px',
+                                  padding: '0.6rem 0.85rem',
+                                  fontSize: '0.8rem',
+                                  color: '#FCD34D',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '0.5rem',
+                                }}
+                              >
+                                <Clock size={16} />
+                                <span>
+                                  <strong>Revision Request Under Review:</strong> Your counter-terms have been received by our Commercial Desk. We are reviewing and will provide an updated proposal shortly.
+                                </span>
+                              </div>
+                            )}
+
+                            {(q.status === 'ordered' || q.status === 'converted_to_order') && (
+                              <div
+                                style={{
+                                  background: 'rgba(16, 185, 129, 0.12)',
+                                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                                  borderRadius: '6px',
+                                  padding: '0.6rem 0.85rem',
+                                  fontSize: '0.8rem',
+                                  color: '#34D399',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  flexWrap: 'wrap',
+                                  gap: '0.5rem',
+                                }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle2 size={16} />
+                                  <span>
+                                    <strong>Quotation Accepted:</strong> Converted to Confirmed B2B Order <strong>#{q.convertedOrderId || 'Confirmed'}</strong>.
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => setActiveTab('orders')}
+                                  className="btn btn-outline-b2b btn-sm"
+                                  style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem', color: '#34D399', borderColor: '#34D399' }}
+                                >
+                                  View Order & Tax Invoice →
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ) : q.adminQuotation ? (
+                          /* Standard Initial Admin Proposal */
                           <div
                             style={{
                               background: 'rgba(16, 185, 129, 0.1)',
@@ -562,12 +885,23 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                             </p>
 
                             {q.status === 'quoted' && (
-                              <div className="flex gap-3">
+                              <div className="flex gap-3 flex-wrap">
                                 <button
                                   onClick={() => handleAcceptQuotation(q)}
                                   className="btn btn-amber btn-sm"
+                                  style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                                 >
                                   <Check size={14} /> Accept Quotation & Convert to Order
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setRevisionModalQuote(q);
+                                    setTargetCounterPrice(String(q.targetUnitPrice || ''));
+                                  }}
+                                  className="btn btn-outline-b2b btn-sm"
+                                  style={{ borderColor: 'rgba(168, 85, 247, 0.5)', color: '#C084FC', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                                >
+                                  <RefreshCw size={14} /> Request Revision
                                 </button>
                                 <button
                                   onClick={() => handleRejectQuotation(q)}
@@ -579,13 +913,19 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                               </div>
                             )}
 
-                            {q.status === 'ordered' && (
+                            {q.status === 'revision_requested' && (
+                              <div style={{ fontSize: '0.8rem', color: '#FBBF24', fontWeight: 600 }}>
+                                🔄 Revision Request Sent. Commercial Desk is reviewing.
+                              </div>
+                            )}
+
+                            {(q.status === 'ordered' || q.status === 'converted_to_order') && (
                               <div style={{ fontSize: '0.8rem', color: '#34D399', fontWeight: 700 }}>
                                 ✓ Accepted & Converted to B2B Order. View under B2B Orders.
                               </div>
                             )}
                           </div>
-                        )}
+                        ) : null}
                       </div>
                     ))}
                   </div>
@@ -649,6 +989,70 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                             <span className="badge badge-amber">
                               Payment: {ord.paymentTerms}
                             </span>
+                            {ord.source && (
+                              <span
+                                className="badge"
+                                style={{
+                                  background:
+                                    ord.source === 'whatsapp'
+                                      ? 'rgba(37, 211, 102, 0.15)'
+                                      : ord.source === 'phone'
+                                      ? 'rgba(59, 130, 246, 0.15)'
+                                      : ord.source === 'sales_rep'
+                                      ? 'rgba(168, 85, 247, 0.15)'
+                                      : 'rgba(245, 158, 11, 0.15)',
+                                  color:
+                                    ord.source === 'whatsapp'
+                                      ? '#25D366'
+                                      : ord.source === 'phone'
+                                      ? '#60A5FA'
+                                      : ord.source === 'sales_rep'
+                                      ? '#C084FC'
+                                      : '#FBBF24',
+                                  border: '1px solid currentColor',
+                                  fontSize: '0.72rem',
+                                }}
+                              >
+                                {ord.source === 'whatsapp'
+                                  ? '💬 WhatsApp Booking'
+                                  : ord.source === 'phone'
+                                  ? '📞 Phone Booking'
+                                  : ord.source === 'sales_rep'
+                                  ? '💼 Sales Rep Booking'
+                                  : ord.source === 'direct_offline'
+                                  ? '🏪 Direct Offline'
+                                  : ord.source === 'email'
+                                  ? '✉️ Email Order'
+                                  : '🌐 Web Order'}
+                              </span>
+                            )}
+                            {ord.amountDue !== undefined && (
+                              <span
+                                className="badge"
+                                style={{
+                                  background:
+                                    ord.amountDue === 0
+                                      ? 'rgba(16, 185, 129, 0.15)'
+                                      : ord.amountPaid && ord.amountPaid > 0
+                                      ? 'rgba(245, 158, 11, 0.15)'
+                                      : 'rgba(239, 68, 68, 0.15)',
+                                  color:
+                                    ord.amountDue === 0
+                                      ? '#34D399'
+                                      : ord.amountPaid && ord.amountPaid > 0
+                                      ? '#FBBF24'
+                                      : '#F87171',
+                                  border: '1px solid currentColor',
+                                  fontSize: '0.72rem',
+                                }}
+                              >
+                                {ord.amountDue === 0
+                                  ? '✓ Fully Paid'
+                                  : ord.amountPaid && ord.amountPaid > 0
+                                  ? `Partially Paid (Due ₹${ord.amountDue.toLocaleString('en-IN')})`
+                                  : `Payment Due: ₹${ord.amountDue.toLocaleString('en-IN')}`}
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -1123,6 +1527,117 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
           isB2B={true}
           onSuccess={handleB2BPaymentSuccess}
         />
+      )}
+
+      {/* Client Counter-Revision Request Modal */}
+      {revisionModalQuote && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(10, 15, 29, 0.85)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#1E293B',
+              border: '1px solid rgba(168, 85, 247, 0.4)',
+              borderRadius: 'var(--radius-lg)',
+              width: '100%',
+              maxWidth: '560px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+              padding: '1.75rem',
+            }}
+          >
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.25rem', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '0.75rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <RefreshCw size={18} style={{ color: '#C084FC' }} /> Request Counter-Revision
+                </h3>
+                <p style={{ fontSize: '0.78rem', color: '#94A3B8', marginTop: '0.15rem' }}>
+                  Quotation: <strong>{revisionModalQuote.rfqNumber}</strong> • {revisionModalQuote.productName}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setRevisionModalQuote(null);
+                  setRevisionNotes('');
+                  setTargetCounterPrice('');
+                }}
+                className="btn btn-icon"
+                style={{ color: '#94A3B8' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#CBD5E1', marginBottom: '0.35rem' }}>
+                  Proposed Target Unit Price (Optional, ₹)
+                </label>
+                <input
+                  type="number"
+                  className="input"
+                  value={targetCounterPrice}
+                  onChange={(e) => setTargetCounterPrice(e.target.value)}
+                  placeholder="e.g. 190"
+                  style={{ width: '100%', background: '#0F172A', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFFFFF' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#CBD5E1', marginBottom: '0.35rem' }}>
+                  Revision Notes & Specific Requirements <span style={{ color: '#EF4444' }}>*</span>
+                </label>
+                <textarea
+                  className="input"
+                  rows={4}
+                  value={revisionNotes}
+                  onChange={(e) => setRevisionNotes(e.target.value)}
+                  placeholder="Please specify your counter-offer, delivery timeline expectation, payment term request, or quantity adjustments..."
+                  style={{ width: '100%', background: '#0F172A', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFFFFF', resize: 'vertical' }}
+                />
+                <span style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '0.25rem', display: 'block' }}>
+                  This note will be sent directly to the Kogniti Commercial Desk for negotiation.
+                </span>
+              </div>
+
+              <div className="flex justify-end gap-3" style={{ marginTop: '0.75rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRevisionModalQuote(null);
+                    setRevisionNotes('');
+                    setTargetCounterPrice('');
+                  }}
+                  className="btn btn-outline-b2b btn-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmitCounterRevision}
+                  className="btn btn-amber btn-sm"
+                  style={{ fontWeight: 800, background: 'linear-gradient(135deg, #A855F7 0%, #7C3AED 100%)', color: '#FFFFFF' }}
+                >
+                  Submit Counter-Revision
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

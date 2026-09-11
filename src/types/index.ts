@@ -63,6 +63,7 @@ export interface B2CUser {
 export interface B2BBusiness {
   id: string;
   companyName: string;
+  legalName?: string;
   contactPerson: string;
   businessEmail: string;
   mobile: string;
@@ -210,6 +211,8 @@ export interface B2BOrder {
   businessId: string;
   businessName: string;
   gstin: string;
+  source?: 'web' | 'phone' | 'whatsapp' | 'email' | 'sales_rep' | 'direct_offline' | 'other';
+  internalRemarks?: string;
   shippingAddress: B2CAddress;
   billingAddress: B2CAddress;
   items: B2BOrderItemSummary[];
@@ -301,7 +304,18 @@ export interface B2BQuotation {
   deliveryPincode?: string;
   requiredByDate?: string;
   specialRequirements?: string;
-  status: 'submitted' | 'quoted' | 'accepted' | 'rejected' | 'ordered' | 'converted_to_order';
+  status:
+    | 'draft'
+    | 'quoted'
+    | 'submitted'
+    | 'under_review'
+    | 'revision_requested'
+    | 'revised_quoted'
+    | 'accepted'
+    | 'rejected'
+    | 'expired'
+    | 'converted_to_order'
+    | 'ordered';
   subtotal?: number;
   discount?: number;
   taxableAmount?: number;
@@ -310,7 +324,26 @@ export interface B2BQuotation {
   grandTotal?: number;
   paymentTerms?: string;
   deliveryTerms?: string;
+  deliveryTimeline?: string;
+  adminRemarks?: string;
   notes?: string;
+  originalRequest?: {
+    productName?: string;
+    requestedQty: number;
+    targetUnitPrice: number;
+    deliveryPincode?: string;
+    specialRequirements?: string;
+    notes?: string;
+    submittedAt?: string;
+    items?: { productName: string; quantity: number; targetUnitPrice?: number }[];
+  };
+  revisions?: {
+    revisedAt: string;
+    revisedBy: string;
+    previousGrandTotal?: number;
+    newGrandTotal: number;
+    remarks?: string;
+  }[];
   convertedOrderId?: string;
   convertedAt?: string;
   convertedBy?: string;
