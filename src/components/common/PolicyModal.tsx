@@ -70,7 +70,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ type, onClose }) => {
               <p style={{ lineHeight: '1.6', marginBottom: '0.75rem' }}>
                 • Metro cities (Bengaluru, Delhi NCR, Mumbai, Hyderabad, Chennai, Kolkata): 2 to 4 business days.<br />
                 • Tier 2 & Tier 3 cities: 3 to 6 business days.<br />
-                • Institutional heavy freight (commercial standing desks, 75" flat panels): Scheduled delivery with lift gate within 5 to 7 business days.
+                • Institutional pallet freight (bulk paper reams, institutional supply cartons): Scheduled delivery within 4 to 6 business days.
               </p>
               <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>2. Free Shipping & Institutional Support</h4>
               <p style={{ lineHeight: '1.6', marginBottom: '0.75rem' }}>
@@ -90,19 +90,19 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ type, onClose }) => {
           content: (
             <div>
               <p style={{ marginBottom: '1rem', lineHeight: '1.6' }}>
-                We stand behind the engineering of every physical product manufactured and distributed by Kogniti Minds Private Limited.
+                We stand behind the quality of every sustainable paper and stationery product manufactured and distributed by Kogniti Minds Private Limited.
               </p>
               <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>1. 7-Day Replacement Guarantee</h4>
               <p style={{ lineHeight: '1.6', marginBottom: '0.75rem' }}>
-                If any hardware arrives physically damaged in transit, with defective mechanical parts, or mismatching specifications, report it within 7 calendar days of delivery for a 100% free doorstep replacement.
+                If any product arrives physically damaged in transit, defective, or mismatching specifications, report it within 7 calendar days of delivery for a 100% free doorstep replacement.
               </p>
               <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>2. Refunds Processing</h4>
               <p style={{ lineHeight: '1.6', marginBottom: '0.75rem' }}>
                 If a replacement cannot be fulfilled due to inventory constraints, a complete refund will be credited back to your original payment source (UPI account or Card) within 3 to 5 banking days.
               </p>
-              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>3. Manufacturer Warranty</h4>
+              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>3. Quality Guarantee</h4>
               <p style={{ lineHeight: '1.6' }}>
-                Products are protected by long-term manufacturer warranty (ranging from 1 to 5 years). On-site technician support is provided for interactive displays and motorized desks in major metros.
+                Products are protected by strict manufacturer quality guarantees. Dedicated institutional customer support and batch replacement support are provided for corporate and educational bulk orders.
               </p>
             </div>
           ),

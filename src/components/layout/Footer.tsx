@@ -258,7 +258,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal })
               </li>
               <li>
                 <button onClick={() => setActiveTab('b2b')} style={{ color: '#94A3B8' }}>
-                  School & College Outfitting
+                  Institutional & School Paper Supplies
                 </button>
               </li>
             </ul>
@@ -318,7 +318,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal })
               Stay Updated
             </div>
             <p style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '1rem' }}>
-              Subscribe for new smart hardware releases, institutional tenders, and exclusive corporate discount announcements.
+              Subscribe for sustainable paper innovations, institutional supply updates, and exclusive bulk discount announcements.
             </p>
             <form onSubmit={handleSubscribe}>
               <div style={{ position: 'relative' }}>

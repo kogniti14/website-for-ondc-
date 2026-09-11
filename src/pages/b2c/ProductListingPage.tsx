@@ -35,7 +35,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
   const categoryList = categories && categories.length > 0 ? categories : CATEGORIES;
   const [search, setSearch] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'All');
-  const [priceRange, setPriceRange] = useState<number>(200000);
+  const [priceRange, setPriceRange] = useState<number>(100000);
   const [minRating, setMinRating] = useState<number>(0);
   const [onlyInStock, setOnlyInStock] = useState<boolean>(false);
   const [onlyBestSellers, setOnlyBestSellers] = useState<boolean>(false);
@@ -97,7 +97,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
   const handleResetFilters = () => {
     setSearch('');
     setSelectedCategory('All');
-    setPriceRange(200000);
+    setPriceRange(100000);
     setMinRating(0);
     setOnlyInStock(false);
     setOnlyBestSellers(false);
@@ -117,10 +117,10 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
           </span>
         </div>
         <h1 style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--slate-900)' }}>
-          {isShopNowView ? 'Shop Now — Official Store' : 'Browse All Physical Hardware'}
+          {isShopNowView ? 'Shop Now — Official Store' : 'Browse Sustainable Paper & Stationery'}
         </h1>
         <p style={{ color: 'var(--slate-600)', fontSize: '0.95rem', marginTop: '0.35rem' }}>
-          Find high-grade ergonomic furniture, smart classrooms & boardrooms tech, biometric attendance terminals, and corporate accessories.
+          Find sustainable paper from agricultural waste, printing & copy paper, notebooks, journals, office stationery, and institutional supplies.
         </p>
       </div>
 
@@ -143,7 +143,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
             />
             <input
               type="text"
-              placeholder="Search by product name, category, SKU (e.g. Chair, 75 panel, PDU)..."
+              placeholder="Search sustainable paper, printing paper, notebooks, journals, stationery & more..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="form-input"
@@ -263,16 +263,16 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
             </div>
             <input
               type="range"
-              min={2000}
-              max={200000}
-              step={5000}
+              min={100}
+              max={100000}
+              step={500}
               value={priceRange}
               onChange={(e) => setPriceRange(Number(e.target.value))}
               style={{ width: '100%', accentColor: 'var(--primary)' }}
             />
             <div className="flex justify-between text-slate-400" style={{ fontSize: '0.7rem' }}>
-              <span>₹2,000</span>
-              <span>₹2,00,000</span>
+              <span>₹100</span>
+              <span>₹1,00,000</span>
             </div>
           </div>
 
@@ -333,7 +333,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
                 No Products Match Your Criteria
               </h3>
               <p style={{ color: 'var(--slate-500)', fontSize: '0.9rem', maxWidth: '400px', margin: '0 auto 1.5rem' }}>
-                Try adjusting your search query, price slider, or category filter to discover available hardware.
+                Try adjusting your search query, price slider, or category filter to discover available paper and stationery products.
               </p>
               <button onClick={handleResetFilters} className="btn btn-secondary btn-sm">
                 <RotateCcw size={14} /> Clear All Filters

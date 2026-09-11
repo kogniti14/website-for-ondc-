@@ -109,7 +109,7 @@ export const CartPage: React.FC<CartPageProps> = ({
             Your Cart is Currently Empty
           </h3>
           <p style={{ color: 'var(--slate-500)', fontSize: '0.9rem', lineHeight: '1.5', marginBottom: '1.75rem' }}>
-            Discover commercial-grade ergonomic office chairs, 4K interactive display panels, biometric systems, and accessories.
+            Discover our curated range of sustainable agri-waste paper, printing paper, notebooks, journals, office stationery, and eco supplies.
           </p>
           <button
             onClick={() => setActiveTab('products')}

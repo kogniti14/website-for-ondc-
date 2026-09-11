@@ -538,7 +538,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       <span className="flex items-center text-amber-500"><Star size={12} fill="#D97706" /> 5.0</span>
                     </div>
                     <p style={{ fontSize: '0.78rem', color: 'var(--slate-600)', marginTop: '0.2rem' }}>
-                      "Sturdy, high-grade commercial quality. We ordered 15 units for our design team, everyone loves the comfort."
+                      "Excellent texture and ink absorption. High quality sustainable supplies with fast dispatch and GST tax invoice."
                     </p>
                   </div>
                 </div>

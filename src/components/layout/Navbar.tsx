@@ -152,7 +152,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               />
               <input
                 type="text"
-                placeholder="Search ergonomic chairs, smart panels, PDUs, organizers..."
+                placeholder="Search sustainable paper, printing paper, notebooks, journals, stationery & more..."
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -565,7 +565,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <form onSubmit={handleSearchSubmit}>
             <input
               type="text"
-              placeholder="Search products..."
+              placeholder="Search sustainable paper, printing paper, notebooks, journals, stationery & more..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);

@@ -145,10 +145,10 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
               Institutional Sourcing Desk
             </span>
             <h1 style={{ fontSize: '2.2rem', fontWeight: 800, color: '#FFFFFF' }}>
-              Wholesale Physical Hardware Catalog
+              Wholesale Sustainable Paper & Institutional Supplies Catalog
             </h1>
             <p style={{ color: '#94A3B8', fontSize: '0.92rem', marginTop: '0.2rem' }}>
-              Direct factory procurement for schools, offices, universities, IT infrastructure, and resellers.
+              Direct manufacturer procurement for schools, offices, universities, corporate enterprises, and resellers.
             </p>
           </div>
         </div>
@@ -173,7 +173,7 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
             <Search size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: '#94A3B8' }} />
             <input
               type="text"
-              placeholder="Search wholesale products, HSN, specs..."
+              placeholder="Search sustainable paper, printing paper, notebooks, journals, stationery & more..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="form-input"

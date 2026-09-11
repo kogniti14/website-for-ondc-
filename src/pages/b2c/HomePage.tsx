@@ -222,8 +222,8 @@ export const HomePage: React.FC<HomePageProps> = ({
                 }}
               >
                 <img
-                  src="https://images.unsplash.com/photo-1580481077195-77626359b35b?auto=format&fit=crop&w=1200&q=80"
-                  alt="Kogniti Minds Flagship Physical Hardware"
+                  src="https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1200&q=80"
+                  alt="Kogniti Minds Flagship Sustainable Agro-Waste Paper"
                   style={{ width: '100%', height: '420px', objectFit: 'cover' }}
                 />
                 <div
@@ -239,16 +239,16 @@ export const HomePage: React.FC<HomePageProps> = ({
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="badge badge-amber" style={{ fontSize: '0.68rem', marginBottom: '0.25rem' }}>
-                        Enterprise Favorite
+                        Best Seller Ream
                       </span>
                       <h4 style={{ color: '#FFFFFF', fontSize: '1.1rem', fontWeight: 700 }}>
-                        Kogniti AeroFlex Pro Ergonomic Mesh
+                        Kogniti AgroPrint 75 GSM Sustainable Paper
                       </h4>
-                      <div style={{ color: '#94A3B8', fontSize: '0.8rem' }}>BIFMA Level 3 Certified seating for 12h+ work</div>
+                      <div style={{ color: '#94A3B8', fontSize: '0.8rem' }}>100% Tree-Free Indian Agricultural Residue Paper</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#38BDF8' }}>₹12,499</div>
-                      <div style={{ fontSize: '0.75rem', color: '#94A3B8', textDecoration: 'line-through' }}>₹18,999</div>
+                      <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#38BDF8' }}>₹289</div>
+                      <div style={{ fontSize: '0.75rem', color: '#94A3B8', textDecoration: 'line-through' }}>₹399</div>
                     </div>
                   </div>
                 </div>
@@ -350,7 +350,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               </span>
               <h2 style={{ fontSize: '1.9rem', fontWeight: 800 }}>Explore Curated Categories</h2>
               <p style={{ color: 'var(--slate-500)', fontSize: '0.92rem', marginTop: '0.2rem' }}>
-                Premium hardware engineered for home offices, schools, tech enterprises, and institutions.
+                Sustainable paper and eco-stationery engineered from agricultural waste for individuals, schools, offices, and institutions.
               </p>
             </div>
             <button
@@ -664,28 +664,28 @@ export const HomePage: React.FC<HomePageProps> = ({
               </div>
 
               <h4 style={{ color: '#FFFFFF', fontSize: '1.2rem', fontWeight: 800, marginBottom: '0.5rem' }}>
-                75" 4K Interactive VisionBoard Bundle
+                Institutional Agro Copier Paper Pallet (100,000 Sheets)
               </h4>
               <p style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '1.5rem' }}>
-                Simulation for School Lab Outfitting (10 Units with Installation)
+                Simulation for University / Corporate Campus Procurement (40 Cartons / 200 Reams)
               </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
                 <div className="flex justify-between" style={{ fontSize: '0.85rem' }}>
-                  <span style={{ color: '#94A3B8' }}>B2C Retail Price (10 Units):</span>
-                  <span style={{ color: '#CBD5E1', textDecoration: 'line-through' }}>₹14,50,000</span>
+                  <span style={{ color: '#94A3B8' }}>Retail Price (200 Reams):</span>
+                  <span style={{ color: '#CBD5E1', textDecoration: 'line-through' }}>₹79,800</span>
                 </div>
                 <div className="flex justify-between" style={{ fontSize: '0.85rem' }}>
-                  <span style={{ color: '#94A3B8' }}>Wholesale Base Price:</span>
-                  <span style={{ color: '#FFFFFF', fontWeight: 600 }}>₹11,20,000</span>
+                  <span style={{ color: '#94A3B8' }}>Wholesale Pallet Price:</span>
+                  <span style={{ color: '#FFFFFF', fontWeight: 600 }}>₹39,600</span>
                 </div>
                 <div className="flex justify-between" style={{ fontSize: '0.85rem' }}>
-                  <span style={{ color: '#34D399' }}>Institutional Tier 1 Discount (6%):</span>
-                  <span style={{ color: '#34D399', fontWeight: 700 }}>- ₹67,200</span>
+                  <span style={{ color: '#34D399' }}>Volume Tier Discount (12%):</span>
+                  <span style={{ color: '#34D399', fontWeight: 700 }}>- ₹4,752</span>
                 </div>
                 <div className="flex justify-between" style={{ fontSize: '0.85rem' }}>
-                  <span style={{ color: '#38BDF8' }}>Input Tax Credit (18% GST):</span>
-                  <span style={{ color: '#38BDF8', fontWeight: 700 }}>₹1,89,504 Claimable</span>
+                  <span style={{ color: '#38BDF8' }}>Input Tax Credit (12% GST):</span>
+                  <span style={{ color: '#38BDF8', fontWeight: 700 }}>₹4,181 Claimable</span>
                 </div>
                 <div
                   className="flex justify-between items-baseline"
@@ -696,7 +696,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 >
                   <span style={{ fontWeight: 700, color: '#FFFFFF' }}>Total Net Savings:</span>
                   <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FBBF24' }}>
-                    Save ₹3,97,200+
+                    Save ₹44,950+
                   </span>
                 </div>
               </div>
@@ -756,7 +756,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               Engineered for Reliability & Scale
             </h2>
             <p style={{ color: 'var(--slate-500)', fontSize: '0.95rem', marginTop: '0.35rem' }}>
-              We bridge the gap between world-class hardware manufacturing and transparent Indian commerce.
+              We bridge the gap between sustainable material innovation from farm residues and reliable Indian commerce.
             </p>
           </div>
 
@@ -784,10 +784,10 @@ export const HomePage: React.FC<HomePageProps> = ({
                 <Award size={24} />
               </div>
               <h4 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-                Commercial Grade Quality
+                Certified Tree-Free Excellence
               </h4>
               <p style={{ fontSize: '0.85rem', color: 'var(--slate-600)', lineHeight: '1.5' }}>
-                Every physical product complies with BIFMA, ISO 9001, and BIS safety standards, engineered for intense 12+ hour daily institutional usage.
+                Every ream and notebook is precision-milled from upcycled agricultural crop residue, meeting ISO 9001 and ISO 14001 environmental standards for jam-free printing and smudge-free writing.
               </p>
             </div>
 
@@ -811,7 +811,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 Competitive Pricing
               </h4>
               <p style={{ fontSize: '0.85rem', color: 'var(--slate-600)', lineHeight: '1.5' }}>
-                Eliminate distributor markups. We deliver straight from specialized Indian assembly lines to your doorstep at unmatched value.
+                Eliminate distributor markups. We deliver straight from our Indian agro-paper manufacturing facilities to your doorstep at direct manufacturer pricing.
               </p>
             </div>
 
@@ -890,7 +890,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 ))}
               </div>
               <p style={{ fontSize: '0.88rem', color: 'var(--slate-700)', lineHeight: '1.6', marginBottom: '1.25rem' }}>
-                "We outfitted our entire hybrid computer lab with Kogniti 75-inch interactive panels and soundbars. The zero-gap touch precision and prompt GST billing made the procurement painless."
+                "We transitioned all 5 campuses of our university to Kogniti 75 GSM agro-waste copier paper. Jam-free high-speed printing during semester exams, prompt GST billing, and real carbon reduction for our annual sustainability report."
               </p>
               <div className="flex items-center gap-3">
                 <div
@@ -927,7 +927,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 ))}
               </div>
               <p style={{ fontSize: '0.88rem', color: 'var(--slate-700)', lineHeight: '1.6', marginBottom: '1.25rem' }}>
-                "As a developer working 14 hours a day, the AeroFlex Pro chair cured my chronic lower back stiffness. Built like a tank, easy 15-minute assembly, and quick delivery to Bengaluru."
+                "The AgroLeaf executive notebooks and plantable seed pens are phenomenal. The 80 GSM tree-free paper has an incredible natural texture with zero bleed from fountain pens. Quick delivery to our Bengaluru office."
               </p>
               <div className="flex items-center gap-3">
                 <div
@@ -964,7 +964,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 ))}
               </div>
               <p style={{ fontSize: '0.88rem', color: 'var(--slate-700)', lineHeight: '1.6', marginBottom: '1.25rem' }}>
-                "We ordered 200 bamboo desk organizer gift sets for our annual corporate townhall. Every piece had our company logo laser engraved with perfection. Outstanding business support!"
+                "We ordered 500 custom-embossed Agro-Paper employee onboarding hampers for our corporate annual meet. Our team loved the plantable seed pencils and handcrafted journals. Outstanding B2B support!"
               </p>
               <div className="flex items-center gap-3">
                 <div

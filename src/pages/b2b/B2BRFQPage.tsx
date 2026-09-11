@@ -42,7 +42,7 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
   const [deliveryPincode, setDeliveryPincode] = useState(b2bBusiness?.shippingAddress.pincode || '560100');
   const [requiredByDate, setRequiredByDate] = useState('2026-09-30');
   const [specialRequirements, setSpecialRequirements] = useState(
-    'Required for campus / corporate expansion. Please include delivery and transit insurance in commercial quote.'
+    'Required for campus / institutional supply. Please include dispatch schedule and GST breakdown in commercial quote.'
   );
 
   const [submittedRfq, setSubmittedRfq] = useState<B2BQuotation | null>(null);
@@ -73,7 +73,7 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
       email,
       phone,
       productId,
-      productName: currentProduct?.name || 'Selected Physical Hardware',
+      productName: currentProduct?.name || 'Selected Paper & Stationery Supplies',
       sku: currentProduct?.sku || 'SKU-KM',
       requestedQty,
       targetUnitPrice,
@@ -171,7 +171,7 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
                 Request a Formal B2B Quotation (RFQ)
               </h1>
               <p style={{ color: '#94A3B8', fontSize: '0.95rem', marginTop: '0.35rem' }}>
-                For tenders, campus outfitting, corporate bulk purchases, and custom OEM branding requests.
+                For tenders, institutional supplies, corporate bulk paper procurement, and custom stationery branding requests.
               </p>
             </div>
 

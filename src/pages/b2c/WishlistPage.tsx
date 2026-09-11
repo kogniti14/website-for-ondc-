@@ -72,7 +72,7 @@ export const WishlistPage: React.FC<WishlistPageProps> = ({
             Your Wishlist is Empty
           </h3>
           <p style={{ color: 'var(--slate-500)', fontSize: '0.9rem', lineHeight: '1.5', marginBottom: '1.75rem' }}>
-            Explore our curated catalog of ergonomic office chairs, 4K interactive display panels, biometric systems, and accessories.
+            Explore our curated range of sustainable agri-waste paper, printing paper, notebooks, journals, office stationery, and eco supplies.
           </p>
           <button
             onClick={() => setActiveTab('products')}

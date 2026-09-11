@@ -225,7 +225,7 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
                 Corporate Offices & IT
               </h4>
               <p style={{ color: '#94A3B8', fontSize: '0.82rem', lineHeight: '1.6' }}>
-                Ergonomic mesh chairs, dual-motor motorized desks, video conference bars, and server rack power units for modern tech campuses.
+                Eco-friendly printing paper reams, executive notebooks, document files, letterheads, and customized corporate stationery.
               </p>
             </div>
 
@@ -256,7 +256,7 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
                 Schools, Colleges & EdTech
               </h4>
               <p style={{ color: '#94A3B8', fontSize: '0.82rem', lineHeight: '1.6' }}>
-                75" 4K interactive flat panels, acoustic soundbars, biometric attendance for students/faculty, and durable computer lab seating.
+                Annual bulk exam answer booklets, project paper, student notebooks, laboratory record sheets, and sustainable classroom supplies.
               </p>
             </div>
 
@@ -287,7 +287,7 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
                 Co-Working & Real Estate
               </h4>
               <p style={{ color: '#94A3B8', fontSize: '0.82rem', lineHeight: '1.6' }}>
-                Fast turnkey outfitting for multi-tenant facilities, commercial air purifiers, and contactless facial access control gates.
+                High-capacity eco-paper reams, branded onboarding hampers, sustainable desk caddies, and recycled kraft presentation folders.
               </p>
             </div>
 
@@ -334,7 +334,7 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
                 Wholesale Showcase
               </span>
               <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#FFFFFF', marginTop: '0.25rem' }}>
-                B2B Hardware Ready for Bulk Dispatch
+                Sustainable Paper & Supplies Ready for Bulk Dispatch
               </h2>
             </div>
 

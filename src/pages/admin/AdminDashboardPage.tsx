@@ -852,19 +852,19 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     id: `km-new-${Date.now()}`,
                     name: '',
                     tagline: '',
-                    sku: 'KM-HW-',
-                    hsn: '84213920',
-                    category: categories[0]?.name || 'Ergonomic Furniture',
-                    b2cMrp: 10000,
-                    b2cPrice: 7500,
-                    b2bWholesalePrice: 5500,
-                    b2bMoq: 5,
-                    b2bDiscountSlabs: [{ minQty: 5, maxQty: 19, discountPercent: 0, label: 'Base' }],
-                    gstRate: 18,
-                    stock: 50,
+                    sku: 'KM-PAP-',
+                    hsn: '48025610',
+                    category: categories[0]?.name || 'Sustainable & Agri-Waste-Based Paper',
+                    b2cMrp: 499,
+                    b2cPrice: 349,
+                    b2bWholesalePrice: 240,
+                    b2bMoq: 10,
+                    b2bDiscountSlabs: [{ minQty: 10, maxQty: 49, discountPercent: 0, label: 'Base' }],
+                    gstRate: 12,
+                    stock: 500,
                     rating: 4.8,
                     reviewCount: 1,
-                    images: ['https://images.unsplash.com/photo-1580481077195-77626359b35b?auto=format&fit=crop&w=800&q=80'],
+                    images: ['https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=800&q=80'],
                     shortDescription: '',
                     description: '',
                     specifications: {},
@@ -2522,7 +2522,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         <div className="modal-overlay" onClick={() => setShowProductModal(false)}>
           <div className="modal-content" style={{ maxWidth: '650px', padding: '2rem' }} onClick={(e) => e.stopPropagation()}>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '1.25rem' }}>
-              Add / Edit Catalog Hardware
+              Add / Edit Catalog Product
             </h3>
 
             <form onSubmit={handleSaveProduct}>
@@ -2684,7 +2684,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       id: prev.isNew ? newName.toLowerCase().replace(/[^a-z0-9]+/g, '-') : prev.id,
                     }));
                   }}
-                  placeholder="e.g. Ergonomic Furniture, Smart Robotics"
+                  placeholder="e.g. Sustainable & Agri-Waste-Based Paper, Notebooks"
                   className="form-input"
                   required
                 />
@@ -2697,7 +2697,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     type="text"
                     value={categoryForm.id}
                     onChange={(e) => setCategoryForm({ ...categoryForm, id: e.target.value })}
-                    placeholder="e.g. smart-robotics"
+                    placeholder="e.g. notebooks-journals"
                     className="form-input"
                     required
                   />
