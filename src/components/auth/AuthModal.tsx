@@ -11,28 +11,37 @@ interface AuthModalProps {
 
 export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onClose }) => {
   const [mode, setMode] = useState<'login' | 'register' | 'otp' | 'forgot'>(initialMode);
-  const [loginMethod, setLoginMethod] = useState<'password' | 'otp'>('password');
+  const [loginMethod, setLoginMethod] = useState<'password' | 'email_otp'>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Email OTP States for Login
+  const [loginOtpSent, setLoginOtpSent] = useState(false);
+  const [loginOtp, setLoginOtp] = useState('');
+  const [loginCooldown, setLoginCooldown] = useState(0);
+
+  // Email OTP States for Registration
+  const [regOtpSent, setRegOtpSent] = useState(false);
+  const [regOtp, setRegOtp] = useState('');
+  const [regCooldown, setRegCooldown] = useState(0);
+
+  // Email OTP States for Forgot Password
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [forgotOtpSent, setForgotOtpSent] = useState(false);
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotCooldown, setForgotCooldown] = useState(0);
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
+  const [firebaseResetSuccess, setFirebaseResetSuccess] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   // Unregistered Account Check State
   const [showUnregisteredModal, setShowUnregisteredModal] = useState(false);
   const [unregisteredIdentifier, setUnregisteredIdentifier] = useState('');
-
-  // Forgot Password via OTP State
-  const [forgotIdentifier, setForgotIdentifier] = useState('');
-  const [forgotOtp, setForgotOtp] = useState('');
-  const [forgotNewPassword, setForgotNewPassword] = useState('');
-  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
-  const [forgotOtpInfo, setForgotOtpInfo] = useState<{ otp: string; expiresAt: string } | null>(null);
-  const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
-  const [firebaseResetSuccess, setFirebaseResetSuccess] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
   const {
     loginB2C,
@@ -40,19 +49,48 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
     registerB2CWithFirebase,
     loginWithGoogle,
     sendFirebasePasswordReset,
+    sendEmailOtp,
+    loginB2CWithEmailOtp,
+    registerB2CWithEmailOtp,
+    resetPasswordWithEmailOtp,
     isFirebaseLive,
   } = useAuth();
 
+  // Cooldown timers
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (loginCooldown > 0) {
+      timer = setTimeout(() => setLoginCooldown((prev) => prev - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [loginCooldown]);
+
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (regCooldown > 0) {
+      timer = setTimeout(() => setRegCooldown((prev) => prev - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [regCooldown]);
+
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (forgotCooldown > 0) {
+      timer = setTimeout(() => setForgotCooldown((prev) => prev - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [forgotCooldown]);
+
+  // Handlers
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (!email) {
-      setError('Please enter your registered email address or mobile number');
+      setError('Please enter your registered email address or mobile number.');
       return;
     }
     const cleanEmail = email.trim();
 
-    // Check whether the entered mobile number or email address exists in the database
     const isRegistered = storageService.isB2CIdentifierRegistered(cleanEmail);
     if (!isRegistered) {
       setUnregisteredIdentifier(cleanEmail);
@@ -62,7 +100,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
 
     setLoading(true);
 
-    // If email format and password entered, authenticate via Firebase
     if (cleanEmail.includes('@') && password) {
       const res = await loginB2CWithFirebase(cleanEmail.toLowerCase(), password);
       setLoading(false);
@@ -74,37 +111,116 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
       return;
     }
 
-    // Local / Mobile fallback
     const success = loginB2C(cleanEmail);
     setLoading(false);
     if (success) {
       onClose();
     } else {
-      setError('Incorrect password. Please verify your credentials or reset via OTP.');
+      setError('Incorrect credentials. Please verify or use Email OTP / Reset.');
     }
   };
 
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
+  const handleSendLoginEmailOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!fullName || !email || !phone) {
-      setError('Please fill in all required registration fields');
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setError('Please enter a valid email address to receive your verification OTP.');
+      return;
+    }
+
+    const isRegistered = storageService.isB2CIdentifierRegistered(cleanEmail);
+    if (!isRegistered) {
+      setUnregisteredIdentifier(cleanEmail);
+      setShowUnregisteredModal(true);
+      return;
+    }
+
+    setLoading(true);
+    const res = await sendEmailOtp(cleanEmail, 'login');
+    setLoading(false);
+    if (res.success) {
+      setLoginOtpSent(true);
+      setLoginCooldown(res.cooldownSeconds || 60);
+    } else {
+      setError(res.message);
+    }
+  };
+
+  const handleVerifyLoginEmailOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!loginOtp || loginOtp.length !== 6) {
+      setError('Please enter the 6-digit verification code sent to your email.');
       return;
     }
     setLoading(true);
-    const res = await registerB2CWithFirebase(
+    const res = await loginB2CWithEmailOtp(email.trim().toLowerCase(), loginOtp.trim());
+    setLoading(false);
+    if (res.success) {
+      onClose();
+    } else {
+      setError(res.error || 'Invalid OTP code. Please try again.');
+    }
+  };
+
+  const handleSendRegisterOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!fullName.trim() || !email.trim() || !phone.trim()) {
+      setError('Please fill in all registration fields first.');
+      return;
+    }
+    if (!email.includes('@')) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    if (!password || password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const existing = storageService.getB2CUserByIdentifier(cleanEmail);
+    if (existing) {
+      setError('An account with this email address already exists. Please sign in instead.');
+      return;
+    }
+
+    setLoading(true);
+    const res = await sendEmailOtp(cleanEmail, 'register');
+    setLoading(false);
+    if (res.success) {
+      setRegOtpSent(true);
+      setRegCooldown(res.cooldownSeconds || 60);
+    } else {
+      setError(res.message);
+    }
+  };
+
+  const handleVerifyAndRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!regOtp || regOtp.length !== 6) {
+      setError('Please enter the 6-digit verification code received in your email.');
+      return;
+    }
+
+    setLoading(true);
+    const res = await registerB2CWithEmailOtp(
       {
-        name: fullName,
+        name: fullName.trim(),
         email: email.trim().toLowerCase(),
-        phone,
+        phone: phone.trim(),
       },
-      password || 'Customer@123'
+      regOtp.trim(),
+      password
     );
     setLoading(false);
     if (res.success) {
       onClose();
     } else {
-      setError(res.error || 'Registration failed.');
+      setError(res.error || 'Registration failed. Please check the code and try again.');
     }
   };
 
@@ -136,21 +252,39 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
     }
   };
 
-  const handleSendForgotOtp = (e: React.FormEvent) => {
+  const handleSendForgotOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!forgotIdentifier.trim()) {
-      setError('Please enter your registered email address or mobile number.');
+    const clean = forgotIdentifier.trim().toLowerCase();
+    if (!clean || !clean.includes('@')) {
+      setError('Please enter your registered email address.');
       return;
     }
-    const otpRes = storageService.generatePasswordResetOtp(forgotIdentifier.trim(), 'b2c');
-    setForgotOtpInfo(otpRes);
-    setForgotOtp(otpRes.otp);
+    const isRegistered = storageService.isB2CIdentifierRegistered(clean);
+    if (!isRegistered) {
+      setUnregisteredIdentifier(clean);
+      setShowUnregisteredModal(true);
+      return;
+    }
+
+    setLoading(true);
+    const res = await sendEmailOtp(clean, 'reset');
+    setLoading(false);
+    if (res.success) {
+      setForgotOtpSent(true);
+      setForgotCooldown(res.cooldownSeconds || 60);
+    } else {
+      setError(res.message);
+    }
   };
 
-  const handleVerifyForgotOtp = (e: React.FormEvent) => {
+  const handleVerifyForgotOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!forgotOtp || forgotOtp.length !== 6) {
+      setError('Please enter the 6-digit verification code received in your email.');
+      return;
+    }
     if (!forgotNewPassword || forgotNewPassword.length < 6) {
       setError('Password must be at least 6 characters long.');
       return;
@@ -159,11 +293,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
       setError('Passwords do not match.');
       return;
     }
-    const res = storageService.resetPasswordWithOtp(
-      forgotIdentifier.trim(),
+
+    setLoading(true);
+    const res = await resetPasswordWithEmailOtp(
+      forgotIdentifier.trim().toLowerCase(),
       forgotOtp.trim(),
-      forgotNewPassword
+      forgotNewPassword,
+      'b2c'
     );
+    setLoading(false);
     if (res.success) {
       setForgotSuccess(res.message);
       setEmail(forgotIdentifier.trim());
@@ -171,45 +309,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
       setTimeout(() => {
         setMode('login');
         setForgotSuccess(null);
-        setForgotOtpInfo(null);
+        setForgotOtpSent(false);
+        setForgotOtp('');
       }, 2500);
     } else {
       setError(res.message);
-    }
-  };
-
-  const handleSendOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phone || phone.replace(/\D/g, '').length < 10) {
-      setError('Please enter a valid 10-digit Indian mobile number');
-      return;
-    }
-    const cleanPhone = phone.trim();
-
-    // Check whether the entered mobile number exists in the database
-    const isRegistered = storageService.isB2CIdentifierRegistered(cleanPhone);
-    if (!isRegistered) {
-      setUnregisteredIdentifier(cleanPhone);
-      setShowUnregisteredModal(true);
-      return;
-    }
-
-    setOtpSent(true);
-    setError(null);
-  };
-
-  const handleVerifyOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otp === '123456' || otp.length === 6) {
-      const cleanPhone = phone.trim();
-      const success = loginB2C(cleanPhone);
-      if (success) {
-        onClose();
-      } else {
-        setError('Verification failed. No matching account found for this mobile number.');
-      }
-    } else {
-      setError('Invalid OTP. For demo testing, enter 123456');
     }
   };
 
@@ -320,7 +424,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
         )}
 
         {mode === 'forgot' ? (
-          /* Forgot Password via OTP Form */
+          /* Forgot Password via Email OTP */
           <div>
             <div className="flex items-center gap-2" style={{ marginBottom: '1.25rem' }}>
               <button
@@ -328,6 +432,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
                 onClick={() => {
                   setMode('login');
                   setError(null);
+                  setForgotOtpSent(false);
                 }}
                 className="btn btn-sm btn-outline"
                 style={{ padding: '0.3rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
@@ -362,15 +467,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
                   Sign In with New Password
                 </button>
               </div>
-            ) : !forgotOtpInfo ? (
+            ) : !forgotOtpSent ? (
               <form onSubmit={handleSendForgotOtp}>
                 <div className="form-group">
-                  <label className="form-label">Registered Email or Mobile Number</label>
+                  <label className="form-label">Registered Email Address *</label>
                   <div style={{ position: 'relative' }}>
                     <Mail size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
                     <input
-                      type="text"
-                      placeholder="customer@kognitiminds.com"
+                      type="email"
+                      placeholder="yourname@domain.com"
                       value={forgotIdentifier}
                       onChange={(e) => setForgotIdentifier(e.target.value)}
                       className="form-input"
@@ -379,7 +484,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
                     />
                   </div>
                   <span style={{ fontSize: '0.72rem', color: 'var(--slate-500)', marginTop: '0.2rem', display: 'block' }}>
-                    We will dispatch a secure 6-digit authentication OTP to verify ownership.
+                    We will send a cryptographically secure 6-digit OTP code directly to your email inbox.
                   </span>
                 </div>
 
@@ -401,8 +506,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
                   </div>
                 )}
 
-                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
-                  Generate & Send Verification OTP
+                <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
+                  {loading ? 'Dispatching OTP...' : 'Send 6-Digit Verification Code'}
                 </button>
 
                 {forgotIdentifier && forgotIdentifier.includes('@') && (
@@ -419,59 +524,48 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
               </form>
             ) : (
               <form onSubmit={handleVerifyForgotOtp}>
-                {/* Live OTP Notification Simulation Banner */}
                 <div
                   style={{
-                    background: 'linear-gradient(135deg, #ECFDF5 0%, #E0F2FE 100%)',
-                    border: '1.5px solid #10B981',
-                    borderRadius: '10px',
-                    padding: '0.85rem',
+                    background: '#F0FDF4',
+                    border: '1px solid #BBF7D0',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
                     marginBottom: '1rem',
+                    fontSize: '0.8rem',
+                    color: '#166534',
                   }}
                 >
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#047857', marginBottom: '0.25rem' }}>
-                    ✨ Live OTP Dispatch Simulation
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: '#065F46' }}>
-                    OTP sent to <strong>{forgotIdentifier}</strong>:
-                  </div>
-                  <div className="flex items-center gap-3" style={{ marginTop: '0.4rem' }}>
-                    <span
-                      style={{
-                        fontFamily: 'monospace',
-                        fontSize: '1.3rem',
-                        fontWeight: 900,
-                        letterSpacing: '3px',
-                        background: '#FFFFFF',
-                        padding: '0.25rem 0.6rem',
-                        borderRadius: '6px',
-                        color: '#047857',
-                        border: '1px solid #A7F3D0',
-                      }}
-                    >
-                      {forgotOtpInfo.otp}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setForgotOtp(forgotOtpInfo.otp)}
-                      className="btn btn-sm"
-                      style={{ background: '#10B981', color: '#FFFFFF', fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
-                    >
-                      Auto-Fill OTP
-                    </button>
-                  </div>
+                  Verification code dispatched to <strong>{forgotIdentifier}</strong>. Please check your inbox (or spam folder).
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">6-Digit Verification OTP *</label>
+                  <div className="flex justify-between items-center">
+                    <label className="form-label">Enter 6-Digit Email OTP *</label>
+                    <button
+                      type="button"
+                      disabled={forgotCooldown > 0 || loading}
+                      onClick={handleSendForgotOtp}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: forgotCooldown > 0 ? 'not-allowed' : 'pointer',
+                        fontSize: '0.75rem',
+                        color: forgotCooldown > 0 ? 'var(--slate-400)' : 'var(--primary)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {forgotCooldown > 0 ? `Resend code in ${forgotCooldown}s` : 'Resend Code'}
+                    </button>
+                  </div>
                   <input
                     type="text"
                     maxLength={6}
                     value={forgotOtp}
-                    onChange={(e) => setForgotOtp(e.target.value)}
-                    placeholder="123456"
+                    onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, ''))}
+                    placeholder="••••••"
                     className="form-input"
-                    style={{ fontFamily: 'monospace', fontSize: '1.1rem', letterSpacing: '2px', textAlign: 'center', fontWeight: 700 }}
+                    style={{ fontFamily: 'monospace', fontSize: '1.25rem', letterSpacing: '0.3em', textAlign: 'center', fontWeight: 800 }}
                     required
                   />
                 </div>
@@ -508,51 +602,57 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
                   </div>
                 </div>
 
-                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
-                  Verify OTP & Set New Password
+                <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
+                  {loading ? 'Updating Password...' : 'Verify OTP & Set New Password'}
                 </button>
               </form>
             )}
           </div>
         ) : mode === 'login' ? (
           <div>
-            {/* Login Method Toggle */}
+            {/* Login Method Toggle: Password vs Email OTP */}
             <div className="flex justify-center gap-4" style={{ marginBottom: '1rem', fontSize: '0.8rem' }}>
               <button
                 type="button"
-                onClick={() => setLoginMethod('password')}
+                onClick={() => {
+                  setLoginMethod('password');
+                  setError(null);
+                }}
                 style={{
                   color: loginMethod === 'password' ? 'var(--primary)' : 'var(--slate-500)',
                   fontWeight: loginMethod === 'password' ? 700 : 500,
                   borderBottom: loginMethod === 'password' ? '2px solid var(--primary)' : 'none',
-                  paddingBottom: '2px',
+                  paddingBottom: '4px',
                 }}
               >
                 Password Login
               </button>
               <button
                 type="button"
-                onClick={() => setLoginMethod('otp')}
+                onClick={() => {
+                  setLoginMethod('email_otp');
+                  setError(null);
+                }}
                 style={{
-                  color: loginMethod === 'otp' ? 'var(--primary)' : 'var(--slate-500)',
-                  fontWeight: loginMethod === 'otp' ? 700 : 500,
-                  borderBottom: loginMethod === 'otp' ? '2px solid var(--primary)' : 'none',
-                  paddingBottom: '2px',
+                  color: loginMethod === 'email_otp' ? 'var(--primary)' : 'var(--slate-500)',
+                  fontWeight: loginMethod === 'email_otp' ? 700 : 500,
+                  borderBottom: loginMethod === 'email_otp' ? '2px solid var(--primary)' : 'none',
+                  paddingBottom: '4px',
                 }}
               >
-                Mobile OTP Login
+                ✉️ Email OTP Login
               </button>
             </div>
 
             {loginMethod === 'password' ? (
               <form onSubmit={handleLoginSubmit}>
                 <div className="form-group">
-                  <label className="form-label">Email or Mobile Number</label>
+                  <label className="form-label">Email Address or Mobile</label>
                   <div style={{ position: 'relative' }}>
                     <Mail size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
                     <input
                       type="text"
-                      placeholder="customer@kognitiminds.com"
+                      placeholder="yourname@domain.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="form-input"
@@ -572,7 +672,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
                         setForgotIdentifier(email || '');
                         setError(null);
                         setForgotSuccess(null);
-                        setForgotOtpInfo(null);
+                        setForgotOtpSent(false);
                       }}
                       style={{
                         background: 'none',
@@ -601,77 +701,85 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
                   </div>
                 </div>
 
-                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
-                  Sign In to Account
+                <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
+                  {loading ? 'Authenticating...' : 'Sign In to Account'}
                 </button>
-
-                <div style={{ marginTop: '0.85rem', textAlign: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail('customer@kognitiminds.com');
-                      setPassword('demo123');
-                    }}
-                    style={{ fontSize: '0.78rem', color: 'var(--primary)', textDecoration: 'underline' }}
-                  >
-                    Use Demo B2C Credentials (customer@kognitiminds.com)
-                  </button>
-                </div>
               </form>
             ) : (
               <div>
-                {!otpSent ? (
-                  <form onSubmit={handleSendOtp}>
+                {!loginOtpSent ? (
+                  <form onSubmit={handleSendLoginEmailOtp}>
                     <div className="form-group">
-                      <label className="form-label">10-Digit Mobile Number</label>
+                      <label className="form-label">Registered Email Address</label>
                       <div style={{ position: 'relative' }}>
-                        <Phone size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
+                        <Mail size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
                         <input
-                          type="tel"
-                          placeholder="98765 43210"
-                          value={phone}
-                          maxLength={10}
-                          onChange={(e) => setPhone(e.target.value)}
+                          type="email"
+                          placeholder="yourname@domain.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
                           className="form-input"
                           style={{ paddingLeft: '38px' }}
                           required
                         />
                       </div>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--slate-500)', marginTop: '0.2rem', display: 'block' }}>
+                        A one-time 6-digit login password will be delivered to this email inbox.
+                      </span>
                     </div>
-                    <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
-                      Send OTP via SMS
+                    <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
+                      {loading ? 'Sending OTP...' : 'Send Login OTP to Email'}
                     </button>
                   </form>
                 ) : (
-                  <form onSubmit={handleVerifyOtp}>
+                  <form onSubmit={handleVerifyLoginEmailOtp}>
                     <div
                       style={{
-                        padding: '0.6rem',
-                        background: 'var(--emerald-50)',
-                        border: '1px solid var(--emerald-100)',
-                        color: 'var(--emerald-800)',
+                        padding: '0.65rem 0.85rem',
+                        background: '#F0FDF4',
+                        border: '1px solid #BBF7D0',
+                        color: '#166534',
                         borderRadius: 'var(--radius-sm)',
                         fontSize: '0.8rem',
                         marginBottom: '1rem',
                       }}
                     >
-                      OTP sent to +91 {phone}. Demo OTP is <strong>123456</strong>.
+                      OTP sent to <strong>{email}</strong>. Check inbox or spam folder.
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Enter 6-Digit OTP</label>
+                      <div className="flex justify-between items-center">
+                        <label className="form-label">Enter 6-Digit Email OTP</label>
+                        <button
+                          type="button"
+                          disabled={loginCooldown > 0 || loading}
+                          onClick={handleSendLoginEmailOtp}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: loginCooldown > 0 ? 'not-allowed' : 'pointer',
+                            fontSize: '0.75rem',
+                            color: loginCooldown > 0 ? 'var(--slate-400)' : 'var(--primary)',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {loginCooldown > 0 ? `Resend in ${loginCooldown}s` : 'Resend Code'}
+                        </button>
+                      </div>
                       <input
                         type="text"
-                        placeholder="123456"
+                        placeholder="••••••"
                         maxLength={6}
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value)}
+                        value={loginOtp}
+                        onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, ''))}
                         className="form-input"
-                        style={{ textAlign: 'center', fontSize: '1.2rem', letterSpacing: '0.3em' }}
+                        style={{ textAlign: 'center', fontSize: '1.25rem', letterSpacing: '0.3em', fontWeight: 800 }}
                         required
+                        autoFocus
                       />
                     </div>
-                    <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-                      Verify & Sign In
+                    <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%' }}>
+                      {loading ? 'Verifying...' : 'Verify OTP & Sign In'}
                     </button>
                   </form>
                 )}
@@ -679,77 +787,143 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
             )}
           </div>
         ) : (
-          /* Register Form */
-          <form onSubmit={handleRegisterSubmit}>
-            <div className="form-group">
-              <label className="form-label">Full Name</label>
-              <div style={{ position: 'relative' }}>
-                <User size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
-                <input
-                  type="text"
-                  placeholder="e.g. Utkarsh Sharma"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="form-input"
-                  style={{ paddingLeft: '38px' }}
-                  required
-                />
-              </div>
-            </div>
+          /* Register Form with Real Email OTP Verification */
+          <div>
+            {!regOtpSent ? (
+              <form onSubmit={handleSendRegisterOtp}>
+                <div className="form-group">
+                  <label className="form-label">Full Name *</label>
+                  <div style={{ position: 'relative' }}>
+                    <User size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
+                    <input
+                      type="text"
+                      placeholder="e.g. Utkarsh Sharma"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="form-input"
+                      style={{ paddingLeft: '38px' }}
+                      required
+                    />
+                  </div>
+                </div>
 
-            <div className="form-group">
-              <label className="form-label">Email Address</label>
-              <div style={{ position: 'relative' }}>
-                <Mail size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
-                <input
-                  type="email"
-                  placeholder="name@domain.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="form-input"
-                  style={{ paddingLeft: '38px' }}
-                  required
-                />
-              </div>
-            </div>
+                <div className="form-group">
+                  <label className="form-label">Email Address * (For OTP Verification)</label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
+                    <input
+                      type="email"
+                      placeholder="yourname@domain.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="form-input"
+                      style={{ paddingLeft: '38px' }}
+                      required
+                    />
+                  </div>
+                </div>
 
-            <div className="form-group">
-              <label className="form-label">Mobile Number</label>
-              <div style={{ position: 'relative' }}>
-                <Phone size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
-                <input
-                  type="tel"
-                  placeholder="98765 43210"
-                  value={phone}
-                  maxLength={10}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="form-input"
-                  style={{ paddingLeft: '38px' }}
-                  required
-                />
-              </div>
-            </div>
+                <div className="form-group">
+                  <label className="form-label">Mobile Number *</label>
+                  <div style={{ position: 'relative' }}>
+                    <Phone size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
+                    <input
+                      type="tel"
+                      placeholder="98765 43210"
+                      value={phone}
+                      maxLength={10}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="form-input"
+                      style={{ paddingLeft: '38px' }}
+                      required
+                    />
+                  </div>
+                </div>
 
-            <div className="form-group">
-              <label className="form-label">Account Password</label>
-              <div style={{ position: 'relative' }}>
-                <Lock size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
-                <input
-                  type="password"
-                  placeholder="Create secure password (min 6 chars)"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="form-input"
-                  style={{ paddingLeft: '38px' }}
-                  required
-                />
-              </div>
-            </div>
+                <div className="form-group">
+                  <label className="form-label">Create Password * (Min 6 chars)</label>
+                  <div style={{ position: 'relative' }}>
+                    <Lock size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--slate-400)' }} />
+                    <input
+                      type="password"
+                      placeholder="Create secure password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="form-input"
+                      style={{ paddingLeft: '38px' }}
+                      required
+                    />
+                  </div>
+                </div>
 
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
-              Create B2C Account
-            </button>
-          </form>
+                <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
+                  {loading ? 'Sending Code...' : 'Send Verification OTP to Email'}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyAndRegister}>
+                <div
+                  style={{
+                    padding: '0.75rem',
+                    background: '#F0FDF4',
+                    border: '1px solid #BBF7D0',
+                    color: '#166534',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem',
+                    marginBottom: '1rem',
+                  }}
+                >
+                  A 6-digit verification OTP was sent to <strong>{email}</strong>. Enter it below to activate your account.
+                </div>
+
+                <div className="form-group">
+                  <div className="flex justify-between items-center">
+                    <label className="form-label">Enter 6-Digit Email OTP *</label>
+                    <button
+                      type="button"
+                      disabled={regCooldown > 0 || loading}
+                      onClick={handleSendRegisterOtp}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: regCooldown > 0 ? 'not-allowed' : 'pointer',
+                        fontSize: '0.75rem',
+                        color: regCooldown > 0 ? 'var(--slate-400)' : 'var(--primary)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {regCooldown > 0 ? `Resend in ${regCooldown}s` : 'Resend Code'}
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={regOtp}
+                    onChange={(e) => setRegOtp(e.target.value.replace(/\D/g, ''))}
+                    placeholder="••••••"
+                    className="form-input"
+                    style={{ textAlign: 'center', fontSize: '1.25rem', letterSpacing: '0.3em', fontWeight: 800 }}
+                    required
+                    autoFocus
+                  />
+                </div>
+
+                <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
+                  {loading ? 'Verifying & Registering...' : 'Verify OTP & Complete Registration'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setRegOtpSent(false)}
+                  className="btn btn-outline btn-sm"
+                  style={{ width: '100%', marginTop: '0.65rem' }}
+                >
+                  ← Edit Registration Details
+                </button>
+              </form>
+            )}
+          </div>
         )}
 
         {/* Social / Google Sign-in */}

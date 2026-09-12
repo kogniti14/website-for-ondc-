@@ -18,6 +18,7 @@ import {
   B2CAddress,
 } from '../types';
 import { MOCK_PRODUCTS, MOCK_COUPONS, CATEGORIES } from '../data/mockProducts';
+import { emailOtpService } from './emailOtpService';
 
 const KEYS = {
   PRODUCTS: 'km_products_v2',
@@ -37,193 +38,25 @@ const KEYS = {
   SITE_MEDIA: 'km_site_media_v2',
 };
 
-// Initial Seed Data
+// Initial Seed Data - Production Level (Zero Dummy Accounts)
 const SEED_ADMIN_USERS: AdminUser[] = [
   {
     id: 'adm_super_01',
-    userId: 'superadmin',
-    name: 'Kogniti Super Admin',
-    email: 'superadmin@kognitiminds.com',
-    password: 'SuperAdmin@2026#',
+    userId: 'kogniti14',
+    name: 'Honey Sharma',
+    email: 'kogniti14@kognitiminds.com',
+    password: '28022007Honey@#',
     role: 'super_admin',
     department: 'Executive Leadership & Governance',
     status: 'approved',
     registeredAt: '2026-08-01T09:00:00Z',
     approvedAt: '2026-08-01T09:00:00Z',
   },
-  {
-    id: 'adm_ops_02',
-    userId: 'admin_ops',
-    name: 'Rohan Sharma (Operations)',
-    email: 'admin@kognitiminds.com',
-    password: 'OpsAdmin@2026#',
-    role: 'operations_admin',
-    department: 'Fulfillment & Logistics',
-    status: 'approved',
-    registeredAt: '2026-08-10T10:30:00Z',
-    approvedAt: '2026-08-10T11:00:00Z',
-  },
-  {
-    id: 'adm_catalog_03',
-    userId: 'admin_catalog',
-    name: 'Priya Patel (Catalog)',
-    email: 'catalog@kognitiminds.com',
-    password: 'CatalogLead@2026#',
-    role: 'catalog_manager',
-    department: 'Product & Catalog Management',
-    status: 'approved',
-    registeredAt: '2026-08-12T14:15:00Z',
-    approvedAt: '2026-08-12T15:00:00Z',
-  },
-  {
-    id: 'adm_fin_04',
-    userId: 'admin_finance',
-    name: 'Amit Verma (Finance)',
-    email: 'finance@kognitiminds.com',
-    password: 'FinanceAdmin@2026#',
-    role: 'finance_admin',
-    department: 'Accounts, GST & Credit Control',
-    status: 'approved',
-    registeredAt: '2026-08-15T09:00:00Z',
-    approvedAt: '2026-08-15T09:30:00Z',
-  },
 ];
 
-const SEED_B2C_USERS: B2CUser[] = [
-  {
-    id: 'b2c_user_01',
-    name: 'Utkarsh Sharma',
-    email: 'customer@kognitiminds.com',
-    phone: '+91 98765 43210',
-    password: 'Customer@123',
-    addresses: [
-      {
-        id: 'addr_01',
-        fullName: 'Utkarsh Sharma',
-        phone: '+91 98765 43210',
-        street: 'Flat 402, Green Glen Layout, Bellandur',
-        city: 'Bengaluru',
-        state: 'Karnataka',
-        pincode: '560103',
-        isDefault: true,
-        addressType: 'home',
-      },
-    ],
-    createdAt: '2026-08-15T10:00:00Z',
-  },
-];
+const SEED_B2C_USERS: B2CUser[] = [];
 
-const SEED_B2B_BUSINESSES: B2BBusiness[] = [
-  {
-    id: 'biz_edutech',
-    companyName: 'EduTech Solutions Private Limited',
-    contactPerson: 'Vikram Malhotra',
-    businessEmail: 'procurement@edutech.in',
-    mobile: '+91 98111 22334',
-    password: 'b2b123',
-    gstin: '29AAACE1234F1Z8',
-    pan: 'AAACE1234F',
-    businessType: 'Education / School',
-    status: 'approved',
-    creditLimit: 1500000,
-    paymentTerms: 'Net 30',
-    accountManager: {
-      name: 'Rohan Sharma',
-      email: 'rohan.sharma@kognitiminds.com',
-      phone: '+91 9931648595',
-      designation: 'Senior Institutional Key Account Manager',
-    },
-    registeredAt: '2026-08-01T10:00:00Z',
-    approvedAt: '2026-08-02T14:30:00Z',
-    billingAddress: {
-      id: 'addr_b2b_01_bill',
-      fullName: 'EduTech Solutions Pvt Ltd (Finance)',
-      phone: '+91 98111 22334',
-      street: 'Plot 45, Electronic City Phase 1',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      pincode: '560100',
-      addressType: 'work',
-      isDefault: true,
-    },
-    shippingAddress: {
-      id: 'addr_b2b_01_ship',
-      fullName: 'EduTech Solutions Central Campus Warehouse',
-      phone: '+91 98111 22334',
-      street: 'Gate 2, EduTech Campus, Electronic City Phase 1',
-      city: 'Bengaluru',
-      state: 'Karnataka',
-      pincode: '560100',
-      addressType: 'work',
-      isDefault: true,
-    },
-    documents: [
-      {
-        name: 'GST_Certificate_29AAACE1234F1Z8.pdf',
-        type: 'application/pdf',
-        uploadedAt: '2026-08-01T10:05:00Z',
-        status: 'verified',
-      },
-      {
-        name: 'PAN_Card_Corporate.pdf',
-        type: 'application/pdf',
-        uploadedAt: '2026-08-01T10:06:00Z',
-        status: 'verified',
-      },
-    ],
-  },
-  {
-    id: 'biz_innovate',
-    companyName: 'Innovate Workspace Hub LLP',
-    contactPerson: 'Pooja Verma',
-    businessEmail: 'admin@innovatetech.co',
-    mobile: '+91 97222 33445',
-    password: 'b2b123',
-    gstin: '07AABCI5678G1ZP',
-    pan: 'AABCI5678G',
-    businessType: 'Co-Working & Real Estate',
-    status: 'pending',
-    creditLimit: 500000,
-    paymentTerms: 'Prepaid',
-    accountManager: {
-      name: 'Rohan Sharma',
-      email: 'rohan.sharma@kognitiminds.com',
-      phone: '+91 9931648595',
-      designation: 'Senior Institutional Key Account Manager',
-    },
-    registeredAt: '2026-09-08T09:15:00Z',
-    billingAddress: {
-      id: 'addr_b2b_02_bill',
-      fullName: 'Innovate Workspace Hub LLP',
-      phone: '+91 97222 33445',
-      street: 'Tower B, Cyber City',
-      city: 'Gurugram',
-      state: 'Haryana',
-      pincode: '122002',
-      addressType: 'work',
-      isDefault: true,
-    },
-    shippingAddress: {
-      id: 'addr_b2b_02_ship',
-      fullName: 'Innovate Hub Logistics Dock',
-      phone: '+91 97222 33445',
-      street: 'Basement Level 2 Freight Bay, Cyber City',
-      city: 'Gurugram',
-      state: 'Haryana',
-      pincode: '122002',
-      addressType: 'work',
-      isDefault: true,
-    },
-    documents: [
-      {
-        name: 'GST_Reg_Innovate_07AABCI5678G1ZP.pdf',
-        type: 'application/pdf',
-        uploadedAt: '2026-09-08T09:20:00Z',
-        status: 'pending',
-      },
-    ],
-  },
-];
+const SEED_B2B_BUSINESSES: B2BBusiness[] = [];
 
 const SEED_B2C_ORDERS: B2COrder[] = [];
 
@@ -1232,23 +1065,30 @@ class StorageService {
     return this.getItem<PasswordResetOtp[]>(KEYS.RESET_OTPS, []);
   }
 
-  generatePasswordResetOtp(
+  async generatePasswordResetOtp(
     targetIdentifier: string,
     userType: 'admin' | 'b2c' | 'b2b'
-  ): { otp: string; expiresAt: string; targetIdentifier: string } {
+  ): Promise<{ otp: string; expiresAt: string; targetIdentifier: string; message?: string }> {
     const cleanTarget = targetIdentifier.trim().toLowerCase();
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 mins
     const otps = this.getResetOtps().filter((o) => o.targetIdentifier !== cleanTarget);
     otps.push({ targetIdentifier: cleanTarget, otp, expiresAt, userType });
     this.setItem(KEYS.RESET_OTPS, otps);
-    return { otp, expiresAt, targetIdentifier: cleanTarget };
+
+    let message: string | undefined;
+    if (cleanTarget.includes('@')) {
+      const emailRes = await emailOtpService.sendOtp(cleanTarget, 'reset');
+      message = emailRes.message;
+    }
+
+    return { otp, expiresAt, targetIdentifier: cleanTarget, message };
   }
 
   verifyPasswordResetOtp(targetIdentifier: string, inputOtp: string): boolean {
     const cleanTarget = targetIdentifier.trim().toLowerCase();
     const cleanInput = inputOtp.trim();
-    if (cleanInput === '123456') return true; // Master developer bypass code
+    if (!cleanInput || cleanInput.length !== 6 || !/^\d{6}$/.test(cleanInput)) return false;
     const otps = this.getResetOtps();
     const record = otps.find((o) => o.targetIdentifier === cleanTarget && o.otp === cleanInput);
     if (!record) return false;

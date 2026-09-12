@@ -31,7 +31,14 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   onSuccess,
   initialMode = 'login',
 }) => {
-  const { loginAdminWithCredentials, registerAdminUser, loginAdminWithFirebase, sendFirebasePasswordReset } = useAuth();
+  const {
+    loginAdminWithCredentials,
+    registerAdminUser,
+    loginAdminWithFirebase,
+    sendFirebasePasswordReset,
+    sendEmailOtp,
+    resetPasswordWithEmailOtp,
+  } = useAuth();
 
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
   const [showPassword, setShowPassword] = useState(false);
@@ -46,12 +53,13 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   const [showUnregisteredModal, setShowUnregisteredModal] = useState(false);
   const [unregisteredIdentifier, setUnregisteredIdentifier] = useState('');
 
-  // Forgot Password via OTP State
+  // Forgot Password via Email OTP State
   const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [forgotOtpSent, setForgotOtpSent] = useState(false);
   const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotCooldown, setForgotCooldown] = useState(0);
   const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
-  const [forgotOtpInfo, setForgotOtpInfo] = useState<{ otp: string; expiresAt: string } | null>(null);
   const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
 
   // Login Form State
@@ -66,6 +74,12 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   const [regRole, setRegRole] = useState<AdminRole>('operations_admin');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
+
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (forgotCooldown > 0) timer = setTimeout(() => setForgotCooldown((prev) => prev - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [forgotCooldown]);
 
   const fillDemoCredentials = (id: string, pass: string) => {
     setLoginIdentifier(id);
@@ -90,21 +104,42 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
     }
   };
 
-  const handleSendAdminForgotOtp = (e: React.FormEvent) => {
+  const handleSendAdminForgotOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    if (!forgotIdentifier.trim()) {
+    const clean = forgotIdentifier.trim();
+    if (!clean) {
       setErrorMsg('Please enter your Admin User ID or Work Email.');
       return;
     }
-    const otpRes = storageService.generatePasswordResetOtp(forgotIdentifier.trim(), 'admin');
-    setForgotOtpInfo(otpRes);
-    setForgotOtp(otpRes.otp);
+    const admin = storageService.getAdminUserByIdentifier(clean);
+    if (!admin) {
+      setErrorMsg('No administrative staff account found with this identifier.');
+      return;
+    }
+    if (!admin.email || !admin.email.includes('@')) {
+      setErrorMsg('No valid corporate email associated with this admin record.');
+      return;
+    }
+
+    setLoading(true);
+    const res = await sendEmailOtp(admin.email, 'reset');
+    setLoading(false);
+    if (res.success) {
+      setForgotOtpSent(true);
+      setForgotCooldown(res.cooldownSeconds || 60);
+    } else {
+      setErrorMsg(res.message);
+    }
   };
 
-  const handleVerifyAdminForgotOtp = (e: React.FormEvent) => {
+  const handleVerifyAdminForgotOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    if (!forgotOtp || forgotOtp.length !== 6) {
+      setErrorMsg('Please enter the 6-digit verification code received in your email.');
+      return;
+    }
     if (!forgotNewPassword || forgotNewPassword.length < 6) {
       setErrorMsg('Password must be at least 6 characters long.');
       return;
@@ -113,11 +148,21 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
       setErrorMsg('Passwords do not match.');
       return;
     }
-    const res = storageService.resetPasswordWithOtp(
-      forgotIdentifier.trim(),
+
+    const admin = storageService.getAdminUserByIdentifier(forgotIdentifier.trim());
+    if (!admin) {
+      setErrorMsg('Admin account not found.');
+      return;
+    }
+
+    setLoading(true);
+    const res = await resetPasswordWithEmailOtp(
+      admin.email,
       forgotOtp.trim(),
-      forgotNewPassword
+      forgotNewPassword,
+      'admin'
     );
+    setLoading(false);
     if (res.success) {
       setForgotSuccess(res.message);
       setLoginIdentifier(forgotIdentifier.trim());
@@ -125,7 +170,8 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
       setTimeout(() => {
         setMode('login');
         setForgotSuccess(null);
-        setForgotOtpInfo(null);
+        setForgotOtpSent(false);
+        setForgotOtp('');
       }, 2500);
     } else {
       setErrorMsg(res.message);
@@ -452,23 +498,13 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                   onClick={() => {
                     setRegistrationSuccess(false);
                     setMode('login');
-                    fillDemoCredentials('superadmin', 'SuperAdmin@2026#');
+                    setLoginIdentifier(registeredUserId);
+                    setLoginPassword('');
                   }}
                   className="btn btn-purple flex-1"
                   style={{ justifyContent: 'center' }}
                 >
-                  Log In as Super Admin to Approve
-                </button>
-                <button
-                  onClick={() => {
-                    setRegistrationSuccess(false);
-                    setMode('login');
-                    fillDemoCredentials(registeredUserId, regPassword);
-                  }}
-                  className="btn btn-outline-b2b"
-                  style={{ color: '#FFFFFF', borderColor: 'rgba(255, 255, 255, 0.3)' }}
-                >
-                  Try Login
+                  Return to Staff Sign In
                 </button>
               </div>
             </div>
@@ -513,7 +549,8 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                         setForgotIdentifier(loginIdentifier || '');
                         setErrorMsg(null);
                         setForgotSuccess(null);
-                        setForgotOtpInfo(null);
+                        setForgotOtpSent(false);
+                        setForgotOtp('');
                       }}
                       style={{
                         background: 'none',
@@ -640,7 +677,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                     Sign In with New Password
                   </button>
                 </div>
-              ) : !forgotOtpInfo ? (
+              ) : !forgotOtpSent ? (
                 <form onSubmit={handleSendAdminForgotOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#CBD5E1', marginBottom: '0.4rem' }}>
@@ -652,7 +689,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                         type="text"
                         value={forgotIdentifier}
                         onChange={(e) => setForgotIdentifier(e.target.value)}
-                        placeholder="e.g. superadmin or admin_ops"
+                        placeholder="e.g. superadmin or work email"
                         required
                         style={{
                           width: '100%',
@@ -666,7 +703,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                       />
                     </div>
                     <span style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '0.2rem', display: 'block' }}>
-                      A secure 6-digit authentication OTP will be dispatched to verify your identity.
+                      A secure 6-digit authentication OTP will be emailed to your authorized work email.
                     </span>
                   </div>
 
@@ -689,16 +726,18 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
 
                   <button
                     type="submit"
+                    disabled={loading}
                     className="btn btn-purple"
                     style={{ padding: '0.75rem', fontWeight: 700, justifyContent: 'center', marginTop: '0.5rem' }}
                   >
-                    Generate & Send Verification OTP
+                    {loading ? 'Sending Code...' : 'Send Verification OTP to Work Email'}
                   </button>
 
                   {forgotIdentifier && forgotIdentifier.includes('@') && (
                     <button
                       type="button"
                       onClick={handleSendAdminFirebaseReset}
+                      disabled={loading}
                       className="btn btn-sm btn-outline-b2b"
                       style={{
                         width: '100%',
@@ -716,67 +755,57 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                 </form>
               ) : (
                 <form onSubmit={handleVerifyAdminForgotOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {/* Live OTP Notification Simulation Banner */}
                   <div
                     style={{
-                      background: 'rgba(147, 51, 234, 0.18)',
-                      border: '1.5px solid rgba(147, 51, 234, 0.45)',
-                      borderRadius: '10px',
-                      padding: '0.85rem',
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      color: '#34D399',
+                      borderRadius: '8px',
+                      padding: '0.75rem',
+                      fontSize: '0.8rem',
                     }}
                   >
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#C084FC', marginBottom: '0.25rem' }}>
-                      ✨ Live OTP Dispatch Simulation
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: '#E9D5FF' }}>
-                      OTP generated for <strong>{forgotIdentifier}</strong>:
-                    </div>
-                    <div className="flex items-center gap-3" style={{ marginTop: '0.4rem' }}>
-                      <span
-                        style={{
-                          fontFamily: 'monospace',
-                          fontSize: '1.3rem',
-                          fontWeight: 900,
-                          letterSpacing: '3px',
-                          background: '#0F172A',
-                          padding: '0.25rem 0.6rem',
-                          borderRadius: '6px',
-                          color: '#C084FC',
-                          border: '1px solid rgba(147, 51, 234, 0.4)',
-                        }}
-                      >
-                        {forgotOtpInfo.otp}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setForgotOtp(forgotOtpInfo.otp)}
-                        className="btn btn-sm"
-                        style={{ background: '#9333EA', color: '#FFF', fontWeight: 700, fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
-                      >
-                        Auto-Fill OTP
-                      </button>
-                    </div>
+                    Verification OTP sent to your registered work email. Check inbox or spam folder.
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#CBD5E1', marginBottom: '0.4rem' }}>
-                      6-Digit Verification OTP *
-                    </label>
+                    <div className="flex justify-between items-center" style={{ marginBottom: '0.4rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#CBD5E1' }}>
+                        Enter 6-Digit Verification OTP *
+                      </label>
+                      <button
+                        type="button"
+                        disabled={forgotCooldown > 0 || loading}
+                        onClick={handleSendAdminForgotOtp}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          cursor: forgotCooldown > 0 ? 'not-allowed' : 'pointer',
+                          fontSize: '0.75rem',
+                          color: forgotCooldown > 0 ? '#94A3B8' : '#C084FC',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {forgotCooldown > 0 ? `Resend in ${forgotCooldown}s` : 'Resend Code'}
+                      </button>
+                    </div>
                     <input
                       type="text"
                       maxLength={6}
                       value={forgotOtp}
-                      onChange={(e) => setForgotOtp(e.target.value)}
-                      placeholder="123456"
+                      onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, ''))}
+                      placeholder="••••••"
                       required
+                      autoFocus
                       style={{
                         width: '100%',
                         padding: '0.65rem',
                         fontFamily: 'monospace',
-                        fontSize: '1.1rem',
-                        letterSpacing: '2px',
+                        fontSize: '1.25rem',
+                        letterSpacing: '0.3em',
                         textAlign: 'center',
-                        fontWeight: 700,
+                        fontWeight: 800,
                         background: 'rgba(255, 255, 255, 0.06)',
                         border: '1px solid rgba(255, 255, 255, 0.15)',
                         borderRadius: '10px',
@@ -837,10 +866,11 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
 
                   <button
                     type="submit"
+                    disabled={loading}
                     className="btn btn-purple"
                     style={{ padding: '0.75rem', fontWeight: 700, justifyContent: 'center', marginTop: '0.5rem' }}
                   >
-                    Verify OTP & Reset Password
+                    {loading ? 'Updating Password...' : 'Verify OTP & Reset Password'}
                   </button>
                 </form>
               )}

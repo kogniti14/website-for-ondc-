@@ -4,6 +4,7 @@ import { UserRole, B2CUser, B2BBusiness, AdminUser, AdminRole } from '../types';
 import { storageService } from '../services/storageService';
 import { firebaseAuthService } from '../services/firebaseAuthService';
 import { isFirebaseConfigured } from '../services/firebase';
+import { emailOtpService } from '../services/emailOtpService';
 
 export interface AuthContextType {
   role: UserRole;
@@ -52,6 +53,35 @@ export interface AuthContextType {
   ) => Promise<{ success: boolean; message: string; user?: AdminUser; isPending?: boolean }>;
   loginWithGoogle: (portal: 'b2c' | 'b2b') => Promise<{ success: boolean; error?: string }>;
   sendFirebasePasswordReset: (email: string) => Promise<{ success: boolean; message: string }>;
+
+  // Production Email OTP Verification System
+  sendEmailOtp: (
+    email: string,
+    purpose?: 'login' | 'register' | 'reset' | 'general'
+  ) => Promise<{ success: boolean; message: string; cooldownSeconds?: number }>;
+  verifyEmailOtp: (
+    email: string,
+    otp: string,
+    purpose?: 'login' | 'register' | 'reset' | 'general'
+  ) => { success: boolean; message: string };
+  loginB2CWithEmailOtp: (email: string, otp: string) => Promise<{ success: boolean; error?: string }>;
+  loginB2BWithEmailOtp: (email: string, otp: string) => Promise<{ success: boolean; error?: string }>;
+  registerB2CWithEmailOtp: (
+    data: Partial<B2CUser>,
+    otp: string,
+    password?: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  registerB2BWithEmailOtp: (
+    biz: Partial<B2BBusiness>,
+    otp: string,
+    password?: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  resetPasswordWithEmailOtp: (
+    email: string,
+    otp: string,
+    newPassword: string,
+    userType?: 'b2c' | 'b2b' | 'admin'
+  ) => Promise<{ success: boolean; message: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -184,10 +214,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const registerB2C = (data: Partial<B2CUser>): B2CUser => {
     const newUser: B2CUser = {
       id: `usr_${Date.now()}`,
-      name: data.name || 'Valued Customer',
-      email: data.email || 'customer@kognitiminds.com',
-      phone: data.phone || '+91 98000 11223',
-      password: data.password || 'Customer@123',
+      name: data.name || 'Registered Customer',
+      email: data.email || '',
+      phone: data.phone || '',
+      password: data.password,
       addresses: data.addresses || [],
       createdAt: new Date().toISOString(),
     };
@@ -202,13 +232,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const registerB2B = (data: Partial<B2BBusiness>): B2BBusiness => {
     const newBiz: B2BBusiness = {
       id: `biz_${Date.now()}`,
-      companyName: data.companyName || 'Enterprise Client',
+      companyName: data.companyName || 'Registered Enterprise',
       contactPerson: data.contactPerson || 'Authorized Representative',
-      businessEmail: data.businessEmail || 'procurement@company.com',
-      mobile: data.mobile || '+91 98000 00000',
-      password: data.password || 'B2bEdu@123',
-      gstin: data.gstin?.toUpperCase() || '29AAAAA0000A1Z5',
-      pan: data.pan?.toUpperCase() || (data.gstin ? data.gstin.slice(2, 12).toUpperCase() : 'AAAAA0000A'),
+      businessEmail: data.businessEmail || '',
+      mobile: data.mobile || '',
+      password: data.password,
+      gstin: data.gstin?.toUpperCase() || '',
+      pan: data.pan?.toUpperCase() || (data.gstin ? data.gstin.slice(2, 12).toUpperCase() : ''),
       businessType: data.businessType || 'Corporate Office',
       status: 'pending',
       statusReason: 'Documents uploaded. Compliance desk verification underway (SLA: 24h).',
@@ -412,17 +442,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const users = storageService.getB2CUsers();
-    const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    let found = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
     if (!found) {
-      return {
-        success: false,
-        error: 'This mobile number/email address is not registered. Please register your details or create a new account before signing in.',
+      // First-time Firebase login on this device: persist verified profile
+      found = {
+        id: `usr_${Date.now()}`,
+        name: res.user?.displayName || email.split('@')[0],
+        email: email.toLowerCase(),
+        phone: res.user?.phoneNumber || '',
+        firebaseUid: res.user?.uid,
+        authProvider: 'firebase_email',
+        addresses: [],
+        createdAt: new Date().toISOString(),
       };
+    } else {
+      found.firebaseUid = res.user?.uid;
+      found.authProvider = 'firebase_email';
+      if (password) found.password = password;
     }
-
-    found.firebaseUid = res.user?.uid;
-    found.authProvider = 'firebase_email';
-    if (password) found.password = password;
     storageService.saveB2CUser(found);
 
     setB2cUser(found);
@@ -771,6 +808,285 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return firebaseAuthService.sendPasswordReset(email);
   };
 
+  // ==========================================
+  // PRODUCTION EMAIL OTP VERIFICATION SYSTEM
+  // ==========================================
+
+  const sendEmailOtp = async (
+    email: string,
+    purpose: 'login' | 'register' | 'reset' | 'general' = 'general'
+  ): Promise<{ success: boolean; message: string; cooldownSeconds?: number }> => {
+    return emailOtpService.sendOtp(email, purpose);
+  };
+
+  const verifyEmailOtp = (
+    email: string,
+    otp: string,
+    purpose: 'login' | 'register' | 'reset' | 'general' = 'general'
+  ): { success: boolean; message: string } => {
+    return emailOtpService.verifyOtp(email, otp, purpose);
+  };
+
+  const loginB2CWithEmailOtp = async (
+    email: string,
+    otp: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const cleanEmail = email.trim().toLowerCase();
+    const verification = emailOtpService.verifyOtp(cleanEmail, otp, 'login');
+    if (!verification.success) {
+      return { success: false, error: verification.message };
+    }
+
+    const users = storageService.getB2CUsers();
+    const found = users.find((u) => u.email.toLowerCase() === cleanEmail);
+    if (!found) {
+      return {
+        success: false,
+        error: 'No customer account registered with this email. Please sign up first.',
+      };
+    }
+
+    setB2cUser(found);
+    setB2bBusiness(null);
+    setCurrentAdminUser(null);
+    setIsAdmin(false);
+    setRole('b2c');
+    localStorage.setItem('km_active_role', 'b2c');
+    localStorage.setItem('km_active_entity_id', found.id);
+    localStorage.removeItem('km_active_admin_id');
+    return { success: true };
+  };
+
+  const loginB2BWithEmailOtp = async (
+    email: string,
+    otp: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const cleanEmail = email.trim().toLowerCase();
+    const verification = emailOtpService.verifyOtp(cleanEmail, otp, 'login');
+    if (!verification.success) {
+      return { success: false, error: verification.message };
+    }
+
+    const businesses = storageService.getB2BBusinesses();
+    const found = businesses.find((b) => b.businessEmail.toLowerCase() === cleanEmail);
+    if (!found) {
+      return {
+        success: false,
+        error: 'No corporate business account found with this email. Please complete corporate registration.',
+      };
+    }
+
+    setB2bBusiness(found);
+    setB2cUser(null);
+    setCurrentAdminUser(null);
+    setIsAdmin(false);
+    setRole('b2b');
+    localStorage.setItem('km_active_role', 'b2b');
+    localStorage.setItem('km_active_entity_id', found.id);
+    localStorage.removeItem('km_active_admin_id');
+    return { success: true };
+  };
+
+  const registerB2CWithEmailOtp = async (
+    data: Partial<B2CUser>,
+    otp: string,
+    password?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const email = data.email?.trim().toLowerCase() || '';
+    if (!email) {
+      return { success: false, error: 'Valid email address is required.' };
+    }
+
+    const verification = emailOtpService.verifyOtp(email, otp, 'register');
+    if (!verification.success) {
+      return { success: false, error: verification.message };
+    }
+
+    const existing = storageService.getB2CUserByIdentifier(email);
+    if (existing) {
+      return { success: false, error: 'An account with this email address already exists. Please sign in.' };
+    }
+
+    let firebaseUid: string | undefined;
+    if (password && isFirebaseConfigured()) {
+      const fbRes = await firebaseAuthService.registerWithEmail(email, password, data.name);
+      if (fbRes.success && fbRes.user) {
+        firebaseUid = fbRes.user.uid;
+      }
+    }
+
+    const newUser: B2CUser = {
+      id: `usr_${Date.now()}`,
+      name: data.name?.trim() || email.split('@')[0],
+      email,
+      phone: data.phone?.trim() || '',
+      password: password || undefined,
+      firebaseUid,
+      authProvider: firebaseUid ? 'firebase_email' : 'email_otp',
+      addresses: data.addresses || [],
+      createdAt: new Date().toISOString(),
+    };
+
+    storageService.saveB2CUser(newUser);
+    setB2cUser(newUser);
+    setB2bBusiness(null);
+    setCurrentAdminUser(null);
+    setIsAdmin(false);
+    setRole('b2c');
+    localStorage.setItem('km_active_role', 'b2c');
+    localStorage.setItem('km_active_entity_id', newUser.id);
+    localStorage.removeItem('km_active_admin_id');
+    return { success: true };
+  };
+
+  const registerB2BWithEmailOtp = async (
+    bizData: Partial<B2BBusiness>,
+    otp: string,
+    password?: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    const email = bizData.businessEmail?.trim().toLowerCase() || '';
+    if (!email) {
+      return { success: false, error: 'Valid corporate email address is required.' };
+    }
+
+    const verification = emailOtpService.verifyOtp(email, otp, 'register');
+    if (!verification.success) {
+      return { success: false, error: verification.message };
+    }
+
+    const businesses = storageService.getB2BBusinesses();
+    if (businesses.some((b) => b.businessEmail.toLowerCase() === email)) {
+      return { success: false, error: 'A business account with this email is already registered.' };
+    }
+
+    let firebaseUid: string | undefined;
+    if (password && isFirebaseConfigured()) {
+      const fbRes = await firebaseAuthService.registerWithEmail(email, password, bizData.companyName);
+      if (fbRes.success && fbRes.user) {
+        firebaseUid = fbRes.user.uid;
+      }
+    }
+
+    const newBiz: B2BBusiness = {
+      id: `biz_${Date.now()}`,
+      companyName: bizData.companyName?.trim() || 'Registered Enterprise',
+      contactPerson: bizData.contactPerson?.trim() || 'Authorized Representative',
+      businessEmail: email,
+      mobile: bizData.mobile?.trim() || '',
+      password: password || undefined,
+      firebaseUid,
+      authProvider: firebaseUid ? 'firebase_email' : 'email_otp',
+      gstin: bizData.gstin?.toUpperCase() || '',
+      pan: bizData.pan?.toUpperCase() || (bizData.gstin ? bizData.gstin.slice(2, 12).toUpperCase() : ''),
+      businessType: bizData.businessType || 'Corporate Office',
+      status: 'pending',
+      statusReason: 'Documents uploaded. Compliance desk verification underway (SLA: 24h).',
+      creditLimit: 0,
+      paymentTerms: 'Prepaid',
+      registeredAt: new Date().toISOString(),
+      accountManager: {
+        name: 'Rohan Saxena',
+        email: 'rohan.saxena@kognitiminds.com',
+        phone: '+91 99100 88221',
+        designation: 'Institutional Onboarding Lead',
+      },
+      billingAddress: bizData.billingAddress || {
+        id: `baddr_${Date.now()}`,
+        fullName: bizData.companyName || 'Registered Office',
+        phone: bizData.mobile || '',
+        street: 'Commercial Tower, Sector 44',
+        city: 'Gurugram',
+        state: 'Haryana',
+        pincode: '122003',
+        addressType: 'work',
+        isDefault: true,
+      },
+      shippingAddress: bizData.shippingAddress || {
+        id: `saddr_${Date.now()}`,
+        fullName: bizData.companyName || 'Receiving Warehouse',
+        phone: bizData.mobile || '',
+        street: 'Logistics Facility, Sector 44',
+        city: 'Gurugram',
+        state: 'Haryana',
+        pincode: '122003',
+        addressType: 'work',
+        isDefault: true,
+      },
+      documents: [
+        {
+          name: `GST_Certificate_${bizData.gstin || 'Doc'}.pdf`,
+          type: 'GST Certificate',
+          uploadedAt: new Date().toISOString(),
+          status: 'pending',
+        },
+      ],
+    };
+
+    storageService.saveB2BBusiness(newBiz);
+    setB2bBusiness(newBiz);
+    setB2cUser(null);
+    setCurrentAdminUser(null);
+    setIsAdmin(false);
+    setRole('b2b');
+    localStorage.setItem('km_active_role', 'b2b');
+    localStorage.setItem('km_active_entity_id', newBiz.id);
+    localStorage.removeItem('km_active_admin_id');
+    return { success: true };
+  };
+
+  const resetPasswordWithEmailOtp = async (
+    email: string,
+    otp: string,
+    newPassword: string,
+    userType: 'b2c' | 'b2b' | 'admin' = 'b2c'
+  ): Promise<{ success: boolean; message: string }> => {
+    const cleanEmail = email.trim().toLowerCase();
+    const verification = emailOtpService.verifyOtp(cleanEmail, otp, 'reset');
+    if (!verification.success) {
+      return { success: false, message: verification.message };
+    }
+
+    if (userType === 'b2c') {
+      const users = storageService.getB2CUsers();
+      const user = users.find((u) => u.email.toLowerCase() === cleanEmail);
+      if (!user) {
+        return { success: false, message: 'No consumer account found with this email address.' };
+      }
+      user.password = newPassword;
+      storageService.saveB2CUser(user);
+    } else if (userType === 'b2b') {
+      const businesses = storageService.getB2BBusinesses();
+      const biz = businesses.find((b) => b.businessEmail.toLowerCase() === cleanEmail);
+      if (!biz) {
+        return { success: false, message: 'No institutional account found with this corporate email.' };
+      }
+      biz.password = newPassword;
+      storageService.saveB2BBusiness(biz);
+    } else if (userType === 'admin') {
+      const admins = storageService.getAdminUsers();
+      const adm = admins.find((a) => a.email.toLowerCase() === cleanEmail);
+      if (!adm) {
+        return { success: false, message: 'No administrative account found with this email address.' };
+      }
+      adm.password = newPassword;
+      storageService.saveAdminUser(adm);
+    }
+
+    // If Firebase is live, also trigger password reset email link
+    if (isFirebaseConfigured()) {
+      try {
+        await firebaseAuthService.sendPasswordReset(cleanEmail);
+      } catch {
+        // Graceful fallback
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Password has been successfully updated. You can now log in securely with your new password.',
+    };
+  };
+
   const logout = async () => {
     await firebaseAuthService.logout();
     setRole('guest');
@@ -790,39 +1106,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (target === 'guest') {
       logout();
     } else if (target === 'b2c') {
-      const demo = storageService.getB2CUserById('usr_b2c_demo');
-      if (demo) {
-        setB2cUser(demo);
+      const users = storageService.getB2CUsers();
+      const first = users[0];
+      if (first) {
+        setB2cUser(first);
         setB2bBusiness(null);
         setCurrentAdminUser(null);
         setIsAdmin(false);
         setRole('b2c');
         localStorage.setItem('km_active_role', 'b2c');
-        localStorage.setItem('km_active_entity_id', demo.id);
+        localStorage.setItem('km_active_entity_id', first.id);
         localStorage.removeItem('km_active_admin_id');
       }
     } else if (target === 'b2b_approved') {
-      const biz = storageService.getB2BBusinessById('biz_edutech');
-      if (biz) {
-        setB2bBusiness(biz);
+      const businesses = storageService.getB2BBusinesses();
+      const approved = businesses.find((b) => b.status === 'approved') || businesses[0];
+      if (approved) {
+        setB2bBusiness(approved);
         setB2cUser(null);
         setCurrentAdminUser(null);
         setIsAdmin(false);
         setRole('b2b');
         localStorage.setItem('km_active_role', 'b2b');
-        localStorage.setItem('km_active_entity_id', biz.id);
+        localStorage.setItem('km_active_entity_id', approved.id);
         localStorage.removeItem('km_active_admin_id');
       }
     } else if (target === 'b2b_pending') {
-      const biz = storageService.getB2BBusinessById('biz_innovate');
-      if (biz) {
-        setB2bBusiness(biz);
+      const businesses = storageService.getB2BBusinesses();
+      const pending = businesses.find((b) => b.status === 'pending');
+      if (pending) {
+        setB2bBusiness(pending);
         setB2cUser(null);
         setCurrentAdminUser(null);
         setIsAdmin(false);
         setRole('b2b');
         localStorage.setItem('km_active_role', 'b2b');
-        localStorage.setItem('km_active_entity_id', biz.id);
+        localStorage.setItem('km_active_entity_id', pending.id);
         localStorage.removeItem('km_active_admin_id');
       }
     } else if (target === 'admin' || target === 'superadmin') {
@@ -838,7 +1157,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('km_active_role', 'admin');
       localStorage.removeItem('km_active_entity_id');
     } else if (target === 'ops_admin') {
-      const opsAdmin = storageService.getAdminUserById('adm_ops_02');
+      const admins = storageService.getAdminUsers();
+      const opsAdmin = admins.find((a) => a.role === 'operations_admin');
       if (opsAdmin) {
         setCurrentAdminUser(opsAdmin);
         localStorage.setItem('km_active_admin_id', opsAdmin.id);
@@ -882,6 +1202,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginAdminWithFirebase,
         loginWithGoogle,
         sendFirebasePasswordReset,
+        sendEmailOtp,
+        verifyEmailOtp,
+        loginB2CWithEmailOtp,
+        loginB2BWithEmailOtp,
+        registerB2CWithEmailOtp,
+        registerB2BWithEmailOtp,
+        resetPasswordWithEmailOtp,
       }}
     >
       {children}

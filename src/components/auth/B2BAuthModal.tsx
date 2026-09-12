@@ -49,25 +49,59 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
   const [docUploaded, setDocUploaded] = useState(false);
   const [docImage, setDocImage] = useState('');
 
-  // Forgot Password via OTP State
+  // Login Method & OTP
+  const [loginMethod, setLoginMethod] = useState<'password' | 'email_otp'>('password');
+  const [loginOtpSent, setLoginOtpSent] = useState(false);
+  const [loginOtp, setLoginOtp] = useState('');
+  const [loginCooldown, setLoginCooldown] = useState(0);
+
+  // Registration Password & Email OTP
+  const [regPassword, setRegPassword] = useState('');
+  const [regOtpSent, setRegOtpSent] = useState(false);
+  const [regOtp, setRegOtp] = useState('');
+  const [regCooldown, setRegCooldown] = useState(0);
+
+  // Forgot Password via Email OTP State
   const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotOtpSent, setForgotOtpSent] = useState(false);
   const [forgotOtp, setForgotOtp] = useState('');
+  const [forgotCooldown, setForgotCooldown] = useState(0);
   const [forgotNewPassword, setForgotNewPassword] = useState('');
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
-  const [forgotOtpInfo, setForgotOtpInfo] = useState<{ otp: string; expiresAt: string } | null>(null);
   const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
   const [firebaseResetSuccess, setFirebaseResetSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const {
     loginB2B,
-    registerB2B,
     loginB2BWithFirebase,
-    registerB2BWithFirebase,
     loginWithGoogle,
     sendFirebasePasswordReset,
+    sendEmailOtp,
+    loginB2BWithEmailOtp,
+    registerB2BWithEmailOtp,
+    resetPasswordWithEmailOtp,
     isFirebaseLive,
   } = useAuth();
+
+  // Cooldown timers
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (loginCooldown > 0) timer = setTimeout(() => setLoginCooldown((prev) => prev - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [loginCooldown]);
+
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (regCooldown > 0) timer = setTimeout(() => setRegCooldown((prev) => prev - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [regCooldown]);
+
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (forgotCooldown > 0) timer = setTimeout(() => setForgotCooldown((prev) => prev - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [forgotCooldown]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +112,6 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
     }
     const cleanEmail = email.trim();
 
-    // Check whether the entered mobile number or email address exists in the database
     const isRegistered = storageService.isB2BIdentifierRegistered(cleanEmail);
     if (!isRegistered) {
       setUnregisteredIdentifier(cleanEmail);
@@ -88,7 +121,7 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
 
     setLoading(true);
 
-    if (password) {
+    if (cleanEmail.includes('@') && password) {
       const res = await loginB2BWithFirebase(cleanEmail.toLowerCase(), password);
       setLoading(false);
       if (res.success) {
@@ -106,7 +139,52 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
       if (onSuccess) onSuccess();
       onClose();
     } else {
-      setError('Incorrect corporate credentials. Please verify your password or reset via OTP.');
+      setError('Incorrect corporate credentials. Please verify your password or use Email OTP.');
+    }
+  };
+
+  const handleSendB2BLoginEmailOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setError('Please enter your official corporate email address.');
+      return;
+    }
+
+    const isRegistered = storageService.isB2BIdentifierRegistered(cleanEmail);
+    if (!isRegistered) {
+      setUnregisteredIdentifier(cleanEmail);
+      setShowUnregisteredModal(true);
+      return;
+    }
+
+    setLoading(true);
+    const res = await sendEmailOtp(cleanEmail, 'login');
+    setLoading(false);
+    if (res.success) {
+      setLoginOtpSent(true);
+      setLoginCooldown(res.cooldownSeconds || 60);
+    } else {
+      setError(res.message);
+    }
+  };
+
+  const handleVerifyB2BLoginEmailOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!loginOtp || loginOtp.length !== 6) {
+      setError('Please enter the 6-digit verification code sent to your email.');
+      return;
+    }
+    setLoading(true);
+    const res = await loginB2BWithEmailOtp(email.trim().toLowerCase(), loginOtp.trim());
+    setLoading(false);
+    if (res.success) {
+      if (onSuccess) onSuccess();
+      onClose();
+    } else {
+      setError(res.error || 'Invalid OTP code. Please try again.');
     }
   };
 
@@ -139,21 +217,39 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
     }
   };
 
-  const handleSendB2BForgotOtp = (e: React.FormEvent) => {
+  const handleSendB2BForgotOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!forgotEmail.trim()) {
+    const clean = forgotEmail.trim().toLowerCase();
+    if (!clean || !clean.includes('@')) {
       setError('Please enter your registered corporate email.');
       return;
     }
-    const otpRes = storageService.generatePasswordResetOtp(forgotEmail.trim(), 'b2b');
-    setForgotOtpInfo(otpRes);
-    setForgotOtp(otpRes.otp);
+    const isRegistered = storageService.isB2BIdentifierRegistered(clean);
+    if (!isRegistered) {
+      setUnregisteredIdentifier(clean);
+      setShowUnregisteredModal(true);
+      return;
+    }
+
+    setLoading(true);
+    const res = await sendEmailOtp(clean, 'reset');
+    setLoading(false);
+    if (res.success) {
+      setForgotOtpSent(true);
+      setForgotCooldown(res.cooldownSeconds || 60);
+    } else {
+      setError(res.message);
+    }
   };
 
-  const handleVerifyB2BForgotOtp = (e: React.FormEvent) => {
+  const handleVerifyB2BForgotOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!forgotOtp || forgotOtp.length !== 6) {
+      setError('Please enter the 6-digit verification code received in your email.');
+      return;
+    }
     if (!forgotNewPassword || forgotNewPassword.length < 6) {
       setError('Password must be at least 6 characters long.');
       return;
@@ -162,11 +258,15 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
       setError('Passwords do not match.');
       return;
     }
-    const res = storageService.resetPasswordWithOtp(
-      forgotEmail.trim(),
+
+    setLoading(true);
+    const res = await resetPasswordWithEmailOtp(
+      forgotEmail.trim().toLowerCase(),
       forgotOtp.trim(),
-      forgotNewPassword
+      forgotNewPassword,
+      'b2b'
     );
+    setLoading(false);
     if (res.success) {
       setForgotSuccess(res.message);
       setEmail(forgotEmail.trim());
@@ -174,42 +274,77 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
       setTimeout(() => {
         setTab('login');
         setForgotSuccess(null);
-        setForgotOtpInfo(null);
+        setForgotOtpSent(false);
+        setForgotOtp('');
       }, 2500);
     } else {
       setError(res.message);
     }
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleSendB2BRegisterOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!companyName || !businessEmail || !mobile || !gstin) {
-      setError('Please fill in all mandatory corporate fields (marked with *).');
+    if (!companyName.trim() || !businessEmail.trim() || !mobile.trim() || !gstin.trim() || !regPassword) {
+      setError('Please fill in all mandatory corporate fields and enter a password.');
+      return;
+    }
+    if (!businessEmail.includes('@')) {
+      setError('Please enter a valid corporate email address.');
+      return;
+    }
+    if (gstin.trim().length !== 15) {
+      setError('Please enter a valid 15-character Indian GSTIN.');
+      return;
+    }
+    if (regPassword.length < 6) {
+      setError('Password must be at least 6 characters long.');
       return;
     }
 
-    if (gstin.length !== 15) {
-      setError('Please enter a valid 15-character Indian GSTIN.');
+    const cleanEmail = businessEmail.trim().toLowerCase();
+    const existing = storageService.isB2BIdentifierRegistered(cleanEmail);
+    if (existing) {
+      setError('A business account with this email address already exists. Please sign in.');
       return;
     }
 
     setLoading(true);
-    const res = await registerB2BWithFirebase(
+    const res = await sendEmailOtp(cleanEmail, 'register');
+    setLoading(false);
+    if (res.success) {
+      setRegOtpSent(true);
+      setRegCooldown(res.cooldownSeconds || 60);
+    } else {
+      setError(res.message);
+    }
+  };
+
+  const handleVerifyAndRegisterB2B = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!regOtp || regOtp.length !== 6) {
+      setError('Please enter the 6-digit verification code received in your email.');
+      return;
+    }
+
+    setLoading(true);
+    const res = await registerB2BWithEmailOtp(
       {
-        companyName,
-        contactPerson: contactPerson || 'Authorized Representative',
+        companyName: companyName.trim(),
+        contactPerson: contactPerson.trim() || 'Authorized Representative',
         businessEmail: businessEmail.trim().toLowerCase(),
-        mobile,
-        gstin: gstin.toUpperCase(),
-        pan: gstin.slice(2, 12).toUpperCase(),
+        mobile: mobile.trim(),
+        gstin: gstin.trim().toUpperCase(),
+        pan: gstin.trim().slice(2, 12).toUpperCase(),
         businessType,
         billingAddress: {
           id: `baddr_${Date.now()}`,
-          fullName: companyName,
-          phone: mobile,
-          street: street || 'Commercial Tower',
+          fullName: companyName.trim(),
+          phone: mobile.trim(),
+          street: street || 'Commercial Facility',
           city: city || 'Bengaluru',
           state: state || 'Karnataka',
           pincode: pincode || '560001',
@@ -218,8 +353,8 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
         },
         shippingAddress: {
           id: `saddr_${Date.now()}`,
-          fullName: companyName,
-          phone: mobile,
+          fullName: companyName.trim(),
+          phone: mobile.trim(),
           street: street || 'Commercial Facility',
           city: city || 'Bengaluru',
           state: state || 'Karnataka',
@@ -239,7 +374,8 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
           : [],
         avatarUrl: docImage || undefined,
       },
-      password || 'B2bEdu@123'
+      regOtp.trim(),
+      regPassword
     );
 
     setLoading(false);
@@ -247,7 +383,7 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
       if (onSuccess) onSuccess();
       onClose();
     } else {
-      setError(res.error || 'Registration failed.');
+      setError(res.error || 'Corporate registration failed. Please verify the OTP.');
     }
   };
 
@@ -388,170 +524,251 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
 
         {tab === 'login' ? (
           <div>
-            <form onSubmit={handleLogin}>
-              <div className="form-group">
-                <label className="form-label" style={{ color: '#CBD5E1' }}>
-                  Registered Corporate Email
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <Mail size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94A3B8' }} />
-                  <input
-                    type="email"
-                    placeholder="procurement@company.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="form-input"
-                    style={{
-                      paddingLeft: '38px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      borderColor: 'rgba(255, 255, 255, 0.15)',
-                      color: '#FFFFFF',
-                    }}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <div className="flex justify-between items-center" style={{ marginBottom: '0.4rem' }}>
-                  <label className="form-label" style={{ color: '#CBD5E1', margin: 0 }}>
-                    Password
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTab('forgot');
-                      setForgotEmail(email || '');
-                      setError(null);
-                      setForgotSuccess(null);
-                      setForgotOtpInfo(null);
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      padding: 0,
-                      cursor: 'pointer',
-                      fontSize: '0.75rem',
-                      color: '#F59E0B',
-                      fontWeight: 600,
-                    }}
-                  >
-                    Forgot Password? Reset via OTP
-                  </button>
-                </div>
-                <div style={{ position: 'relative' }}>
-                  <Lock size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94A3B8' }} />
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="form-input"
-                    style={{
-                      paddingLeft: '38px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      borderColor: 'rgba(255, 255, 255, 0.15)',
-                      color: '#FFFFFF',
-                    }}
-                    required
-                  />
-                </div>
-              </div>
-
-              <button type="submit" className="btn btn-amber" style={{ width: '100%', marginTop: '0.75rem' }}>
-                <UserCheck size={16} /> {loading ? 'Authenticating...' : 'Sign In to B2B Dashboard'}
-              </button>
-
+            {/* Login Method Toggle */}
+            <div className="flex justify-center gap-4" style={{ marginBottom: '1rem', fontSize: '0.8rem' }}>
               <button
                 type="button"
-                onClick={handleGoogleB2BSignIn}
-                disabled={loading}
+                onClick={() => {
+                  setLoginMethod('password');
+                  setError(null);
+                }}
                 style={{
-                  width: '100%',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.6rem',
-                  padding: '0.65rem',
-                  borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#FFFFFF',
-                  marginTop: '0.65rem',
+                  color: loginMethod === 'password' ? '#F59E0B' : '#94A3B8',
+                  fontWeight: loginMethod === 'password' ? 700 : 500,
+                  borderBottom: loginMethod === 'password' ? '2px solid #F59E0B' : 'none',
+                  paddingBottom: '4px',
+                  background: 'none',
+                  borderTop: 'none',
+                  borderLeft: 'none',
+                  borderRight: 'none',
                   cursor: 'pointer',
                 }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                </svg>
-                <span>Sign in with Google Workspace</span>
+                Password Login
               </button>
-            </form>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMethod('email_otp');
+                  setError(null);
+                }}
+                style={{
+                  color: loginMethod === 'email_otp' ? '#F59E0B' : '#94A3B8',
+                  fontWeight: loginMethod === 'email_otp' ? 700 : 500,
+                  borderBottom: loginMethod === 'email_otp' ? '2px solid #F59E0B' : 'none',
+                  paddingBottom: '4px',
+                  background: 'none',
+                  borderTop: 'none',
+                  borderLeft: 'none',
+                  borderRight: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                ✉️ Corporate Email OTP
+              </button>
+            </div>
 
-            {/* Quick Demo Pre-fill Links */}
-            <div
+            {loginMethod === 'password' ? (
+              <form onSubmit={handleLogin}>
+                <div className="form-group">
+                  <label className="form-label" style={{ color: '#CBD5E1' }}>
+                    Registered Corporate Email or Mobile
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94A3B8' }} />
+                    <input
+                      type="text"
+                      placeholder="contact@enterprise.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="form-input"
+                      style={{
+                        paddingLeft: '38px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderColor: 'rgba(255, 255, 255, 0.15)',
+                        color: '#FFFFFF',
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <div className="flex justify-between items-center" style={{ marginBottom: '0.4rem' }}>
+                    <label className="form-label" style={{ color: '#CBD5E1', margin: 0 }}>
+                      Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTab('forgot');
+                        setForgotEmail(email || '');
+                        setError(null);
+                        setForgotSuccess(null);
+                        setForgotOtpSent(false);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        fontSize: '0.75rem',
+                        color: '#F59E0B',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Forgot Password? Reset via OTP
+                    </button>
+                  </div>
+                  <div style={{ position: 'relative' }}>
+                    <Lock size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94A3B8' }} />
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="form-input"
+                      style={{
+                        paddingLeft: '38px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        borderColor: 'rgba(255, 255, 255, 0.15)',
+                        color: '#FFFFFF',
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <button type="submit" disabled={loading} className="btn btn-amber" style={{ width: '100%', marginTop: '0.75rem' }}>
+                  <UserCheck size={16} /> {loading ? 'Authenticating...' : 'Sign In to B2B Dashboard'}
+                </button>
+              </form>
+            ) : (
+              <div>
+                {!loginOtpSent ? (
+                  <form onSubmit={handleSendB2BLoginEmailOtp}>
+                    <div className="form-group">
+                      <label className="form-label" style={{ color: '#CBD5E1' }}>Official Corporate Email</label>
+                      <div style={{ position: 'relative' }}>
+                        <Mail size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94A3B8' }} />
+                        <input
+                          type="email"
+                          placeholder="contact@enterprise.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="form-input"
+                          style={{
+                            paddingLeft: '38px',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            borderColor: 'rgba(255, 255, 255, 0.15)',
+                            color: '#FFFFFF',
+                          }}
+                          required
+                        />
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '0.2rem', display: 'block' }}>
+                        A one-time 6-digit corporate verification code will be sent to your inbox.
+                      </span>
+                    </div>
+                    <button type="submit" disabled={loading} className="btn btn-amber" style={{ width: '100%', marginTop: '0.5rem' }}>
+                      {loading ? 'Sending OTP...' : 'Send Corporate Login OTP'}
+                    </button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleVerifyB2BLoginEmailOtp}>
+                    <div
+                      style={{
+                        padding: '0.65rem 0.85rem',
+                        background: 'rgba(16, 185, 129, 0.15)',
+                        border: '1px solid rgba(16, 185, 129, 0.3)',
+                        color: '#34D399',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.8rem',
+                        marginBottom: '1rem',
+                      }}
+                    >
+                      OTP sent to <strong>{email}</strong>. Check inbox or spam folder.
+                    </div>
+                    <div className="form-group">
+                      <div className="flex justify-between items-center">
+                        <label className="form-label" style={{ color: '#CBD5E1' }}>Enter 6-Digit Email OTP</label>
+                        <button
+                          type="button"
+                          disabled={loginCooldown > 0 || loading}
+                          onClick={handleSendB2BLoginEmailOtp}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: loginCooldown > 0 ? 'not-allowed' : 'pointer',
+                            fontSize: '0.75rem',
+                            color: loginCooldown > 0 ? '#94A3B8' : '#F59E0B',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {loginCooldown > 0 ? `Resend in ${loginCooldown}s` : 'Resend Code'}
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="••••••"
+                        maxLength={6}
+                        value={loginOtp}
+                        onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, ''))}
+                        className="form-input"
+                        style={{
+                          textAlign: 'center',
+                          fontSize: '1.25rem',
+                          letterSpacing: '0.3em',
+                          fontWeight: 800,
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          borderColor: 'rgba(255, 255, 255, 0.15)',
+                          color: '#FFFFFF',
+                        }}
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <button type="submit" disabled={loading} className="btn btn-amber" style={{ width: '100%' }}>
+                      {loading ? 'Verifying...' : 'Verify OTP & Enter B2B Portal'}
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleGoogleB2BSignIn}
+              disabled={loading}
               style={{
-                marginTop: '1.5rem',
-                padding: '1rem',
-                background: 'rgba(255, 255, 255, 0.04)',
+                width: '100%',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.6rem',
+                padding: '0.65rem',
                 borderRadius: 'var(--radius-md)',
-                border: '1px dashed rgba(255, 255, 255, 0.15)',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: '#FFFFFF',
+                marginTop: '0.85rem',
+                cursor: 'pointer',
               }}
             >
-              <div style={{ fontSize: '0.72rem', color: '#94A3B8', textTransform: 'uppercase', marginBottom: '0.5rem', fontWeight: 700 }}>
-                Instant Demo Business Logins
-              </div>
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('procurement@edutech.in');
-                    setPassword('b2b123');
-                  }}
-                  className="flex items-center justify-between"
-                  style={{
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: '6px',
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    color: '#34D399',
-                    fontSize: '0.78rem',
-                    textAlign: 'left',
-                    border: '1px solid rgba(16, 185, 129, 0.2)',
-                  }}
-                >
-                  <span>1. Approved Account: <strong>procurement@edutech.in</strong></span>
-                  <span className="badge badge-green" style={{ fontSize: '0.62rem' }}>Verified</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('admin@innovatetech.co');
-                    setPassword('b2b123');
-                  }}
-                  className="flex items-center justify-between"
-                  style={{
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: '6px',
-                    background: 'rgba(245, 158, 11, 0.1)',
-                    color: '#FBBF24',
-                    fontSize: '0.78rem',
-                    textAlign: 'left',
-                    border: '1px solid rgba(245, 158, 11, 0.2)',
-                  }}
-                >
-                  <span>2. Pending Verification: <strong>admin@innovatetech.co</strong></span>
-                  <span className="badge badge-amber" style={{ fontSize: '0.62rem' }}>Pending</span>
-                </button>
-              </div>
-            </div>
+              <svg width="16" height="16" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+              </svg>
+              <span>Sign in with Google Workspace</span>
+            </button>
           </div>
         ) : tab === 'forgot' ? (
-          /* Forgot Password via OTP Form for B2B */
+          /* Forgot Password via Email OTP Form for B2B */
           <div>
             <div className="flex items-center gap-2" style={{ marginBottom: '1.25rem' }}>
               <button
@@ -559,6 +776,7 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
                 onClick={() => {
                   setTab('login');
                   setError(null);
+                  setForgotOtpSent(false);
                 }}
                 className="btn btn-sm btn-outline-b2b"
                 style={{ padding: '0.3rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#FFF' }}
@@ -593,15 +811,15 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
                   Sign In with New Password
                 </button>
               </div>
-            ) : !forgotOtpInfo ? (
+            ) : !forgotOtpSent ? (
               <form onSubmit={handleSendB2BForgotOtp}>
                 <div className="form-group">
-                  <label className="form-label" style={{ color: '#CBD5E1' }}>Registered Corporate Email</label>
+                  <label className="form-label" style={{ color: '#CBD5E1' }}>Registered Corporate Email *</label>
                   <div style={{ position: 'relative' }}>
                     <Mail size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: '#94A3B8' }} />
                     <input
                       type="email"
-                      placeholder="procurement@company.com"
+                      placeholder="contact@enterprise.com"
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
                       className="form-input"
@@ -615,7 +833,7 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
                     />
                   </div>
                   <span style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '0.2rem', display: 'block' }}>
-                    A 6-digit authentication OTP will be generated to authenticate corporate recovery.
+                    A secure 6-digit verification code will be sent to your corporate email.
                   </span>
                 </div>
 
@@ -637,14 +855,15 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
                   </div>
                 )}
 
-                <button type="submit" className="btn btn-amber" style={{ width: '100%', marginTop: '0.5rem' }}>
-                  Generate & Send Verification OTP
+                <button type="submit" disabled={loading} className="btn btn-amber" style={{ width: '100%', marginTop: '0.5rem' }}>
+                  {loading ? 'Dispatching OTP...' : 'Generate & Send Verification OTP'}
                 </button>
 
                 {forgotEmail && forgotEmail.includes('@') && (
                   <button
                     type="button"
                     onClick={handleSendB2BFirebaseReset}
+                    disabled={loading}
                     className="btn btn-sm btn-outline-b2b"
                     style={{
                       width: '100%',
@@ -663,64 +882,53 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
               </form>
             ) : (
               <form onSubmit={handleVerifyB2BForgotOtp}>
-                {/* Live OTP Notification Simulation Banner */}
                 <div
                   style={{
-                    background: 'rgba(245, 158, 11, 0.15)',
-                    border: '1.5px solid rgba(245, 158, 11, 0.4)',
-                    borderRadius: '10px',
-                    padding: '0.85rem',
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    color: '#34D399',
+                    borderRadius: '8px',
+                    padding: '0.75rem',
                     marginBottom: '1rem',
+                    fontSize: '0.8rem',
                   }}
                 >
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#FBBF24', marginBottom: '0.25rem' }}>
-                    ✨ Live OTP Dispatch Simulation
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: '#E2E8F0' }}>
-                    OTP sent to <strong>{forgotEmail}</strong>:
-                  </div>
-                  <div className="flex items-center gap-3" style={{ marginTop: '0.4rem' }}>
-                    <span
-                      style={{
-                        fontFamily: 'monospace',
-                        fontSize: '1.3rem',
-                        fontWeight: 900,
-                        letterSpacing: '3px',
-                        background: '#1E293B',
-                        padding: '0.25rem 0.6rem',
-                        borderRadius: '6px',
-                        color: '#F59E0B',
-                        border: '1px solid rgba(245, 158, 11, 0.3)',
-                      }}
-                    >
-                      {forgotOtpInfo.otp}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setForgotOtp(forgotOtpInfo.otp)}
-                      className="btn btn-sm"
-                      style={{ background: '#F59E0B', color: '#000', fontWeight: 700, fontSize: '0.75rem', padding: '0.25rem 0.6rem' }}
-                    >
-                      Auto-Fill OTP
-                    </button>
-                  </div>
+                  Verification code dispatched to <strong>{forgotEmail}</strong>. Please check your inbox or spam folder.
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" style={{ color: '#CBD5E1' }}>6-Digit Verification OTP *</label>
+                  <div className="flex justify-between items-center">
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>6-Digit Verification OTP *</label>
+                    <button
+                      type="button"
+                      disabled={forgotCooldown > 0 || loading}
+                      onClick={handleSendB2BForgotOtp}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: forgotCooldown > 0 ? 'not-allowed' : 'pointer',
+                        fontSize: '0.75rem',
+                        color: forgotCooldown > 0 ? '#94A3B8' : '#F59E0B',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {forgotCooldown > 0 ? `Resend in ${forgotCooldown}s` : 'Resend Code'}
+                    </button>
+                  </div>
                   <input
                     type="text"
                     maxLength={6}
                     value={forgotOtp}
-                    onChange={(e) => setForgotOtp(e.target.value)}
-                    placeholder="123456"
+                    onChange={(e) => setForgotOtp(e.target.value.replace(/\D/g, ''))}
+                    placeholder="••••••"
                     className="form-input"
                     style={{
                       fontFamily: 'monospace',
-                      fontSize: '1.1rem',
-                      letterSpacing: '2px',
+                      fontSize: '1.25rem',
+                      letterSpacing: '0.3em',
                       textAlign: 'center',
-                      fontWeight: 700,
+                      fontWeight: 800,
                       background: 'rgba(255, 255, 255, 0.05)',
                       borderColor: 'rgba(255, 255, 255, 0.15)',
                       color: '#FFFFFF',
@@ -771,176 +979,263 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
                   </div>
                 </div>
 
-                <button type="submit" className="btn btn-amber" style={{ width: '100%', marginTop: '0.5rem' }}>
-                  Verify OTP & Set New Password
+                <button type="submit" disabled={loading} className="btn btn-amber" style={{ width: '100%', marginTop: '0.5rem' }}>
+                  {loading ? 'Updating Password...' : 'Verify OTP & Set New Password'}
                 </button>
               </form>
             )}
           </div>
         ) : (
-          /* Business Registration Form */
-          <form onSubmit={handleRegister}>
-            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
-              <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                <label className="form-label" style={{ color: '#CBD5E1' }}>Company / Entity Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Apex Global Technologies Pvt Ltd"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  className="form-input"
-                  style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
-                  required
-                />
-              </div>
+          /* Business Registration Form with Real Email OTP Verification */
+          <div>
+            {!regOtpSent ? (
+              <form onSubmit={handleSendB2BRegisterOtp}>
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                  <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>Company / Entity Name *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Apex Global Technologies Pvt Ltd"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      className="form-input"
+                      style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                      required
+                    />
+                  </div>
 
-              <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                <label className="form-label" style={{ color: '#CBD5E1' }}>Authorized Contact Person *</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Rajesh Khurana (Procurement Head)"
-                  value={contactPerson}
-                  onChange={(e) => setContactPerson(e.target.value)}
-                  className="form-input"
-                  style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
-                  required
-                />
-              </div>
+                  <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>Authorized Contact Person *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Rajesh Khurana (Procurement Head)"
+                      value={contactPerson}
+                      onChange={(e) => setContactPerson(e.target.value)}
+                      className="form-input"
+                      style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                      required
+                    />
+                  </div>
 
-              <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                <label className="form-label" style={{ color: '#CBD5E1' }}>Official Business Email *</label>
-                <input
-                  type="email"
-                  placeholder="procurement@apex.in"
-                  value={businessEmail}
-                  onChange={(e) => setBusinessEmail(e.target.value)}
-                  className="form-input"
-                  style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
-                  required
-                />
-              </div>
+                  <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>Official Business Email * (For OTP)</label>
+                    <input
+                      type="email"
+                      placeholder="contact@enterprise.com"
+                      value={businessEmail}
+                      onChange={(e) => setBusinessEmail(e.target.value)}
+                      className="form-input"
+                      style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                      required
+                    />
+                  </div>
 
-              <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                <label className="form-label" style={{ color: '#CBD5E1' }}>Direct Contact Mobile *</label>
-                <input
-                  type="tel"
-                  placeholder="98123 45678"
-                  value={mobile}
-                  maxLength={10}
-                  onChange={(e) => setMobile(e.target.value)}
-                  className="form-input"
-                  style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
-                  required
-                />
-              </div>
+                  <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>Direct Contact Mobile *</label>
+                    <input
+                      type="tel"
+                      placeholder="98123 45678"
+                      value={mobile}
+                      maxLength={10}
+                      onChange={(e) => setMobile(e.target.value)}
+                      className="form-input"
+                      style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                      required
+                    />
+                  </div>
 
-              <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                <label className="form-label" style={{ color: '#CBD5E1' }}>15-Digit Indian GSTIN *</label>
-                <input
-                  type="text"
-                  placeholder="29AAACE1234F1Z8"
-                  value={gstin}
-                  maxLength={15}
-                  onChange={(e) => setGstin(e.target.value.toUpperCase())}
-                  className="form-input"
-                  style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF', letterSpacing: '0.05em', fontWeight: 600 }}
-                  required
-                />
-              </div>
+                  <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>15-Digit Indian GSTIN *</label>
+                    <input
+                      type="text"
+                      placeholder="29AAACE1234F1Z8"
+                      value={gstin}
+                      maxLength={15}
+                      onChange={(e) => setGstin(e.target.value.toUpperCase())}
+                      className="form-input"
+                      style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF', letterSpacing: '0.05em', fontWeight: 600 }}
+                      required
+                    />
+                  </div>
 
-              <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                <label className="form-label" style={{ color: '#CBD5E1' }}>Business Classification *</label>
-                <select
-                  value={businessType}
-                  onChange={(e) => setBusinessType(e.target.value as any)}
-                  className="form-select"
-                  style={{ background: '#1E293B', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                  <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>Create Portal Password * (Min 6 chars)</label>
+                    <input
+                      type="password"
+                      placeholder="Create secure password"
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      className="form-input"
+                      style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>Business Classification *</label>
+                    <select
+                      value={businessType}
+                      onChange={(e) => setBusinessType(e.target.value as any)}
+                      className="form-select"
+                      style={{ background: '#1E293B', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                    >
+                      <option value="Education / School">Education / School / University</option>
+                      <option value="Corporate Office">Corporate Office / IT Enterprise</option>
+                      <option value="Retailer / Reseller">Retailer / Bulk Reseller</option>
+                      <option value="Healthcare / Hospital">Healthcare / Hospital / Clinic</option>
+                      <option value="Co-Working & Real Estate">Co-Working & Real Estate Hub</option>
+                      <option value="Government / PSU">Government / PSU / NGO</option>
+                      <option value="Other">Other Institutional Buyer</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Address Row */}
+                <div style={{ marginTop: '0.5rem' }}>
+                  <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>Corporate Facility Street Address</label>
+                    <input
+                      type="text"
+                      placeholder="Building 4, Tech Park, Outer Ring Road"
+                      value={street}
+                      onChange={(e) => setStreet(e.target.value)}
+                      className="form-input"
+                      style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                    />
+                  </div>
+
+                  <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                    <div className="form-group">
+                      <label className="form-label" style={{ color: '#CBD5E1' }}>City</label>
+                      <input
+                        type="text"
+                        placeholder="Bengaluru"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        className="form-input"
+                        style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label" style={{ color: '#CBD5E1' }}>State</label>
+                      <input
+                        type="text"
+                        placeholder="Karnataka"
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                        className="form-input"
+                        style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label" style={{ color: '#CBD5E1' }}>Pincode</label>
+                      <input
+                        type="text"
+                        placeholder="560103"
+                        value={pincode}
+                        maxLength={6}
+                        onChange={(e) => setPincode(e.target.value)}
+                        className="form-input"
+                        style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Device Document Upload */}
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <ImageUpload
+                    label="Attach GST Certificate / Incorporation Proof"
+                    helperText="Upload official business registration proof directly from device (JPG, PNG, WebP)."
+                    variant="dark"
+                    value={docImage}
+                    onChange={(val) => {
+                      const img = typeof val === 'string' ? val : val[0] || '';
+                      setDocImage(img);
+                      setDocUploaded(!!img);
+                    }}
+                  />
+                </div>
+
+                <button type="submit" disabled={loading} className="btn btn-amber" style={{ width: '100%' }}>
+                  {loading ? 'Sending Code...' : 'Send Verification OTP to Corporate Email'}
+                </button>
+                <div style={{ fontSize: '0.72rem', color: '#94A3B8', textAlign: 'center', marginTop: '0.5rem' }}>
+                  Registrations undergo compliance check by Kogniti B2B desk within 24 business hours.
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyAndRegisterB2B}>
+                <div
+                  style={{
+                    padding: '0.75rem',
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    color: '#34D399',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem',
+                    marginBottom: '1rem',
+                  }}
                 >
-                  <option value="Education / School">Education / School / University</option>
-                  <option value="Corporate Office">Corporate Office / IT Enterprise</option>
-                  <option value="Retailer / Reseller">Retailer / Bulk Reseller</option>
-                  <option value="Healthcare / Hospital">Healthcare / Hospital / Clinic</option>
-                  <option value="Co-Working & Real Estate">Co-Working & Real Estate Hub</option>
-                  <option value="Government / PSU">Government / PSU / NGO</option>
-                  <option value="Other">Other Institutional Buyer</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Address Row */}
-            <div style={{ marginTop: '0.5rem' }}>
-              <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                <label className="form-label" style={{ color: '#CBD5E1' }}>Corporate Facility Street Address</label>
-                <input
-                  type="text"
-                  placeholder="Building 4, Tech Park, Outer Ring Road"
-                  value={street}
-                  onChange={(e) => setStreet(e.target.value)}
-                  className="form-input"
-                  style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
-                />
-              </div>
-
-              <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-                <div className="form-group">
-                  <label className="form-label" style={{ color: '#CBD5E1' }}>City</label>
-                  <input
-                    type="text"
-                    placeholder="Bengaluru"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="form-input"
-                    style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
-                  />
+                  Verification code dispatched to <strong>{businessEmail}</strong>. Enter the 6-digit OTP below to verify ownership and submit your compliance application.
                 </div>
+
                 <div className="form-group">
-                  <label className="form-label" style={{ color: '#CBD5E1' }}>State</label>
+                  <div className="flex justify-between items-center">
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>Enter 6-Digit Email OTP *</label>
+                    <button
+                      type="button"
+                      disabled={regCooldown > 0 || loading}
+                      onClick={handleSendB2BRegisterOtp}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: regCooldown > 0 ? 'not-allowed' : 'pointer',
+                        fontSize: '0.75rem',
+                        color: regCooldown > 0 ? '#94A3B8' : '#F59E0B',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {regCooldown > 0 ? `Resend in ${regCooldown}s` : 'Resend Code'}
+                    </button>
+                  </div>
                   <input
                     type="text"
-                    placeholder="Karnataka"
-                    value={state}
-                    onChange={(e) => setState(e.target.value)}
-                    className="form-input"
-                    style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label" style={{ color: '#CBD5E1' }}>Pincode</label>
-                  <input
-                    type="text"
-                    placeholder="560103"
-                    value={pincode}
                     maxLength={6}
-                    onChange={(e) => setPincode(e.target.value)}
+                    value={regOtp}
+                    onChange={(e) => setRegOtp(e.target.value.replace(/\D/g, ''))}
+                    placeholder="••••••"
                     className="form-input"
-                    style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                    style={{
+                      textAlign: 'center',
+                      fontSize: '1.25rem',
+                      letterSpacing: '0.3em',
+                      fontWeight: 800,
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      borderColor: 'rgba(255, 255, 255, 0.15)',
+                      color: '#FFFFFF',
+                    }}
+                    required
+                    autoFocus
                   />
                 </div>
-              </div>
-            </div>
 
-            {/* Device Document Upload */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <ImageUpload
-                label="Attach GST Certificate / Incorporation Proof"
-                helperText="Upload official business registration proof directly from device (JPG, PNG, WebP)."
-                variant="dark"
-                value={docImage}
-                onChange={(val) => {
-                  const img = typeof val === 'string' ? val : val[0] || '';
-                  setDocImage(img);
-                  setDocUploaded(!!img);
-                }}
-              />
-            </div>
+                <button type="submit" disabled={loading} className="btn btn-amber" style={{ width: '100%', marginTop: '0.5rem' }}>
+                  {loading ? 'Verifying & Submitting...' : 'Verify OTP & Submit Compliance Application'}
+                </button>
 
-            <button type="submit" className="btn btn-amber" style={{ width: '100%' }}>
-              Submit Business Registration for Compliance Review
-            </button>
-            <div style={{ fontSize: '0.72rem', color: '#94A3B8', textAlign: 'center', marginTop: '0.5rem' }}>
-              Registrations undergo compliance check by Kogniti B2B desk within 24 business hours.
-            </div>
-          </form>
+                <button
+                  type="button"
+                  onClick={() => setRegOtpSent(false)}
+                  className="btn btn-outline-b2b btn-sm"
+                  style={{ width: '100%', marginTop: '0.65rem', color: '#FFF' }}
+                >
+                  ← Edit Entity Details
+                </button>
+              </form>
+            )}
+          </div>
         )}
 
         {/* Firebase Authentication Security Badge */}

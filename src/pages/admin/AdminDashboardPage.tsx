@@ -949,7 +949,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     otp: string;
     expiresAt: string;
     targetIdentifier: string;
+    message?: string;
   } | null>(null);
+  const [isResendingAdminOtp, setIsResendingAdminOtp] = useState(false);
   const [otpResetForm, setOtpResetForm] = useState({
     inputOtp: '',
     newPassword: '',
@@ -1021,18 +1023,41 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setTimeout(() => setCredSuccessMsg(null), 5000);
   };
 
-  const handleOpenOtpReset = (
+  const handleOpenOtpReset = async (
     type: 'admin' | 'b2b' | 'b2c',
     id: string,
     name: string,
     identifier: string
   ) => {
     setOtpResetTarget({ type, id, name, identifier });
-    const otpRes = storageService.generatePasswordResetOtp(identifier, type);
+    const otpRes = await storageService.generatePasswordResetOtp(identifier, type);
     setGeneratedOtpInfo(otpRes);
-    setOtpResetForm({ inputOtp: otpRes.otp, newPassword: '', confirmPassword: '' });
+    setOtpResetForm({ inputOtp: '', newPassword: '', confirmPassword: '' });
     setOtpResetMsg(null);
     setShowOtpResetModal(true);
+  };
+
+  const handleResendAdminOtp = async () => {
+    if (!otpResetTarget) return;
+    setIsResendingAdminOtp(true);
+    try {
+      const otpRes = await storageService.generatePasswordResetOtp(
+        otpResetTarget.identifier,
+        otpResetTarget.type
+      );
+      setGeneratedOtpInfo(otpRes);
+      setOtpResetMsg({
+        success: true,
+        text: `Fresh verification code dispatched to ${otpResetTarget.identifier}. Please check the inbox.`,
+      });
+    } catch {
+      setOtpResetMsg({
+        success: false,
+        text: 'Failed to dispatch verification email. Please try again.',
+      });
+    } finally {
+      setIsResendingAdminOtp(false);
+    }
   };
 
   const handleExecuteOtpReset = (e: React.FormEvent) => {
@@ -4130,23 +4155,23 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               }}
             >
               <div className="flex items-center gap-2.5">
-                <ShieldCheck size={20} style={{ color: isFirebaseConfigured() ? '#10B981' : '#3B82F6' }} />
+                <ShieldCheck size={20} style={{ color: isFirebaseConfigured() ? '#10B981' : '#F59E0B' }} />
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--slate-800)' }}>
-                    Firebase Authentication Engine: {isFirebaseConfigured() ? '⚡ Production Live Mode' : '🧪 Fallback / Sandbox Mode'}
+                    Firebase Authentication Engine: {isFirebaseConfigured() ? '⚡ Production Live Mode' : '⚙️ Environment Setup Required'}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
                     {isFirebaseConfigured()
                       ? 'Connected to Google Firebase Cloud Auth. Email/Password, Google Sign-In popups, and secure resets active.'
-                      : 'Mock / sandbox fallback active with 100% feature parity. Provide live keys in .env to connect live project.'}
+                      : 'Provide your Firebase project credentials in .env (VITE_FIREBASE_API_KEY, etc.) to activate live cloud auth.'}
                   </div>
                 </div>
               </div>
               <span
-                className={`badge ${isFirebaseConfigured() ? 'badge-green' : 'badge-blue'}`}
+                className={`badge ${isFirebaseConfigured() ? 'badge-green' : 'badge-amber'}`}
                 style={{ fontSize: '0.72rem', padding: '0.3rem 0.6rem' }}
               >
-                {isFirebaseConfigured() ? 'Firebase 12.19.0 Live' : 'Demo Sandbox Active'}
+                {isFirebaseConfigured() ? 'Firebase 12.19.0 Live' : 'Keys Pending in .env'}
               </span>
             </div>
 
@@ -4450,7 +4475,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         })
                         .map((b) => {
                           const isRevealed = !!revealedPasswords[`b2b_${b.id}`];
-                          const pwd = b.password || 'B2bEdu@123';
+                          const hasStoredPwd = !!b.password;
+                          const pwd = b.password || (b.firebaseUid ? 'Firebase Auth Managed' : 'Corporate OTP Managed');
                           return (
                             <tr key={`b2b_${b.id}`} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                               <td style={{ padding: '0.85rem 1rem' }}>
@@ -4481,10 +4507,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                     <span
                                       style={{
                                         fontFamily: 'monospace',
-                                        fontSize: '0.85rem',
+                                        fontSize: '0.82rem',
                                         fontWeight: 700,
-                                        color: '#047857',
-                                        background: '#D1FAE5',
+                                        color: hasStoredPwd ? '#047857' : '#D97706',
+                                        background: hasStoredPwd ? '#D1FAE5' : '#FEF3C7',
                                         padding: '0.2rem 0.5rem',
                                         borderRadius: '4px',
                                       }}
@@ -4516,7 +4542,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                     {isRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
                                   </button>
 
-                                  {isRevealed && (
+                                  {isRevealed && hasStoredPwd && (
                                     <button
                                       onClick={() => handleCopyPassword(`b2b_${b.id}`, pwd)}
                                       className="btn btn-sm"
@@ -4599,7 +4625,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         })
                         .map((c) => {
                           const isRevealed = !!revealedPasswords[`b2c_${c.id}`];
-                          const pwd = c.password || 'Customer@123';
+                          const hasStoredPwd = !!c.password;
+                          const pwd = c.password || (c.firebaseUid ? 'Firebase Auth Managed' : 'Email OTP Managed');
                           return (
                             <tr key={`b2c_${c.id}`} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                               <td style={{ padding: '0.85rem 1rem' }}>
@@ -4630,10 +4657,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                     <span
                                       style={{
                                         fontFamily: 'monospace',
-                                        fontSize: '0.85rem',
+                                        fontSize: '0.82rem',
                                         fontWeight: 700,
-                                        color: '#047857',
-                                        background: '#D1FAE5',
+                                        color: hasStoredPwd ? '#047857' : '#2563EB',
+                                        background: hasStoredPwd ? '#D1FAE5' : '#DBEAFE',
                                         padding: '0.2rem 0.5rem',
                                         borderRadius: '4px',
                                       }}
@@ -4665,7 +4692,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                     {isRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
                                   </button>
 
-                                  {isRevealed && (
+                                  {isRevealed && hasStoredPwd && (
                                     <button
                                       onClick={() => handleCopyPassword(`b2c_${c.id}`, pwd)}
                                       className="btn btn-sm"
@@ -5903,50 +5930,45 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               </button>
             </div>
 
-            {/* Simulated Live OTP Dispatch Notice */}
+            {/* Production Email OTP Dispatch Notice */}
             {generatedOtpInfo && (
               <div
                 style={{
-                  background: 'linear-gradient(135deg, #EDE9FE 0%, #E0E7FF 100%)',
-                  border: '1.5px solid #8B5CF6',
+                  background: 'linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%)',
+                  border: '1.5px solid #10B981',
                   borderRadius: '12px',
                   padding: '1rem',
                   marginBottom: '1.25rem',
-                  boxShadow: '0 4px 12px rgba(139, 92, 246, 0.12)',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.08)',
                 }}
               >
                 <div className="flex items-center justify-between" style={{ marginBottom: '0.4rem' }}>
-                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#6D28D9', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    ✨ Live OTP Dispatch Simulation
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#047857', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Mail size={14} /> Production Email OTP Dispatched
                   </span>
-                  <span style={{ fontSize: '0.72rem', color: '#7C3AED' }}>Valid for 10 minutes</span>
+                  <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>Valid for 10 minutes</span>
                 </div>
-                <div style={{ fontSize: '0.85rem', color: '#4C1D95', lineHeight: 1.4 }}>
-                  Verification OTP generated for <strong>{generatedOtpInfo.targetIdentifier}</strong>:
+                <div style={{ fontSize: '0.84rem', color: '#064E3B', lineHeight: 1.5 }}>
+                  A secure 6-digit verification code was generated and emailed to <strong>{generatedOtpInfo.targetIdentifier}</strong>.
+                  Please ask the account holder to check their email inbox (and spam folder) and enter the code below.
                 </div>
-                <div className="flex items-center gap-3" style={{ marginTop: '0.5rem' }}>
-                  <span
-                    style={{
-                      fontFamily: 'monospace',
-                      fontSize: '1.4rem',
-                      fontWeight: 900,
-                      letterSpacing: '4px',
-                      background: '#FFFFFF',
-                      padding: '0.3rem 0.8rem',
-                      borderRadius: '8px',
-                      color: '#6D28D9',
-                      border: '1px solid #C4B5FD',
-                    }}
-                  >
-                    {generatedOtpInfo.otp}
-                  </span>
+                <div className="flex items-center justify-between" style={{ marginTop: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid #A7F3D0' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#065F46' }}>Didn't receive the email?</span>
                   <button
                     type="button"
-                    onClick={() => setOtpResetForm({ ...otpResetForm, inputOtp: generatedOtpInfo.otp })}
+                    onClick={handleResendAdminOtp}
+                    disabled={isResendingAdminOtp}
                     className="btn btn-sm"
-                    style={{ background: '#7C3AED', color: '#FFFFFF', fontSize: '0.75rem', padding: '0.35rem 0.75rem' }}
+                    style={{
+                      background: '#10B981',
+                      color: '#FFFFFF',
+                      fontSize: '0.75rem',
+                      padding: '0.3rem 0.75rem',
+                      borderRadius: '6px',
+                      border: 'none',
+                    }}
                   >
-                    Auto-Fill OTP
+                    {isResendingAdminOtp ? 'Dispatching...' : 'Resend Verification Code'}
                   </button>
                 </div>
               </div>
@@ -5979,8 +6001,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   type="text"
                   maxLength={6}
                   value={otpResetForm.inputOtp}
-                  onChange={(e) => setOtpResetForm({ ...otpResetForm, inputOtp: e.target.value })}
-                  placeholder="Enter 6-digit code (e.g. 123456)"
+                  onChange={(e) => setOtpResetForm({ ...otpResetForm, inputOtp: e.target.value.replace(/\D/g, '') })}
+                  placeholder="Enter 6-digit verification code"
                   className="form-input"
                   style={{ fontFamily: 'monospace', fontSize: '1.1rem', letterSpacing: '2px', fontWeight: 700 }}
                   required

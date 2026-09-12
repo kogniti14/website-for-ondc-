@@ -3,6 +3,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   sendPasswordResetEmail,
+  sendEmailVerification,
   signOut,
   onAuthStateChanged,
   updateProfile,
@@ -31,20 +32,24 @@ const mapFirebaseError = (error: any): string => {
     case 'auth/user-disabled':
       return 'This account has been disabled. Please contact support.';
     case 'auth/user-not-found':
-      return 'No registered account found with this email address.';
+      return 'No registered account found with this email address. Please register first.';
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
-      return 'Invalid email or password. Please verify your credentials.';
+      return 'Invalid email or password. Please verify your credentials or sign in via Email OTP.';
     case 'auth/email-already-in-use':
-      return 'An account with this email address already exists.';
+      return 'An account with this email address already exists. Please sign in instead.';
     case 'auth/weak-password':
       return 'Password should be at least 6 characters long.';
     case 'auth/popup-closed-by-user':
-      return 'Google sign-in was cancelled before completion.';
+      return 'Google sign-in popup was closed before completion.';
+    case 'auth/cancelled-popup-request':
+      return 'Another sign-in window is already active.';
     case 'auth/operation-not-allowed':
-      return 'This sign-in provider is not enabled in the Firebase Console. Please enable Email/Password or Google provider.';
+      return 'This sign-in provider is not enabled in the Firebase Console. Please enable Email/Password or Google in Firebase Console.';
+    case 'auth/too-many-requests':
+      return 'Access to this account has been temporarily disabled due to many failed attempts. Please try again later or reset your password.';
     case 'auth/network-request-failed':
-      return 'Network error communicating with Firebase. Please check your connection.';
+      return 'Network error communicating with Firebase. Please check your internet connection.';
     default:
       return error?.message || 'Authentication encountered an error. Please try again.';
   }
@@ -69,20 +74,15 @@ export const firebaseAuthService = {
 
   /**
    * Sign in with Email and Password
+   * Strict Production Standard: Authenticates directly against Firebase Cloud Auth
    */
   async loginWithEmail(email: string, password: string): Promise<FirebaseAuthResult> {
     const isLive = isFirebaseConfigured();
     if (!isLive) {
-      // Graceful simulated mode when user hasn't added live credentials yet
       return {
-        success: true,
+        success: false,
+        error: 'Firebase Authentication is not configured. Please supply your live VITE_FIREBASE_API_KEY and credentials in .env.',
         isLive: false,
-        user: {
-          uid: `fb_sim_${Date.now()}`,
-          email,
-          displayName: email.split('@')[0],
-          emailVerified: true,
-        } as any,
       };
     }
 
@@ -113,14 +113,9 @@ export const firebaseAuthService = {
     const isLive = isFirebaseConfigured();
     if (!isLive) {
       return {
-        success: true,
+        success: false,
+        error: 'Firebase Authentication is not configured. Please supply your live VITE_FIREBASE_API_KEY and credentials in .env.',
         isLive: false,
-        user: {
-          uid: `fb_sim_${Date.now()}`,
-          email,
-          displayName: displayName || email.split('@')[0],
-          emailVerified: false,
-        } as any,
       };
     }
 
@@ -154,15 +149,9 @@ export const firebaseAuthService = {
     const isLive = isFirebaseConfigured();
     if (!isLive) {
       return {
-        success: true,
+        success: false,
+        error: 'Firebase Authentication is not configured. Please supply your live VITE_FIREBASE_API_KEY in .env.',
         isLive: false,
-        user: {
-          uid: `fb_sim_google_${Date.now()}`,
-          email: 'google.user@kognitiminds.com',
-          displayName: 'Google Verified User',
-          photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-          emailVerified: true,
-        } as any,
       };
     }
 
@@ -189,8 +178,8 @@ export const firebaseAuthService = {
     const isLive = isFirebaseConfigured();
     if (!isLive) {
       return {
-        success: true,
-        message: `(Simulation Mode) Password reset instructions would be delivered to ${email}.`,
+        success: false,
+        message: 'Firebase Authentication is not configured. Please supply your live VITE_FIREBASE_API_KEY in .env.',
         isLive: false,
       };
     }
@@ -212,13 +201,25 @@ export const firebaseAuthService = {
   },
 
   /**
+   * Send Email Verification Link via Firebase
+   */
+  async sendVerification(user: FirebaseUser): Promise<{ success: boolean; error?: string }> {
+    try {
+      await sendEmailVerification(user);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: mapFirebaseError(err) };
+    }
+  },
+
+  /**
    * Sign Out from Firebase
    */
   async logout(): Promise<void> {
     try {
       await signOut(auth);
     } catch (err) {
-      console.warn('Firebase sign-out encountered non-blocking issue:', err);
+      console.warn('Firebase sign-out notice:', err);
     }
   },
 };

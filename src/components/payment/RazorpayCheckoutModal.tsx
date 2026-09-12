@@ -167,10 +167,10 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
 
   const handleVerifyOtp = (e: React.FormEvent) => {
     e.preventDefault();
-    if (enteredOtp.trim() === simulatedOtp || enteredOtp.trim() === '123456' || enteredOtp.length === 6) {
+    if (enteredOtp.trim() === simulatedOtp) {
       processSuccess();
     } else {
-      setPaymentError('Invalid OTP. Please enter the 6-digit verification code shown above.');
+      setPaymentError('Invalid OTP. Please enter the authentic 6-digit bank verification code.');
     }
   };
 
@@ -993,7 +993,7 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
                 marginBottom: '1.5rem',
               }}
             >
-              Simulated Test OTP: <strong style={{ letterSpacing: '0.1em', fontSize: '1rem' }}>{simulatedOtp}</strong>
+              Sandbox Bank Challenge Code: <strong style={{ letterSpacing: '0.1em', fontSize: '1rem' }}>{simulatedOtp}</strong>
             </div>
 
             <form onSubmit={handleVerifyOtp} style={{ maxWidth: '320px', margin: '0 auto' }}>
