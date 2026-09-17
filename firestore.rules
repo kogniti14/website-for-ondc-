@@ -44,14 +44,14 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 2. Gallery Categories Collection
+    // 2. Gallery Categories Collection (Super Admin Exclusive Management)
     // =========================================================================
     match /gallery_categories/{catId} {
-      // Anyone can read active categories
+      // Anyone can read categories
       allow read: if true;
 
-      // Admin & Super Admin can manage categories
-      allow write: if isAdmin();
+      // Strictly Super Admin can create, update, reorder, or delete categories
+      allow write: if isSuperAdmin();
     }
 
     // =========================================================================
@@ -74,11 +74,11 @@ service cloud.firestore {
     }
 
     // =========================================================================
-    // 4. Certification Categories Collection
+    // 4. Certification Categories Collection (Super Admin Exclusive Management)
     // =========================================================================
     match /certification_categories/{catId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isSuperAdmin();
     }
 
     // =========================================================================

@@ -41,6 +41,7 @@ import {
   Mail,
   Sparkles,
   Award,
+  Layers,
 } from 'lucide-react';
 import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, AdminPermissions, Category, B2CUser, SiteMedia, B2BOrderItemSummary, OrderItemSummary, B2BQuotationItem, B2BPaymentRecord, B2CAddress } from '../../types';
 import { storageService } from '../../services/storageService';
@@ -52,6 +53,7 @@ import { razorpayService, RazorpayConfig, RazorpayTransactionRecord } from '../.
 import { RazorpayCheckoutModal } from '../../components/payment/RazorpayCheckoutModal';
 import { GalleryManagement } from '../../components/admin/GalleryManagement';
 import { CertificationManagement } from '../../components/admin/CertificationManagement';
+import { CategoryManager } from '../../components/admin/CategoryManager';
 import { AdminNavSlider } from '../../components/admin/AdminNavSlider';
 
 interface AdminDashboardPageProps {
@@ -82,7 +84,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const { currentAdminUser, isSuperAdmin, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery' | 'certifications'
+    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery' | 'gallery_categories' | 'certifications' | 'cert_categories'
   >('overview');
 
   // Razorpay Gateway State
@@ -1857,6 +1859,43 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               </span>
             </button>
             <button
+              onClick={() => setActiveTab('gallery_categories')}
+              data-tab="gallery_categories"
+              data-active={activeTab === 'gallery_categories'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'gallery_categories' ? '#10B981' : 'var(--slate-600)',
+                borderBottom: activeTab === 'gallery_categories' ? '2px solid #10B981' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'gallery_categories' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'gallery_categories' ? '#10B981' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <FolderTree size={16} style={{ color: '#10B981' }} /> Story Categories
+              <span
+                style={{
+                  backgroundColor: '#DCFCE7',
+                  color: '#15803D',
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  padding: '0.1rem 0.4rem',
+                  borderRadius: '4px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {isSuperAdmin ? '👑 Super Admin' : 'Admin'}
+              </span>
+            </button>
+            <button
               onClick={() => setActiveTab('certifications')}
               data-tab="certifications"
               data-active={activeTab === 'certifications'}
@@ -1891,6 +1930,43 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 }}
               >
                 CMS
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('cert_categories')}
+              data-tab="cert_categories"
+              data-active={activeTab === 'cert_categories'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'cert_categories' ? '#0D9488' : 'var(--slate-600)',
+                borderBottom: activeTab === 'cert_categories' ? '2px solid #0D9488' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'cert_categories' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'cert_categories' ? '#0D9488' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <Layers size={16} style={{ color: '#0D9488' }} /> Cert Categories
+              <span
+                style={{
+                  backgroundColor: '#CCFBF1',
+                  color: '#0F766E',
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  padding: '0.1rem 0.4rem',
+                  borderRadius: '4px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {isSuperAdmin ? '👑 Super Admin' : 'Admin'}
               </span>
             </button>
             <button
@@ -5683,9 +5759,19 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           <GalleryManagement />
         )}
 
+        {/* Gallery & Success Story Category Governance */}
+        {activeTab === 'gallery_categories' && (
+          <CategoryManager type="gallery" />
+        )}
+
         {/* Centralized Certifications & Regulatory Documents CMS */}
         {activeTab === 'certifications' && (
           <CertificationManagement />
+        )}
+
+        {/* Company Certification & Regulatory Document Category Governance */}
+        {activeTab === 'cert_categories' && (
+          <CategoryManager type="certification" />
         )}
       </div>
 

@@ -474,6 +474,9 @@ export interface GalleryCategory {
   slug: string;
   description?: string;
   displayOrder: number;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // --- Certification Management Module Types ---
@@ -517,5 +520,8 @@ export interface CertificationCategory {
   slug: string;
   description?: string;
   displayOrder: number;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 

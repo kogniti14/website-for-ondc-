@@ -36,6 +36,7 @@ import {
   certificationService,
   INITIAL_CERTIFICATION_CATEGORIES,
 } from '../../services/certificationService';
+import { CategoryManager } from './CategoryManager';
 
 export const CertificationManagement: React.FC = () => {
   const { currentAdminUser, isSuperAdmin, isAdmin } = useAuth();
@@ -53,6 +54,7 @@ export const CertificationManagement: React.FC = () => {
   // List & Filter States
   const [certifications, setCertifications] = useState<CompanyCertification[]>([]);
   const [categories, setCategories] = useState<CertificationCategory[]>([]);
+  const [activeCategories, setActiveCategories] = useState<CertificationCategory[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedVisibility, setSelectedVisibility] = useState<CertificationVisibility | 'all'>('all');

@@ -23,16 +23,16 @@ const LOCAL_STORAGE_CATEGORIES_KEY = 'km_gallery_categories_v1';
 
 // Initial Seed Categories as defined in specifications
 export const INITIAL_GALLERY_CATEGORIES: GalleryCategory[] = [
-  { id: 'cat_success', name: 'Success Stories', slug: 'success-stories', displayOrder: 1, description: 'Client transformations, brand migrations, and circular economy adoption milestones.' },
-  { id: 'cat_achieve', name: 'Achievements', slug: 'achievements', displayOrder: 2, description: 'Company milestones, ESG certifications, and sustainable packaging breakthroughs.' },
-  { id: 'cat_events', name: 'Company Events', slug: 'company-events', displayOrder: 3, description: 'Symposiums, stakeholder meets, and agro-farmer partner summits.' },
-  { id: 'cat_prod', name: 'Products', slug: 'products', displayOrder: 4, description: 'Showcase of 100% tree-free circular paper, courier bags, and molded pulp tableware.' },
-  { id: 'cat_mfg', name: 'Manufacturing', slug: 'manufacturing', displayOrder: 5, description: 'Inside our zero-effluent agri-waste processing and automated conversion units.' },
-  { id: 'cat_team', name: 'Team', slug: 'team', displayOrder: 6, description: 'R&D scientists, production engineers, and visionary changemakers at Kogniti Minds.' },
-  { id: 'cat_exhib', name: 'Exhibitions', slug: 'exhibitions', displayOrder: 7, description: 'National packaging expos, ONDC seller pavilions, and global sustainability forums.' },
-  { id: 'cat_awards', name: 'Awards', slug: 'awards', displayOrder: 8, description: 'National Cleantech honors, Circular Packaging Innovation awards, and Green MSME recognitions.' },
-  { id: 'cat_partners', name: 'Partnerships', slug: 'partnerships', displayOrder: 9, description: 'Institutional alliances, state farmer collectives, and enterprise logistics adopters.' },
-  { id: 'cat_other', name: 'Other', slug: 'other', displayOrder: 10, description: 'Press features, community outreach, and future circular packaging initiatives.' },
+  { id: 'cat_success', name: 'Success Stories', slug: 'success-stories', displayOrder: 1, isActive: true, description: 'Client transformations, brand migrations, and circular economy adoption milestones.' },
+  { id: 'cat_achieve', name: 'Achievements', slug: 'achievements', displayOrder: 2, isActive: true, description: 'Company milestones, ESG certifications, and sustainable packaging breakthroughs.' },
+  { id: 'cat_events', name: 'Company Events', slug: 'company-events', displayOrder: 3, isActive: true, description: 'Symposiums, stakeholder meets, and agro-farmer partner summits.' },
+  { id: 'cat_prod', name: 'Products', slug: 'products', displayOrder: 4, isActive: true, description: 'Showcase of 100% tree-free circular paper, courier bags, and molded pulp tableware.' },
+  { id: 'cat_mfg', name: 'Manufacturing', slug: 'manufacturing', displayOrder: 5, isActive: true, description: 'Inside our zero-effluent agri-waste processing and automated conversion units.' },
+  { id: 'cat_team', name: 'Team', slug: 'team', displayOrder: 6, isActive: true, description: 'R&D scientists, production engineers, and visionary changemakers at Kogniti Minds.' },
+  { id: 'cat_exhib', name: 'Exhibitions', slug: 'exhibitions', displayOrder: 7, isActive: true, description: 'National packaging expos, ONDC seller pavilions, and global sustainability forums.' },
+  { id: 'cat_awards', name: 'Awards', slug: 'awards', displayOrder: 8, isActive: true, description: 'National Cleantech honors, Circular Packaging Innovation awards, and Green MSME recognitions.' },
+  { id: 'cat_partners', name: 'Partnerships', slug: 'partnerships', displayOrder: 9, isActive: true, description: 'Institutional alliances, state farmer collectives, and enterprise logistics adopters.' },
+  { id: 'cat_other', name: 'Other', slug: 'other', displayOrder: 10, isActive: true, description: 'Press features, community outreach, and future circular packaging initiatives.' },
 ];
 
 // Initial Realistic Seed Stories for Kogniti Minds
@@ -258,11 +258,21 @@ class GalleryService {
           this.saveLocalCategories(INITIAL_GALLERY_CATEGORIES);
           return INITIAL_GALLERY_CATEGORIES;
         }
-        return JSON.parse(data);
+        const parsed: GalleryCategory[] = JSON.parse(data);
+        return parsed.map((c) => ({
+          ...c,
+          isActive: c.isActive !== false,
+        }));
       }
-      return this.memoryCategories || INITIAL_GALLERY_CATEGORIES;
+      return (this.memoryCategories || INITIAL_GALLERY_CATEGORIES).map((c) => ({
+        ...c,
+        isActive: c.isActive !== false,
+      }));
     } catch {
-      return this.memoryCategories || INITIAL_GALLERY_CATEGORIES;
+      return (this.memoryCategories || INITIAL_GALLERY_CATEGORIES).map((c) => ({
+        ...c,
+        isActive: c.isActive !== false,
+      }));
     }
   }
 
@@ -691,52 +701,239 @@ class GalleryService {
   }
 
   /**
-   * Categories Management
+   * Categories Management (Super Admin Exclusive Governance)
    */
   getCategories(): GalleryCategory[] {
     const list = this.getLocalCategories();
     return list.sort((a, b) => a.displayOrder - b.displayOrder);
   }
 
-  saveCategory(
-    name: string,
+  getActiveCategories(): GalleryCategory[] {
+    return this.getCategories().filter((c) => c.isActive !== false);
+  }
+
+  getStoryCountForCategory(categoryName: string): number {
+    const clean = categoryName.trim().toLowerCase();
+    return this.getLocalStories().filter((s) => s.category.trim().toLowerCase() === clean).length;
+  }
+
+  createCategory(
+    data: { name: string; slug?: string; description?: string; displayOrder?: number; isActive?: boolean },
     currentUserRole?: string
   ): { success: boolean; category?: GalleryCategory; message: string } {
-    if (!this.isAuthorized(currentUserRole)) {
-      return {
-        success: false,
-        message: 'Unauthorized: Admin privileges required to manage categories.',
-      };
+    if (currentUserRole !== 'super_admin') {
+      return { success: false, message: 'Unauthorized: Only Super Admin has permission to add categories.' };
     }
 
-    const cleanName = name.trim();
+    const cleanName = data.name.trim();
     if (!cleanName) {
       return { success: false, message: 'Category name is required.' };
     }
 
     const currentList = this.getLocalCategories();
-    const existing = currentList.find(
-      (c) => c.name.toLowerCase() === cleanName.toLowerCase()
-    );
-    if (existing) {
-      return { success: false, message: 'A category with this name already exists.' };
+    if (currentList.some((c) => c.name.toLowerCase() === cleanName.toLowerCase())) {
+      return { success: false, message: `Category "${cleanName}" already exists.` };
     }
 
     const newCat: GalleryCategory = {
       id: `cat_${Date.now()}`,
       name: cleanName,
-      slug: this.generateSlug(cleanName),
-      displayOrder: currentList.length + 1,
+      slug: data.slug?.trim() || this.generateSlug(cleanName),
+      description: data.description?.trim(),
+      displayOrder: data.displayOrder ?? currentList.length + 1,
+      isActive: data.isActive !== false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     currentList.push(newCat);
     this.saveLocalCategories(currentList);
 
+    return { success: true, category: newCat, message: `Category "${cleanName}" created successfully.` };
+  }
+
+  updateCategory(
+    id: string,
+    data: { name?: string; slug?: string; description?: string; displayOrder?: number; isActive?: boolean },
+    currentUserRole?: string
+  ): { success: boolean; category?: GalleryCategory; message: string } {
+    if (currentUserRole !== 'super_admin') {
+      return { success: false, message: 'Unauthorized: Only Super Admin has permission to edit categories.' };
+    }
+
+    const currentList = this.getLocalCategories();
+    const index = currentList.findIndex((c) => c.id === id);
+    if (index === -1) {
+      return { success: false, message: 'Category not found.' };
+    }
+
+    const oldCat = currentList[index];
+    const oldName = oldCat.name;
+    const newName = data.name ? data.name.trim() : oldName;
+
+    // Check collision if name changed
+    if (newName.toLowerCase() !== oldName.toLowerCase()) {
+      if (currentList.some((c) => c.id !== id && c.name.toLowerCase() === newName.toLowerCase())) {
+        return { success: false, message: `A category named "${newName}" already exists.` };
+      }
+      // Re-map existing stories with oldName to newName
+      const stories = this.getLocalStories();
+      let updatedStoriesCount = 0;
+      for (const s of stories) {
+        if (s.category.toLowerCase() === oldName.toLowerCase()) {
+          s.category = newName;
+          s.updatedAt = new Date().toISOString();
+          updatedStoriesCount++;
+        }
+      }
+      if (updatedStoriesCount > 0) {
+        this.saveLocalStories(stories);
+      }
+    }
+
+    const updatedCat: GalleryCategory = {
+      ...oldCat,
+      name: newName,
+      slug: data.slug?.trim() || (data.name ? this.generateSlug(newName) : oldCat.slug),
+      description: data.description !== undefined ? data.description.trim() : oldCat.description,
+      displayOrder: data.displayOrder !== undefined ? Number(data.displayOrder) : oldCat.displayOrder,
+      isActive: data.isActive !== undefined ? data.isActive : (oldCat.isActive !== false),
+      updatedAt: new Date().toISOString(),
+    };
+
+    currentList[index] = updatedCat;
+    this.saveLocalCategories(currentList);
+
+    return { success: true, category: updatedCat, message: `Category "${newName}" updated successfully.` };
+  }
+
+  toggleCategoryStatus(
+    id: string,
+    currentUserRole?: string
+  ): { success: boolean; isActive?: boolean; message: string } {
+    if (currentUserRole !== 'super_admin') {
+      return { success: false, message: 'Unauthorized: Only Super Admin can change category status.' };
+    }
+
+    const currentList = this.getLocalCategories();
+    const cat = currentList.find((c) => c.id === id);
+    if (!cat) {
+      return { success: false, message: 'Category not found.' };
+    }
+
+    cat.isActive = !(cat.isActive !== false);
+    cat.updatedAt = new Date().toISOString();
+    this.saveLocalCategories(currentList);
+
     return {
       success: true,
-      category: newCat,
-      message: `Category "${cleanName}" created successfully!`,
+      isActive: cat.isActive,
+      message: `Category "${cat.name}" is now ${cat.isActive ? 'Active' : 'Inactive'}.`,
     };
+  }
+
+  reorderCategories(
+    orderedIds: string[],
+    currentUserRole?: string
+  ): { success: boolean; message: string } {
+    if (currentUserRole !== 'super_admin') {
+      return { success: false, message: 'Unauthorized: Only Super Admin can change display order.' };
+    }
+
+    const currentList = this.getLocalCategories();
+    const map = new Map(currentList.map((c) => [c.id, c]));
+
+    orderedIds.forEach((id, idx) => {
+      const cat = map.get(id);
+      if (cat) {
+        cat.displayOrder = idx + 1;
+        cat.updatedAt = new Date().toISOString();
+      }
+    });
+
+    this.saveLocalCategories(Array.from(map.values()));
+    return { success: true, message: 'Category display order updated successfully.' };
+  }
+
+  deleteCategory(
+    id: string,
+    currentUserRole?: string
+  ): { success: boolean; hasContent?: boolean; count?: number; message: string } {
+    if (currentUserRole !== 'super_admin') {
+      return { success: false, message: 'Unauthorized: Only Super Admin can delete categories.' };
+    }
+
+    const currentList = this.getLocalCategories();
+    const cat = currentList.find((c) => c.id === id);
+    if (!cat) {
+      return { success: false, message: 'Category not found.' };
+    }
+
+    const storyCount = this.getStoryCountForCategory(cat.name);
+    if (storyCount > 0) {
+      return {
+        success: false,
+        hasContent: true,
+        count: storyCount,
+        message: `Cannot delete category "${cat.name}" because it contains ${storyCount} stories. Please migrate existing content to another category first.`,
+      };
+    }
+
+    const updated = currentList.filter((c) => c.id !== id);
+    this.saveLocalCategories(updated);
+    return { success: true, message: `Category "${cat.name}" deleted successfully.` };
+  }
+
+  migrateCategoryContentAndDelete(
+    sourceId: string,
+    targetCategoryName: string,
+    currentUserRole?: string
+  ): { success: boolean; migratedCount?: number; message: string } {
+    if (currentUserRole !== 'super_admin') {
+      return { success: false, message: 'Unauthorized: Only Super Admin can migrate and delete categories.' };
+    }
+
+    const currentList = this.getLocalCategories();
+    const sourceCat = currentList.find((c) => c.id === sourceId);
+    if (!sourceCat) {
+      return { success: false, message: 'Source category not found.' };
+    }
+
+    const targetCat = currentList.find(
+      (c) => c.name.toLowerCase() === targetCategoryName.trim().toLowerCase() && c.id !== sourceId
+    );
+    if (!targetCat) {
+      return { success: false, message: 'Target replacement category not found.' };
+    }
+
+    // Migrate all stories
+    const stories = this.getLocalStories();
+    let migratedCount = 0;
+    for (const s of stories) {
+      if (s.category.toLowerCase() === sourceCat.name.toLowerCase()) {
+        s.category = targetCat.name;
+        s.updatedAt = new Date().toISOString();
+        migratedCount++;
+      }
+    }
+    this.saveLocalStories(stories);
+
+    // Delete source category
+    const updatedCategories = currentList.filter((c) => c.id !== sourceId);
+    this.saveLocalCategories(updatedCategories);
+
+    return {
+      success: true,
+      migratedCount,
+      message: `Successfully migrated ${migratedCount} stories to "${targetCat.name}" and removed category "${sourceCat.name}".`,
+    };
+  }
+
+  saveCategory(
+    name: string,
+    currentUserRole?: string
+  ): { success: boolean; category?: GalleryCategory; message: string } {
+    return this.createCategory({ name }, currentUserRole);
   }
 }
 

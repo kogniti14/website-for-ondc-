@@ -25,10 +25,12 @@ import {
   Loader2,
   FolderPlus,
   FileText,
+  FolderTree,
 } from 'lucide-react';
 import { GalleryStory, GalleryCategory, GalleryVisibility, GalleryStatus } from '../../types';
 import { galleryService } from '../../services/galleryService';
 import { useAuth } from '../../context/AuthContext';
+import { CategoryManager } from './CategoryManager';
 
 interface GalleryManagementProps {
   onPreviewStory?: (story: GalleryStory) => void;
@@ -44,6 +46,7 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
   // Data state
   const [stories, setStories] = useState<GalleryStory[]>([]);
   const [categories, setCategories] = useState<GalleryCategory[]>([]);
+  const [activeCategories, setActiveCategories] = useState<GalleryCategory[]>([]);
 
   // Filter & Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,10 +82,6 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
   const [formMetaDesc, setFormMetaDesc] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Category Form State
-  const [newCatName, setNewCatName] = useState('');
-  const [catError, setCatError] = useState<string | null>(null);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = () => {
@@ -95,6 +94,7 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
     });
     setStories(list);
     setCategories(galleryService.getCategories());
+    setActiveCategories(galleryService.getActiveCategories());
   };
 
   useEffect(() => {
@@ -103,10 +103,12 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
 
   // Open Create Modal
   const handleOpenCreateModal = () => {
+    const activeCats = galleryService.getActiveCategories();
+    setActiveCategories(activeCats);
     setEditingStory(null);
     setFormTitle('');
     setFormSlug('');
-    setFormCategory(categories[0]?.name || 'Success Stories');
+    setFormCategory(activeCats[0]?.name || 'Success Stories');
     setFormVisibility('both');
     setFormStatus('published');
     setFormFeatured(false);
@@ -125,6 +127,7 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
 
   // Open Edit Modal
   const handleOpenEditModal = (story: GalleryStory) => {
+    setActiveCategories(galleryService.getActiveCategories());
     setEditingStory(story);
     setFormTitle(story.title);
     setFormSlug(story.slug);
@@ -306,27 +309,6 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
       setTimeout(() => setStatusMsg(null), 4000);
     } else {
       setStatusMsg({ success: false, text: res.message });
-    }
-  };
-
-  // Add Category Submit
-  const handleAddCategory = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCatError(null);
-    if (!newCatName.trim()) {
-      setCatError('Category name cannot be empty.');
-      return;
-    }
-    const currentUserRole = currentAdminUser?.role || (isSuperAdmin ? 'super_admin' : 'admin');
-    const res = galleryService.saveCategory(newCatName.trim(), currentUserRole);
-    if (res.success) {
-      setNewCatName('');
-      setCategories(galleryService.getCategories());
-      loadData();
-      setStatusMsg({ success: true, text: res.message });
-      setTimeout(() => setStatusMsg(null), 3000);
-    } else {
-      setCatError(res.message);
     }
   };
 
@@ -1070,12 +1052,23 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
                     className="form-input"
                     required
                   >
-                    {categories.map((c) => (
+                    {/* Retain assigned category if editing a story whose category was deactivated */}
+                    {editingStory && !activeCategories.some((c) => c.name.toLowerCase() === formCategory.toLowerCase()) && (
+                      <option value={formCategory} disabled>
+                        {formCategory} (Inactive / Archived)
+                      </option>
+                    )}
+                    {activeCategories.map((c) => (
                       <option key={c.id} value={c.name}>
                         {c.name}
                       </option>
                     ))}
                   </select>
+                  {activeCategories.length === 0 && (
+                    <p style={{ color: '#DC2626', fontSize: '0.75rem', marginTop: '0.35rem' }}>
+                      ⚠️ No active categories found. Please activate or create a category in Category Governance.
+                    </p>
+                  )}
                 </div>
 
                 {/* Visibility */}
@@ -1345,103 +1338,49 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
             zIndex: 1050,
             padding: '1.25rem',
           }}
+          onClick={() => setCategoryModalOpen(false)}
         >
           <div
             className="card"
             style={{
-              maxWidth: '520px',
+              maxWidth: '920px',
               width: '100%',
-              padding: '2rem',
+              padding: '1.75rem',
               borderRadius: '16px',
               background: '#FFFFFF',
-              maxHeight: '85vh',
+              maxHeight: '90vh',
               overflowY: 'auto',
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between" style={{ marginBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)' }}>
-                Gallery & Story Categories
-              </h3>
+            <div className="flex items-center justify-between" style={{ marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <div className="flex items-center gap-2">
+                <FolderTree size={22} style={{ color: '#10B981' }} />
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)', margin: 0 }}>
+                    Image Gallery Category Governance
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--slate-500)', margin: 0 }}>
+                    Super Admin exclusive: Add, edit, reorder, toggle active/inactive, or migrate content before deletion.
+                  </p>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setCategoryModalOpen(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--slate-400)', fontSize: '1.25rem' }}
+                className="btn btn-outline btn-sm"
+                style={{ borderRadius: '50%', padding: '0.35rem' }}
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 
-            {catError && (
-              <div
-                style={{
-                  background: '#FEF2F2',
-                  color: '#991B1B',
-                  padding: '0.6rem 0.85rem',
-                  borderRadius: '6px',
-                  fontSize: '0.82rem',
-                  marginBottom: '1rem',
-                }}
-              >
-                {catError}
-              </div>
-            )}
-
-            {/* Add Category Form */}
-            <form onSubmit={handleAddCategory} className="flex gap-2" style={{ marginBottom: '1.5rem' }}>
-              <input
-                type="text"
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
-                placeholder="New Category (e.g. CSR Milestones)"
-                className="form-input"
-                style={{ fontSize: '0.85rem' }}
-              />
-              <button type="submit" className="btn btn-primary" style={{ background: '#10B981', borderColor: '#10B981', whiteSpace: 'nowrap' }}>
-                <Plus size={16} /> Add
-              </button>
-            </form>
-
-            {/* Category List */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--slate-500)', textTransform: 'uppercase' }}>
-                Active Categories ({categories.length})
-              </div>
-              {categories.map((c) => {
-                const count = allStories.filter((s) => s.category.toLowerCase() === c.name.toLowerCase()).length;
-                return (
-                  <div
-                    key={c.id}
-                    className="flex items-center justify-between"
-                    style={{
-                      padding: '0.6rem 0.85rem',
-                      background: 'var(--slate-50)',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-subtle)',
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 700, color: 'var(--slate-800)', fontSize: '0.88rem' }}>{c.name}</div>
-                      {c.description && (
-                        <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>{c.description}</div>
-                      )}
-                    </div>
-                    <span className="badge" style={{ background: 'var(--slate-200)', color: 'var(--slate-700)', fontSize: '0.72rem' }}>
-                      {count} {count === 1 ? 'story' : 'stories'}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex justify-end" style={{ marginTop: '1.5rem' }}>
-              <button
-                type="button"
-                onClick={() => setCategoryModalOpen(false)}
-                className="btn btn-secondary btn-sm"
-              >
-                Close
-              </button>
-            </div>
+            <CategoryManager
+              type="gallery"
+              onCategoryChanged={() => {
+                loadData();
+              }}
+            />
           </div>
         </div>
       )}

@@ -25,19 +25,19 @@ const LOCAL_STORAGE_CATEGORIES_KEY = 'kogniti_certification_categories';
  * 13 Official Certificate Categories specified in project requirements
  */
 export const INITIAL_CERTIFICATION_CATEGORIES: CertificationCategory[] = [
-  { id: 'cat_msme', name: 'MSME / Udyam', slug: 'msme-udyam', description: 'Official Udyam and MSME registration certificates', displayOrder: 1 },
-  { id: 'cat_startup', name: 'Startup Certification', slug: 'startup-certification', description: 'DPIIT Startup India recognition and awards', displayOrder: 2 },
-  { id: 'cat_iso', name: 'ISO Certification', slug: 'iso-certification', description: 'ISO 9001, ISO 14001, and international standards', displayOrder: 3 },
-  { id: 'cat_gov', name: 'Government Registration', slug: 'government-registration', description: 'Official central & state statutory registrations', displayOrder: 4 },
-  { id: 'cat_quality', name: 'Quality Certification', slug: 'quality-certification', description: 'Product and manufacturing process quality assurances', displayOrder: 5 },
-  { id: 'cat_env', name: 'Environmental Certification', slug: 'environmental-certification', description: 'Green industry consents, ESG and ecological ratings', displayOrder: 6 },
-  { id: 'cat_prod', name: 'Product Certification', slug: 'product-certification', description: 'Zero plastic and agricultural pulp laboratory certs', displayOrder: 7 },
-  { id: 'cat_compliance', name: 'Compliance', slug: 'compliance', description: 'Statutory, tax, and pollution board compliance filings', displayOrder: 8 },
-  { id: 'cat_approval', name: 'Approval', slug: 'approval', description: 'GeM OEM vendor approvals and institutional clearance', displayOrder: 9 },
-  { id: 'cat_membership', name: 'Membership', slug: 'membership', description: 'Industry associations and paper trade federations', displayOrder: 10 },
-  { id: 'cat_license', name: 'License', slug: 'license', description: 'Commercial operation and manufacturing licenses', displayOrder: 11 },
-  { id: 'cat_awards', name: 'Awards & Recognition', slug: 'awards-recognition', description: 'Industry leadership and sustainability honors', displayOrder: 12 },
-  { id: 'cat_other', name: 'Other', slug: 'other', description: 'Supplementary corporate recognitions and affidavits', displayOrder: 13 },
+  { id: 'cat_msme', name: 'MSME / Udyam', slug: 'msme-udyam', description: 'Official Udyam and MSME registration certificates', displayOrder: 1, isActive: true },
+  { id: 'cat_startup', name: 'Startup Certification', slug: 'startup-certification', description: 'DPIIT Startup India recognition and awards', displayOrder: 2, isActive: true },
+  { id: 'cat_iso', name: 'ISO Certification', slug: 'iso-certification', description: 'ISO 9001, ISO 14001, and international standards', displayOrder: 3, isActive: true },
+  { id: 'cat_gov', name: 'Government Registration', slug: 'government-registration', description: 'Official central & state statutory registrations', displayOrder: 4, isActive: true },
+  { id: 'cat_quality', name: 'Quality Certification', slug: 'quality-certification', description: 'Product and manufacturing process quality assurances', displayOrder: 5, isActive: true },
+  { id: 'cat_env', name: 'Environmental Certification', slug: 'environmental-certification', description: 'Green industry consents, ESG and ecological ratings', displayOrder: 6, isActive: true },
+  { id: 'cat_prod', name: 'Product Certification', slug: 'product-certification', description: 'Zero plastic and agricultural pulp laboratory certs', displayOrder: 7, isActive: true },
+  { id: 'cat_compliance', name: 'Compliance', slug: 'compliance', description: 'Statutory, tax, and pollution board compliance filings', displayOrder: 8, isActive: true },
+  { id: 'cat_approval', name: 'Approval', slug: 'approval', description: 'GeM OEM vendor approvals and institutional clearance', displayOrder: 9, isActive: true },
+  { id: 'cat_membership', name: 'Membership', slug: 'membership', description: 'Industry associations and paper trade federations', displayOrder: 10, isActive: true },
+  { id: 'cat_license', name: 'License', slug: 'license', description: 'Commercial operation and manufacturing licenses', displayOrder: 11, isActive: true },
+  { id: 'cat_awards', name: 'Awards & Recognition', slug: 'awards-recognition', description: 'Industry leadership and sustainability honors', displayOrder: 12, isActive: true },
+  { id: 'cat_other', name: 'Other', slug: 'other', description: 'Supplementary corporate recognitions and affidavits', displayOrder: 13, isActive: true },
 ];
 
 /**
@@ -361,11 +361,21 @@ class CertificationService {
           this.saveLocalCategories(INITIAL_CERTIFICATION_CATEGORIES);
           return INITIAL_CERTIFICATION_CATEGORIES;
         }
-        return JSON.parse(data);
+        const parsed: CertificationCategory[] = JSON.parse(data);
+        return parsed.map((c) => ({
+          ...c,
+          isActive: c.isActive !== false,
+        }));
       }
-      return this.memoryCategories || INITIAL_CERTIFICATION_CATEGORIES;
+      return (this.memoryCategories || INITIAL_CERTIFICATION_CATEGORIES).map((c) => ({
+        ...c,
+        isActive: c.isActive !== false,
+      }));
     } catch {
-      return this.memoryCategories || INITIAL_CERTIFICATION_CATEGORIES;
+      return (this.memoryCategories || INITIAL_CERTIFICATION_CATEGORIES).map((c) => ({
+        ...c,
+        isActive: c.isActive !== false,
+      }));
     }
   }
 
@@ -868,29 +878,275 @@ class CertificationService {
   }
 
   /**
-   * Categories Management
+   * Categories Management (Super Admin Exclusive Governance)
    */
   getCategories(): CertificationCategory[] {
-    return this.getLocalCategories();
+    const list = this.getLocalCategories();
+    return list.sort((a, b) => a.displayOrder - b.displayOrder);
+  }
+
+  getActiveCategories(): CertificationCategory[] {
+    return this.getCategories().filter((c) => c.isActive !== false);
+  }
+
+  getCertificateCountForCategory(categoryName: string): number {
+    const clean = categoryName.trim().toLowerCase();
+    return this.getLocalCertificates().filter((c) => c.category.trim().toLowerCase() === clean).length;
+  }
+
+  async createCategory(
+    data: { name: string; slug?: string; description?: string; displayOrder?: number; isActive?: boolean },
+    currentUserRole?: string
+  ): Promise<{ success: boolean; category?: CertificationCategory; message: string }> {
+    if (currentUserRole !== 'super_admin') {
+      return { success: false, message: 'Unauthorized: Only Super Admin has permission to add categories.' };
+    }
+
+    const cleanName = data.name.trim();
+    if (!cleanName) {
+      return { success: false, message: 'Category name is required.' };
+    }
+
+    const currentList = this.getLocalCategories();
+    if (currentList.some((c) => c.name.toLowerCase() === cleanName.toLowerCase())) {
+      return { success: false, message: `Category "${cleanName}" already exists.` };
+    }
+
+    const newCat: CertificationCategory = {
+      id: `cat_${Date.now()}`,
+      name: cleanName,
+      slug: data.slug?.trim() || this.generateSlug(cleanName),
+      description: data.description?.trim(),
+      displayOrder: data.displayOrder ?? currentList.length + 1,
+      isActive: data.isActive !== false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    currentList.push(newCat);
+    this.saveLocalCategories(currentList);
+
+    if (isFirebaseConfigured() && db) {
+      try {
+        await setDoc(doc(db, 'certification_categories', newCat.id), newCat);
+      } catch (err) {
+        console.warn('Firestore category sync notice:', err);
+      }
+    }
+
+    return { success: true, category: newCat, message: `Category "${cleanName}" created successfully.` };
+  }
+
+  async updateCategory(
+    id: string,
+    data: { name?: string; slug?: string; description?: string; displayOrder?: number; isActive?: boolean },
+    currentUserRole?: string
+  ): Promise<{ success: boolean; category?: CertificationCategory; message: string }> {
+    if (currentUserRole !== 'super_admin') {
+      return { success: false, message: 'Unauthorized: Only Super Admin has permission to edit categories.' };
+    }
+
+    const currentList = this.getLocalCategories();
+    const index = currentList.findIndex((c) => c.id === id);
+    if (index === -1) {
+      return { success: false, message: 'Category not found.' };
+    }
+
+    const oldCat = currentList[index];
+    const oldName = oldCat.name;
+    const newName = data.name ? data.name.trim() : oldName;
+
+    if (newName.toLowerCase() !== oldName.toLowerCase()) {
+      if (currentList.some((c) => c.id !== id && c.name.toLowerCase() === newName.toLowerCase())) {
+        return { success: false, message: `A category named "${newName}" already exists.` };
+      }
+      // Re-map existing certificates with oldName to newName
+      const certs = this.getLocalCertificates();
+      let updatedCount = 0;
+      for (const c of certs) {
+        if (c.category.toLowerCase() === oldName.toLowerCase()) {
+          c.category = newName;
+          c.updatedAt = new Date().toISOString();
+          updatedCount++;
+        }
+      }
+      if (updatedCount > 0) {
+        this.saveLocalCertificates(certs);
+      }
+    }
+
+    const updatedCat: CertificationCategory = {
+      ...oldCat,
+      name: newName,
+      slug: data.slug?.trim() || (data.name ? this.generateSlug(newName) : oldCat.slug),
+      description: data.description !== undefined ? data.description.trim() : oldCat.description,
+      displayOrder: data.displayOrder !== undefined ? Number(data.displayOrder) : oldCat.displayOrder,
+      isActive: data.isActive !== undefined ? data.isActive : (oldCat.isActive !== false),
+      updatedAt: new Date().toISOString(),
+    };
+
+    currentList[index] = updatedCat;
+    this.saveLocalCategories(currentList);
+
+    if (isFirebaseConfigured() && db) {
+      try {
+        await setDoc(doc(db, 'certification_categories', updatedCat.id), updatedCat);
+      } catch (err) {
+        console.warn('Firestore category sync notice:', err);
+      }
+    }
+
+    return { success: true, category: updatedCat, message: `Category "${newName}" updated successfully.` };
+  }
+
+  async toggleCategoryStatus(
+    id: string,
+    currentUserRole?: string
+  ): Promise<{ success: boolean; isActive?: boolean; message: string }> {
+    if (currentUserRole !== 'super_admin') {
+      return { success: false, message: 'Unauthorized: Only Super Admin can change category status.' };
+    }
+
+    const currentList = this.getLocalCategories();
+    const cat = currentList.find((c) => c.id === id);
+    if (!cat) {
+      return { success: false, message: 'Category not found.' };
+    }
+
+    cat.isActive = !(cat.isActive !== false);
+    cat.updatedAt = new Date().toISOString();
+    this.saveLocalCategories(currentList);
+
+    if (isFirebaseConfigured() && db) {
+      try {
+        await setDoc(doc(db, 'certification_categories', cat.id), cat);
+      } catch (err) {
+        console.warn('Firestore category sync notice:', err);
+      }
+    }
+
+    return {
+      success: true,
+      isActive: cat.isActive,
+      message: `Category "${cat.name}" is now ${cat.isActive ? 'Active' : 'Inactive'}.`,
+    };
+  }
+
+  async reorderCategories(
+    orderedIds: string[],
+    currentUserRole?: string
+  ): Promise<{ success: boolean; message: string }> {
+    if (currentUserRole !== 'super_admin') {
+      return { success: false, message: 'Unauthorized: Only Super Admin can change display order.' };
+    }
+
+    const currentList = this.getLocalCategories();
+    const map = new Map(currentList.map((c) => [c.id, c]));
+
+    orderedIds.forEach((id, idx) => {
+      const cat = map.get(id);
+      if (cat) {
+        cat.displayOrder = idx + 1;
+        cat.updatedAt = new Date().toISOString();
+      }
+    });
+
+    const updatedList = Array.from(map.values());
+    this.saveLocalCategories(updatedList);
+    return { success: true, message: 'Category display order updated successfully.' };
+  }
+
+  async deleteCategory(
+    id: string,
+    currentUserRole?: string
+  ): Promise<{ success: boolean; hasContent?: boolean; count?: number; message: string }> {
+    if (currentUserRole !== 'super_admin') {
+      return { success: false, message: 'Unauthorized: Only Super Admin can delete categories.' };
+    }
+
+    const currentList = this.getLocalCategories();
+    const cat = currentList.find((c) => c.id === id);
+    if (!cat) {
+      return { success: false, message: 'Category not found.' };
+    }
+
+    const certCount = this.getCertificateCountForCategory(cat.name);
+    if (certCount > 0) {
+      return {
+        success: false,
+        hasContent: true,
+        count: certCount,
+        message: `Cannot delete category "${cat.name}" because it contains ${certCount} certificates or documents. Please migrate existing content to another category first.`,
+      };
+    }
+
+    const updated = currentList.filter((c) => c.id !== id);
+    this.saveLocalCategories(updated);
+    return { success: true, message: `Category "${cat.name}" deleted successfully.` };
+  }
+
+  async migrateCategoryContentAndDelete(
+    sourceId: string,
+    targetCategoryName: string,
+    currentUserRole?: string
+  ): Promise<{ success: boolean; migratedCount?: number; message: string }> {
+    if (currentUserRole !== 'super_admin') {
+      return { success: false, message: 'Unauthorized: Only Super Admin can migrate and delete categories.' };
+    }
+
+    const currentList = this.getLocalCategories();
+    const sourceCat = currentList.find((c) => c.id === sourceId);
+    if (!sourceCat) {
+      return { success: false, message: 'Source category not found.' };
+    }
+
+    const targetCat = currentList.find(
+      (c) => c.name.toLowerCase() === targetCategoryName.trim().toLowerCase() && c.id !== sourceId
+    );
+    if (!targetCat) {
+      return { success: false, message: 'Target replacement category not found.' };
+    }
+
+    // Migrate all certificates
+    const certs = this.getLocalCertificates();
+    let migratedCount = 0;
+    for (const c of certs) {
+      if (c.category.toLowerCase() === sourceCat.name.toLowerCase()) {
+        c.category = targetCat.name;
+        c.updatedAt = new Date().toISOString();
+        migratedCount++;
+      }
+    }
+    this.saveLocalCertificates(certs);
+
+    // Delete source category
+    const updatedCategories = currentList.filter((c) => c.id !== sourceId);
+    this.saveLocalCategories(updatedCategories);
+
+    return {
+      success: true,
+      migratedCount,
+      message: `Successfully migrated ${migratedCount} certificates to "${targetCat.name}" and removed category "${sourceCat.name}".`,
+    };
   }
 
   async saveCategory(
     cat: CertificationCategory,
     currentUserRole?: string
   ): Promise<{ success: boolean; message: string }> {
-    if (!this.isAuthorized(currentUserRole)) {
+    if (currentUserRole !== 'super_admin') {
       return {
         success: false,
-        message: 'Unauthorized: Admin privileges required to manage certification categories.',
+        message: 'Unauthorized: Super Admin privileges required to manage certification categories.',
       };
     }
 
     const current = this.getLocalCategories();
     const existingIndex = current.findIndex((c) => c.id === cat.id || c.slug === cat.slug);
     if (existingIndex >= 0) {
-      current[existingIndex] = cat;
+      current[existingIndex] = { ...cat, isActive: cat.isActive !== false, updatedAt: new Date().toISOString() };
     } else {
-      current.push(cat);
+      current.push({ ...cat, isActive: cat.isActive !== false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
     }
     this.saveLocalCategories(current);
 
