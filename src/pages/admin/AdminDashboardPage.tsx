@@ -52,6 +52,7 @@ import { razorpayService, RazorpayConfig, RazorpayTransactionRecord } from '../.
 import { RazorpayCheckoutModal } from '../../components/payment/RazorpayCheckoutModal';
 import { GalleryManagement } from '../../components/admin/GalleryManagement';
 import { CertificationManagement } from '../../components/admin/CertificationManagement';
+import { AdminNavSlider } from '../../components/admin/AdminNavSlider';
 
 interface AdminDashboardPageProps {
   products: Product[];
@@ -1549,237 +1550,387 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         </div>
       </header>
 
-      {/* Main Admin Sub-Navigation */}
+      {/* Main Admin Sub-Navigation with Responsive Horizontal Slider */}
       <div style={{ background: '#FFFFFF', borderBottom: '1px solid var(--border-color)', padding: '0.5rem 0' }}>
-        <div className="container flex items-center gap-6 overflow-x-auto" style={{ fontSize: '0.9rem', fontWeight: 600 }}>
-          <button
-            onClick={() => setActiveTab('overview')}
-            style={{
-              padding: '0.5rem 0.2rem',
-              color: activeTab === 'overview' ? 'var(--primary)' : 'var(--slate-600)',
-              borderBottom: activeTab === 'overview' ? '2px solid var(--primary)' : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
-            <BarChart3 size={16} /> Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('products')}
-            style={{
-              padding: '0.5rem 0.2rem',
-              color: activeTab === 'products' ? 'var(--primary)' : 'var(--slate-600)',
-              borderBottom: activeTab === 'products' ? '2px solid var(--primary)' : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
-            <Package size={16} /> Products ({products.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('categories')}
-            style={{
-              padding: '0.5rem 0.2rem',
-              color: activeTab === 'categories' ? 'var(--primary)' : 'var(--slate-600)',
-              borderBottom: activeTab === 'categories' ? '2px solid var(--primary)' : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
-            <FolderTree size={16} /> Categories ({categories.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('b2c_orders')}
-            style={{
-              padding: '0.5rem 0.2rem',
-              color: activeTab === 'b2c_orders' ? 'var(--primary)' : 'var(--slate-600)',
-              borderBottom: activeTab === 'b2c_orders' ? '2px solid var(--primary)' : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              fontWeight: activeTab === 'b2c_orders' ? 700 : 500,
-            }}
-          >
-            <ShoppingCart size={16} /> B2C Orders ({b2cOrders.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('b2b_orders')}
-            style={{
-              padding: '0.5rem 0.2rem',
-              color: activeTab === 'b2b_orders' ? 'var(--primary)' : 'var(--slate-600)',
-              borderBottom: activeTab === 'b2b_orders' ? '2px solid var(--primary)' : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              fontWeight: activeTab === 'b2b_orders' ? 700 : 500,
-            }}
-          >
-            <Building2 size={16} /> B2B Orders ({b2bOrders.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('rfqs')}
-            style={{
-              padding: '0.5rem 0.2rem',
-              color: activeTab === 'rfqs' ? 'var(--primary)' : 'var(--slate-600)',
-              borderBottom: activeTab === 'rfqs' ? '2px solid var(--primary)' : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              fontWeight: activeTab === 'rfqs' ? 700 : 500,
-            }}
-          >
-            <FileText size={16} /> Quotations ({quotations.length}) {pendingRfqs > 0 && <span className="badge badge-blue" style={{ fontSize: '0.65rem' }}>{pendingRfqs}</span>}
-          </button>
-          <button
-            onClick={() => setActiveTab('verification')}
-            style={{
-              padding: '0.5rem 0.2rem',
-              color: activeTab === 'verification' ? 'var(--primary)' : 'var(--slate-600)',
-              borderBottom: activeTab === 'verification' ? '2px solid var(--primary)' : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
-            <ShieldCheck size={16} /> B2B Verification {pendingApprovals > 0 && <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>{pendingApprovals}</span>}
-          </button>
-          <button
-            onClick={() => setActiveTab('coupons')}
-            style={{
-              padding: '0.5rem 0.2rem',
-              color: activeTab === 'coupons' ? 'var(--primary)' : 'var(--slate-600)',
-              borderBottom: activeTab === 'coupons' ? '2px solid var(--primary)' : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
-            <Tag size={16} /> Coupons & Marketing
-          </button>
-          <button
-            onClick={() => setActiveTab('approvals')}
-            style={{
-              padding: '0.5rem 0.2rem',
-              color: activeTab === 'approvals' ? 'var(--primary)' : 'var(--slate-600)',
-              borderBottom: activeTab === 'approvals' ? '2px solid var(--primary)' : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
-            <ShieldCheck size={16} /> Staff & Approvals {pendingAdminRequests > 0 && <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>{pendingAdminRequests}</span>}
-          </button>
-          <button
-            onClick={() => setActiveTab('credentials')}
-            style={{
-              padding: '0.5rem 0.2rem',
-              color: activeTab === 'credentials' ? 'var(--primary)' : 'var(--slate-600)',
-              borderBottom: activeTab === 'credentials' ? '2px solid var(--primary)' : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
-            <KeyRound size={16} /> User Credentials ({adminUsers.length + businesses.length + b2cUsers.length})
-            {isSuperAdmin && <span className="badge badge-purple" style={{ fontSize: '0.65rem' }}>👑 Master Rights</span>}
-          </button>
-          <button
-            onClick={() => setActiveTab('media')}
-            style={{
-              padding: '0.5rem 0.2rem',
-              color: activeTab === 'media' ? 'var(--primary)' : 'var(--slate-600)',
-              borderBottom: activeTab === 'media' ? '2px solid var(--primary)' : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-            }}
-          >
-            <ImageIcon size={16} /> Storefront Banners & Media
-          </button>
-          <button
-            onClick={() => setActiveTab('gallery')}
-            style={{
-              padding: '0.5rem 0.2rem',
-              color: activeTab === 'gallery' ? '#10B981' : 'var(--slate-600)',
-              borderBottom: activeTab === 'gallery' ? '2px solid #10B981' : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              fontWeight: activeTab === 'gallery' ? 700 : 600,
-            }}
-          >
-            <Sparkles size={16} style={{ color: '#10B981' }} /> Image Gallery & Stories
-            <span
+        <div className="container" style={{ position: 'relative' }}>
+          <AdminNavSlider activeTab={activeTab}>
+            <button
+              onClick={() => setActiveTab('overview')}
+              data-tab="overview"
+              data-active={activeTab === 'overview'}
+              className="admin-nav-item"
               style={{
-                backgroundColor: '#DCFCE7',
-                color: '#15803D',
-                fontSize: '0.62rem',
-                fontWeight: 800,
-                padding: '0.1rem 0.4rem',
-                borderRadius: '4px',
-                textTransform: 'uppercase',
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'overview' ? 'var(--primary)' : 'var(--slate-600)',
+                borderBottom: activeTab === 'overview' ? '2px solid var(--primary)' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'overview' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'overview' ? 'var(--primary)' : 'transparent',
+                cursor: 'pointer',
               }}
             >
-              CMS
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('certifications')}
-            style={{
-              padding: '0.5rem 0.2rem',
-              color: activeTab === 'certifications' ? '#0D9488' : 'var(--slate-600)',
-              borderBottom: activeTab === 'certifications' ? '2px solid #0D9488' : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              fontWeight: activeTab === 'certifications' ? 700 : 600,
-            }}
-          >
-            <Award size={16} style={{ color: '#0D9488' }} /> Official Certifications
-            <span
+              <BarChart3 size={16} /> Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('products')}
+              data-tab="products"
+              data-active={activeTab === 'products'}
+              className="admin-nav-item"
               style={{
-                backgroundColor: '#CCFBF1',
-                color: '#0F766E',
-                fontSize: '0.62rem',
-                fontWeight: 800,
-                padding: '0.1rem 0.4rem',
-                borderRadius: '4px',
-                textTransform: 'uppercase',
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'products' ? 'var(--primary)' : 'var(--slate-600)',
+                borderBottom: activeTab === 'products' ? '2px solid var(--primary)' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'products' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'products' ? 'var(--primary)' : 'transparent',
+                cursor: 'pointer',
               }}
             >
-              CMS
-            </span>
-          </button>
-          <button
-            onClick={() => setActiveTab('razorpay')}
-            style={{
-              padding: '0.5rem 0.2rem',
-              color: activeTab === 'razorpay' ? '#0284C7' : 'var(--slate-600)',
-              borderBottom: activeTab === 'razorpay' ? '2px solid #0284C7' : '2px solid transparent',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              fontWeight: activeTab === 'razorpay' ? 700 : 600,
-            }}
-          >
-            <CreditCard size={16} /> Razorpay Gateway ({razorpayTransactions.length})
-            <span
+              <Package size={16} /> Products ({products.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('categories')}
+              data-tab="categories"
+              data-active={activeTab === 'categories'}
+              className="admin-nav-item"
               style={{
-                backgroundColor: razorpayConfig.mode === 'live' ? '#DCFCE7' : '#FEF3C7',
-                color: razorpayConfig.mode === 'live' ? '#15803D' : '#B45309',
-                fontSize: '0.62rem',
-                fontWeight: 800,
-                padding: '0.1rem 0.4rem',
-                borderRadius: '4px',
-                textTransform: 'uppercase',
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'categories' ? 'var(--primary)' : 'var(--slate-600)',
+                borderBottom: activeTab === 'categories' ? '2px solid var(--primary)' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'categories' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'categories' ? 'var(--primary)' : 'transparent',
+                cursor: 'pointer',
               }}
             >
-              {razorpayConfig.mode}
-            </span>
-          </button>
+              <FolderTree size={16} /> Categories ({categories.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('b2c_orders')}
+              data-tab="b2c_orders"
+              data-active={activeTab === 'b2c_orders'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'b2c_orders' ? 'var(--primary)' : 'var(--slate-600)',
+                borderBottom: activeTab === 'b2c_orders' ? '2px solid var(--primary)' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'b2c_orders' ? 700 : 500,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'b2c_orders' ? 'var(--primary)' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <ShoppingCart size={16} /> B2C Orders ({b2cOrders.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('b2b_orders')}
+              data-tab="b2b_orders"
+              data-active={activeTab === 'b2b_orders'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'b2b_orders' ? 'var(--primary)' : 'var(--slate-600)',
+                borderBottom: activeTab === 'b2b_orders' ? '2px solid var(--primary)' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'b2b_orders' ? 700 : 500,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'b2b_orders' ? 'var(--primary)' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <Building2 size={16} /> B2B Orders ({b2bOrders.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('rfqs')}
+              data-tab="rfqs"
+              data-active={activeTab === 'rfqs'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'rfqs' ? 'var(--primary)' : 'var(--slate-600)',
+                borderBottom: activeTab === 'rfqs' ? '2px solid var(--primary)' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'rfqs' ? 700 : 500,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'rfqs' ? 'var(--primary)' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <FileText size={16} /> Quotations ({quotations.length}) {pendingRfqs > 0 && <span className="badge badge-blue" style={{ fontSize: '0.65rem' }}>{pendingRfqs}</span>}
+            </button>
+            <button
+              onClick={() => setActiveTab('verification')}
+              data-tab="verification"
+              data-active={activeTab === 'verification'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'verification' ? 'var(--primary)' : 'var(--slate-600)',
+                borderBottom: activeTab === 'verification' ? '2px solid var(--primary)' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'verification' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'verification' ? 'var(--primary)' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <ShieldCheck size={16} /> B2B Verification {pendingApprovals > 0 && <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>{pendingApprovals}</span>}
+            </button>
+            <button
+              onClick={() => setActiveTab('coupons')}
+              data-tab="coupons"
+              data-active={activeTab === 'coupons'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'coupons' ? 'var(--primary)' : 'var(--slate-600)',
+                borderBottom: activeTab === 'coupons' ? '2px solid var(--primary)' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'coupons' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'coupons' ? 'var(--primary)' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <Tag size={16} /> Coupons & Marketing
+            </button>
+            <button
+              onClick={() => setActiveTab('approvals')}
+              data-tab="approvals"
+              data-active={activeTab === 'approvals'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'approvals' ? 'var(--primary)' : 'var(--slate-600)',
+                borderBottom: activeTab === 'approvals' ? '2px solid var(--primary)' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'approvals' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'approvals' ? 'var(--primary)' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <ShieldCheck size={16} /> Staff & Approvals {pendingAdminRequests > 0 && <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>{pendingAdminRequests}</span>}
+            </button>
+            <button
+              onClick={() => setActiveTab('credentials')}
+              data-tab="credentials"
+              data-active={activeTab === 'credentials'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'credentials' ? 'var(--primary)' : 'var(--slate-600)',
+                borderBottom: activeTab === 'credentials' ? '2px solid var(--primary)' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'credentials' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'credentials' ? 'var(--primary)' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <KeyRound size={16} /> User Credentials ({adminUsers.length + businesses.length + b2cUsers.length})
+              {isSuperAdmin && <span className="badge badge-purple" style={{ fontSize: '0.65rem' }}>👑 Master Rights</span>}
+            </button>
+            <button
+              onClick={() => setActiveTab('media')}
+              data-tab="media"
+              data-active={activeTab === 'media'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'media' ? 'var(--primary)' : 'var(--slate-600)',
+                borderBottom: activeTab === 'media' ? '2px solid var(--primary)' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'media' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'media' ? 'var(--primary)' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <ImageIcon size={16} /> Storefront Banners & Media
+            </button>
+            <button
+              onClick={() => setActiveTab('gallery')}
+              data-tab="gallery"
+              data-active={activeTab === 'gallery'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'gallery' ? '#10B981' : 'var(--slate-600)',
+                borderBottom: activeTab === 'gallery' ? '2px solid #10B981' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'gallery' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'gallery' ? '#10B981' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <Sparkles size={16} style={{ color: '#10B981' }} /> Image Gallery & Stories
+              <span
+                style={{
+                  backgroundColor: '#DCFCE7',
+                  color: '#15803D',
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  padding: '0.1rem 0.4rem',
+                  borderRadius: '4px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                CMS
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('certifications')}
+              data-tab="certifications"
+              data-active={activeTab === 'certifications'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'certifications' ? '#0D9488' : 'var(--slate-600)',
+                borderBottom: activeTab === 'certifications' ? '2px solid #0D9488' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'certifications' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'certifications' ? '#0D9488' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <Award size={16} style={{ color: '#0D9488' }} /> Official Certifications
+              <span
+                style={{
+                  backgroundColor: '#CCFBF1',
+                  color: '#0F766E',
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  padding: '0.1rem 0.4rem',
+                  borderRadius: '4px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                CMS
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('razorpay')}
+              data-tab="razorpay"
+              data-active={activeTab === 'razorpay'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'razorpay' ? '#0284C7' : 'var(--slate-600)',
+                borderBottom: activeTab === 'razorpay' ? '2px solid #0284C7' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'razorpay' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'razorpay' ? '#0284C7' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <CreditCard size={16} /> Razorpay Gateway ({razorpayTransactions.length})
+              <span
+                style={{
+                  backgroundColor: razorpayConfig.mode === 'live' ? '#DCFCE7' : '#FEF3C7',
+                  color: razorpayConfig.mode === 'live' ? '#15803D' : '#B45309',
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  padding: '0.1rem 0.4rem',
+                  borderRadius: '4px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {razorpayConfig.mode}
+              </span>
+            </button>
+          </AdminNavSlider>
         </div>
       </div>
 
