@@ -470,3 +470,46 @@ export interface GalleryCategory {
   displayOrder: number;
 }
 
+// --- Certification Management Module Types ---
+export type CertificationVisibility = 'both' | 'b2b' | 'b2c';
+export type CertificationStatus = 'published' | 'draft' | 'unpublished';
+export type ValidityStatus = 'active' | 'expired' | 'upcoming';
+
+export interface CompanyCertification {
+  id: string;
+  name: string;
+  slug: string;
+  shortDescription: string;
+  fullDescription?: string;
+  category: string;
+  issuingAuthority: string;
+  certificateNumber?: string;
+  issueDate: string; // YYYY-MM-DD
+  expiryDate?: string | null; // YYYY-MM-DD or null
+  noExpiry: boolean;
+  verificationUrl?: string;
+  fileUrl: string;
+  storagePath?: string;
+  fileType: string; // 'application/pdf' | 'image/jpeg' | 'image/png' | 'image/webp'
+  thumbnailUrl?: string;
+  visibility: CertificationVisibility;
+  status: CertificationStatus;
+  featured: boolean;
+  allowDownload: boolean;
+  displayOrder: number;
+  metaTitle?: string;
+  metaDescription?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  publishedAt?: string;
+}
+
+export interface CertificationCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  displayOrder: number;
+}
+

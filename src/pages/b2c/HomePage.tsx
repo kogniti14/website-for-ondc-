@@ -16,11 +16,12 @@ import {
   FileText,
   Building2,
 } from 'lucide-react';
-import { Product, UserRole, Category, GalleryStory } from '../../types';
+import { Product, UserRole, Category, GalleryStory, CompanyCertification } from '../../types';
 import { CATEGORIES } from '../../data/mockProducts';
 import { ProductCard } from '../../components/products/ProductCard';
 import { storageService } from '../../services/storageService';
 import { galleryService } from '../../services/galleryService';
+import { certificationService } from '../../services/certificationService';
 
 interface HomePageProps {
   products: Product[];
@@ -31,6 +32,7 @@ interface HomePageProps {
   setActiveTab: (tab: string) => void;
   openB2BAuthModal: () => void;
   onOpenStory?: (story: GalleryStory) => void;
+  onOpenCertificate?: (cert: CompanyCertification) => void;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
@@ -42,6 +44,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   setActiveTab,
   openB2BAuthModal,
   onOpenStory,
+  onOpenCertificate,
 }) => {
   const featuredProducts = products.filter((p) => p.isFeatured || p.isBestSeller).slice(0, 4);
   const newArrivals = products.filter((p) => p.isNewArrival || p.stock > 100).slice(0, 4);
@@ -51,6 +54,13 @@ export const HomePage: React.FC<HomePageProps> = ({
   const displayStories = featuredStories.length > 0
     ? featuredStories
     : galleryService.getStories({ visibility: 'b2c', status: 'published' }).slice(0, 3);
+
+  const featuredCertifications = certificationService
+    .getCertificates({ visibility: 'b2c', status: 'published', featuredOnly: true })
+    .slice(0, 3);
+  const displayCertifications = featuredCertifications.length > 0
+    ? featuredCertifications
+    : certificationService.getCertificates({ visibility: 'b2c', status: 'published' }).slice(0, 3);
 
   return (
     <div>
@@ -1039,7 +1049,188 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* 8. Featured Success Stories & Image Gallery Showcase */}
+      {/* 8. Featured Certifications & Recognitions Showcase */}
+      {displayCertifications.length > 0 && (
+        <section style={{ padding: '4.5rem 0', backgroundColor: '#F8FAFC', borderTop: '1px solid var(--border-subtle)' }}>
+          <div className="container">
+            <div className="flex items-center justify-between gap-4 flex-wrap" style={{ marginBottom: '2.5rem' }}>
+              <div>
+                <span
+                  className="badge"
+                  style={{
+                    background: 'rgba(6, 78, 59, 0.1)',
+                    color: '#065F46',
+                    border: '1px solid rgba(6, 78, 59, 0.25)',
+                    marginBottom: '0.4rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  <ShieldCheck size={13} className="inline mr-1 text-emerald-600" /> Trust & Compliance
+                </span>
+                <h2 style={{ fontSize: '2.1rem', fontWeight: 900, color: 'var(--slate-900)', letterSpacing: '-0.02em' }}>
+                  Our Certifications & Recognitions
+                </h2>
+                <p style={{ color: 'var(--slate-500)', fontSize: '0.95rem', marginTop: '0.3rem' }}>
+                  Building trust through statutory recognition, ISO quality assurance, and validated environmental standards.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setActiveTab('certifications')}
+                className="btn btn-outline"
+                style={{ borderRadius: '9999px', fontWeight: 700, borderColor: 'var(--slate-300)' }}
+              >
+                View All Certifications <ArrowRight size={16} />
+              </button>
+            </div>
+
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: '2rem',
+              }}
+            >
+              {displayCertifications.map((cert) => {
+                const isPdf = cert.fileType === 'application/pdf';
+
+                return (
+                  <div
+                    key={cert.id}
+                    onClick={() => {
+                      if (onOpenCertificate) onOpenCertificate(cert);
+                      else setActiveTab('certifications');
+                    }}
+                    style={{
+                      background: '#FFFFFF',
+                      borderRadius: '16px',
+                      overflow: 'hidden',
+                      border: '1px solid var(--border-color)',
+                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.04)',
+                      transition: 'all 0.25s ease',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                      e.currentTarget.style.boxShadow = '0 12px 24px rgba(0, 0, 0, 0.08)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.04)';
+                    }}
+                  >
+                    <div style={{ position: 'relative', height: '170px', overflow: 'hidden', background: isPdf ? '#FEF2F2' : '#E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {isPdf ? (
+                        <div style={{ textAlign: 'center', padding: '1rem' }}>
+                          <div
+                            style={{
+                              width: '52px',
+                              height: '52px',
+                              borderRadius: '12px',
+                              backgroundColor: '#FEE2E2',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              margin: '0 auto 0.4rem',
+                            }}
+                          >
+                            <FileText size={28} style={{ color: '#DC2626' }} />
+                          </div>
+                          <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#991B1B' }}>
+                            Official Document (PDF)
+                          </div>
+                        </div>
+                      ) : (
+                        <img
+                          src={cert.fileUrl}
+                          alt={cert.name}
+                          loading="lazy"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      )}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '12px',
+                          left: '12px',
+                          background: 'rgba(15, 23, 42, 0.85)',
+                          backdropFilter: 'blur(4px)',
+                          color: '#A7F3D0',
+                          padding: '0.2rem 0.65rem',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        {cert.category}
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '1.25rem', flex: '1 0 auto', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ fontSize: '0.76rem', color: 'var(--slate-500)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <Building2 size={13} className="text-emerald-600" />
+                        <span style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {cert.issuingAuthority}
+                        </span>
+                      </div>
+
+                      <h3
+                        style={{
+                          fontSize: '1.08rem',
+                          fontWeight: 800,
+                          color: 'var(--slate-900)',
+                          lineHeight: 1.35,
+                          marginBottom: '0.45rem',
+                        }}
+                      >
+                        {cert.name}
+                      </h3>
+
+                      <p
+                        style={{
+                          fontSize: '0.84rem',
+                          color: 'var(--slate-600)',
+                          lineHeight: 1.5,
+                          marginBottom: '1rem',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {cert.shortDescription}
+                      </p>
+
+                      <div
+                        style={{
+                          borderTop: '1px solid var(--border-subtle)',
+                          paddingTop: '0.85rem',
+                          marginTop: 'auto',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          View Details <ArrowRight size={13} />
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700 }}>
+                          {cert.noExpiry ? 'Permanent' : `Valid: ${cert.expiryDate}`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 9. Featured Success Stories & Image Gallery Showcase */}
       {displayStories.length > 0 && (
         <section style={{ padding: '4.5rem 0', backgroundColor: '#FFFFFF', borderTop: '1px solid var(--border-subtle)' }}>
           <div className="container">

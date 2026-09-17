@@ -21,6 +21,18 @@ service firebase.storage {
         && request.resource.size <= 5 * 1024 * 1024; // Max 5 MB
     }
 
+    function isValidCertificateFile() {
+      return (
+        request.resource.contentType in [
+          'application/pdf',
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+          'image/jpg'
+        ]
+      ) && request.resource.size <= 10 * 1024 * 1024; // Max 10 MB (Section 8 & 34)
+    }
+
     // =========================================================================
     // Company Gallery & Success Stories Storage Bucket
     // Path: /company-gallery/{category}/{filename}
@@ -31,6 +43,21 @@ service firebase.storage {
 
       // Exclusive write access: Super Admin only with strict image validation
       allow write: if isSuperAdmin() && isValidImage();
+
+      // Exclusive delete access: Super Admin only
+      allow delete: if isSuperAdmin();
+    }
+
+    // =========================================================================
+    // Company Certifications & Official Documents Storage Bucket
+    // Path: /company-certifications/{category}/{filename}
+    // =========================================================================
+    match /company-certifications/{allPaths=**} {
+      // Public read access for published official documents
+      allow read: if true;
+
+      // Exclusive write access: Super Admin only with PDF/Image <= 10MB validation
+      allow write: if isSuperAdmin() && isValidCertificateFile();
 
       // Exclusive delete access: Super Admin only
       allow delete: if isSuperAdmin();

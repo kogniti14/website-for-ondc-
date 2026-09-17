@@ -11,6 +11,7 @@ import {
   Package,
   Tag,
   ShieldCheck,
+  Award,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -197,6 +198,19 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
               }}
             >
               Success Stories
+            </button>
+            <button
+              onClick={() => setB2bTab('certifications')}
+              style={{
+                color: b2bTab === 'certifications' ? '#34D399' : '#CBD5E1',
+                borderBottom: b2bTab === 'certifications' ? '2px solid #34D399' : '2px solid transparent',
+                paddingBottom: '0.3rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+              }}
+            >
+              <Award size={14} className="text-emerald-400" /> Certifications & Compliance
             </button>
           </div>
 

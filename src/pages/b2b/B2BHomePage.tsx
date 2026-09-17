@@ -16,8 +16,9 @@ import {
   Tag,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { Product, GalleryStory } from '../../types';
+import { Product, GalleryStory, CompanyCertification } from '../../types';
 import { galleryService } from '../../services/galleryService';
+import { certificationService } from '../../services/certificationService';
 
 interface B2BHomePageProps {
   products: Product[];
@@ -25,6 +26,7 @@ interface B2BHomePageProps {
   openB2BAuthModal: () => void;
   onOpenProduct: (product: Product) => void;
   onOpenStory?: (story: GalleryStory) => void;
+  onOpenCertificate?: (cert: CompanyCertification) => void;
 }
 
 export const B2BHomePage: React.FC<B2BHomePageProps> = ({
@@ -33,6 +35,7 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
   openB2BAuthModal,
   onOpenProduct,
   onOpenStory,
+  onOpenCertificate,
 }) => {
   const { role, b2bBusiness } = useAuth();
   const isApproved = role === 'b2b' && b2bBusiness?.status === 'approved';
@@ -42,6 +45,13 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
   const displayStories = featuredStories.length > 0
     ? featuredStories
     : galleryService.getStories({ visibility: 'b2b', status: 'published' }).slice(0, 3);
+
+  const featuredCertifications = certificationService
+    .getCertificates({ visibility: 'b2b', status: 'published', featuredOnly: true })
+    .slice(0, 3);
+  const displayCertifications = featuredCertifications.length > 0
+    ? featuredCertifications
+    : certificationService.getCertificates({ visibility: 'b2b', status: 'published' }).slice(0, 3);
 
   return (
     <div style={{ backgroundColor: '#0A0F1D', color: '#E2E8F0', minHeight: '100vh' }}>
@@ -666,7 +676,204 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
         </div>
       </section>
 
-      {/* 6. Enterprise Milestones & Stories Section */}
+      {/* 6. Company Certifications & Statutory Compliance Section */}
+      {displayCertifications.length > 0 && (
+        <section
+          style={{
+            padding: '5rem 0 5.5rem',
+            background: '#090D16',
+            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          }}
+        >
+          <div className="container">
+            <div className="flex items-center justify-between gap-4 flex-wrap" style={{ marginBottom: '2.5rem' }}>
+              <div>
+                <span
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    color: '#34D399',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    padding: '0.2rem 0.65rem',
+                    borderRadius: '6px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    marginBottom: '0.4rem',
+                  }}
+                >
+                  <ShieldCheck size={13} className="text-emerald-400" /> Compliance & Statutory Accreditations
+                </span>
+                <h2 style={{ fontSize: '2.1rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
+                  Enterprise Certifications & Approvals
+                </h2>
+                <p style={{ color: '#94A3B8', fontSize: '0.95rem', marginTop: '0.3rem' }}>
+                  Audited ISO 9001/14001, GeM Registered Vendor, DPIIT Startup India, and UPPCB clean pollution consents.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setB2bTab('certifications')}
+                className="btn btn-outline"
+                style={{
+                  borderRadius: '9999px',
+                  fontWeight: 700,
+                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF',
+                }}
+              >
+                View All Certifications <ArrowRight size={16} />
+              </button>
+            </div>
+
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: '2rem',
+              }}
+            >
+              {displayCertifications.map((cert) => {
+                const isPdf = cert.fileType === 'application/pdf';
+
+                return (
+                  <div
+                    key={cert.id}
+                    onClick={() => {
+                      if (onOpenCertificate) onOpenCertificate(cert);
+                      else setB2bTab('certifications');
+                    }}
+                    style={{
+                      background: '#0F172A',
+                      borderRadius: '16px',
+                      overflow: 'hidden',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+                      transition: 'all 0.25s ease',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                      e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    }}
+                  >
+                    <div style={{ position: 'relative', height: '180px', overflow: 'hidden', background: isPdf ? 'rgba(239, 68, 68, 0.08)' : '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {isPdf ? (
+                        <div style={{ textAlign: 'center', padding: '1rem' }}>
+                          <div
+                            style={{
+                              width: '52px',
+                              height: '52px',
+                              borderRadius: '12px',
+                              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              margin: '0 auto 0.4rem',
+                            }}
+                          >
+                            <FileText size={28} style={{ color: '#F87171' }} />
+                          </div>
+                          <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#FCA5A5' }}>
+                            Official Document (PDF)
+                          </div>
+                        </div>
+                      ) : (
+                        <img
+                          src={cert.fileUrl}
+                          alt={cert.name}
+                          loading="lazy"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      )}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '12px',
+                          left: '12px',
+                          background: 'rgba(0, 0, 0, 0.8)',
+                          color: '#34D399',
+                          padding: '0.2rem 0.65rem',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          border: '1px solid rgba(52, 211, 153, 0.3)',
+                        }}
+                      >
+                        {cert.category}
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '1.4rem', flex: '1 0 auto', display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ fontSize: '0.76rem', color: '#94A3B8', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        <Building2 size={13} className="text-emerald-400" />
+                        <span style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {cert.issuingAuthority}
+                        </span>
+                      </div>
+
+                      <h3
+                        style={{
+                          fontSize: '1.08rem',
+                          fontWeight: 800,
+                          color: '#FFFFFF',
+                          lineHeight: 1.35,
+                          marginBottom: '0.45rem',
+                        }}
+                      >
+                        {cert.name}
+                      </h3>
+
+                      <p
+                        style={{
+                          fontSize: '0.84rem',
+                          color: '#94A3B8',
+                          lineHeight: 1.55,
+                          marginBottom: '1rem',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {cert.shortDescription}
+                      </p>
+
+                      <div
+                        style={{
+                          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                          paddingTop: '0.85rem',
+                          marginTop: 'auto',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}
+                      >
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#34D399', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          Inspect Credential <ArrowRight size={13} />
+                        </span>
+                        <span style={{ fontSize: '0.72rem', color: '#60A5FA', fontWeight: 700 }}>
+                          {cert.noExpiry ? 'Permanent' : `Valid: ${cert.expiryDate}`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 7. Enterprise Milestones & Stories Section */}
       {displayStories.length > 0 && (
         <section
           style={{

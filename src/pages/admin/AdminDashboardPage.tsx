@@ -40,6 +40,7 @@ import {
   MessageSquare,
   Mail,
   Sparkles,
+  Award,
 } from 'lucide-react';
 import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, Category, B2CUser, SiteMedia, B2BOrderItemSummary, OrderItemSummary, B2BQuotationItem, B2BPaymentRecord, B2CAddress } from '../../types';
 import { storageService } from '../../services/storageService';
@@ -50,6 +51,7 @@ import { ImageUpload } from '../../components/common/ImageUpload';
 import { razorpayService, RazorpayConfig, RazorpayTransactionRecord } from '../../services/razorpayService';
 import { RazorpayCheckoutModal } from '../../components/payment/RazorpayCheckoutModal';
 import { GalleryManagement } from '../../components/admin/GalleryManagement';
+import { CertificationManagement } from '../../components/admin/CertificationManagement';
 
 interface AdminDashboardPageProps {
   products: Product[];
@@ -79,7 +81,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const { currentAdminUser, isSuperAdmin, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery'
+    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery' | 'certifications'
   >('overview');
 
   // Razorpay Gateway State
@@ -1714,6 +1716,33 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               style={{
                 backgroundColor: '#DCFCE7',
                 color: '#15803D',
+                fontSize: '0.62rem',
+                fontWeight: 800,
+                padding: '0.1rem 0.4rem',
+                borderRadius: '4px',
+                textTransform: 'uppercase',
+              }}
+            >
+              CMS
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('certifications')}
+            style={{
+              padding: '0.5rem 0.2rem',
+              color: activeTab === 'certifications' ? '#0D9488' : 'var(--slate-600)',
+              borderBottom: activeTab === 'certifications' ? '2px solid #0D9488' : '2px solid transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              fontWeight: activeTab === 'certifications' ? 700 : 600,
+            }}
+          >
+            <Award size={16} style={{ color: '#0D9488' }} /> Official Certifications
+            <span
+              style={{
+                backgroundColor: '#CCFBF1',
+                color: '#0F766E',
                 fontSize: '0.62rem',
                 fontWeight: 800,
                 padding: '0.1rem 0.4rem',
@@ -5415,6 +5444,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         {/* Centralized Image Gallery & Success Stories CMS */}
         {activeTab === 'gallery' && (
           <GalleryManagement />
+        )}
+
+        {/* Centralized Certifications & Regulatory Documents CMS */}
+        {activeTab === 'certifications' && (
+          <CertificationManagement />
         )}
       </div>
 

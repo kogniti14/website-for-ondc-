@@ -46,6 +46,33 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 3. Certifications Collection
+    // =========================================================================
+    match /certifications/{certId} {
+      // Public / B2B / B2C Visitors: Read-only access for published certifications
+      allow read: if resource.data.status == 'published' || isSuperAdmin();
+
+      // Super Admin: Exclusive write / create / update / delete access
+      allow create: if isSuperAdmin()
+        && request.resource.data.name is string
+        && request.resource.data.fileUrl is string
+        && request.resource.data.category is string
+        && request.resource.data.visibility in ['both', 'b2b', 'b2c']
+        && request.resource.data.status in ['published', 'draft', 'unpublished'];
+
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // =========================================================================
+    // 4. Certification Categories Collection
+    // =========================================================================
+    match /certification_categories/{catId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // =========================================================================
     // 3. User & Administrative Rules (Baseline Security)
     // =========================================================================
     match /admin_users/{adminId} {

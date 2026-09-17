@@ -282,6 +282,11 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
                 </button>
               </li>
               <li>
+                <button onClick={() => setActiveTab('certifications')} style={{ color: '#6EE7B7', fontWeight: 600 }}>
+                  🏆 Official Certifications
+                </button>
+              </li>
+              <li>
                 <button onClick={() => setActiveTab('orders')} style={{ color: '#94A3B8' }}>
                   Track Order Status
                 </button>
@@ -319,6 +324,17 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
                   style={{ color: '#FBBF24', fontWeight: 600 }}
                 >
                   🏢 ESG Milestones & Stories
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    setActiveTab('b2b');
+                    if (setB2bTab) setB2bTab('certifications');
+                  }}
+                  style={{ color: '#34D399', fontWeight: 600 }}
+                >
+                  🛡️ Compliance & Certifications
                 </button>
               </li>
               <li>

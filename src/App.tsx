@@ -27,6 +27,7 @@ import { OrdersPage } from './pages/b2c/OrdersPage';
 import { WishlistPage } from './pages/b2c/WishlistPage';
 import { CustomerDashboardPage } from './pages/b2c/CustomerDashboardPage';
 import { SuccessStoriesPage } from './pages/b2c/SuccessStoriesPage';
+import { CertificationsPage } from './pages/b2c/CertificationsPage';
 
 // B2B Pages
 import { B2BHomePage } from './pages/b2b/B2BHomePage';
@@ -35,13 +36,15 @@ import { B2BCartPage } from './pages/b2b/B2BCartPage';
 import { B2BRFQPage } from './pages/b2b/B2BRFQPage';
 import { B2BDashboardPage } from './pages/b2b/B2BDashboardPage';
 import { B2BSuccessStoriesPage } from './pages/b2b/B2BSuccessStoriesPage';
+import { B2BCertificationsPage } from './pages/b2b/B2BCertificationsPage';
 
 // Admin Page
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 
-// Gallery Components
+// Gallery & Certification Components
 import { StoryDetailModal } from './components/gallery/StoryDetailModal';
-import { GalleryStory } from './types';
+import { CertificateDetailModal } from './components/certification/CertificateDetailModal';
+import { GalleryStory, CompanyCertification } from './types';
 
 const MainApp: React.FC = () => {
   const { role, b2cUser, b2bBusiness, isAdmin } = useAuth();
@@ -64,6 +67,7 @@ const MainApp: React.FC = () => {
   const [policyModalType, setPolicyModalType] = useState<'privacy' | 'terms' | 'shipping' | 'refund' | null>(null);
   const [rfqTargetProduct, setRfqTargetProduct] = useState<Product | null>(null);
   const [selectedStory, setSelectedStory] = useState<GalleryStory | null>(null);
+  const [selectedCertificate, setSelectedCertificate] = useState<CompanyCertification | null>(null);
 
   // App Data (reactive)
   const [products, setProducts] = useState<Product[]>(() => storageService.getProducts());
@@ -181,12 +185,19 @@ const MainApp: React.FC = () => {
             setActiveTab={setActiveTab}
             openB2BAuthModal={handleOpenB2BAuth}
             onOpenStory={(story) => setSelectedStory(story)}
+            onOpenCertificate={(cert) => setSelectedCertificate(cert)}
           />
         )}
 
         {activeTab === 'stories' && (
           <SuccessStoriesPage
             onOpenStory={(story) => setSelectedStory(story)}
+          />
+        )}
+
+        {activeTab === 'certifications' && (
+          <CertificationsPage
+            onOpenCertificate={(cert) => setSelectedCertificate(cert)}
           />
         )}
 
@@ -288,6 +299,7 @@ const MainApp: React.FC = () => {
                 openB2BAuthModal={handleOpenB2BAuth}
                 onOpenProduct={handleOpenProduct}
                 onOpenStory={(story) => setSelectedStory(story)}
+                onOpenCertificate={(cert) => setSelectedCertificate(cert)}
               />
             )}
 
@@ -341,6 +353,12 @@ const MainApp: React.FC = () => {
             {b2bTab === 'stories' && (
               <B2BSuccessStoriesPage
                 onOpenStory={(story) => setSelectedStory(story)}
+              />
+            )}
+
+            {b2bTab === 'certifications' && (
+              <B2BCertificationsPage
+                onOpenCertificate={(cert) => setSelectedCertificate(cert)}
               />
             )}
           </div>
@@ -436,6 +454,14 @@ const MainApp: React.FC = () => {
           story={selectedStory}
           onClose={() => setSelectedStory(null)}
           onSelectStory={(s) => setSelectedStory(s)}
+          isB2BMode={activeTab === 'b2b'}
+        />
+      )}
+
+      {selectedCertificate && (
+        <CertificateDetailModal
+          cert={selectedCertificate}
+          onClose={() => setSelectedCertificate(null)}
           isB2BMode={activeTab === 'b2b'}
         />
       )}

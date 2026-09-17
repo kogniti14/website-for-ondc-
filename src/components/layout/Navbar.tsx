@@ -15,6 +15,7 @@ import {
   LogOut,
   Package,
   Sparkles,
+  Award,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -519,6 +520,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Sparkles size={14} className="text-amber-500" /> Success Stories
             </button>
             <button
+              onClick={() => setActiveTab('certifications')}
+              style={{
+                color: activeTab === 'certifications' ? 'var(--primary)' : 'var(--slate-700)',
+                borderBottom: activeTab === 'certifications' ? '2px solid var(--primary)' : '2px solid transparent',
+                paddingBottom: '0.3rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+              }}
+            >
+              <Award size={14} className="text-emerald-600" /> Certifications
+            </button>
+            <button
               onClick={() => setActiveTab('b2b')}
               style={{
                 color: 'var(--slate-900)',
@@ -630,6 +644,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             style={{ justifyContent: 'flex-start' }}
           >
             <Sparkles size={16} className="text-amber-500" /> Success Stories & Gallery
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('certifications');
+              setMobileMenuOpen(false);
+            }}
+            className="btn btn-secondary"
+            style={{ justifyContent: 'flex-start' }}
+          >
+            <Award size={16} className="text-emerald-600" /> Certifications & Recognitions
           </button>
           <button
             onClick={() => {
