@@ -153,34 +153,55 @@ class EmailOtpService {
     const htmlContent = this.generateEmailHtml(otp, purpose);
     const subject = `Your Kogniti Minds Verification Code: ${otp}`;
 
-    // Provider 1: Resend REST API (Direct, modern, production standard)
+    // Provider 1: Resend REST API (via Vite Dev Proxy / serverless handler or direct)
     if (resendApiKey && resendApiKey.startsWith('re_')) {
-      try {
-        const response = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${resendApiKey.trim()}`,
-          },
-          body: JSON.stringify({
-            from: emailFrom,
-            to: [toEmail],
-            subject,
-            html: htmlContent,
-          }),
-        });
+      const endpoints = [
+        '/api/resend/emails',
+        '/api/resend',
+        'https://api.resend.com/emails',
+      ];
 
-        if (response.ok) {
-          return { delivered: true, provider: 'Resend API' };
-        } else {
+      let lastError: string | undefined;
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${resendApiKey.trim()}`,
+            },
+            body: JSON.stringify({
+              from: emailFrom,
+              to: [toEmail],
+              subject,
+              html: htmlContent,
+            }),
+          });
+
+          if (response.ok) {
+            return { delivered: true, provider: 'Resend API' };
+          }
+
+          // If endpoint not found (404), try next endpoint
+          if (response.status === 404) {
+            continue;
+          }
+
           const errData = await response.json().catch(() => ({}));
           const errMsg = errData.message || `Resend HTTP ${response.status}`;
           console.error('Resend delivery error:', errMsg);
           return { delivered: false, provider: 'Resend API', error: errMsg };
+        } catch (err: any) {
+          lastError = err.message;
+          // Network or CORS error, try next endpoint
+          continue;
         }
-      } catch (err: any) {
-        console.error('Failed to communicate with Resend API:', err);
-        return { delivered: false, provider: 'Resend API', error: err.message };
+      }
+
+      if (lastError) {
+        console.error('Failed to communicate with Resend API:', lastError);
+        return { delivered: false, provider: 'Resend API', error: lastError };
       }
     }
 
