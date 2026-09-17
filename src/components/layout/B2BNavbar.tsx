@@ -188,6 +188,16 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
             >
               Business Dashboard
             </button>
+            <button
+              onClick={() => setB2bTab('stories')}
+              style={{
+                color: b2bTab === 'stories' ? '#60A5FA' : '#CBD5E1',
+                borderBottom: b2bTab === 'stories' ? '2px solid #60A5FA' : '2px solid transparent',
+                paddingBottom: '0.3rem',
+              }}
+            >
+              Success Stories
+            </button>
           </div>
 
           {/* Business Actions */}

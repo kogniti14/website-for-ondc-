@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'super_admin' ||
+        get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.role == 'super_admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin'
+      );
+    }
+
+    // =========================================================================
+    // 1. Gallery & Success Stories Collection
+    // =========================================================================
+    match /gallery/{storyId} {
+      // Public / Customers / Visitors: Read-only access for published stories
+      allow read: if resource.data.status == 'published' || isSuperAdmin();
+
+      // Super Admin: Exclusive write / create / update / delete access
+      allow create: if isSuperAdmin()
+        && request.resource.data.title is string
+        && request.resource.data.imageUrl is string
+        && request.resource.data.category is string
+        && request.resource.data.visibility in ['both', 'b2b', 'b2c']
+        && request.resource.data.status in ['published', 'draft', 'unpublished'];
+
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
+    }
+
+    // =========================================================================
+    // 2. Gallery Categories Collection
+    // =========================================================================
+    match /gallery_categories/{catId} {
+      // Anyone can read active categories
+      allow read: if true;
+
+      // Super Admin only can create, edit, or delete categories
+      allow write: if isSuperAdmin();
+    }
+
+    // =========================================================================
+    // 3. User & Administrative Rules (Baseline Security)
+    // =========================================================================
+    match /admin_users/{adminId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isSuperAdmin());
+    }
+
+    match /b2b_businesses/{bizId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (request.auth.uid == bizId || isSuperAdmin());
+    }
+
+    // Default deny for unhandled documents
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

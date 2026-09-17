@@ -16,11 +16,12 @@ import { storageService } from '../../services/storageService';
 
 interface FooterProps {
   setActiveTab: (tab: string) => void;
+  setB2bTab?: (tab: string) => void;
   openPolicyModal: (type: 'privacy' | 'terms' | 'shipping' | 'refund') => void;
   isB2B?: boolean;
 }
 
-export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal, isB2B = false }) => {
+export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPolicyModal, isB2B = false }) => {
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
 
@@ -276,6 +277,11 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal, i
                 </button>
               </li>
               <li>
+                <button onClick={() => setActiveTab('stories')} style={{ color: '#34D399', fontWeight: 600 }}>
+                  ✨ Success Stories & Gallery
+                </button>
+              </li>
+              <li>
                 <button onClick={() => setActiveTab('orders')} style={{ color: '#94A3B8' }}>
                   Track Order Status
                 </button>
@@ -302,6 +308,17 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openPolicyModal, i
               <li>
                 <button onClick={() => setActiveTab('b2b')} style={{ color: '#60A5FA', fontWeight: 600 }}>
                   Enter B2B Portal
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    setActiveTab('b2b');
+                    if (setB2bTab) setB2bTab('stories');
+                  }}
+                  style={{ color: '#FBBF24', fontWeight: 600 }}
+                >
+                  🏢 ESG Milestones & Stories
                 </button>
               </li>
               <li>

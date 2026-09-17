@@ -39,6 +39,7 @@ import {
   Phone,
   MessageSquare,
   Mail,
+  Sparkles,
 } from 'lucide-react';
 import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, Category, B2CUser, SiteMedia, B2BOrderItemSummary, OrderItemSummary, B2BQuotationItem, B2BPaymentRecord, B2CAddress } from '../../types';
 import { storageService } from '../../services/storageService';
@@ -48,6 +49,7 @@ import { isFirebaseConfigured } from '../../services/firebase';
 import { ImageUpload } from '../../components/common/ImageUpload';
 import { razorpayService, RazorpayConfig, RazorpayTransactionRecord } from '../../services/razorpayService';
 import { RazorpayCheckoutModal } from '../../components/payment/RazorpayCheckoutModal';
+import { GalleryManagement } from '../../components/admin/GalleryManagement';
 
 interface AdminDashboardPageProps {
   products: Product[];
@@ -77,7 +79,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const { currentAdminUser, isSuperAdmin, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay'
+    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery'
   >('overview');
 
   // Razorpay Gateway State
@@ -1694,6 +1696,33 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             }}
           >
             <ImageIcon size={16} /> Storefront Banners & Media
+          </button>
+          <button
+            onClick={() => setActiveTab('gallery')}
+            style={{
+              padding: '0.5rem 0.2rem',
+              color: activeTab === 'gallery' ? '#10B981' : 'var(--slate-600)',
+              borderBottom: activeTab === 'gallery' ? '2px solid #10B981' : '2px solid transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              fontWeight: activeTab === 'gallery' ? 700 : 600,
+            }}
+          >
+            <Sparkles size={16} style={{ color: '#10B981' }} /> Image Gallery & Stories
+            <span
+              style={{
+                backgroundColor: '#DCFCE7',
+                color: '#15803D',
+                fontSize: '0.62rem',
+                fontWeight: 800,
+                padding: '0.1rem 0.4rem',
+                borderRadius: '4px',
+                textTransform: 'uppercase',
+              }}
+            >
+              CMS
+            </span>
           </button>
           <button
             onClick={() => setActiveTab('razorpay')}
@@ -5381,6 +5410,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               </div>
             </div>
           </div>
+        )}
+
+        {/* Centralized Image Gallery & Success Stories CMS */}
+        {activeTab === 'gallery' && (
+          <GalleryManagement />
         )}
       </div>
 

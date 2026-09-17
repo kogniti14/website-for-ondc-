@@ -26,6 +26,7 @@ import { CheckoutPage } from './pages/b2c/CheckoutPage';
 import { OrdersPage } from './pages/b2c/OrdersPage';
 import { WishlistPage } from './pages/b2c/WishlistPage';
 import { CustomerDashboardPage } from './pages/b2c/CustomerDashboardPage';
+import { SuccessStoriesPage } from './pages/b2c/SuccessStoriesPage';
 
 // B2B Pages
 import { B2BHomePage } from './pages/b2b/B2BHomePage';
@@ -33,9 +34,14 @@ import { B2BCatalogPage } from './pages/b2b/B2BCatalogPage';
 import { B2BCartPage } from './pages/b2b/B2BCartPage';
 import { B2BRFQPage } from './pages/b2b/B2BRFQPage';
 import { B2BDashboardPage } from './pages/b2b/B2BDashboardPage';
+import { B2BSuccessStoriesPage } from './pages/b2b/B2BSuccessStoriesPage';
 
 // Admin Page
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
+
+// Gallery Components
+import { StoryDetailModal } from './components/gallery/StoryDetailModal';
+import { GalleryStory } from './types';
 
 const MainApp: React.FC = () => {
   const { role, b2cUser, b2bBusiness, isAdmin } = useAuth();
@@ -57,6 +63,7 @@ const MainApp: React.FC = () => {
   const [adminAuthMode, setAdminAuthMode] = useState<'login' | 'register'>('login');
   const [policyModalType, setPolicyModalType] = useState<'privacy' | 'terms' | 'shipping' | 'refund' | null>(null);
   const [rfqTargetProduct, setRfqTargetProduct] = useState<Product | null>(null);
+  const [selectedStory, setSelectedStory] = useState<GalleryStory | null>(null);
 
   // App Data (reactive)
   const [products, setProducts] = useState<Product[]>(() => storageService.getProducts());
@@ -173,6 +180,13 @@ const MainApp: React.FC = () => {
             onBuyNow={handleBuyNow}
             setActiveTab={setActiveTab}
             openB2BAuthModal={handleOpenB2BAuth}
+            onOpenStory={(story) => setSelectedStory(story)}
+          />
+        )}
+
+        {activeTab === 'stories' && (
+          <SuccessStoriesPage
+            onOpenStory={(story) => setSelectedStory(story)}
           />
         )}
 
@@ -273,6 +287,7 @@ const MainApp: React.FC = () => {
                 setB2bTab={setB2bTab}
                 openB2BAuthModal={handleOpenB2BAuth}
                 onOpenProduct={handleOpenProduct}
+                onOpenStory={(story) => setSelectedStory(story)}
               />
             )}
 
@@ -320,6 +335,12 @@ const MainApp: React.FC = () => {
                   refreshData();
                   setB2bTab('dashboard');
                 }}
+              />
+            )}
+
+            {b2bTab === 'stories' && (
+              <B2BSuccessStoriesPage
+                onOpenStory={(story) => setSelectedStory(story)}
               />
             )}
           </div>
@@ -403,12 +424,22 @@ const MainApp: React.FC = () => {
       {activeTab !== 'admin' && (
         <Footer
           setActiveTab={setActiveTab}
+          setB2bTab={setB2bTab}
           openPolicyModal={(type) => setPolicyModalType(type)}
           isB2B={activeTab === 'b2b'}
         />
       )}
 
       {/* 4. Modals */}
+      {selectedStory && (
+        <StoryDetailModal
+          story={selectedStory}
+          onClose={() => setSelectedStory(null)}
+          onSelectStory={(s) => setSelectedStory(s)}
+          isB2BMode={activeTab === 'b2b'}
+        />
+      )}
+
       {selectedProduct && (
         <ProductDetailModal
           product={selectedProduct}

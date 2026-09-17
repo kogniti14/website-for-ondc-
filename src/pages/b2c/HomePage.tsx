@@ -16,10 +16,11 @@ import {
   FileText,
   Building2,
 } from 'lucide-react';
-import { Product, UserRole, Category } from '../../types';
+import { Product, UserRole, Category, GalleryStory } from '../../types';
 import { CATEGORIES } from '../../data/mockProducts';
 import { ProductCard } from '../../components/products/ProductCard';
 import { storageService } from '../../services/storageService';
+import { galleryService } from '../../services/galleryService';
 
 interface HomePageProps {
   products: Product[];
@@ -29,6 +30,7 @@ interface HomePageProps {
   onBuyNow: (product: Product) => void;
   setActiveTab: (tab: string) => void;
   openB2BAuthModal: () => void;
+  onOpenStory?: (story: GalleryStory) => void;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
@@ -39,9 +41,16 @@ export const HomePage: React.FC<HomePageProps> = ({
   onBuyNow,
   setActiveTab,
   openB2BAuthModal,
+  onOpenStory,
 }) => {
   const featuredProducts = products.filter((p) => p.isFeatured || p.isBestSeller).slice(0, 4);
   const newArrivals = products.filter((p) => p.isNewArrival || p.stock > 100).slice(0, 4);
+  const featuredStories = galleryService
+    .getStories({ visibility: 'b2c', status: 'published', featuredOnly: true })
+    .slice(0, 3);
+  const displayStories = featuredStories.length > 0
+    ? featuredStories
+    : galleryService.getStories({ visibility: 'b2c', status: 'published' }).slice(0, 3);
 
   return (
     <div>
@@ -1029,6 +1038,157 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
         </div>
       </section>
+
+      {/* 8. Featured Success Stories & Image Gallery Showcase */}
+      {displayStories.length > 0 && (
+        <section style={{ padding: '4.5rem 0', backgroundColor: '#FFFFFF', borderTop: '1px solid var(--border-subtle)' }}>
+          <div className="container">
+            <div className="flex items-center justify-between gap-4 flex-wrap" style={{ marginBottom: '2.5rem' }}>
+              <div>
+                <span
+                  className="badge"
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.1)',
+                    color: '#059669',
+                    border: '1px solid rgba(16, 185, 129, 0.25)',
+                    marginBottom: '0.4rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  <Sparkles size={13} className="inline mr-1" /> Real Impact Milestones
+                </span>
+                <h2 style={{ fontSize: '2.1rem', fontWeight: 900, color: 'var(--slate-900)', letterSpacing: '-0.02em' }}>
+                  Stories Behind Our Journey
+                </h2>
+                <p style={{ color: 'var(--slate-500)', fontSize: '0.95rem', marginTop: '0.3rem' }}>
+                  Witness how our circular tree-free packaging technology transforms stubble waste into national pride.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setActiveTab('stories')}
+                className="btn btn-outline"
+                style={{ borderRadius: '9999px', fontWeight: 700, borderColor: 'var(--slate-300)' }}
+              >
+                Explore All Stories & Gallery <ArrowRight size={16} />
+              </button>
+            </div>
+
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: '2rem',
+              }}
+            >
+              {displayStories.map((story) => (
+                <article
+                  key={story.id}
+                  onClick={() => {
+                    if (onOpenStory) onOpenStory(story);
+                    else setActiveTab('stories');
+                  }}
+                  style={{
+                    background: '#FFFFFF',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    border: '1px solid var(--border-color)',
+                    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.04)',
+                    transition: 'all 0.25s ease',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = '0 12px 24px rgba(0, 0, 0, 0.08)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.04)';
+                  }}
+                >
+                  <div style={{ position: 'relative', height: '210px', overflow: 'hidden', background: '#E2E8F0' }}>
+                    <img
+                      src={story.imageUrl}
+                      alt={story.imageAlt || story.title}
+                      loading="lazy"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '12px',
+                        left: '12px',
+                        background: 'rgba(15, 23, 42, 0.85)',
+                        backdropFilter: 'blur(4px)',
+                        color: '#6EE7B7',
+                        padding: '0.2rem 0.65rem',
+                        borderRadius: '6px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {story.category}
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '1.5rem', flex: '1 0 auto', display: 'flex', flexDirection: 'column' }}>
+                    <h3
+                      style={{
+                        fontSize: '1.12rem',
+                        fontWeight: 800,
+                        color: 'var(--slate-900)',
+                        lineHeight: 1.35,
+                        marginBottom: '0.5rem',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {story.title}
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: '0.86rem',
+                        color: 'var(--slate-600)',
+                        lineHeight: 1.55,
+                        marginBottom: '1.25rem',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        flex: '1 0 auto',
+                      }}
+                    >
+                      {story.shortDescription}
+                    </p>
+                    <div
+                      style={{
+                        borderTop: '1px solid var(--border-subtle)',
+                        paddingTop: '0.85rem',
+                        marginTop: 'auto',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        Read Story <ArrowRight size={14} />
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--slate-400)' }}>
+                        {new Date(story.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 };

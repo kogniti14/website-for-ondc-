@@ -16,13 +16,15 @@ import {
   Tag,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { Product } from '../../types';
+import { Product, GalleryStory } from '../../types';
+import { galleryService } from '../../services/galleryService';
 
 interface B2BHomePageProps {
   products: Product[];
   setB2bTab: (tab: string) => void;
   openB2BAuthModal: () => void;
   onOpenProduct: (product: Product) => void;
+  onOpenStory?: (story: GalleryStory) => void;
 }
 
 export const B2BHomePage: React.FC<B2BHomePageProps> = ({
@@ -30,9 +32,16 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
   setB2bTab,
   openB2BAuthModal,
   onOpenProduct,
+  onOpenStory,
 }) => {
   const { role, b2bBusiness } = useAuth();
   const isApproved = role === 'b2b' && b2bBusiness?.status === 'approved';
+  const featuredStories = galleryService
+    .getStories({ visibility: 'b2b', status: 'published', featuredOnly: true })
+    .slice(0, 3);
+  const displayStories = featuredStories.length > 0
+    ? featuredStories
+    : galleryService.getStories({ visibility: 'b2b', status: 'published' }).slice(0, 3);
 
   return (
     <div style={{ backgroundColor: '#0A0F1D', color: '#E2E8F0', minHeight: '100vh' }}>
@@ -656,6 +665,173 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
           </div>
         </div>
       </section>
+
+      {/* 6. Enterprise Milestones & Stories Section */}
+      {displayStories.length > 0 && (
+        <section
+          style={{
+            padding: '5rem 0 5.5rem',
+            background: '#0B1120',
+            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          }}
+        >
+          <div className="container">
+            <div className="flex items-center justify-between gap-4 flex-wrap" style={{ marginBottom: '2.5rem' }}>
+              <div>
+                <span
+                  style={{
+                    background: 'rgba(217, 119, 6, 0.15)',
+                    color: '#FBBF24',
+                    border: '1px solid rgba(217, 119, 6, 0.3)',
+                    padding: '0.2rem 0.65rem',
+                    borderRadius: '6px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                    marginBottom: '0.4rem',
+                  }}
+                >
+                  <Sparkles size={13} className="text-amber-400" /> Enterprise Impact
+                </span>
+                <h2 style={{ fontSize: '2.1rem', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
+                  Company Milestones & ESG Success Stories
+                </h2>
+                <p style={{ color: '#94A3B8', fontSize: '0.95rem', marginTop: '0.3rem' }}>
+                  Explore how our agro-paper manufacturing transforms commercial supply chains and supports enterprise ESG goals.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setB2bTab('stories')}
+                className="btn btn-outline"
+                style={{
+                  borderRadius: '9999px',
+                  fontWeight: 700,
+                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF',
+                }}
+              >
+                View All Case Studies <ArrowRight size={16} />
+              </button>
+            </div>
+
+            <div
+              className="grid"
+              style={{
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: '2rem',
+              }}
+            >
+              {displayStories.map((story) => (
+                <article
+                  key={story.id}
+                  onClick={() => {
+                    if (onOpenStory) onOpenStory(story);
+                    else setB2bTab('stories');
+                  }}
+                  style={{
+                    background: '#1E293B',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+                    transition: 'all 0.25s ease',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.borderColor = 'rgba(217, 119, 6, 0.5)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                  }}
+                >
+                  <div style={{ position: 'relative', height: '210px', overflow: 'hidden', background: '#0F172A' }}>
+                    <img
+                      src={story.imageUrl}
+                      alt={story.imageAlt || story.title}
+                      loading="lazy"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '12px',
+                        left: '12px',
+                        background: 'rgba(10, 15, 29, 0.88)',
+                        color: '#FCD34D',
+                        padding: '0.2rem 0.65rem',
+                        borderRadius: '6px',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        border: '1px solid rgba(252, 211, 77, 0.3)',
+                      }}
+                    >
+                      {story.category}
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '1.5rem', flex: '1 0 auto', display: 'flex', flexDirection: 'column' }}>
+                    <h3
+                      style={{
+                        fontSize: '1.12rem',
+                        fontWeight: 800,
+                        color: '#FFFFFF',
+                        lineHeight: 1.35,
+                        marginBottom: '0.5rem',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {story.title}
+                    </h3>
+                    <p
+                      style={{
+                        fontSize: '0.86rem',
+                        color: '#94A3B8',
+                        lineHeight: 1.55,
+                        marginBottom: '1.25rem',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        flex: '1 0 auto',
+                      }}
+                    >
+                      {story.shortDescription}
+                    </p>
+                    <div
+                      style={{
+                        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                        paddingTop: '0.85rem',
+                        marginTop: 'auto',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#60A5FA', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        Read Case Study <ArrowRight size={14} />
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                        {new Date(story.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 };

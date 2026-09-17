@@ -435,3 +435,38 @@ export interface SiteMedia {
   ondcLogo?: string;
   promotionalBanner?: string;
 }
+
+// --- Image Gallery & Success Stories CMS Types ---
+export type GalleryVisibility = 'both' | 'b2b' | 'b2c';
+export type GalleryStatus = 'published' | 'draft' | 'unpublished';
+
+export interface GalleryStory {
+  id: string;
+  title: string;
+  slug: string;
+  shortDescription: string;
+  fullDescription: string;
+  imageUrl: string;
+  storagePath?: string;
+  imageAlt: string;
+  category: string;
+  visibility: GalleryVisibility;
+  status: GalleryStatus;
+  featured: boolean;
+  displayOrder: number;
+  metaTitle?: string;
+  metaDescription?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  publishedAt?: string;
+}
+
+export interface GalleryCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  displayOrder: number;
+}
+

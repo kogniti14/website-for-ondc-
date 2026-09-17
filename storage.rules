@@ -1,0 +1,45 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'super_admin' ||
+        firestore.get(/databases/(default)/documents/admin_users/$(request.auth.uid)).data.role == 'super_admin' ||
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'super_admin'
+      );
+    }
+
+    function isValidImage() {
+      return request.resource.contentType.matches('image/.*')
+        && (request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'])
+        && request.resource.size <= 5 * 1024 * 1024; // Max 5 MB
+    }
+
+    // =========================================================================
+    // Company Gallery & Success Stories Storage Bucket
+    // Path: /company-gallery/{category}/{filename}
+    // =========================================================================
+    match /company-gallery/{allPaths=**} {
+      // Public read access so visitors can view company images
+      allow read: if true;
+
+      // Exclusive write access: Super Admin only with strict image validation
+      allow write: if isSuperAdmin() && isValidImage();
+
+      // Exclusive delete access: Super Admin only
+      allow delete: if isSuperAdmin();
+    }
+
+    // Default deny for unmapped storage paths
+    match /{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+  }
+}
