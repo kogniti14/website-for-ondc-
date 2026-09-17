@@ -15,10 +15,25 @@ service firebase.storage {
       );
     }
 
-    function isValidImage() {
-      return request.resource.contentType.matches('image/.*')
-        && (request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'])
-        && request.resource.size <= 5 * 1024 * 1024; // Max 5 MB
+    function isAdmin() {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        request.auth.token.role in ['admin', 'operations_admin', 'catalog_manager'] ||
+        firestore.get(/databases/(default)/documents/admin_users/$(request.auth.uid)).data.role in ['admin', 'operations_admin', 'catalog_manager'] ||
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['admin', 'operations_admin']
+      );
+    }
+
+    function isValidStoryMedia() {
+      return (
+        request.resource.contentType in [
+          'application/pdf',
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+          'image/jpg'
+        ]
+      ) && request.resource.size <= 10 * 1024 * 1024; // Max 10 MB
     }
 
     function isValidCertificateFile() {
@@ -41,11 +56,11 @@ service firebase.storage {
       // Public read access so visitors can view company images
       allow read: if true;
 
-      // Exclusive write access: Super Admin only with strict image validation
-      allow write: if isSuperAdmin() && isValidImage();
+      // Admin write access with image/PDF <= 10MB validation
+      allow write: if isAdmin() && isValidStoryMedia();
 
-      // Exclusive delete access: Super Admin only
-      allow delete: if isSuperAdmin();
+      // Admin delete access
+      allow delete: if isAdmin();
     }
 
     // =========================================================================
@@ -56,11 +71,11 @@ service firebase.storage {
       // Public read access for published official documents
       allow read: if true;
 
-      // Exclusive write access: Super Admin only with PDF/Image <= 10MB validation
-      allow write: if isSuperAdmin() && isValidCertificateFile();
+      // Admin write access: PDF/Image <= 10MB validation
+      allow write: if isAdmin() && isValidCertificateFile();
 
-      // Exclusive delete access: Super Admin only
-      allow delete: if isSuperAdmin();
+      // Admin delete access
+      allow delete: if isAdmin();
     }
 
     // Default deny for unmapped storage paths

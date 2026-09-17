@@ -24,6 +24,7 @@ import {
   ShieldAlert,
   Loader2,
   FolderPlus,
+  FileText,
 } from 'lucide-react';
 import { GalleryStory, GalleryCategory, GalleryVisibility, GalleryStatus } from '../../types';
 import { galleryService } from '../../services/galleryService';
@@ -34,7 +35,11 @@ interface GalleryManagementProps {
 }
 
 export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewStory }) => {
-  const { currentAdminUser, isSuperAdmin } = useAuth();
+  const { currentAdminUser, isSuperAdmin, isAdmin } = useAuth();
+  const hasManageStories = isSuperAdmin || isAdmin || Boolean(currentAdminUser?.permissions?.canManageStories);
+
+  // Section Navigation
+  const [activeSection, setActiveSection] = useState<'directory' | 'upload' | 'categories'>('directory');
 
   // Data state
   const [stories, setStories] = useState<GalleryStory[]>([]);
@@ -67,6 +72,8 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
   const [formShortDesc, setFormShortDesc] = useState('');
   const [formFullDesc, setFormFullDesc] = useState('');
   const [formImageUrl, setFormImageUrl] = useState('');
+  const [formDocumentUrl, setFormDocumentUrl] = useState('');
+  const [formFileType, setFormFileType] = useState<'image' | 'pdf'>('image');
   const [formImageAlt, setFormImageAlt] = useState('');
   const [formMetaTitle, setFormMetaTitle] = useState('');
   const [formMetaDesc, setFormMetaDesc] = useState('');
@@ -107,6 +114,8 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
     setFormShortDesc('');
     setFormFullDesc('');
     setFormImageUrl('');
+    setFormDocumentUrl('');
+    setFormFileType('image');
     setFormImageAlt('');
     setFormMetaTitle('');
     setFormMetaDesc('');
@@ -127,6 +136,8 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
     setFormShortDesc(story.shortDescription);
     setFormFullDesc(story.fullDescription);
     setFormImageUrl(story.imageUrl);
+    setFormDocumentUrl(story.documentUrl || '');
+    setFormFileType(story.fileType || (story.imageUrl?.toLowerCase().endsWith('.pdf') ? 'pdf' : 'image'));
     setFormImageAlt(story.imageAlt || story.title);
     setFormMetaTitle(story.metaTitle || '');
     setFormMetaDesc(story.metaDescription || '');
@@ -142,7 +153,7 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
     }
   };
 
-  // Handle Image File Selection & Validation
+  // Handle Image or PDF File Selection & Validation
   const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -150,16 +161,21 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
     setFormError(null);
     setUploadProgress(true);
 
+    const currentUserRole = currentAdminUser?.role || (isSuperAdmin ? 'super_admin' : 'admin');
     const uploadRes = await galleryService.uploadImage(
       file,
       formCategory,
-      currentAdminUser?.role
+      currentUserRole
     );
 
     setUploadProgress(false);
 
     if (uploadRes.success) {
       setFormImageUrl(uploadRes.imageUrl);
+      setFormFileType(uploadRes.fileType || (file.type === 'application/pdf' ? 'pdf' : 'image'));
+      if (uploadRes.documentUrl) {
+        setFormDocumentUrl(uploadRes.documentUrl);
+      }
       if (!formImageAlt) {
         setFormImageAlt(formTitle || file.name.split('.')[0]);
       }
@@ -178,7 +194,7 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
       return;
     }
     if (!formImageUrl.trim()) {
-      setFormError('Please upload an image or provide a cover image URL.');
+      setFormError('Please upload an image/document or provide a media URL.');
       return;
     }
     if (!formShortDesc.trim()) {
@@ -187,6 +203,7 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
     }
 
     setIsSubmitting(true);
+    const currentUserRole = currentAdminUser?.role || (isSuperAdmin ? 'super_admin' : 'admin');
 
     try {
       if (editingStory) {
@@ -204,11 +221,13 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
             shortDescription: formShortDesc.trim(),
             fullDescription: formFullDesc.trim(),
             imageUrl: formImageUrl.trim(),
+            documentUrl: formDocumentUrl.trim() || undefined,
+            fileType: formFileType,
             imageAlt: formImageAlt.trim() || formTitle.trim(),
             metaTitle: formMetaTitle.trim() || formTitle.trim(),
             metaDescription: formMetaDesc.trim() || formShortDesc.trim(),
           },
-          currentAdminUser?.role
+          currentUserRole
         );
 
         if (res.success) {
@@ -233,12 +252,14 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
             shortDescription: formShortDesc.trim(),
             fullDescription: formFullDesc.trim(),
             imageUrl: formImageUrl.trim(),
+            documentUrl: formDocumentUrl.trim() || undefined,
+            fileType: formFileType,
             imageAlt: formImageAlt.trim() || formTitle.trim(),
             metaTitle: formMetaTitle.trim() || formTitle.trim(),
             metaDescription: formMetaDesc.trim() || formShortDesc.trim(),
-            createdBy: currentAdminUser?.id || 'superadmin',
+            createdBy: currentAdminUser?.name || 'Admin',
           },
-          currentAdminUser?.role
+          currentUserRole
         );
 
         if (res.success) {
@@ -259,7 +280,8 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
 
   // Quick Toggle Publish Status
   const handleTogglePublish = async (story: GalleryStory) => {
-    const res = await galleryService.togglePublishStatus(story.id, currentAdminUser?.role);
+    const currentUserRole = currentAdminUser?.role || (isSuperAdmin ? 'super_admin' : 'admin');
+    const res = await galleryService.togglePublishStatus(story.id, currentUserRole);
     if (res.success) {
       setStatusMsg({ success: true, text: res.message });
       loadData();
@@ -273,7 +295,8 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
   const handleExecuteDelete = async () => {
     if (!deleteConfirmStory) return;
     setIsSubmitting(true);
-    const res = await galleryService.deleteStory(deleteConfirmStory.id, currentAdminUser?.role);
+    const currentUserRole = currentAdminUser?.role || (isSuperAdmin ? 'super_admin' : 'admin');
+    const res = await galleryService.deleteStory(deleteConfirmStory.id, currentUserRole);
     setIsSubmitting(false);
     setDeleteConfirmStory(null);
 
@@ -294,7 +317,8 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
       setCatError('Category name cannot be empty.');
       return;
     }
-    const res = galleryService.saveCategory(newCatName.trim(), currentAdminUser?.role);
+    const currentUserRole = currentAdminUser?.role || (isSuperAdmin ? 'super_admin' : 'admin');
+    const res = galleryService.saveCategory(newCatName.trim(), currentUserRole);
     if (res.success) {
       setNewCatName('');
       setCategories(galleryService.getCategories());
@@ -313,15 +337,15 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
   const draftsCount = allStories.filter((s) => s.status === 'draft').length;
   const featuredCount = allStories.filter((s) => s.featured).length;
 
-  if (!isSuperAdmin) {
+  if (!hasManageStories) {
     return (
       <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
         <ShieldAlert size={48} style={{ color: '#EF4444', margin: '0 auto 1rem' }} />
         <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)' }}>
-          Super Admin Privileges Required
+          Staff / Admin Privileges Required
         </h3>
         <p style={{ color: 'var(--slate-600)', maxWidth: '480px', margin: '0.5rem auto 1.5rem', fontSize: '0.88rem' }}>
-          The centralized Image Gallery & Success Stories CMS is restricted exclusively to the Super Admin. Staff and operational roles are not authorized to upload, edit, or publish media content.
+          You do not currently have permissions to upload or manage stories. Please contact the Super Admin to grant you Story & Media CMS rights.
         </p>
       </div>
     );
@@ -839,11 +863,11 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
             )}
 
             <form onSubmit={handleSaveStory} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              {/* 1. Image Upload & Live Preview */}
+              {/* 1. Image / PDF Upload & Live Preview */}
               <div className="form-group">
                 <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Cover Image * (JPG, PNG, WEBP, Max 5MB)</span>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>Recommended: 1200x800 px</span>
+                  <span>Story Media * (JPG, PNG, WEBP, or PDF Document up to 10MB)</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>High-res photography or PDF case study</span>
                 </label>
 
                 {formImageUrl ? (
@@ -856,13 +880,26 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
                       background: '#F8FAFC',
                     }}
                   >
-                    <div style={{ maxHeight: '240px', overflow: 'hidden', position: 'relative' }}>
-                      <img
-                        src={formImageUrl}
-                        alt="Preview"
-                        style={{ width: '100%', height: '220px', objectFit: 'cover' }}
-                      />
-                    </div>
+                    {formFileType === 'pdf' ? (
+                      <div style={{ padding: '2rem', textAlign: 'center', background: '#FEF2F2', borderBottom: '1px solid #FECACA' }}>
+                        <FileText size={48} style={{ color: '#DC2626', margin: '0 auto 0.5rem' }} />
+                        <div style={{ fontWeight: 800, color: '#991B1B', fontSize: '1rem' }}>PDF Document / Case Study Attached</div>
+                        <div style={{ fontSize: '0.8rem', color: '#B91C1C' }}>Original PDF document preserved. Visitors can view and read this story document.</div>
+                        {formImageUrl.startsWith('http') && (
+                          <a href={formImageUrl} target="_blank" rel="noreferrer" className="btn btn-outline btn-xs" style={{ marginTop: '0.75rem', borderColor: '#DC2626', color: '#DC2626' }}>
+                            Preview Attached PDF ↗
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ maxHeight: '240px', overflow: 'hidden', position: 'relative' }}>
+                        <img
+                          src={formImageUrl}
+                          alt="Preview"
+                          style={{ width: '100%', height: '220px', objectFit: 'cover' }}
+                        />
+                      </div>
+                    )}
                     <div
                       className="flex items-center justify-between"
                       style={{
@@ -872,7 +909,7 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
                       }}
                     >
                       <span style={{ fontSize: '0.78rem', color: 'var(--slate-600)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '380px' }}>
-                        Asset URL: <code>{formImageUrl.slice(0, 45)}...</code>
+                        Type: <strong style={{ textTransform: 'uppercase' }}>{formFileType}</strong> • Asset URL: <code>{formImageUrl.slice(0, 40)}...</code>
                       </span>
                       <div className="flex gap-2">
                         <button
@@ -880,11 +917,14 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
                           onClick={() => fileInputRef.current?.click()}
                           className="btn btn-outline btn-xs"
                         >
-                          Replace Image
+                          Replace File
                         </button>
                         <button
                           type="button"
-                          onClick={() => setFormImageUrl('')}
+                          onClick={() => {
+                            setFormImageUrl('');
+                            setFormDocumentUrl('');
+                          }}
                           className="btn btn-ghost btn-xs text-rose-600"
                         >
                           Remove
@@ -910,10 +950,17 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
                       const file = e.dataTransfer.files?.[0];
                       if (file) {
                         setUploadProgress(true);
-                        const res = await galleryService.uploadImage(file, formCategory, currentAdminUser?.role);
+                        const currentUserRole = currentAdminUser?.role || (isSuperAdmin ? 'super_admin' : 'admin');
+                        const res = await galleryService.uploadImage(file, formCategory, currentUserRole);
                         setUploadProgress(false);
-                        if (res.success) setFormImageUrl(res.imageUrl);
-                        else setFormError(res.message);
+                        if (res.success) {
+                          setFormImageUrl(res.imageUrl);
+                          setFormFileType(res.fileType || (file.type === 'application/pdf' ? 'pdf' : 'image'));
+                          if (res.documentUrl) setFormDocumentUrl(res.documentUrl);
+                          if (!formImageAlt) setFormImageAlt(formTitle || file.name.split('.')[0]);
+                        } else {
+                          setFormError(res.message);
+                        }
                       }
                     }}
                   >
@@ -933,28 +980,36 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
                       {uploadProgress ? <Loader2 size={24} className="animate-spin" /> : <Upload size={24} />}
                     </div>
                     <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--slate-800)' }}>
-                      {uploadProgress ? 'Processing Image...' : 'Click to Upload Image or Drag & Drop'}
+                      {uploadProgress ? 'Processing File (Image / PDF)...' : 'Click to Upload Image or PDF (or Drag & Drop)'}
                     </div>
                     <p style={{ fontSize: '0.78rem', color: 'var(--slate-500)', marginTop: '0.25rem' }}>
-                      Supports High-Res JPG, PNG, and WebP (up to 5 MB). Stored in Firebase Cloud Storage.
+                      Supports High-Res JPG, PNG, WebP, and PDF documents (up to 10 MB). Stored in Firebase Cloud Storage.
                     </p>
                   </div>
                 )}
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/jpeg,image/png,image/webp,image/jpg,application/pdf"
                   onChange={handleImageFileChange}
                   style={{ display: 'none' }}
                 />
 
-                {/* Direct Image URL input as alternative */}
+                {/* Direct Image or Document URL input as alternative */}
                 <div style={{ marginTop: '0.5rem' }}>
                   <input
                     type="url"
                     value={formImageUrl}
-                    onChange={(e) => setFormImageUrl(e.target.value)}
-                    placeholder="Or paste direct image URL (https://...)"
+                    onChange={(e) => {
+                      setFormImageUrl(e.target.value);
+                      if (e.target.value.toLowerCase().endsWith('.pdf')) {
+                        setFormFileType('pdf');
+                        setFormDocumentUrl(e.target.value);
+                      } else {
+                        setFormFileType('image');
+                      }
+                    }}
+                    placeholder="Or paste direct media URL (https://...)"
                     className="form-input"
                     style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem' }}
                   />

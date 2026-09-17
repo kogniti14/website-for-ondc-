@@ -315,6 +315,15 @@ class CertificationService {
   private memoryCategories: CertificationCategory[] | null = null;
 
   /**
+   * Role authorization check: allows super_admin, admin, operations_admin, catalog_manager, or staff
+   */
+  isAuthorized(role?: string): boolean {
+    if (!role) return false;
+    const permitted = ['super_admin', 'admin', 'operations_admin', 'catalog_manager', 'staff'];
+    return permitted.includes(role);
+  }
+
+  /**
    * Safe local cache retrieval
    */
   private getLocalCertificates(): CompanyCertification[] {
@@ -531,11 +540,11 @@ class CertificationService {
     data: Omit<CompanyCertification, 'id' | 'createdAt' | 'updatedAt'>,
     currentUserRole?: string
   ): Promise<{ success: boolean; certificate?: CompanyCertification; message: string }> {
-    // 1. Strict Role Authorization
-    if (currentUserRole !== 'super_admin') {
+    // 1. Role Authorization
+    if (!this.isAuthorized(currentUserRole)) {
       return {
         success: false,
-        message: 'Unauthorized: Only the Super Admin is permitted to upload or publish certifications.',
+        message: 'Unauthorized: Admin privileges required to upload or publish certifications.',
       };
     }
 
@@ -599,10 +608,10 @@ class CertificationService {
     updates: Partial<CompanyCertification>,
     currentUserRole?: string
   ): Promise<{ success: boolean; certificate?: CompanyCertification; message: string }> {
-    if (currentUserRole !== 'super_admin') {
+    if (!this.isAuthorized(currentUserRole)) {
       return {
         success: false,
-        message: 'Unauthorized: Only the Super Admin is permitted to modify certifications.',
+        message: 'Unauthorized: Admin privileges required to modify certifications.',
       };
     }
 
@@ -648,10 +657,10 @@ class CertificationService {
     id: string,
     currentUserRole?: string
   ): Promise<{ success: boolean; message: string }> {
-    if (currentUserRole !== 'super_admin') {
+    if (!this.isAuthorized(currentUserRole)) {
       return {
         success: false,
-        message: 'Unauthorized: Only the Super Admin is permitted to delete certifications.',
+        message: 'Unauthorized: Admin privileges required to delete certifications.',
       };
     }
 
@@ -697,10 +706,10 @@ class CertificationService {
     id: string,
     currentUserRole?: string
   ): Promise<{ success: boolean; newStatus?: CertificationStatus; message: string }> {
-    if (currentUserRole !== 'super_admin') {
+    if (!this.isAuthorized(currentUserRole)) {
       return {
         success: false,
-        message: 'Unauthorized: Only the Super Admin is permitted to change publication status.',
+        message: 'Unauthorized: Admin privileges required to change publication status.',
       };
     }
 
@@ -738,13 +747,13 @@ class CertificationService {
     thumbnailUrl?: string;
     message: string;
   }> {
-    // 1. Strict Role Authorization
-    if (currentUserRole !== 'super_admin') {
+    // 1. Role Authorization
+    if (!this.isAuthorized(currentUserRole)) {
       return {
         success: false,
         fileUrl: '',
         fileType: '',
-        message: 'Unauthorized: Only the Super Admin can upload certificate files.',
+        message: 'Unauthorized: Admin privileges required to upload certificate files.',
       };
     }
 
@@ -869,10 +878,10 @@ class CertificationService {
     cat: CertificationCategory,
     currentUserRole?: string
   ): Promise<{ success: boolean; message: string }> {
-    if (currentUserRole !== 'super_admin') {
+    if (!this.isAuthorized(currentUserRole)) {
       return {
         success: false,
-        message: 'Unauthorized: Only the Super Admin can manage certification categories.',
+        message: 'Unauthorized: Admin privileges required to manage certification categories.',
       };
     }
 

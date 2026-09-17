@@ -15,23 +15,32 @@ service cloud.firestore {
       );
     }
 
+    function isAdmin() {
+      return isAuthenticated() && (
+        isSuperAdmin() ||
+        request.auth.token.role in ['admin', 'operations_admin', 'catalog_manager'] ||
+        get(/databases/$(database)/documents/admin_users/$(request.auth.uid)).data.role in ['admin', 'operations_admin', 'catalog_manager'] ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'operations_admin']
+      );
+    }
+
     // =========================================================================
     // 1. Gallery & Success Stories Collection
     // =========================================================================
     match /gallery/{storyId} {
       // Public / Customers / Visitors: Read-only access for published stories
-      allow read: if resource.data.status == 'published' || isSuperAdmin();
+      allow read: if resource.data.status == 'published' || isAdmin();
 
-      // Super Admin: Exclusive write / create / update / delete access
-      allow create: if isSuperAdmin()
+      // Admin & Super Admin: Write / create / update / delete access
+      allow create: if isAdmin()
         && request.resource.data.title is string
         && request.resource.data.imageUrl is string
         && request.resource.data.category is string
         && request.resource.data.visibility in ['both', 'b2b', 'b2c']
         && request.resource.data.status in ['published', 'draft', 'unpublished'];
 
-      allow update: if isSuperAdmin();
-      allow delete: if isSuperAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     // =========================================================================
@@ -41,8 +50,8 @@ service cloud.firestore {
       // Anyone can read active categories
       allow read: if true;
 
-      // Super Admin only can create, edit, or delete categories
-      allow write: if isSuperAdmin();
+      // Admin & Super Admin can manage categories
+      allow write: if isAdmin();
     }
 
     // =========================================================================
@@ -50,18 +59,18 @@ service cloud.firestore {
     // =========================================================================
     match /certifications/{certId} {
       // Public / B2B / B2C Visitors: Read-only access for published certifications
-      allow read: if resource.data.status == 'published' || isSuperAdmin();
+      allow read: if resource.data.status == 'published' || isAdmin();
 
-      // Super Admin: Exclusive write / create / update / delete access
-      allow create: if isSuperAdmin()
+      // Admin & Super Admin: Write / create / update / delete access
+      allow create: if isAdmin()
         && request.resource.data.name is string
         && request.resource.data.fileUrl is string
         && request.resource.data.category is string
         && request.resource.data.visibility in ['both', 'b2b', 'b2c']
         && request.resource.data.status in ['published', 'draft', 'unpublished'];
 
-      allow update: if isSuperAdmin();
-      allow delete: if isSuperAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     // =========================================================================
@@ -69,7 +78,7 @@ service cloud.firestore {
     // =========================================================================
     match /certification_categories/{catId} {
       allow read: if true;
-      allow write: if isSuperAdmin();
+      allow write: if isAdmin();
     }
 
     // =========================================================================

@@ -42,7 +42,7 @@ import {
   Sparkles,
   Award,
 } from 'lucide-react';
-import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, Category, B2CUser, SiteMedia, B2BOrderItemSummary, OrderItemSummary, B2BQuotationItem, B2BPaymentRecord, B2CAddress } from '../../types';
+import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, AdminPermissions, Category, B2CUser, SiteMedia, B2BOrderItemSummary, OrderItemSummary, B2BQuotationItem, B2BPaymentRecord, B2CAddress } from '../../types';
 import { storageService } from '../../services/storageService';
 import { useAuth } from '../../context/AuthContext';
 import { OrderInvoiceModal } from '../../components/common/OrderInvoiceModal';
@@ -1379,14 +1379,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   const handleToggleStaffPermission = (
     staffId: string,
-    permKey: 'canManageCoupons' | 'canConfirmOrders' | 'canRejectOrders'
+    permKey: keyof AdminPermissions
   ) => {
     const staff = adminUsers.find((u) => u.id === staffId);
     if (!staff) return;
-    const currentPerms = staff.permissions || {};
+    const currentPerms: AdminPermissions = staff.permissions || {};
     staff.permissions = {
       ...currentPerms,
-      [permKey]: !currentPerms[permKey],
+      [permKey]: !Boolean(currentPerms[permKey]),
     };
     storageService.saveAdminUser(staff);
     refreshAdminUsers();
@@ -4097,6 +4097,92 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                       style={{ cursor: isSuperAdmin ? 'pointer' : 'default' }}
                                     />
                                     Reject Orders
+                                  </label>
+
+                                  <div style={{ height: '1px', backgroundColor: 'var(--slate-200)', margin: '0.2rem 0' }} />
+
+                                  <label
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.4rem',
+                                      cursor: isSuperAdmin ? 'pointer' : 'default',
+                                      fontWeight: staff.permissions?.canManageStories ? 700 : 500,
+                                      color: staff.permissions?.canManageStories ? '#059669' : 'var(--slate-500)',
+                                    }}
+                                    onClick={() => isSuperAdmin && handleToggleStaffPermission(staff.id, 'canManageStories')}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(staff.permissions?.canManageStories)}
+                                      disabled={!isSuperAdmin}
+                                      readOnly
+                                      style={{ cursor: isSuperAdmin ? 'pointer' : 'default' }}
+                                    />
+                                    Stories (Image/PDF)
+                                  </label>
+
+                                  <label
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.4rem',
+                                      cursor: isSuperAdmin ? 'pointer' : 'default',
+                                      fontWeight: staff.permissions?.canUploadCertifications ? 700 : 500,
+                                      color: staff.permissions?.canUploadCertifications ? '#059669' : 'var(--slate-500)',
+                                    }}
+                                    onClick={() => isSuperAdmin && handleToggleStaffPermission(staff.id, 'canUploadCertifications')}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(staff.permissions?.canUploadCertifications)}
+                                      disabled={!isSuperAdmin}
+                                      readOnly
+                                      style={{ cursor: isSuperAdmin ? 'pointer' : 'default' }}
+                                    />
+                                    Upload Certifications
+                                  </label>
+
+                                  <label
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.4rem',
+                                      cursor: isSuperAdmin ? 'pointer' : 'default',
+                                      fontWeight: staff.permissions?.canEditCertifications ? 700 : 500,
+                                      color: staff.permissions?.canEditCertifications ? '#0284C7' : 'var(--slate-500)',
+                                    }}
+                                    onClick={() => isSuperAdmin && handleToggleStaffPermission(staff.id, 'canEditCertifications')}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(staff.permissions?.canEditCertifications)}
+                                      disabled={!isSuperAdmin}
+                                      readOnly
+                                      style={{ cursor: isSuperAdmin ? 'pointer' : 'default' }}
+                                    />
+                                    Edit Certifications
+                                  </label>
+
+                                  <label
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '0.4rem',
+                                      cursor: isSuperAdmin ? 'pointer' : 'default',
+                                      fontWeight: staff.permissions?.canDeleteCertifications ? 700 : 500,
+                                      color: staff.permissions?.canDeleteCertifications ? '#DC2626' : 'var(--slate-500)',
+                                    }}
+                                    onClick={() => isSuperAdmin && handleToggleStaffPermission(staff.id, 'canDeleteCertifications')}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(staff.permissions?.canDeleteCertifications)}
+                                      disabled={!isSuperAdmin}
+                                      readOnly
+                                      style={{ cursor: isSuperAdmin ? 'pointer' : 'default' }}
+                                    />
+                                    Delete Certifications
                                   </label>
                                 </div>
                               )}

@@ -395,6 +395,10 @@ export interface AdminPermissions {
   canRejectOrders?: boolean;
   canManageProducts?: boolean;
   canManageUsers?: boolean;
+  canManageStories?: boolean; // upload success stories, image, pdf
+  canUploadCertifications?: boolean; // upload certificates (pdf, images)
+  canEditCertifications?: boolean; // edit certificates & validity
+  canDeleteCertifications?: boolean; // delete certificates
 }
 
 export type AdminRole = 'super_admin' | 'operations_admin' | 'catalog_manager' | 'finance_admin';
@@ -447,6 +451,8 @@ export interface GalleryStory {
   shortDescription: string;
   fullDescription: string;
   imageUrl: string;
+  documentUrl?: string; // Optional PDF case study / brochure
+  fileType?: 'image' | 'pdf'; // Primary media type
   storagePath?: string;
   imageAlt: string;
   category: string;
