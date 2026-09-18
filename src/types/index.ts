@@ -58,6 +58,9 @@ export interface B2CUser {
   avatarUrl?: string;
   addresses: B2CAddress[];
   createdAt: string;
+  policyAccepted?: boolean;
+  policyAcceptedAt?: string;
+  policyAcceptedVersion?: string;
 }
 
 export interface B2BBusiness {
@@ -101,6 +104,9 @@ export interface B2BBusiness {
   };
   registeredAt: string;
   approvedAt?: string;
+  policyAccepted?: boolean;
+  policyAcceptedAt?: string;
+  policyAcceptedVersion?: string;
 }
 
 export interface CartItem {
@@ -523,5 +529,21 @@ export interface CertificationCategory {
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface PolicyUpdateRecord {
+  id: string;
+  policyId: 'terms' | 'privacy' | 'refund' | 'shipping';
+  policyName: string;
+  versionNumber: string;
+  previousVersion: string;
+  newVersion: string;
+  updatedAt: string;
+  changeSummary: string;
+  notificationStatus: 'pending' | 'sent' | 'partially_sent' | 'failed' | 'not_required';
+  recipientsCount: number;
+  recipientsDelivered: string[];
+  isPublished: boolean;
+  error?: string;
 }
 

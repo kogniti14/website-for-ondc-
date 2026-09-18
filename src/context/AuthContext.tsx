@@ -220,6 +220,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       password: data.password,
       addresses: data.addresses || [],
       createdAt: new Date().toISOString(),
+      policyAccepted: data.policyAccepted ?? true,
+      policyAcceptedAt: data.policyAcceptedAt || new Date().toISOString(),
+      policyAcceptedVersion: data.policyAcceptedVersion || '2026-09-18',
     };
     storageService.saveB2CUser(newUser);
     setB2cUser(newUser);
@@ -245,6 +248,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       creditLimit: 0,
       paymentTerms: 'Prepaid',
       registeredAt: new Date().toISOString(),
+      policyAccepted: data.policyAccepted ?? true,
+      policyAcceptedAt: data.policyAcceptedAt || new Date().toISOString(),
+      policyAcceptedVersion: data.policyAcceptedVersion || '2026-09-18',
       accountManager: {
         name: 'Rohan Saxena',
         email: 'rohan.saxena@kognitiminds.com',
@@ -493,6 +499,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       authProvider: 'firebase_email',
       addresses: data.addresses || [],
       createdAt: new Date().toISOString(),
+      policyAccepted: data.policyAccepted ?? true,
+      policyAcceptedAt: data.policyAcceptedAt || new Date().toISOString(),
+      policyAcceptedVersion: data.policyAcceptedVersion || '2026-09-18',
     };
     storageService.saveB2CUser(newUser);
 
@@ -925,6 +934,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       authProvider: firebaseUid ? 'firebase_email' : 'email_otp',
       addresses: data.addresses || [],
       createdAt: new Date().toISOString(),
+      policyAccepted: data.policyAccepted ?? true,
+      policyAcceptedAt: data.policyAcceptedAt || new Date().toISOString(),
+      policyAcceptedVersion: data.policyAcceptedVersion || '2026-09-18',
     };
 
     storageService.saveB2CUser(newUser);
@@ -984,6 +996,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       creditLimit: 0,
       paymentTerms: 'Prepaid',
       registeredAt: new Date().toISOString(),
+      policyAccepted: bizData.policyAccepted ?? true,
+      policyAcceptedAt: bizData.policyAcceptedAt || new Date().toISOString(),
+      policyAcceptedVersion: bizData.policyAcceptedVersion || '2026-09-18',
       accountManager: {
         name: 'Rohan Saxena',
         email: 'rohan.saxena@kognitiminds.com',

@@ -61,6 +61,9 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
   const [regOtp, setRegOtp] = useState('');
   const [regCooldown, setRegCooldown] = useState(0);
 
+  // Policy Acceptance State for B2B Registration
+  const [agreePolicies, setAgreePolicies] = useState(false);
+
   // Forgot Password via Email OTP State
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotOtpSent, setForgotOtpSent] = useState(false);
@@ -303,6 +306,11 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
       return;
     }
 
+    if (!agreePolicies) {
+      setError('Please accept the Terms & Conditions, Privacy Policy, Refund & Return Policy, and Shipping & Logistics Policy to continue.');
+      return;
+    }
+
     const cleanEmail = businessEmail.trim().toLowerCase();
     const existing = storageService.isB2BIdentifierRegistered(cleanEmail);
     if (existing) {
@@ -330,6 +338,11 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
       return;
     }
 
+    if (!agreePolicies) {
+      setError('Please accept the Terms & Conditions, Privacy Policy, Refund & Return Policy, and Shipping & Logistics Policy to continue.');
+      return;
+    }
+
     setLoading(true);
     const res = await registerB2BWithEmailOtp(
       {
@@ -340,6 +353,9 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
         gstin: gstin.trim().toUpperCase(),
         pan: gstin.trim().slice(2, 12).toUpperCase(),
         businessType,
+        policyAccepted: true,
+        policyAcceptedAt: new Date().toISOString(),
+        policyAcceptedVersion: '2026-09-18',
         billingAddress: {
           id: `baddr_${Date.now()}`,
           fullName: companyName.trim(),
@@ -1155,6 +1171,77 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
                       setDocUploaded(!!img);
                     }}
                   />
+                  </div>
+
+                {/* Mandatory Single Policy Agreement Checkbox */}
+                <div style={{ margin: '1rem 0 0.85rem', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <input
+                    type="checkbox"
+                    id="b2b-agree-policies"
+                    checked={agreePolicies}
+                    onChange={(e) => {
+                      setAgreePolicies(e.target.checked);
+                      if (e.target.checked && error?.includes('Please accept')) {
+                        setError(null);
+                      }
+                    }}
+                    style={{
+                      marginTop: '3px',
+                      width: '16px',
+                      height: '16px',
+                      accentColor: '#F59E0B',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                    }}
+                    required
+                  />
+                  <label
+                    htmlFor="b2b-agree-policies"
+                    style={{
+                      fontSize: '0.82rem',
+                      color: '#CBD5E1',
+                      lineHeight: 1.5,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    I agree to the{' '}
+                    <a
+                      href="#terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#FBBF24', fontWeight: 600, textDecoration: 'underline' }}
+                    >
+                      Terms & Conditions
+                    </a>
+                    ,{' '}
+                    <a
+                      href="#privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#FBBF24', fontWeight: 600, textDecoration: 'underline' }}
+                    >
+                      Privacy Policy
+                    </a>
+                    ,{' '}
+                    <a
+                      href="#refund"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#FBBF24', fontWeight: 600, textDecoration: 'underline' }}
+                    >
+                      Refund & Return Policy
+                    </a>
+                    , and{' '}
+                    <a
+                      href="#shipping"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#FBBF24', fontWeight: 600, textDecoration: 'underline' }}
+                    >
+                      Shipping & Logistics Policy
+                    </a>{' '}
+                    of KOGNITI MINDS PRIVATE LIMITED.
+                  </label>
                 </div>
 
                 <button type="submit" disabled={loading} className="btn btn-amber" style={{ width: '100%' }}>

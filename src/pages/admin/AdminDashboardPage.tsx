@@ -55,6 +55,7 @@ import { GalleryManagement } from '../../components/admin/GalleryManagement';
 import { CertificationManagement } from '../../components/admin/CertificationManagement';
 import { CategoryManager } from '../../components/admin/CategoryManager';
 import { AdminNavSlider } from '../../components/admin/AdminNavSlider';
+import { PolicyManagement } from '../../components/admin/PolicyManagement';
 import { WHATSAPP_NUMBER } from '../../config/whatsappConfig';
 
 interface AdminDashboardPageProps {
@@ -85,7 +86,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const { currentAdminUser, isSuperAdmin, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery' | 'gallery_categories' | 'certifications' | 'cert_categories'
+    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery' | 'gallery_categories' | 'certifications' | 'cert_categories' | 'policies'
   >('overview');
 
   // Razorpay Gateway State
@@ -2005,6 +2006,43 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 }}
               >
                 {razorpayConfig.mode}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('policies')}
+              data-tab="policies"
+              data-active={activeTab === 'policies'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'policies' ? '#059669' : 'var(--slate-600)',
+                borderBottom: activeTab === 'policies' ? '2px solid #059669' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'policies' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'policies' ? '#059669' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <FileText size={16} /> Legal Policies & Notifications
+              <span
+                style={{
+                  backgroundColor: '#ECFDF5',
+                  color: '#065F46',
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  padding: '0.1rem 0.4rem',
+                  borderRadius: '4px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Statutory
               </span>
             </button>
           </AdminNavSlider>
@@ -5753,6 +5791,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               </div>
             </div>
           </div>
+        )}
+
+        {/* Statutory Legal Policies & Automated Customer Notifications */}
+        {activeTab === 'policies' && (
+          <PolicyManagement />
         )}
 
         {/* Centralized Image Gallery & Success Stories CMS */}
