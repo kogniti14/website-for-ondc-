@@ -1,6 +1,7 @@
 import React from 'react';
 import { Printer, X, ShieldCheck, CreditCard, Building2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { B2COrder, B2BOrder, OrderItemSummary, B2BOrderItemSummary } from '../../types';
+import { COMPANY_BANK_DETAILS } from '../../config/bankConfig';
 
 interface OrderInvoiceModalProps {
   order: B2COrder | B2BOrder;
@@ -545,12 +546,12 @@ export const OrderInvoiceModal: React.FC<OrderInvoiceModalProps> = ({ order, isB
                 )}
               </div>
 
-              {/* Company Bank Account details for B2B Direct Settlements */}
+              {/* Company Bank Account details for Direct Settlements */}
               <div style={{ fontSize: '0.75rem', color: '#64748B', background: '#F1F5F9', padding: '0.6rem 0.75rem', borderRadius: '6px' }}>
                 <strong style={{ color: '#0F172A' }}>Official Remittance Bank Account:</strong>
-                <div>Bank: HDFC Bank Ltd • Branch: Sector 63 Noida</div>
-                <div>Account Name: Kogniti Minds Private Limited • A/C No: 50200084729184</div>
-                <div>IFSC: HDFC0000128 • Account Type: Current Account</div>
+                <div>Bank: {COMPANY_BANK_DETAILS.bankName} • Account Type: {COMPANY_BANK_DETAILS.accountType}</div>
+                <div>Account Name: {COMPANY_BANK_DETAILS.accountHolder} • A/C No: <code>{COMPANY_BANK_DETAILS.accountNumber}</code></div>
+                <div>IFSC: <code>{COMPANY_BANK_DETAILS.ifsc}</code></div>
               </div>
             </div>
 

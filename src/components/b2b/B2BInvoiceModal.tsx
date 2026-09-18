@@ -4,6 +4,7 @@ import { B2BOrder } from '../../types';
 import { storageService } from '../../services/storageService';
 import { RazorpayCheckoutModal } from '../payment/RazorpayCheckoutModal';
 import { WHATSAPP_NUMBER, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
+import { COMPANY_BANK_DETAILS } from '../../config/bankConfig';
 
 interface B2BInvoiceModalProps {
   order: B2BOrder;
@@ -592,10 +593,9 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
                 <div style={{ fontWeight: 800, color: '#0F172A', marginBottom: '0.2rem' }}>
                   Bank Details for NEFT / RTGS / Corporate Wire:
                 </div>
-                <div><strong>Beneficiary:</strong> KOGNITI MINDS PRIVATE LIMITED</div>
-                <div><strong>Bank Name:</strong> HDFC Bank Ltd | <strong>A/C Type:</strong> Current Account</div>
-                <div><strong>A/C Number:</strong> <code>50200088991122</code> | <strong>IFSC:</strong> <code>HDFC0001234</code></div>
-                <div><strong>Branch:</strong> Greater Noida West, Gautam Buddha Nagar, UP - 201306</div>
+                <div><strong>Beneficiary:</strong> {COMPANY_BANK_DETAILS.accountHolder}</div>
+                <div><strong>Bank Name:</strong> {COMPANY_BANK_DETAILS.bankName} | <strong>A/C Type:</strong> {COMPANY_BANK_DETAILS.accountType}</div>
+                <div><strong>A/C Number:</strong> <code>{COMPANY_BANK_DETAILS.accountNumber}</code> | <strong>IFSC:</strong> <code>{COMPANY_BANK_DETAILS.ifsc}</code></div>
                 <div style={{ color: '#64748B', fontSize: '0.72rem', marginTop: '0.25rem' }}>
                   * Please mention Invoice Ref <strong>INV-{order.orderNumber}</strong> in the remittance remark.
                 </div>
