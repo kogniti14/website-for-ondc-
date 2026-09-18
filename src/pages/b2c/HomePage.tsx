@@ -319,21 +319,17 @@ export const HomePage: React.FC<HomePageProps> = ({
               {/* Available On Section (Exact match from reference image) */}
               <div
                 style={{
-                  marginTop: '1.35rem',
+                  marginTop: '1.5rem',
                   paddingLeft: '0.25rem',
                 }}
               >
-                <img
-                  src="/available-on-hero.png"
-                  alt="Available on GeM — Government e-Marketplace and ONDC — Open Network for Digital Commerce"
-                  style={{
-                    height: '68px',
-                    width: 'auto',
-                    maxWidth: '100%',
-                    objectFit: 'contain',
-                    display: 'block',
-                  }}
-                />
+                <div className="official-platform-card">
+                  <img
+                    src="/available-on-hero.png"
+                    alt="Available on GeM — Government e-Marketplace and ONDC — Open Network for Digital Commerce"
+                    className="official-platform-banner-img"
+                  />
+                </div>
               </div>
             </div>
           </div>

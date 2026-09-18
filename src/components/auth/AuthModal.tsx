@@ -343,7 +343,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
           <img
             src="/logo.png"
             alt="Kogniti Minds"
-            style={{ height: '56px', width: 'auto', margin: '0 auto 0.5rem', objectFit: 'contain' }}
+            className="kogniti-brand-logo-standalone"
+            style={{ height: '58px', width: 'auto', margin: '0 auto 0.75rem', objectFit: 'contain' }}
           />
           <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)' }}>
             {mode === 'login' ? 'Welcome to Kogniti Minds' : 'New Customer Registration'}

@@ -194,11 +194,11 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
         >
           {/* Brand Col */}
           <div style={{ maxWidth: '320px' }}>
-            <div className="flex items-center gap-3" style={{ marginBottom: '1rem' }}>
+            <div className="flex items-center gap-3 brand-logo-container" style={{ marginBottom: '1rem' }}>
               <div
                 style={{
                   background: '#FFFFFF',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   padding: '4px 8px',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -209,7 +209,8 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
                 <img
                   src={storageService.getSiteMedia()?.logo || '/logo.png'}
                   alt="Kogniti Minds"
-                  style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
+                  className="kogniti-brand-logo"
+                  style={{ height: '36px', width: 'auto' }}
                 />
               </div>
               <div style={{ color: '#ffffff', fontWeight: 800, fontSize: '1.2rem' }}>
@@ -240,23 +241,21 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
                   fontSize: '0.76rem',
                   fontWeight: 700,
                   color: '#CBD5E1',
-                  marginBottom: '0.5rem',
+                  marginBottom: '0.6rem',
                   letterSpacing: '0.04em',
                   textTransform: 'uppercase',
                 }}
               >
                 Available On Official Platforms
               </div>
-              <img
-                src="/available-on-hero.png"
-                alt="Available on GeM (Government e-Marketplace) and ONDC (Open Network for Digital Commerce)"
-                style={{
-                  height: '46px',
-                  width: 'auto',
-                  display: 'block',
-                  objectFit: 'contain',
-                }}
-              />
+              <div className="official-platform-card" style={{ padding: '6px 12px' }}>
+                <img
+                  src="/available-on-hero.png"
+                  alt="Available on GeM (Government e-Marketplace) and ONDC (Open Network for Digital Commerce)"
+                  className="official-platform-banner-img"
+                  style={{ height: '44px' }}
+                />
+              </div>
             </div>
           </div>
 
@@ -490,13 +489,15 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
           </div>
 
           {/* Official Commerce Channels */}
-          <div className="flex items-center gap-2" style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '0.25rem 0.75rem', borderRadius: '6px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-            <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>Available On:</span>
-            <img
-              src="/gem-ondc-logos.png"
-              alt="GeM & ONDC Network"
-              style={{ height: '28px', width: 'auto', display: 'block', objectFit: 'contain' }}
-            />
+          <div className="flex items-center gap-2" style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '0.35rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+            <span style={{ fontSize: '0.72rem', color: '#CBD5E1', fontWeight: 600 }}>Available On:</span>
+            <div style={{ background: '#FFFFFF', padding: '3px 8px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center' }}>
+              <img
+                src="/gem-ondc-logos.png"
+                alt="GeM & ONDC Network"
+                style={{ height: '24px', width: 'auto', display: 'block', objectFit: 'contain' }}
+              />
+            </div>
           </div>
 
           {/* Payment Methods */}

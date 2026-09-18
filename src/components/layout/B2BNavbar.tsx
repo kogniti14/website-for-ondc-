@@ -92,7 +92,7 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
         <div className="flex items-center justify-between gap-4">
           {/* Logo & Corporate Tag */}
           <div
-            className="flex items-center gap-3"
+            className="flex items-center gap-3 brand-logo-container"
             style={{ cursor: 'pointer' }}
             onClick={() => setB2bTab('overview')}
           >
@@ -111,7 +111,8 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
               <img
                 src={storageService.getSiteMedia()?.logo || '/logo.png'}
                 alt="Kogniti Minds"
-                style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
+                className="kogniti-brand-logo"
+                style={{ height: '36px', width: 'auto' }}
               />
             </div>
             <div>

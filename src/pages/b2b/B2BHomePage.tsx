@@ -223,11 +223,14 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
                   }}
                   className="hide-on-mobile"
                 />
-                <img
-                  src="/available-on-hero.png"
-                  alt="Available on GeM (Government e-Marketplace) and ONDC (Open Network for Digital Commerce)"
-                  style={{ height: '48px', width: 'auto', objectFit: 'contain' }}
-                />
+                <div className="official-platform-card" style={{ padding: '6px 12px' }}>
+                  <img
+                    src="/available-on-hero.png"
+                    alt="Available on GeM (Government e-Marketplace) and ONDC (Open Network for Digital Commerce)"
+                    className="official-platform-banner-img"
+                    style={{ height: '42px' }}
+                  />
+                </div>
               </div>
             </div>
 
@@ -446,14 +449,17 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
               </p>
             </div>
             <div style={{ flexShrink: 0, textAlign: 'center' }}>
-              <div style={{ fontSize: '0.8rem', color: '#CBD5E1', fontWeight: 600, marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '0.8rem', color: '#CBD5E1', fontWeight: 600, marginBottom: '0.6rem' }}>
                 Official Verified Portals
               </div>
-              <img
-                src="/available-on-hero.png"
-                alt="Available on GeM (Government e-Marketplace) and ONDC (Open Network for Digital Commerce)"
-                style={{ height: '58px', width: 'auto', display: 'block', objectFit: 'contain' }}
-              />
+              <div className="official-platform-card" style={{ padding: '8px 16px' }}>
+                <img
+                  src="/available-on-hero.png"
+                  alt="Available on GeM (Government e-Marketplace) and ONDC (Open Network for Digital Commerce)"
+                  className="official-platform-banner-img"
+                  style={{ height: '48px' }}
+                />
+              </div>
             </div>
           </div>
         </div>

@@ -605,5 +605,120 @@ input, select, textarea {
   }
 }
 
+/* ==========================================================================
+   OFFICIAL KOGNITI MINDS LOGO & PLATFORM AVAILABILITY RESPONSIVE SYSTEM
+   ========================================================================== */
+.brand-logo-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Kogniti Minds Logo responsive sizing:
+   Desktop: 120–160px brand footprint (~46px emblem height)
+   Tablet: 100–140px (~40px emblem height)
+   Mobile: 90–120px (~34px emblem height)
+   Always maintains original aspect ratio and object-fit: contain */
+.kogniti-brand-logo {
+  display: block;
+  object-fit: contain;
+  width: auto;
+  height: 46px;
+  max-width: 140px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.kogniti-brand-logo:hover {
+  transform: scale(1.02);
+}
+
+@media (max-width: 1024px) {
+  .kogniti-brand-logo {
+    height: 40px;
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 640px) {
+  .kogniti-brand-logo {
+    height: 34px;
+    max-width: 100px;
+  }
+}
+
+/* Standalone Brand Logo (Modals, Invoices, Admin) */
+.kogniti-brand-logo-standalone {
+  display: block;
+  object-fit: contain;
+  margin-left: auto;
+  margin-right: auto;
+  width: 130px;
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 1024px) {
+  .kogniti-brand-logo-standalone {
+    width: 115px;
+  }
+}
+
+@media (max-width: 640px) {
+  .kogniti-brand-logo-standalone {
+    width: 95px;
+  }
+}
+
+/* Official GeM & ONDC Platform Availability Card */
+.official-platform-card {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 8px 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  max-width: 100%;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.official-platform-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+
+.official-platform-banner-img {
+  display: block;
+  object-fit: contain;
+  height: 56px;
+  width: auto;
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .official-platform-banner-img {
+    height: 46px;
+  }
+  .official-platform-card {
+    padding: 6px 12px;
+    border-radius: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .official-platform-banner-img {
+    height: 38px;
+  }
+  .official-platform-card {
+    padding: 5px 10px;
+    border-radius: 8px;
+  }
+}
+
+
 
 

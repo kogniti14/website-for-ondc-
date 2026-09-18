@@ -82,14 +82,14 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center justify-between gap-4">
           {/* Brand Logo */}
           <div
-            className="flex items-center gap-3"
+            className="flex items-center gap-3 brand-logo-container"
             style={{ cursor: 'pointer' }}
             onClick={() => setActiveTab('home')}
           >
             <img
               src={storageService.getSiteMedia()?.logo || '/logo.png'}
               alt="Kogniti Minds Logo"
-              style={{ height: '44px', width: 'auto', objectFit: 'contain' }}
+              className="kogniti-brand-logo"
             />
             <div>
               <div
