@@ -6,6 +6,7 @@ import {
 } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
+import { getAnalytics, isSupported, Analytics } from 'firebase/analytics';
 
 const getEnvVar = (key: string): string => {
   try {
@@ -27,34 +28,39 @@ const envProjectId = getEnvVar('VITE_FIREBASE_PROJECT_ID');
 const envStorageBucket = getEnvVar('VITE_FIREBASE_STORAGE_BUCKET');
 const envMessagingSenderId = getEnvVar('VITE_FIREBASE_MESSAGING_SENDER_ID');
 const envAppId = getEnvVar('VITE_FIREBASE_APP_ID');
+const envMeasurementId = getEnvVar('VITE_FIREBASE_MEASUREMENT_ID');
+
+// Safe Firebase config with user production keys as defaults
+export const firebaseConfig = {
+  apiKey: envApiKey || 'AIzaSyAOVn0vnb7ZMmyW7D5XOqBEDskPMNnuY5I',
+  authDomain: envAuthDomain || 'kognitiminds-ondc.firebaseapp.com',
+  projectId: envProjectId || 'kognitiminds-ondc',
+  storageBucket: envStorageBucket || 'kognitiminds-ondc.firebasestorage.app',
+  messagingSenderId: envMessagingSenderId || '585231773951',
+  appId: envAppId || '1:585231773951:web:1a71e21a858b5db71adcca',
+  measurementId: envMeasurementId || 'G-LHW5GZQCCS',
+};
 
 /**
  * Checks if actual live Firebase configuration has been provided
  * (i.e. not default dummy placeholder keys)
  */
 export const isFirebaseConfigured = (): boolean => {
+  const activeKey = firebaseConfig.apiKey;
+  const activeProjectId = firebaseConfig.projectId;
   return Boolean(
-    envApiKey &&
-    envProjectId &&
-    !envApiKey.includes('ExampleKey') &&
-    envApiKey.length > 15
+    activeKey &&
+    activeProjectId &&
+    !activeKey.includes('ExampleKey') &&
+    activeKey.length > 15
   );
-};
-
-// Safe Firebase config with fallback
-const firebaseConfig = {
-  apiKey: envApiKey || 'AIzaSyExampleKey1234567890abcdef',
-  authDomain: envAuthDomain || 'kogniti-minds.firebaseapp.com',
-  projectId: envProjectId || 'kogniti-minds',
-  storageBucket: envStorageBucket || 'kogniti-minds.appspot.com',
-  messagingSenderId: envMessagingSenderId || '123456789012',
-  appId: envAppId || '1:123456789012:web:abcdef1234567890',
 };
 
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore | undefined;
 let storage: FirebaseStorage | undefined;
+let analytics: Analytics | undefined;
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
@@ -75,6 +81,17 @@ try {
   } catch (storageErr) {
     console.warn('Firebase Storage initialization notice:', storageErr);
   }
+  if (typeof window !== 'undefined') {
+    isSupported()
+      .then((supported) => {
+        if (supported) {
+          analytics = getAnalytics(app);
+        }
+      })
+      .catch((err) => {
+        console.warn('Firebase Analytics not supported in this environment:', err);
+      });
+  }
 } catch (error) {
   console.warn('Firebase initialization notice: Running in integrated fallback mode.', error);
   // Re-attempt with minimum safe app
@@ -88,4 +105,5 @@ try {
   } catch {}
 }
 
-export { app, auth, db, storage, googleProvider };
+export { app, auth, db, storage, googleProvider, analytics };
+

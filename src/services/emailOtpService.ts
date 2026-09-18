@@ -146,9 +146,14 @@ class EmailOtpService {
     otp: string,
     purpose: EmailOtpRecord['purpose']
   ): Promise<{ delivered: boolean; provider: string; error?: string }> {
-    const resendApiKey = import.meta.env.VITE_RESEND_API_KEY || '';
+    const resendApiKey = (import.meta.env.VITE_RESEND_API_KEY || '').trim();
     const emailWebhookUrl = import.meta.env.VITE_EMAIL_WEBHOOK_URL || '';
-    const emailFrom = import.meta.env.VITE_EMAIL_FROM || 'Kogniti Minds <onboarding@resend.dev>';
+
+    // Sender resolution: Enforce verified custom domain (kognitiminds.com) to prevent Resend test-mode lockdown
+    let rawFrom = (import.meta.env.VITE_EMAIL_FROM || '').trim().replace(/^["']|["']$/g, '');
+    const emailFrom = (rawFrom && !rawFrom.includes('resend.dev') && !rawFrom.includes('example.com'))
+      ? rawFrom
+      : 'Kogniti Minds Security <security@kognitiminds.com>';
 
     const htmlContent = this.generateEmailHtml(otp, purpose);
     const subject = `Your Kogniti Minds Verification Code: ${otp}`;

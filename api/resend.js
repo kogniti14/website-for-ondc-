@@ -16,6 +16,23 @@ export default async function handler(req, res) {
     process.env.RESEND_API_KEY ||
     '';
 
+  let payload = {};
+  try {
+    payload = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+  } catch {
+    payload = req.body || {};
+  }
+
+  // Ensure 'from' address uses the verified domain (kognitiminds.com)
+  const envFrom = (process.env.VITE_EMAIL_FROM || process.env.EMAIL_FROM || '').trim().replace(/^["']|["']$/g, '');
+  const verifiedFrom = (envFrom && !envFrom.includes('resend.dev') && !envFrom.includes('example.com'))
+    ? envFrom
+    : 'Kogniti Minds Security <security@kognitiminds.com>';
+
+  if (!payload.from || payload.from.includes('resend.dev') || payload.from.includes('example.com')) {
+    payload.from = verifiedFrom;
+  }
+
   try {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -23,7 +40,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey.trim()}`,
       },
-      body: typeof req.body === 'string' ? req.body : JSON.stringify(req.body),
+      body: JSON.stringify(payload),
     });
 
     const data = await response.json().catch(() => ({}));

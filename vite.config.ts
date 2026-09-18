@@ -9,7 +9,10 @@ export default defineConfig({
       '/api/resend': {
         target: 'https://api.resend.com',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/resend/, ''),
+        rewrite: (path) => {
+          const sub = path.replace(/^\/api\/resend/, '');
+          return sub === '' || sub === '/' ? '/emails' : sub;
+        },
         secure: true,
       },
     },
