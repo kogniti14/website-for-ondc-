@@ -9,6 +9,7 @@ import { ShieldCheck, Lock } from 'lucide-react';
 // Layout Components
 import { Navbar } from './components/layout/Navbar';
 import { B2BNavbar } from './components/layout/B2BNavbar';
+import { MobileBottomBar } from './components/layout/MobileBottomBar';
 import { Footer } from './components/layout/Footer';
 import { PolicyModal } from './components/common/PolicyModal';
 
@@ -170,7 +171,7 @@ const MainApp: React.FC = () => {
       )}
 
       {/* 2. Main Page Content View */}
-      <main style={{ flex: '1 0 auto' }}>
+      <main className="has-mobile-bottom-bar" style={{ flex: '1 0 auto' }}>
         {/* --- B2C Views --- */}
         {activeTab === 'home' && (
           <HomePage
@@ -445,6 +446,18 @@ const MainApp: React.FC = () => {
           setB2bTab={setB2bTab}
           openPolicyModal={(type) => setPolicyModalType(type)}
           isB2B={activeTab === 'b2b'}
+        />
+      )}
+
+      {/* Handheld Device Mobile Bottom Navigation Bar */}
+      {activeTab !== 'admin' && (
+        <MobileBottomBar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          openAuthModal={() => handleOpenAuth('login')}
+          b2bTab={b2bTab}
+          setB2bTab={setB2bTab}
+          openB2BAuthModal={handleOpenB2BAuth}
         />
       )}
 

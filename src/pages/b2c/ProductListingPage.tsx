@@ -111,6 +111,115 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
       ? products.length
       : products.filter((p) => p.category === selectedCategory).length;
 
+  const renderFilterBody = () => (
+    <>
+      {/* Categories */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <label className="form-label" style={{ marginBottom: '0.5rem' }}>Categories</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.85rem' }}>
+          <label className="flex items-center justify-between gap-2" style={{ cursor: 'pointer' }}>
+            <div className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="cat"
+                checked={selectedCategory === 'All'}
+                onChange={() => setSelectedCategory('All')}
+              />
+              <span>All Categories</span>
+            </div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>({products.length})</span>
+          </label>
+          {categoryList.map((c) => {
+            const catCount = products.filter((p) => p.category === c.name).length;
+            return (
+              <label key={c.id} className="flex items-center justify-between gap-2" style={{ cursor: 'pointer' }}>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="cat"
+                    checked={selectedCategory === c.name}
+                    onChange={() => setSelectedCategory(c.name)}
+                  />
+                  <span>{c.name}</span>
+                </div>
+                {catCount === 0 ? (
+                  <span className="badge badge-amber" style={{ fontSize: '0.62rem', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
+                    Soon
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>({catCount})</span>
+                )}
+              </label>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Max Price Slider */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <div className="flex justify-between" style={{ marginBottom: '0.5rem' }}>
+          <label className="form-label">Max Price</label>
+          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)' }}>
+            ₹{priceRange.toLocaleString('en-IN')}
+          </span>
+        </div>
+        <input
+          type="range"
+          min={100}
+          max={100000}
+          step={500}
+          value={priceRange}
+          onChange={(e) => setPriceRange(Number(e.target.value))}
+          style={{ width: '100%', accentColor: 'var(--primary)' }}
+        />
+        <div className="flex justify-between text-slate-400" style={{ fontSize: '0.7rem' }}>
+          <span>₹100</span>
+          <span>₹1,00,000</span>
+        </div>
+      </div>
+
+      {/* Minimum Rating */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <label className="form-label" style={{ marginBottom: '0.5rem' }}>Customer Rating</label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.85rem' }}>
+          {[4.5, 4.0, 3.5].map((r) => (
+            <label key={r} className="flex items-center gap-2" style={{ cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="rating"
+                checked={minRating === r}
+                onChange={() => setMinRating(minRating === r ? 0 : r)}
+              />
+              <span className="flex items-center gap-1 text-amber-500">
+                <Star size={13} fill="#D97706" /> {r} & above
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Checkbox Options */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem' }}>
+        <label className="flex items-center gap-2" style={{ cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={onlyInStock}
+            onChange={(e) => setOnlyInStock(e.target.checked)}
+          />
+          <span>In Stock Only</span>
+        </label>
+        <label className="flex items-center gap-2" style={{ cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={onlyBestSellers}
+            onChange={(e) => setOnlyBestSellers(e.target.checked)}
+          />
+          <span>Best Sellers Only</span>
+        </label>
+      </div>
+    </>
+  );
+
   return (
     <div className="container" style={{ padding: '2.5rem 1.25rem 4rem' }}>
       {/* Header Banner */}
@@ -133,9 +242,17 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
           background: '#ffffff',
         }}
       >
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          {/* Search */}
-          <div style={{ position: 'relative', flex: '1 1 280px' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+          }}
+        >
+          {/* Search Bar */}
+          <div style={{ position: 'relative', flex: '1 1 240px' }}>
             <Search
               size={18}
               style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--slate-400)' }}
@@ -179,9 +296,22 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
             })}
           </div>
 
-          {/* Sort Dropdown */}
-          <div className="flex items-center gap-2">
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--slate-600)', whiteSpace: 'nowrap' }}>
+          {/* Controls: Filter button on mobile + Sort Dropdown */}
+          <div className="flex items-center gap-2" style={{ marginLeft: 'auto' }}>
+            <button
+              onClick={() => setMobileFilterOpen(true)}
+              className="btn btn-outline btn-sm hide-on-desktop-flex items-center gap-1.5"
+              style={{ padding: '0.45rem 0.75rem', fontSize: '0.85rem' }}
+              aria-label="Open filters"
+            >
+              <SlidersHorizontal size={15} />
+              <span>Filters</span>
+              {(selectedCategory !== 'All' || priceRange < 100000 || minRating > 0 || onlyInStock || onlyBestSellers) && (
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)' }} />
+              )}
+            </button>
+
+            <span className="hide-on-mobile" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--slate-600)', whiteSpace: 'nowrap' }}>
               Sort by:
             </span>
             <select
@@ -202,15 +332,8 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
       </div>
 
       {/* Main Layout: Sidebar Filters + Product Grid */}
-      <div
-        className="grid"
-        style={{
-          gridTemplateColumns: '260px 1fr',
-          gap: '2rem',
-          alignItems: 'start',
-        }}
-      >
-        {/* Sidebar Filters */}
+      <div className="product-catalog-layout">
+        {/* Sidebar Filters (Desktop) */}
         <aside
           className="card hide-on-mobile"
           style={{
@@ -233,111 +356,92 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
             </button>
           </div>
 
-          {/* Categories */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label className="form-label" style={{ marginBottom: '0.5rem' }}>Categories</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.85rem' }}>
-              <label className="flex items-center justify-between gap-2" style={{ cursor: 'pointer' }}>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="cat"
-                    checked={selectedCategory === 'All'}
-                    onChange={() => setSelectedCategory('All')}
-                  />
-                  <span>All Categories</span>
-                </div>
-                <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>({products.length})</span>
-              </label>
-              {categoryList.map((c) => {
-                const catCount = products.filter((p) => p.category === c.name).length;
-                return (
-                  <label key={c.id} className="flex items-center justify-between gap-2" style={{ cursor: 'pointer' }}>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name="cat"
-                        checked={selectedCategory === c.name}
-                        onChange={() => setSelectedCategory(c.name)}
-                      />
-                      <span>{c.name}</span>
-                    </div>
-                    {catCount === 0 ? (
-                      <span className="badge badge-amber" style={{ fontSize: '0.62rem', padding: '0.1rem 0.4rem', borderRadius: '4px' }}>
-                        Soon
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>({catCount})</span>
-                    )}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Max Price Slider */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <div className="flex justify-between" style={{ marginBottom: '0.5rem' }}>
-              <label className="form-label">Max Price</label>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)' }}>
-                ₹{priceRange.toLocaleString('en-IN')}
-              </span>
-            </div>
-            <input
-              type="range"
-              min={100}
-              max={100000}
-              step={500}
-              value={priceRange}
-              onChange={(e) => setPriceRange(Number(e.target.value))}
-              style={{ width: '100%', accentColor: 'var(--primary)' }}
-            />
-            <div className="flex justify-between text-slate-400" style={{ fontSize: '0.7rem' }}>
-              <span>₹100</span>
-              <span>₹1,00,000</span>
-            </div>
-          </div>
-
-          {/* Minimum Rating */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label className="form-label" style={{ marginBottom: '0.5rem' }}>Customer Rating</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', fontSize: '0.85rem' }}>
-              {[4.5, 4.0, 3.5].map((r) => (
-                <label key={r} className="flex items-center gap-2" style={{ cursor: 'pointer' }}>
-                  <input
-                    type="radio"
-                    name="rating"
-                    checked={minRating === r}
-                    onChange={() => setMinRating(minRating === r ? 0 : r)}
-                  />
-                  <span className="flex items-center gap-1 text-amber-500">
-                    <Star size={13} fill="#D97706" /> {r} & above
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Checkbox Options */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem' }}>
-            <label className="flex items-center gap-2" style={{ cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={onlyInStock}
-                onChange={(e) => setOnlyInStock(e.target.checked)}
-              />
-              <span>In Stock Only</span>
-            </label>
-            <label className="flex items-center gap-2" style={{ cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={onlyBestSellers}
-                onChange={(e) => setOnlyBestSellers(e.target.checked)}
-              />
-              <span>Best Sellers Only</span>
-            </label>
-          </div>
+          {renderFilterBody()}
         </aside>
+
+        {/* Mobile Filters Drawer Modal */}
+        {mobileFilterOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.6)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 9999,
+              display: 'flex',
+              justifyContent: 'flex-end',
+              animation: 'fadeIn 0.2s ease-out',
+            }}
+            onClick={() => setMobileFilterOpen(false)}
+          >
+            <div
+              style={{
+                width: '85%',
+                maxWidth: '340px',
+                height: '100%',
+                background: '#ffffff',
+                display: 'flex',
+                flexDirection: 'column',
+                boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
+                overflowY: 'auto',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                className="flex items-center justify-between p-4"
+                style={{
+                  borderBottom: '1px solid var(--border-color)',
+                  position: 'sticky',
+                  top: 0,
+                  background: '#ffffff',
+                  zIndex: 2,
+                }}
+              >
+                <div className="flex items-center gap-2 font-bold text-slate-800">
+                  <SlidersHorizontal size={18} />
+                  <span>Filters & Options</span>
+                </div>
+                <button
+                  onClick={() => setMobileFilterOpen(false)}
+                  className="btn btn-ghost btn-sm"
+                  style={{ padding: '0.25rem' }}
+                  aria-label="Close filters"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div style={{ padding: '1.25rem', flex: 1, overflowY: 'auto' }}>
+                {renderFilterBody()}
+              </div>
+
+              <div
+                style={{
+                  padding: '1rem 1.25rem',
+                  borderTop: '1px solid var(--border-color)',
+                  display: 'flex',
+                  gap: '0.75rem',
+                  background: '#ffffff',
+                  position: 'sticky',
+                  bottom: 0,
+                }}
+              >
+                <button
+                  onClick={handleResetFilters}
+                  className="btn btn-outline btn-sm flex-1"
+                >
+                  Reset
+                </button>
+                <button
+                  onClick={() => setMobileFilterOpen(false)}
+                  className="btn btn-primary btn-sm flex-1"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Product Grid Area */}
         <div>

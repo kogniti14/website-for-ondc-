@@ -128,7 +128,7 @@ export const CartPage: React.FC<CartPageProps> = ({
         <div
           className="grid"
           style={{
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
             gap: '2.5rem',
             alignItems: 'start',
           }}
@@ -286,9 +286,17 @@ export const CartPage: React.FC<CartPageProps> = ({
                           </button>
                         </div>
                       </div>
+
+                      {/* Mobile Item Total */}
+                      <div className="hide-on-desktop flex items-center justify-between" style={{ marginTop: '0.65rem', paddingTop: '0.4rem', borderTop: '1px dashed var(--border-color)' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)', fontWeight: 600 }}>Item Total:</span>
+                        <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>
+                          ₹{itemTotal.toLocaleString('en-IN')}
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Subtotal */}
+                    {/* Subtotal (Desktop) */}
                     <div style={{ textAlign: 'right', minWidth: '90px' }} className="hide-on-mobile">
                       <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--slate-900)' }}>
                         ₹{itemTotal.toLocaleString('en-IN')}

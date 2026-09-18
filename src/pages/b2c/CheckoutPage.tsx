@@ -586,7 +586,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
         <div
           className="grid"
           style={{
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
             gap: '2.5rem',
             alignItems: 'start',
           }}
@@ -641,7 +641,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                   </span>
                 </div>
 
-                <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem' }}>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label" style={{ fontWeight: 700 }}>
                       Company / Organization Name <span style={{ color: '#EF4444' }}>*</span>
@@ -714,7 +714,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                   <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Contact & Identity</h3>
                 </div>
 
-                <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem' }}>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label">Full Name *</label>
                     <input
@@ -772,7 +772,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                   <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Procurement Officer / Contact Person</h3>
                 </div>
 
-                <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1rem' }}>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label">Authorized Contact Person *</label>
                     <input
@@ -862,7 +862,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                 />
               </div>
 
-              <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: '0.75rem' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label">City *</label>
                   <input
@@ -922,7 +922,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                 </label>
 
                 {wantsGstInvoice && (
-                  <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem', marginTop: '1rem' }}>
+                  <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '0.75rem', marginTop: '1rem' }}>
                     <div className="form-group" style={{ marginBottom: 0 }}>
                       <label className="form-label">Company / Entity Name</label>
                       <input

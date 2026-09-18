@@ -104,8 +104,8 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div
             className="grid"
             style={{
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-              gap: '3rem',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
+              gap: '2.5rem',
               alignItems: 'center',
             }}
           >
@@ -408,7 +408,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div
             className="grid"
             style={{
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))',
               gap: '1.25rem',
             }}
           >
@@ -535,8 +535,8 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div
             className="grid"
             style={{
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-              gap: '3rem',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
+              gap: '2.5rem',
               alignItems: 'center',
             }}
           >
@@ -579,7 +579,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               <div
                 className="grid"
                 style={{
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))',
                   gap: '1.25rem',
                   marginBottom: '2.5rem',
                 }}
@@ -815,7 +815,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div
             className="grid"
             style={{
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
               gap: '1.5rem',
             }}
           >
@@ -931,7 +931,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div
             className="grid"
             style={{
-              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
               gap: '1.5rem',
             }}
           >
@@ -1088,7 +1088,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             <div
               className="grid"
               style={{
-                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
                 gap: '2rem',
               }}
             >
@@ -1269,7 +1269,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             <div
               className="grid"
               style={{
-                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
                 gap: '2rem',
               }}
             >

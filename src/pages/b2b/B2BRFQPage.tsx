@@ -314,7 +314,7 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
               </div>
 
               {/* Quantity & Target Price */}
-              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
+              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <div className="flex justify-between">
                     <label className="form-label" style={{ color: '#CBD5E1' }}>Required Quantity (Units) *</label>
@@ -348,7 +348,7 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
               </div>
 
               {/* Organization & Contact Details */}
-              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
+              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ color: '#CBD5E1' }}>Company / School / Entity Name *</label>
                   <input
@@ -403,7 +403,7 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
               </div>
 
               {/* Delivery Timeline & Pincode */}
-              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
+              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label className="form-label" style={{ color: '#CBD5E1' }}>Destination PIN Code *</label>
                   <input

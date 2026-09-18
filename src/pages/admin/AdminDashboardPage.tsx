@@ -2167,8 +2167,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               </button>
             </div>
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden', background: '#FFFFFF' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+            <div className="card table-responsive-wrapper" style={{ padding: 0, overflowX: 'auto', background: '#FFFFFF' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', minWidth: '700px' }}>
                 <thead>
                   <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                     <th style={{ padding: '0.75rem 1rem' }}>Product</th>
@@ -3530,8 +3530,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--slate-500)', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
                           Itemized Line Items ({q.items.length} Product{q.items.length !== 1 ? 's' : ''}):
                         </div>
-                        <div style={{ border: '1px solid var(--border-subtle)', borderRadius: '6px', overflow: 'hidden' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                        <div className="table-responsive-wrapper" style={{ border: '1px solid var(--border-subtle)', borderRadius: '6px', overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: '550px' }}>
                             <thead>
                               <tr style={{ background: 'var(--slate-50)', textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
                                 <th style={{ padding: '0.4rem 0.6rem' }}>Product</th>
@@ -6767,8 +6767,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             </div>
 
             {/* Products Table */}
-            <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden', marginBottom: '1.25rem' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+            <div className="table-responsive-wrapper" style={{ border: '1px solid var(--border-color)', borderRadius: '10px', overflowX: 'auto', marginBottom: '1.25rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: '450px' }}>
                 <thead>
                   <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                     <th style={{ padding: '0.65rem 0.85rem' }}>Product</th>
@@ -7729,8 +7729,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   </button>
                 </div>
 
-                <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                <div className="table-responsive-wrapper" style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: '650px' }}>
                     <thead>
                       <tr style={{ background: 'var(--slate-100)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                         <th style={{ padding: '0.6rem 0.75rem' }}>Product Selection</th>
@@ -8275,8 +8275,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   </button>
                 </div>
 
-                <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                <div className="table-responsive-wrapper" style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: '650px' }}>
                     <thead>
                       <tr style={{ background: 'var(--slate-50)', textAlign: 'left', borderBottom: '1px solid var(--border-color)' }}>
                         <th style={{ padding: '0.6rem 0.75rem', width: '38%' }}>Product</th>
@@ -8673,8 +8673,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   </button>
                 </div>
 
-                <div style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                <div className="table-responsive-wrapper" style={{ border: '1px solid var(--border-color)', borderRadius: '8px', overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: '650px' }}>
                     <thead>
                       <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
                         <th style={{ padding: '0.5rem 0.75rem' }}>Product</th>

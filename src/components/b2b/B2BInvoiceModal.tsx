@@ -285,6 +285,8 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '1rem',
               borderBottom: '2px solid #0284C7',
             }}
           >
@@ -331,7 +333,7 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1.2fr 1fr',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
               borderBottom: '1px solid #E2E8F0',
               fontSize: '0.82rem',
               lineHeight: '1.5',
@@ -398,7 +400,7 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
               borderBottom: '2px solid #E2E8F0',
               fontSize: '0.82rem',
               lineHeight: '1.5',
@@ -477,86 +479,88 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
           </div>
 
           {/* 4. Itemized Commercial Table */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-            <thead>
-              <tr
-                style={{
-                  backgroundColor: '#1E293B',
-                  color: '#FFFFFF',
-                  textAlign: 'left',
-                  borderBottom: '2px solid #0F172A',
-                }}
-              >
-                <th style={{ padding: '0.65rem 0.75rem', width: '30px' }}>#</th>
-                <th style={{ padding: '0.65rem 0.75rem' }}>Description of Goods & Specifications</th>
-                <th style={{ padding: '0.65rem 0.75rem', textAlign: 'center' }}>HSN</th>
-                <th style={{ padding: '0.65rem 0.75rem', textAlign: 'center' }}>Qty</th>
-                <th style={{ padding: '0.65rem 0.75rem', textAlign: 'right' }}>Wholesale Rate</th>
-                <th style={{ padding: '0.65rem 0.75rem', textAlign: 'center' }}>Tier Disc.</th>
-                <th style={{ padding: '0.65rem 0.75rem', textAlign: 'right' }}>Taxable Amt (₹)</th>
-                <th style={{ padding: '0.65rem 0.75rem', textAlign: 'center' }}>GST%</th>
-                <th style={{ padding: '0.65rem 0.75rem', textAlign: 'right' }}>Total (₹)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {order.items.map((item, idx) => {
-                const itemTaxable = item.effectiveUnitPrice * item.quantity;
-                return (
-                  <tr
-                    key={idx}
-                    style={{
-                      borderBottom: '1px solid #E2E8F0',
-                      backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
-                    }}
-                  >
-                    <td style={{ padding: '0.65rem 0.75rem', color: '#64748B' }}>{idx + 1}</td>
-                    <td style={{ padding: '0.65rem 0.75rem' }}>
-                      <div style={{ fontWeight: 700, color: '#0F172A' }}>{item.productName}</div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                        SKU: {item.sku} | Commercial Physical Goods
-                      </div>
-                    </td>
-                    <td style={{ padding: '0.65rem 0.75rem', textAlign: 'center', fontWeight: 600, color: '#475569' }}>
-                      {item.hsn}
-                    </td>
-                    <td style={{ padding: '0.65rem 0.75rem', textAlign: 'center', fontWeight: 700 }}>
-                      {item.quantity}
-                    </td>
-                    <td style={{ padding: '0.65rem 0.75rem', textAlign: 'right', color: '#64748B' }}>
-                      ₹{item.wholesalePrice?.toLocaleString('en-IN') || item.effectiveUnitPrice.toLocaleString('en-IN')}
-                    </td>
-                    <td style={{ padding: '0.65rem 0.75rem', textAlign: 'center' }}>
-                      <span
-                        className="badge"
-                        style={{
-                          backgroundColor: '#FEF3C7',
-                          color: '#B45309',
-                          fontSize: '0.7rem',
-                        }}
-                      >
-                        {item.tierDiscountPercent}% OFF
-                      </span>
-                    </td>
-                    <td style={{ padding: '0.65rem 0.75rem', textAlign: 'right', fontWeight: 600 }}>
-                      ₹{itemTaxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td style={{ padding: '0.65rem 0.75rem', textAlign: 'center', fontWeight: 600 }}>
-                      18%
-                    </td>
-                    <td style={{ padding: '0.65rem 0.75rem', textAlign: 'right', fontWeight: 800, color: '#0F172A' }}>
-                      ₹{item.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="table-responsive-wrapper">
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: '600px' }}>
+              <thead>
+                <tr
+                  style={{
+                    backgroundColor: '#1E293B',
+                    color: '#FFFFFF',
+                    textAlign: 'left',
+                    borderBottom: '2px solid #0F172A',
+                  }}
+                >
+                  <th style={{ padding: '0.65rem 0.75rem', width: '30px' }}>#</th>
+                  <th style={{ padding: '0.65rem 0.75rem' }}>Description of Goods & Specifications</th>
+                  <th style={{ padding: '0.65rem 0.75rem', textAlign: 'center' }}>HSN</th>
+                  <th style={{ padding: '0.65rem 0.75rem', textAlign: 'center' }}>Qty</th>
+                  <th style={{ padding: '0.65rem 0.75rem', textAlign: 'right' }}>Wholesale Rate</th>
+                  <th style={{ padding: '0.65rem 0.75rem', textAlign: 'center' }}>Tier Disc.</th>
+                  <th style={{ padding: '0.65rem 0.75rem', textAlign: 'right' }}>Taxable Amt (₹)</th>
+                  <th style={{ padding: '0.65rem 0.75rem', textAlign: 'center' }}>GST%</th>
+                  <th style={{ padding: '0.65rem 0.75rem', textAlign: 'right' }}>Total (₹)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {order.items.map((item, idx) => {
+                  const itemTaxable = item.effectiveUnitPrice * item.quantity;
+                  return (
+                    <tr
+                      key={idx}
+                      style={{
+                        borderBottom: '1px solid #E2E8F0',
+                        backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
+                      }}
+                    >
+                      <td style={{ padding: '0.65rem 0.75rem', color: '#64748B' }}>{idx + 1}</td>
+                      <td style={{ padding: '0.65rem 0.75rem' }}>
+                        <div style={{ fontWeight: 700, color: '#0F172A' }}>{item.productName}</div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                          SKU: {item.sku} | Commercial Physical Goods
+                        </div>
+                      </td>
+                      <td style={{ padding: '0.65rem 0.75rem', textAlign: 'center', fontWeight: 600, color: '#475569' }}>
+                        {item.hsn}
+                      </td>
+                      <td style={{ padding: '0.65rem 0.75rem', textAlign: 'center', fontWeight: 700 }}>
+                        {item.quantity}
+                      </td>
+                      <td style={{ padding: '0.65rem 0.75rem', textAlign: 'right', color: '#64748B' }}>
+                        ₹{item.wholesalePrice?.toLocaleString('en-IN') || item.effectiveUnitPrice.toLocaleString('en-IN')}
+                      </td>
+                      <td style={{ padding: '0.65rem 0.75rem', textAlign: 'center' }}>
+                        <span
+                          className="badge"
+                          style={{
+                            backgroundColor: '#FEF3C7',
+                            color: '#B45309',
+                            fontSize: '0.7rem',
+                          }}
+                        >
+                          {item.tierDiscountPercent}% OFF
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.65rem 0.75rem', textAlign: 'right', fontWeight: 600 }}>
+                        ₹{itemTaxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td style={{ padding: '0.65rem 0.75rem', textAlign: 'center', fontWeight: 600 }}>
+                        18%
+                      </td>
+                      <td style={{ padding: '0.65rem 0.75rem', textAlign: 'right', fontWeight: 800, color: '#0F172A' }}>
+                        ₹{item.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
           {/* 5. Statutory Tax Computation Grid */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1.2fr 1fr',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
               borderTop: '2px solid #E2E8F0',
               borderBottom: '1px solid #E2E8F0',
               fontSize: '0.82rem',

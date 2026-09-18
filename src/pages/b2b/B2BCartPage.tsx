@@ -218,7 +218,7 @@ export const B2BCartPage: React.FC<B2BCartPageProps> = ({
             </div>
           </div>
         ) : (
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'start' }}>
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '2rem', alignItems: 'start' }}>
             {/* Left Column: Cart Items */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {b2bCart.map((item) => {

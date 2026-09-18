@@ -288,15 +288,12 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: 'var(--radius-xl)',
                 padding: '1.5rem',
-                display: 'grid',
-                gridTemplateColumns: '160px 1fr auto',
-                gap: '1.5rem',
-                alignItems: 'center',
               }}
               className="b2b-catalog-row"
             >
               {/* Image */}
               <div
+                className="b2b-catalog-image"
                 style={{
                   width: '160px',
                   height: '140px',
@@ -360,6 +357,7 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
 
               {/* Right Pricing & Actions */}
               <div
+                className="b2b-catalog-actions"
                 style={{
                   minWidth: '220px',
                   paddingLeft: '1.5rem',

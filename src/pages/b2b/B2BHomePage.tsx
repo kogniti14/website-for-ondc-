@@ -235,7 +235,7 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
             <div
               className="grid"
               style={{
-                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))',
                 gap: '1.25rem',
                 paddingTop: '2.5rem',
                 borderTop: '1px solid rgba(255, 255, 255, 0.1)',
@@ -290,7 +290,7 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
           <div
             className="grid"
             style={{
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
               gap: '1.5rem',
             }}
           >
@@ -486,7 +486,7 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
             </button>
           </div>
 
-          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))', gap: '1.5rem' }}>
             {products.slice(0, 4).map((p) => (
               <div
                 key={p.id}
@@ -588,7 +588,7 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
           <div
             className="grid"
             style={{
-              gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))',
               gap: '2rem',
             }}
           >
@@ -731,7 +731,7 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
             <div
               className="grid"
               style={{
-                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
                 gap: '2rem',
               }}
             >
@@ -928,7 +928,7 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
             <div
               className="grid"
               style={{
-                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
                 gap: '2rem',
               }}
             >

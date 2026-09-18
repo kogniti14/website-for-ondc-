@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Building2,
   FileText,
@@ -12,6 +12,9 @@ import {
   Tag,
   ShieldCheck,
   Award,
+  Menu,
+  X,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -32,6 +35,7 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
 }) => {
   const { role, b2bBusiness, logout } = useAuth();
   const { b2bCount, getB2BCalculations } = useCart();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const b2bCalculations = getB2BCalculations();
 
   return (
@@ -138,7 +142,7 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
                   ENTERPRISE
                 </span>
               </div>
-              <div style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
+              <div className="hide-on-mobile" style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
                 Wholesale, Slabs & Institutional Quotations
               </div>
             </div>
@@ -328,12 +332,159 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
                 className="btn btn-amber btn-sm"
                 style={{ borderRadius: 'var(--radius-full)' }}
               >
-                <UserCheck size={16} /> Business Login / Register
+                <UserCheck size={16} /> <span className="hide-on-mobile">Business Login / Register</span><span className="hide-on-desktop">Login</span>
               </button>
             )}
+
+            {/* Mobile Navigation Menu Toggle */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="btn btn-sm"
+              style={{
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                borderRadius: '8px',
+                padding: '0.45rem',
+              }}
+              id="mobile-nav-toggle"
+              aria-label="Toggle B2B navigation menu"
+            >
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Mobile Drawer Navigation for B2B */}
+      {mobileMenuOpen && (
+        <div
+          style={{
+            background: '#0F172A',
+            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            padding: '1rem 1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem',
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+        >
+          <button
+            onClick={() => {
+              onSwitchToB2C();
+              setMobileMenuOpen(false);
+            }}
+            className="btn btn-sm"
+            style={{
+              justifyContent: 'flex-start',
+              background: 'rgba(96, 165, 250, 0.15)',
+              color: '#93C5FD',
+              border: '1px solid rgba(96, 165, 250, 0.3)',
+            }}
+          >
+            <ArrowLeft size={16} /> Switch to Consumer Store (B2C)
+          </button>
+
+          <button
+            onClick={() => {
+              setB2bTab('overview');
+              setMobileMenuOpen(false);
+            }}
+            className="btn btn-secondary"
+            style={{ justifyContent: 'flex-start', background: 'rgba(255, 255, 255, 0.08)', color: '#FFFFFF' }}
+          >
+            B2B Overview
+          </button>
+
+          <button
+            onClick={() => {
+              setB2bTab('catalog');
+              setMobileMenuOpen(false);
+            }}
+            className="btn btn-secondary"
+            style={{ justifyContent: 'flex-start', background: 'rgba(255, 255, 255, 0.08)', color: '#FFFFFF' }}
+          >
+            Wholesale Catalog
+          </button>
+
+          <button
+            onClick={() => {
+              setB2bTab('rfq');
+              setMobileMenuOpen(false);
+            }}
+            className="btn btn-secondary"
+            style={{ justifyContent: 'flex-start', background: 'rgba(255, 255, 255, 0.08)', color: '#FFFFFF' }}
+          >
+            <FileText size={16} className="text-amber-400" /> Request a Quote (RFQ)
+          </button>
+
+          <button
+            onClick={() => {
+              setB2bTab('dashboard');
+              setMobileMenuOpen(false);
+            }}
+            className="btn btn-secondary"
+            style={{ justifyContent: 'flex-start', background: 'rgba(255, 255, 255, 0.08)', color: '#FFFFFF' }}
+          >
+            Business Dashboard & Quotations
+          </button>
+
+          <button
+            onClick={() => {
+              setB2bTab('stories');
+              setMobileMenuOpen(false);
+            }}
+            className="btn btn-secondary"
+            style={{ justifyContent: 'flex-start', background: 'rgba(255, 255, 255, 0.08)', color: '#FFFFFF' }}
+          >
+            <Sparkles size={16} className="text-amber-400" /> Success Stories
+          </button>
+
+          <button
+            onClick={() => {
+              setB2bTab('certifications');
+              setMobileMenuOpen(false);
+            }}
+            className="btn btn-secondary"
+            style={{ justifyContent: 'flex-start', background: 'rgba(255, 255, 255, 0.08)', color: '#34D399' }}
+          >
+            <Award size={16} className="text-emerald-400" /> Certifications & Compliance
+          </button>
+
+          <button
+            onClick={() => {
+              setB2bTab('cart');
+              setMobileMenuOpen(false);
+            }}
+            className="btn btn-secondary"
+            style={{ justifyContent: 'flex-start', background: 'rgba(255, 255, 255, 0.08)', color: '#FFFFFF' }}
+          >
+            <ShoppingCart size={16} /> B2B Cart ({b2bCount} items)
+          </button>
+
+          {role === 'b2b' && b2bBusiness ? (
+            <button
+              onClick={() => {
+                logout();
+                setMobileMenuOpen(false);
+              }}
+              className="btn btn-outline"
+              style={{ color: '#F87171', borderColor: 'rgba(248, 113, 113, 0.3)', justifyContent: 'flex-start' }}
+            >
+              <LogOut size={16} /> Sign Out ({b2bBusiness.companyName})
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                openB2BAuthModal();
+                setMobileMenuOpen(false);
+              }}
+              className="btn btn-amber"
+            >
+              <UserCheck size={16} /> Business Login / Register
+            </button>
+          )}
+        </div>
+      )}
     </header>
   );
 };

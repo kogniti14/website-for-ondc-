@@ -101,7 +101,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         <div
           className="grid"
           style={{
-            gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))',
             gap: '2rem',
           }}
         >
@@ -297,7 +297,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             </div>
 
             {/* Quantity Selector & Action Buttons */}
-            <div className="flex items-center gap-3" style={{ marginBottom: '1.25rem' }}>
+            <div className="flex items-center gap-3 flex-wrap" style={{ marginBottom: '1.25rem' }}>
               <div
                 className="flex items-center"
                 style={{

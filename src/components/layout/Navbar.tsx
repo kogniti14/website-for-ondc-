@@ -119,6 +119,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </div>
               <div
+                className="hide-on-mobile"
                 style={{
                   fontSize: '0.72rem',
                   color: 'var(--slate-500)',
@@ -192,7 +193,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Prominent B2B Portal Switch Button */}
             <button
               onClick={() => setActiveTab('b2b')}
-              className="btn btn-b2b btn-sm"
+              className="btn btn-b2b btn-sm hide-on-mobile"
               style={{
                 borderRadius: 'var(--radius-full)',
                 padding: '0.45rem 1rem',
@@ -453,8 +454,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="btn btn-outline btn-sm"
-              style={{ display: 'none', padding: '0.45rem' }}
+              style={{ padding: '0.45rem', borderRadius: '8px' }}
               id="mobile-nav-toggle"
+              aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
