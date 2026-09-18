@@ -376,23 +376,47 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
             </div>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem', marginBottom: '1.2rem' }}>
               <li>
-                <button onClick={() => openPolicyModal('privacy')} style={{ color: '#94A3B8' }}>
-                  Privacy Policy
+                <button
+                  onClick={() => {
+                    setActiveTab('terms');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ color: '#94A3B8', cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit', textAlign: 'left' }}
+                >
+                  📜 Terms & Conditions
                 </button>
               </li>
               <li>
-                <button onClick={() => openPolicyModal('terms')} style={{ color: '#94A3B8' }}>
-                  Terms & Conditions
+                <button
+                  onClick={() => {
+                    setActiveTab('privacy');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ color: '#94A3B8', cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit', textAlign: 'left' }}
+                >
+                  🔒 Privacy Policy
                 </button>
               </li>
               <li>
-                <button onClick={() => openPolicyModal('shipping')} style={{ color: '#94A3B8' }}>
-                  Shipping & Logistics Policy
+                <button
+                  onClick={() => {
+                    setActiveTab('refund');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ color: '#94A3B8', cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit', textAlign: 'left' }}
+                >
+                  🔄 Refund & Return Policy
                 </button>
               </li>
               <li>
-                <button onClick={() => openPolicyModal('refund')} style={{ color: '#94A3B8' }}>
-                  Return & Refund Policy
+                <button
+                  onClick={() => {
+                    setActiveTab('shipping');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ color: '#94A3B8', cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit', textAlign: 'left' }}
+                >
+                  🚚 Shipping & Logistics Policy
                 </button>
               </li>
             </ul>

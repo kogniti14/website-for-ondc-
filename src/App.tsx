@@ -42,6 +42,9 @@ import { B2BCertificationsPage } from './pages/b2b/B2BCertificationsPage';
 // Admin Page
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 
+// Legal & Policy Pages
+import { LegalPolicyPage } from './pages/legal/LegalPolicyPage';
+
 // Gallery & Certification Components
 import { StoryDetailModal } from './components/gallery/StoryDetailModal';
 import { CertificateDetailModal } from './components/certification/CertificateDetailModal';
@@ -94,6 +97,19 @@ const MainApp: React.FC = () => {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab, b2bTab]);
+
+  // Support direct hash navigation for policies (e.g. #terms, #privacy, #refund, #shipping)
+  useEffect(() => {
+    const handleHashCheck = () => {
+      const hash = window.location.hash.replace('#', '').toLowerCase();
+      if (['terms', 'privacy', 'refund', 'shipping'].includes(hash)) {
+        setActiveTab(hash);
+      }
+    };
+    handleHashCheck();
+    window.addEventListener('hashchange', handleHashCheck);
+    return () => window.removeEventListener('hashchange', handleHashCheck);
+  }, []);
 
   // Handlers
   const handleOpenProduct = (p: Product) => {
@@ -287,6 +303,20 @@ const MainApp: React.FC = () => {
           <CustomerDashboardPage
             orders={b2cOrders}
             setActiveTab={setActiveTab}
+          />
+        )}
+
+        {/* --- Legal & Statutory Policy Pages --- */}
+        {(activeTab === 'terms' || activeTab === 'privacy' || activeTab === 'refund' || activeTab === 'shipping') && (
+          <LegalPolicyPage
+            initialPolicy={activeTab as 'terms' | 'privacy' | 'refund' | 'shipping'}
+            onBackHome={() => {
+              window.history.replaceState(null, '', window.location.pathname);
+              setActiveTab('home');
+            }}
+            onNavigatePolicy={(policyId) => {
+              setActiveTab(policyId);
+            }}
           />
         )}
 
@@ -499,6 +529,10 @@ const MainApp: React.FC = () => {
         <PolicyModal
           type={policyModalType}
           onClose={() => setPolicyModalType(null)}
+          onOpenFullPage={(type) => {
+            setPolicyModalType(null);
+            setActiveTab(type);
+          }}
         />
       )}
 

@@ -1,123 +1,44 @@
 import React from 'react';
-import { X, ShieldCheck, FileText, Truck, RotateCcw } from 'lucide-react';
-import { getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
+import { X, ShieldCheck, FileText, Truck, RotateCcw, ExternalLink } from 'lucide-react';
+import { LEGAL_POLICIES } from '../../data/legalPolicies';
+import { getWhatsAppDisplayNumber, getTelUrl } from '../../config/whatsappConfig';
 
 interface PolicyModalProps {
   type: 'privacy' | 'terms' | 'shipping' | 'refund';
   onClose: () => void;
+  onOpenFullPage?: (type: 'privacy' | 'terms' | 'shipping' | 'refund') => void;
 }
 
-export const PolicyModal: React.FC<PolicyModalProps> = ({ type, onClose }) => {
-  const getPolicyContent = () => {
+export const PolicyModal: React.FC<PolicyModalProps> = ({ type, onClose, onOpenFullPage }) => {
+  const policy = LEGAL_POLICIES[type];
+
+  const getIcon = () => {
     switch (type) {
       case 'privacy':
-        return {
-          title: 'Privacy Policy',
-          icon: <ShieldCheck size={24} className="text-emerald-600" />,
-          content: (
-            <div>
-              <p style={{ marginBottom: '1rem', lineHeight: '1.6' }}>
-                Kogniti Minds Private Limited ("we", "us", "our") is committed to protecting your privacy in compliance with the Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules, 2011 and applicable Indian laws.
-              </p>
-              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>1. Data Collection</h4>
-              <p style={{ lineHeight: '1.6', marginBottom: '0.75rem' }}>
-                We collect personal information such as name, shipping address, billing address, phone number, email address, and (for business accounts) organization name, GSTIN, PAN, and corporate documents for tax compliance and order fulfillment.
-              </p>
-              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>2. Use of Information</h4>
-              <p style={{ lineHeight: '1.6', marginBottom: '0.75rem' }}>
-                Information is strictly used for order processing, logistics coordination with courier partners (Delhivery, Blue Dart), issuing statutory GST tax invoices, and providing post-delivery warranty support. We never sell customer or corporate transaction records to third parties.
-              </p>
-              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>3. Data Security</h4>
-              <p style={{ lineHeight: '1.6' }}>
-                All payment transactions are encrypted using 256-bit SSL protocols. We do not store complete credit card or debit card numbers on our servers; payments are processed directly through licensed Indian payment aggregators.
-              </p>
-            </div>
-          ),
-        };
+        return <ShieldCheck size={24} className="text-emerald-600" />;
       case 'terms':
-        return {
-          title: 'Terms & Conditions',
-          icon: <FileText size={24} className="text-blue-600" />,
-          content: (
-            <div>
-              <p style={{ marginBottom: '1rem', lineHeight: '1.6' }}>
-                Welcome to Kogniti Minds Private Limited. By accessing our B2C store or B2B enterprise portal, you agree to be bound by these Terms of Service and all applicable Indian statutory guidelines.
-              </p>
-              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>1. Contract of Sale</h4>
-              <p style={{ lineHeight: '1.6', marginBottom: '0.75rem' }}>
-                Placement of an order constitutes an offer to purchase. Acceptance occurs when we dispatch the physical goods and transmit the statutory GST invoice containing carrier tracking numbers.
-              </p>
-              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>2. B2B Commercial Orders & Quotations</h4>
-              <p style={{ lineHeight: '1.6', marginBottom: '0.75rem' }}>
-                B2B accounts require verified GSTIN identification. Accepted quotations and Purchase Orders (POs) represent legally binding commercial contracts under the Indian Contract Act, 1872. Net credit payment terms are strictly subject to compliance verification.
-              </p>
-              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>3. Jurisdiction</h4>
-              <p style={{ lineHeight: '1.6' }}>
-                Any legal disputes arising from transactions on this platform shall be subject to the exclusive jurisdiction of the competent courts in Gautam Buddha Nagar, Uttar Pradesh, India.
-              </p>
-            </div>
-          ),
-        };
+        return <FileText size={24} className="text-blue-600" />;
       case 'shipping':
-        return {
-          title: 'Shipping & Logistics Policy',
-          icon: <Truck size={24} className="text-amber-600" />,
-          content: (
-            <div>
-              <p style={{ marginBottom: '1rem', lineHeight: '1.6' }}>
-                Kogniti Minds Private Limited operates an integrated surface and express freight logistics network covering over 19,000 PIN codes across all Indian states and Union Territories.
-              </p>
-              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>1. Delivery Timelines</h4>
-              <p style={{ lineHeight: '1.6', marginBottom: '0.75rem' }}>
-                • Metro cities (Bengaluru, Delhi NCR, Mumbai, Hyderabad, Chennai, Kolkata): 2 to 4 business days.<br />
-                • Tier 2 & Tier 3 cities: 3 to 6 business days.<br />
-                • Institutional pallet freight (bulk paper reams, institutional supply cartons): Scheduled delivery within 4 to 6 business days.
-              </p>
-              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>2. Free Shipping & Institutional Support</h4>
-              <p style={{ lineHeight: '1.6', marginBottom: '0.75rem' }}>
-                FREE PAN-INDIA DELIVERY on Orders Above ₹1,999. All retail consumer orders with net value exceeding ₹1,999 qualify for complimentary zero-fee delivery. 100% GENUINE PRODUCTS | GST Invoice Available with input credit. For bulk corporate procurement or B2B & INSTITUTIONAL ENQUIRIES, please contact: {getWhatsAppDisplayNumber()} or sales@kognitiminds.com.
-              </p>
-              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>3. Transit Tracking</h4>
-              <p style={{ lineHeight: '1.6' }}>
-                Every dispatched consignment is allocated a live Air Waybill (AWB) number through Delhivery or Blue Dart, trackable in real-time under your My Orders tab.
-              </p>
-            </div>
-          ),
-        };
+        return <Truck size={24} className="text-amber-600" />;
       case 'refund':
-        return {
-          title: 'Return & Refund Policy',
-          icon: <RotateCcw size={24} className="text-purple-600" />,
-          content: (
-            <div>
-              <p style={{ marginBottom: '1rem', lineHeight: '1.6' }}>
-                We stand behind the quality of every sustainable paper and stationery product manufactured and distributed by Kogniti Minds Private Limited.
-              </p>
-              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>1. 7-Day Replacement Guarantee</h4>
-              <p style={{ lineHeight: '1.6', marginBottom: '0.75rem' }}>
-                If any product arrives physically damaged in transit, defective, or mismatching specifications, report it within 7 calendar days of delivery for a 100% free doorstep replacement.
-              </p>
-              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>2. Refunds Processing</h4>
-              <p style={{ lineHeight: '1.6', marginBottom: '0.75rem' }}>
-                If a replacement cannot be fulfilled due to inventory constraints, a complete refund will be credited back to your original payment source (UPI account or Card) within 3 to 5 banking days.
-              </p>
-              <h4 style={{ fontWeight: 700, margin: '1rem 0 0.5rem' }}>3. Quality Guarantee</h4>
-              <p style={{ lineHeight: '1.6' }}>
-                Products are protected by strict manufacturer quality guarantees. Dedicated institutional customer support and batch replacement support are provided for corporate and educational bulk orders.
-              </p>
-            </div>
-          ),
-        };
+        return <RotateCcw size={24} className="text-purple-600" />;
     }
   };
-
-  const policy = getPolicyContent();
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
         className="modal-content"
-        style={{ maxWidth: '650px', padding: '2.5rem', position: 'relative' }}
+        style={{
+          maxWidth: '750px',
+          width: '94%',
+          padding: '2rem',
+          position: 'relative',
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: '16px',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -136,11 +57,13 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ type, onClose }) => {
             justifyContent: 'center',
             cursor: 'pointer',
           }}
+          aria-label="Close modal"
         >
           <X size={18} className="text-slate-600" />
         </button>
 
-        <div className="flex items-center gap-3" style={{ marginBottom: '1.5rem' }}>
+        {/* Modal Header */}
+        <div className="flex items-center gap-3" style={{ marginBottom: '1.25rem', paddingRight: '2rem' }}>
           <div
             style={{
               width: '46px',
@@ -150,25 +73,165 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ type, onClose }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexShrink: 0,
             }}
           >
-            {policy.icon}
+            {getIcon()}
           </div>
           <div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+            <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--slate-900)', lineHeight: 1.2 }}>
               {policy.title}
             </h2>
-            <div style={{ fontSize: '0.78rem', color: 'var(--slate-500)' }}>
-              Kogniti Minds Private Limited Compliance & Legal Disclosures
+            <div style={{ fontSize: '0.76rem', color: 'var(--slate-500)', marginTop: '2px' }}>
+              Effective: {policy.effectiveDate} | KOGNITI MINDS PRIVATE LIMITED
             </div>
           </div>
         </div>
 
-        <div style={{ fontSize: '0.88rem', color: 'var(--slate-700)', maxHeight: '60vh', overflowY: 'auto', paddingRight: '0.5rem' }}>
-          {policy.content}
+        {/* Modal Body */}
+        <div
+          style={{
+            fontSize: '0.86rem',
+            color: 'var(--slate-700)',
+            overflowY: 'auto',
+            paddingRight: '0.5rem',
+            flex: '1 1 auto',
+            lineHeight: 1.65,
+          }}
+        >
+          <div
+            style={{
+              background: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              padding: '0.75rem 1rem',
+              borderRadius: '8px',
+              marginBottom: '1.25rem',
+              fontSize: '0.82rem',
+              color: '#334155',
+            }}
+          >
+            {policy.summary}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {policy.sections.map((section) => (
+              <div key={section.id}>
+                {section.partTitle && (
+                  <div
+                    style={{
+                      display: 'inline-block',
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      color: '#065F46',
+                      background: '#ECFDF5',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      marginBottom: '0.35rem',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    {section.partTitle}
+                  </div>
+                )}
+                <h4 style={{ fontWeight: 700, color: 'var(--slate-900)', marginBottom: '0.4rem', fontSize: '0.94rem' }}>
+                  {section.title}
+                </h4>
+                {section.content.map((p, pIdx) => (
+                  <p key={pIdx} style={{ marginBottom: '0.5rem', fontSize: '0.84rem' }}>
+                    {p}
+                  </p>
+                ))}
+                {section.bullets && (
+                  <ul style={{ paddingLeft: '1.2rem', marginBottom: '0.5rem', fontSize: '0.82rem' }}>
+                    {section.bullets.map((b, bIdx) => (
+                      <li key={bIdx} style={{ marginBottom: '0.25rem' }}>{b}</li>
+                    ))}
+                  </ul>
+                )}
+                {section.importantNotice && (
+                  <div
+                    style={{
+                      background: '#FEF2F2',
+                      borderLeft: '3px solid #EF4444',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '0 6px 6px 0',
+                      fontSize: '0.8rem',
+                      color: '#991B1B',
+                      fontWeight: 600,
+                      marginTop: '0.4rem',
+                    }}
+                  >
+                    {section.importantNotice}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Contact Details (No "Officer" anywhere) */}
+          <div
+            style={{
+              marginTop: '1.5rem',
+              padding: '1rem',
+              background: '#F1F5F9',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+            }}
+          >
+            <div style={{ fontWeight: 700, color: 'var(--slate-900)', marginBottom: '0.4rem' }}>
+              Policy & Grievance Contact:
+            </div>
+            <div>{policy.contact.entity}</div>
+            <div>
+              Email:{' '}
+              <a href={`mailto:${policy.contact.email}`} style={{ color: '#0284C7', textDecoration: 'underline' }}>
+                {policy.contact.email}
+              </a>
+            </div>
+            <div>
+              Phone:{' '}
+              <a href={getTelUrl()} style={{ color: '#059669', fontWeight: 600 }}>
+                {getWhatsAppDisplayNumber()}
+              </a>
+            </div>
+          </div>
         </div>
 
-        <div style={{ marginTop: '2rem', textAlign: 'right', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+        {/* Modal Footer */}
+        <div
+          style={{
+            marginTop: '1.25rem',
+            borderTop: '1px solid var(--border-color)',
+            paddingTop: '1rem',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+          }}
+        >
+          {onOpenFullPage ? (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenFullPage(type);
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#065F46',
+                fontWeight: 700,
+                fontSize: '0.82rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              <ExternalLink size={14} /> Open Dedicated Page
+            </button>
+          ) : <div />}
+
           <button onClick={onClose} className="btn btn-primary btn-sm">
             Understood & Close
           </button>
