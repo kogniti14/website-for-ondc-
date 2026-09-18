@@ -13,6 +13,7 @@ import {
   Tag,
 } from 'lucide-react';
 import { storageService } from '../../services/storageService';
+import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
 
 interface FooterProps {
   setActiveTab: (tab: string) => void;
@@ -171,8 +172,17 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
                   B2B & INSTITUTIONAL ENQUIRIES
                 </div>
                 <div style={{ fontSize: '0.78rem' }}>
-                  <a href="tel:+919931648595" style={{ color: '#A5B4FC', fontWeight: 600 }}>
-                    +91 9931648595
+                  <a href={getTelUrl()} style={{ color: '#A5B4FC', fontWeight: 600 }}>
+                    {getWhatsAppDisplayNumber()}
+                  </a>{' '}
+                  |{' '}
+                  <a
+                    href={getWhatsAppUrl("Hello Kogniti Minds, I have a B2B & Institutional Enquiry.")}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#86EFAC', fontWeight: 600 }}
+                  >
+                    WhatsApp Chat
                   </a>{' '}
                   | sales@kognitiminds.com
                 </div>
@@ -398,7 +408,10 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
                 <Mail size={14} className="text-emerald-400" /> <span>Accounts & Billing: <a href="mailto:accounts@kognitiminds.com" style={{ color: '#E2E8F0', textDecoration: 'underline' }}>accounts@kognitiminds.com</a></span>
               </div>
               <div className="flex items-center gap-2">
-                <Phone size={14} className="text-emerald-400" /> <span>Enquiries / Helpline: <a href="tel:+919931648595" style={{ color: '#F1F5F9', fontWeight: 600 }}>+91 9931648595</a></span>
+                <Phone size={14} className="text-emerald-400" /> <span>Enquiries / Helpline: <a href={getTelUrl()} style={{ color: '#F1F5F9', fontWeight: 600 }}>{getWhatsAppDisplayNumber()}</a></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span style={{ color: '#25D366' }}>💬</span> <span>WhatsApp Business: <a href={getWhatsAppUrl("Hello Kogniti Minds, I would like to enquire about your products.")} target="_blank" rel="noopener noreferrer" style={{ color: '#86EFAC', fontWeight: 600, textDecoration: 'underline' }}>{getWhatsAppDisplayNumber()} (Click to Chat)</a></span>
               </div>
               <div className="flex items-start gap-2" style={{ marginTop: '0.35rem' }}>
                 <MapPin size={14} className="text-amber-400" style={{ flexShrink: 0, marginTop: '3px' }} />

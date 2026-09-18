@@ -17,6 +17,7 @@ import { Product, B2BQuotation } from '../../types';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { storageService } from '../../services/storageService';
+import { WHATSAPP_NUMBER } from '../../config/whatsappConfig';
 
 interface B2BCartPageProps {
   products: Product[];
@@ -84,7 +85,7 @@ export const B2BCartPage: React.FC<B2BCartPageProps> = ({
       businessName: b2bBusiness?.companyName || 'Institutional Client',
       contactPerson: b2bBusiness?.contactPerson || 'Procurement Officer',
       email: b2bBusiness?.businessEmail || 'procurement@business.com',
-      phone: b2bBusiness?.mobile || '9931648595',
+      phone: b2bBusiness?.mobile || WHATSAPP_NUMBER,
       deliveryPincode: b2bBusiness?.shippingAddress?.pincode || '201301',
       productId: firstProduct?.id,
       productName: firstProduct?.name || 'Multi-Item Institutional Bulk Order',

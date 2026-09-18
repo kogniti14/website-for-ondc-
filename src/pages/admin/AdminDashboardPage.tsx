@@ -55,6 +55,7 @@ import { GalleryManagement } from '../../components/admin/GalleryManagement';
 import { CertificationManagement } from '../../components/admin/CertificationManagement';
 import { CategoryManager } from '../../components/admin/CategoryManager';
 import { AdminNavSlider } from '../../components/admin/AdminNavSlider';
+import { WHATSAPP_NUMBER } from '../../config/whatsappConfig';
 
 interface AdminDashboardPageProps {
   products: Product[];
@@ -429,7 +430,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     const billingAddress: B2CAddress = {
       id: `addr_bill_${Date.now()}`,
       fullName: quoteContactPerson || quoteBusinessName,
-      phone: quoteContactPhone || '9931648595',
+      phone: quoteContactPhone || WHATSAPP_NUMBER,
       street: quoteBillingStreet || 'Commercial Hub',
       city: quoteBillingCity || 'Noida',
       state: quoteBillingState || 'Uttar Pradesh',
@@ -442,7 +443,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       : {
           id: `addr_ship_${Date.now()}`,
           fullName: quoteContactPerson || quoteBusinessName,
-          phone: quoteContactPhone || '9931648595',
+          phone: quoteContactPhone || WHATSAPP_NUMBER,
           street: quoteShippingStreet || quoteBillingStreet || 'Commercial Hub',
           city: quoteShippingCity || quoteBillingCity || 'Noida',
           state: quoteShippingState || quoteBillingState || 'Uttar Pradesh',
@@ -6446,7 +6447,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           orderNumber={`KM-TEST-${Math.floor(1000 + Math.random() * 9000)}`}
           customerName="Admin Portal Tester"
           customerEmail="admin@kognitiminds.com"
-          customerPhone="9931648595"
+          customerPhone={WHATSAPP_NUMBER}
           description="Admin Gateway Diagnostic Test Transaction"
           isB2B={false}
           onSuccess={(response) => {

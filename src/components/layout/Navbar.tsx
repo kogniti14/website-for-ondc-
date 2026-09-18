@@ -21,6 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { storageService } from '../../services/storageService';
+import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
 
 interface NavbarProps {
   activeTab: string;
@@ -70,8 +71,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Building2 size={14} className="text-blue-400" />
           <span>
             B2B & INSTITUTIONAL ENQUIRIES:{' '}
-            <a href="tel:+919931648595" style={{ color: '#93C5FD', fontWeight: 700, textDecoration: 'underline' }}>
-              +91 9931648595
+            <a href={getTelUrl()} style={{ color: '#93C5FD', fontWeight: 700, textDecoration: 'underline' }}>
+              {getWhatsAppDisplayNumber()}
+            </a>
+            {' | '}
+            <a
+              href={getWhatsAppUrl("Hello Kogniti Minds, I would like to enquire about your tree-free agro paper products.")}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#86EFAC', fontWeight: 700, textDecoration: 'underline' }}
+              title="Chat with us on WhatsApp"
+            >
+              WhatsApp
             </a>
           </span>
         </span>

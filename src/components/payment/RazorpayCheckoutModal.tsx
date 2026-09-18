@@ -19,6 +19,7 @@ import {
   RazorpayConfig,
   RazorpayPaymentSuccessResponse,
 } from '../../services/razorpayService';
+import { WHATSAPP_NUMBER } from '../../config/whatsappConfig';
 
 interface RazorpayCheckoutModalProps {
   isOpen: boolean;
@@ -141,7 +142,7 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
         orderType: isB2B ? 'b2b' : 'b2c',
         customerName: customerName || 'Valued Customer',
         customerEmail: customerEmail || 'customer@kognitiminds.com',
-        customerPhone: customerPhone || '9931648595',
+        customerPhone: customerPhone || WHATSAPP_NUMBER,
         amount,
         currency: 'INR',
         method: methodLabel,

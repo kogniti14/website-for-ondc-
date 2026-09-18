@@ -22,6 +22,7 @@ import { useAuth } from '../../context/AuthContext';
 import { storageService } from '../../services/storageService';
 import { razorpayService, RazorpayPaymentSuccessResponse } from '../../services/razorpayService';
 import { RazorpayCheckoutModal } from '../../components/payment/RazorpayCheckoutModal';
+import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
 
 interface CheckoutPageProps {
   products: Product[];
@@ -1304,8 +1305,17 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                   <Building2 size={14} className="text-amber-600 flex-shrink-0" />
                   <span>
                     B2B & INSTITUTIONAL ENQUIRIES:{' '}
-                    <a href="tel:+919931648595" style={{ color: 'var(--primary-600)', fontWeight: 700 }}>
-                      +91 9931648595
+                    <a href={getTelUrl()} style={{ color: 'var(--primary-600)', fontWeight: 700 }}>
+                      {getWhatsAppDisplayNumber()}
+                    </a>
+                    {' | '}
+                    <a
+                      href={getWhatsAppUrl("Hello Kogniti Minds, I need assistance with checkout / B2B ordering.")}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: '#059669', fontWeight: 700, textDecoration: 'underline' }}
+                    >
+                      WhatsApp
                     </a>
                   </span>
                 </div>

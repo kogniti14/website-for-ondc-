@@ -23,6 +23,7 @@ import { useAuth } from '../../context/AuthContext';
 import { B2BOrder, B2BQuotation } from '../../types';
 import { storageService } from '../../services/storageService';
 import { OrderInvoiceModal } from '../../components/common/OrderInvoiceModal';
+import { WHATSAPP_NUMBER } from '../../config/whatsappConfig';
 import { ImageUpload } from '../../components/common/ImageUpload';
 import { RazorpayCheckoutModal } from '../../components/payment/RazorpayCheckoutModal';
 
@@ -1522,7 +1523,7 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
           orderNumber={orderToPay.orderNumber}
           customerName={orderToPay.businessName}
           customerEmail={orderToPay.billingAddress?.fullName || 'accounts@kognitiminds.com'}
-          customerPhone={orderToPay.billingAddress?.phone || '9931648595'}
+          customerPhone={orderToPay.billingAddress?.phone || WHATSAPP_NUMBER}
           description={`B2B Commercial Order #${orderToPay.orderNumber} Settlement`}
           isB2B={true}
           onSuccess={handleB2BPaymentSuccess}

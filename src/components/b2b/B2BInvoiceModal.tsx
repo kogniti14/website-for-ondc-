@@ -3,6 +3,7 @@ import { Printer, X, Building2, CheckCircle2, CreditCard, ShieldCheck } from 'lu
 import { B2BOrder } from '../../types';
 import { storageService } from '../../services/storageService';
 import { RazorpayCheckoutModal } from '../payment/RazorpayCheckoutModal';
+import { WHATSAPP_NUMBER, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
 
 interface B2BInvoiceModalProps {
   order: B2BOrder;
@@ -351,7 +352,7 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
               <div><strong>PAN:</strong> AALCK4750F | <strong>State Code:</strong> 09 (Uttar Pradesh)</div>
               <div><strong>CIN:</strong> U46496UP2024PTC213997</div>
               <div style={{ color: '#64748B', marginTop: '0.2rem' }}>
-                Sales Desk: sales@kognitiminds.com | Accounts: accounts@kognitiminds.com | Helpline: +91 9931648595
+                Sales Desk: sales@kognitiminds.com | Accounts: accounts@kognitiminds.com | Helpline: {getWhatsAppDisplayNumber()}
               </div>
             </div>
 
@@ -747,7 +748,7 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
             orderNumber={currentOrder.orderNumber}
             customerName={currentOrder.businessName}
             customerEmail={currentOrder.billingAddress.fullName || 'accounts@kognitiminds.com'}
-            customerPhone={currentOrder.billingAddress.phone || '9931648595'}
+            customerPhone={currentOrder.billingAddress.phone || WHATSAPP_NUMBER}
             description={`Commercial Invoice INV-${currentOrder.orderNumber} Settlement`}
             isB2B={true}
             onSuccess={handleB2BPaymentSuccess}

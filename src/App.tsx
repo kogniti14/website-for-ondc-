@@ -11,6 +11,7 @@ import { Navbar } from './components/layout/Navbar';
 import { B2BNavbar } from './components/layout/B2BNavbar';
 import { Footer } from './components/layout/Footer';
 import { PolicyModal } from './components/common/PolicyModal';
+import { WhatsAppFloatingButton } from './components/common/WhatsAppFloatingButton';
 
 // Modals
 import { ProductDetailModal } from './components/products/ProductDetailModal';
@@ -511,6 +512,9 @@ const MainApp: React.FC = () => {
           }}
         />
       )}
+
+      {/* WhatsApp Business 1-Click Support Button */}
+      <WhatsAppFloatingButton />
     </div>
   );
 };

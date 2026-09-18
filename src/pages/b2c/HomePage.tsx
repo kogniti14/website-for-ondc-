@@ -22,6 +22,7 @@ import { ProductCard } from '../../components/products/ProductCard';
 import { storageService } from '../../services/storageService';
 import { galleryService } from '../../services/galleryService';
 import { certificationService } from '../../services/certificationService';
+import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
 
 interface HomePageProps {
   products: Product[];
@@ -370,8 +371,17 @@ export const HomePage: React.FC<HomePageProps> = ({
               <Building2 size={18} className="text-blue-400" />
               <span>
                 B2B & INSTITUTIONAL ENQUIRIES:{' '}
-                <a href="tel:+919931648595" style={{ color: '#93C5FD', fontWeight: 700, textDecoration: 'underline' }}>
-                  +91 9931648595
+                <a href={getTelUrl()} style={{ color: '#93C5FD', fontWeight: 700, textDecoration: 'underline' }}>
+                  {getWhatsAppDisplayNumber()}
+                </a>
+                {' | '}
+                <a
+                  href={getWhatsAppUrl("Hello Kogniti Minds, I have an enquiry regarding institutional orders.")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#86EFAC', fontWeight: 700, textDecoration: 'underline' }}
+                >
+                  WhatsApp
                 </a>
               </span>
             </div>
