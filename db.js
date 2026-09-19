@@ -15,11 +15,11 @@ const supabase = createClient(
 const SUPER_ADMIN_RECORD = {
   id: 'adm_super_01',
   userId: 'kogniti14',
-  name: 'Honey Sharma',
+  name: 'Shaurya Kashyap',
   email: 'kogniti14@kognitiminds.com',
   password: '28022007Honey@#',
   role: 'super_admin',
-  department: 'Executive Leadership & Governance',
+  department: 'Founder & CEO Kogniti Minds Private Limited',
   status: 'approved',
   registeredAt: '2026-08-01T09:00:00Z',
   approvedAt: '2026-08-01T09:00:00Z',

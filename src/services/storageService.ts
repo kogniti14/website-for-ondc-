@@ -945,21 +945,35 @@ class StorageService {
   // --- Admin Staff & Governance ---
   getAdminUsers(): AdminUser[] {
     const list = this.getItem<AdminUser[]>(KEYS.ADMIN_USERS, SEED_ADMIN_USERS);
-    // Guarantee that the Super Admin is ALWAYS present in the admin list
-    const hasSuperAdmin =
-      Array.isArray(list) &&
-      list.some(
+    if (Array.isArray(list)) {
+      const superAdminIndex = list.findIndex(
         (u) =>
+          u.id === 'adm_super_01' ||
           u.userId.toLowerCase() === 'kogniti14' ||
           u.email.toLowerCase() === 'kogniti14@kognitiminds.com'
       );
 
-    if (!hasSuperAdmin) {
-      const merged = [MASTER_SUPER_ADMIN, ...(Array.isArray(list) ? list : [])];
-      this.setItem(KEYS.ADMIN_USERS, merged);
-      return merged;
+      if (superAdminIndex >= 0) {
+        if (
+          list[superAdminIndex].name !== MASTER_SUPER_ADMIN.name ||
+          list[superAdminIndex].department !== MASTER_SUPER_ADMIN.department
+        ) {
+          list[superAdminIndex] = {
+            ...list[superAdminIndex],
+            name: MASTER_SUPER_ADMIN.name,
+            department: MASTER_SUPER_ADMIN.department,
+          };
+          this.setItem(KEYS.ADMIN_USERS, list);
+        }
+        return list;
+      } else {
+        const merged = [MASTER_SUPER_ADMIN, ...list];
+        this.setItem(KEYS.ADMIN_USERS, merged);
+        return merged;
+      }
     }
-    return list;
+    this.setItem(KEYS.ADMIN_USERS, [MASTER_SUPER_ADMIN]);
+    return [MASTER_SUPER_ADMIN];
   }
 
   getAdminUserById(id: string): AdminUser | null {

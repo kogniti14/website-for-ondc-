@@ -1484,10 +1484,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           <div className="flex items-center gap-3">
             <div className="text-right hide-on-mobile">
               <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFFFFF' }}>
-                {currentAdminUser?.name || 'Kogniti Super Admin'}
+                {currentAdminUser?.name || 'Shaurya Kashyap'}
               </div>
               <div style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
-                User ID: <span style={{ color: '#C084FC', fontWeight: 600 }}>@{currentAdminUser?.userId || 'superadmin'}</span> ({currentAdminUser?.department || 'Governance'})
+                User ID: <span style={{ color: '#C084FC', fontWeight: 600 }}>@{currentAdminUser?.userId || 'kogniti14'}</span> ({currentAdminUser?.department || 'Founder & CEO Kogniti Minds Private Limited'})
               </div>
             </div>
 
