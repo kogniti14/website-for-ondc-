@@ -1,9 +1,19 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+
+  # 1. Reverse Proxy ONDC Protocol and API endpoints to Node.js backend (Port 3000)
+  <IfModule mod_proxy.c>
+    RewriteCond %{REQUEST_URI} ^/(search|select|init|confirm|status|cancel|update|rating|track|support|ondc|api) [NC]
+    RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
+  </IfModule>
+
+  # 2. Serve static files directly if they exist
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteCond %{REQUEST_FILENAME} !-l
+
+  # 3. Client-side SPA route fallback
   RewriteRule . /index.html [L]
 </IfModule>
