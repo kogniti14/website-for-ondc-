@@ -8,7 +8,7 @@ import express from 'express';
 import crypto from 'crypto';
 import ondcConfig from './config.js';
 import { createAuthorizationHeader, verifyAuthorization } from './crypto.js';
-import { buildOndcCatalog, PRODUCTS_CATALOG } from './catalogMapper.js';
+import { buildOndcCatalog, PRODUCTS_CATALOG, generateCompleteOnSearchPayload } from './catalogMapper.js';
 import {
   calculateQuote,
   createOndcOrder,
@@ -188,6 +188,22 @@ ondcRouter.get('/ondc/health', (req, res) => {
     catalogItemCount: PRODUCTS_CATALOG.length,
     activeWorkbenchFlow: 'Buyer_Initiated_Return_(Full_Order_and_Partial_Order)',
   });
+});
+
+/**
+ * GET /ondc/on_search_sample - Generates complete official on_search payload
+ * Useful for copying/testing with ONDC Workbench "Paste on_search" step
+ */
+ondcRouter.get(['/ondc/on_search_sample', '/on_search_sample'], (req, res) => {
+  const samplePayload = generateCompleteOnSearchPayload({
+    bap_id: req.query.bap_id || 'buyer-app-preprod.ondc.org',
+    bap_uri: req.query.bap_uri || 'https://buyer-app-preprod.ondc.org/protocol/v1',
+    transaction_id: req.query.transaction_id || '54e3d489-0be3-455b-9d41-3da39d520377',
+    message_id: req.query.message_id || '0b0e557b-7b56-4c4f-9e7c-86cf330de223',
+    domain: req.query.domain || ondcConfig.domain,
+    core_version: req.query.core_version || ondcConfig.coreVersion,
+  });
+  return res.status(200).json(samplePayload);
 });
 
 /**

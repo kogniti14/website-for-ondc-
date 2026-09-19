@@ -377,7 +377,7 @@ export function buildOndcCatalog(searchIntent = {}) {
     parent_item_id: prod.categoryId,
     descriptor: {
       name: prod.name,
-      code: prod.sku,
+      code: `4:${prod.hsn}`, // Official ONDC standard: '4:' prefix for HSN code
       symbol: prod.images[0],
       short_desc: prod.shortDescription,
       long_desc: prod.description,
@@ -394,8 +394,14 @@ export function buildOndcCatalog(searchIntent = {}) {
     quantity: {
       available: { count: prod.stock.toString() },
       maximum: { count: Math.min(prod.stock, 500).toString() },
+      minimum: { count: prod.b2bMoq.toString() },
+    },
+    time: {
+      label: 'enable',
+      timestamp: new Date().toISOString(),
     },
     matched: true,
+    recommended: true,
     tags: [
       {
         code: 'origin',
@@ -427,21 +433,37 @@ export function buildOndcCatalog(searchIntent = {}) {
           }),
         })),
       },
+      {
+        code: 'serviceability',
+        list: [
+          { code: 'location', value: 'L1' },
+          { code: 'category', value: prod.categoryId },
+          { code: 'type', value: '10' },
+          { code: 'val', value: '3000' },
+          { code: 'unit', value: 'km' },
+        ],
+      },
     ],
   }));
+
+  const nowIso = new Date().toISOString();
 
   return {
     'bpp/descriptor': {
       name: ondcConfig.seller.name,
+      symbol: 'https://kognitiminds.com/logo-icon.png',
       short_desc: ondcConfig.seller.shortDesc,
       long_desc: ondcConfig.seller.longDesc,
       images: ['https://kognitiminds.com/logo-icon.png'],
       tags: [
-        { code: 'bpp_terms', list: [
-          { code: 'gstin', value: ondcConfig.seller.gstin },
-          { code: 'pan', value: ondcConfig.seller.pan },
-          { code: 'cin', value: ondcConfig.seller.cin },
-        ]},
+        {
+          code: 'bpp_terms',
+          list: [
+            { code: 'gstin', value: ondcConfig.seller.gstin },
+            { code: 'pan', value: ondcConfig.seller.pan },
+            { code: 'cin', value: ondcConfig.seller.cin },
+          ],
+        },
       ],
     },
     'bpp/categories': ONDC_CATEGORIES,
@@ -459,11 +481,18 @@ export function buildOndcCatalog(searchIntent = {}) {
     'bpp/providers': [
       {
         id: ondcConfig.seller.id,
+        time: {
+          label: 'enable',
+          timestamp: nowIso,
+        },
         descriptor: {
           name: ondcConfig.seller.name,
+          symbol: 'https://kognitiminds.com/logo-icon.png',
           short_desc: ondcConfig.seller.shortDesc,
+          long_desc: ondcConfig.seller.longDesc,
           images: ['https://kognitiminds.com/logo-icon.png'],
         },
+        ttl: 'P1D',
         categories: ONDC_CATEGORIES,
         locations: [
           {
@@ -477,23 +506,94 @@ export function buildOndcCatalog(searchIntent = {}) {
             },
             circle: {
               gps: '28.6280,77.3750',
-              radius: { unit: 'km', value: '3000' }, // Pan-India Delivery
+              radius: { unit: 'km', value: '3000' }, // Pan-India Delivery Radius
+            },
+            time: {
+              label: 'enable',
+              timestamp: nowIso,
+              days: '1,2,3,4,5,6',
+              schedule: {
+                holidays: [],
+                frequency: 'PT4H',
+                times: ['1000', '1800'],
+              },
+              range: {
+                start: '1000',
+                end: '1800',
+              },
+            },
+          },
+        ],
+        fulfillments: [
+          {
+            id: 'F1',
+            type: 'Delivery',
+            tracking: true,
+            contact: {
+              phone: ondcConfig.seller.phone,
+              email: ondcConfig.seller.supportEmail,
             },
           },
         ],
         items,
         tags: [
-          {
+          // Explicit serviceability construct per category to pass strict ONDC validation
+          ...ONDC_CATEGORIES.map((cat) => ({
             code: 'serviceability',
             list: [
               { code: 'location', value: 'L1' },
-              { code: 'category', value: 'all' },
-              { code: 'type', value: 'pan_india' },
+              { code: 'category', value: cat.id },
+              { code: 'type', value: '10' },
+              { code: 'val', value: '3000' },
+              { code: 'unit', value: 'km' },
+            ],
+          })),
+          {
+            code: 'timing',
+            list: [
+              { code: 'type', value: 'Order' },
+              { code: 'location', value: 'L1' },
+              { code: 'day_from', value: '1' },
+              { code: 'day_to', value: '6' },
+              { code: 'time_from', value: '0900' },
+              { code: 'time_to', value: '1900' },
             ],
           },
         ],
       },
     ],
+  };
+}
+
+/**
+ * Generate a complete, valid, official ONDC:RETeB2B on_search payload
+ * Ready to paste into ONDC Workbench
+ */
+export function generateCompleteOnSearchPayload(customContext = {}) {
+  const now = new Date().toISOString();
+  const context = {
+    domain: customContext.domain || ondcConfig.domain,
+    action: 'on_search',
+    country: customContext.country || ondcConfig.country,
+    city: customContext.city || ondcConfig.city,
+    core_version: customContext.core_version || ondcConfig.coreVersion,
+    bap_id: customContext.bap_id || 'buyer-app-preprod.ondc.org',
+    bap_uri: customContext.bap_uri || 'https://buyer-app-preprod.ondc.org/protocol/v1',
+    bpp_id: ondcConfig.subscriberId,
+    bpp_uri: ondcConfig.subscriberUri,
+    transaction_id: customContext.transaction_id || '54e3d489-0be3-455b-9d41-3da39d520377',
+    message_id: customContext.message_id || '0b0e557b-7b56-4c4f-9e7c-86cf330de223',
+    timestamp: now,
+    ttl: 'PT30S',
+  };
+
+  const catalog = buildOndcCatalog();
+
+  return {
+    context,
+    message: {
+      catalog,
+    },
   };
 }
 
@@ -506,4 +606,5 @@ export default {
   ONDC_CATEGORIES,
   buildOndcCatalog,
   findProductById,
+  generateCompleteOnSearchPayload,
 };

@@ -217,6 +217,13 @@ async function runTests() {
   assert(healthRes.body.status === 'healthy', 'Health check reports status: healthy');
   assert(healthRes.body.config.domain === 'ONDC:RETeB2B', 'Health check reports domain: ONDC:RETeB2B');
 
+  // Sample on_search endpoint for Workbench
+  const sampleRes = await makeReq('/ondc/on_search_sample');
+  assert(sampleRes.status === 200, 'GET /ondc/on_search_sample returned HTTP 200');
+  assert(sampleRes.body.context?.action === 'on_search', 'Sample context action is on_search');
+  assert(sampleRes.body.message?.catalog?.['bpp/providers']?.[0]?.items?.length >= 10, 'Sample catalog contains B2B items');
+  assert(sampleRes.body.message?.catalog?.['bpp/providers']?.[0]?.items?.[0]?.descriptor?.code?.startsWith('4:'), 'Sample item descriptor code has 4: prefix for HSN');
+
   // Protocol Context for testing
   const testContext = {
     domain: 'ONDC:RETeB2B',
