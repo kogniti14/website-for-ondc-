@@ -710,6 +710,50 @@ class CertificationService {
   }
 
   /**
+   * Super Admin Exclusive: Bulk Delete certificates
+   */
+  async deleteMultipleCertificates(
+    ids: string[],
+    currentUserRole?: string
+  ): Promise<{ success: boolean; deletedCount: number; message: string }> {
+    if (!this.isAuthorized(currentUserRole)) {
+      return {
+        success: false,
+        deletedCount: 0,
+        message: 'Unauthorized: Admin privileges required to delete certifications.',
+      };
+    }
+
+    if (!ids || ids.length === 0) {
+      return { success: true, deletedCount: 0, message: 'No certificates selected.' };
+    }
+
+    const currentList = this.getLocalCertificates();
+    const idSet = new Set(ids);
+    const targets = currentList.filter((c) => idSet.has(c.id));
+    const filtered = currentList.filter((c) => !idSet.has(c.id));
+    this.saveLocalCertificates(filtered);
+
+    // Asynchronously remove from Firestore & Firebase Storage
+    if (isFirebaseConfigured()) {
+      for (const target of targets) {
+        if (db) {
+          deleteDoc(doc(db, 'certifications', target.id)).catch(() => {});
+        }
+        if (storage && target.storagePath) {
+          deleteObject(ref(storage, target.storagePath)).catch(() => {});
+        }
+      }
+    }
+
+    return {
+      success: true,
+      deletedCount: targets.length,
+      message: `${targets.length} certificate${targets.length === 1 ? ' was' : 's were'} permanently deleted.`,
+    };
+  }
+
+  /**
    * Super Admin Exclusive: Quick toggle publish / unpublish
    */
   async togglePublishStatus(
@@ -1083,6 +1127,42 @@ class CertificationService {
     const updated = currentList.filter((c) => c.id !== id);
     this.saveLocalCategories(updated);
     return { success: true, message: `Category "${cat.name}" deleted successfully.` };
+  }
+
+  async deleteMultipleCategories(
+    ids: string[],
+    currentUserRole?: string
+  ): Promise<{ success: boolean; deletedCount: number; skippedCount: number; message: string }> {
+    if (currentUserRole !== 'super_admin') {
+      return { success: false, deletedCount: 0, skippedCount: ids.length, message: 'Unauthorized: Only Super Admin can delete categories.' };
+    }
+
+    const currentList = this.getLocalCategories();
+    const idSet = new Set(ids);
+    let deletedCount = 0;
+    let skippedCount = 0;
+
+    const remaining = currentList.filter((cat) => {
+      if (!idSet.has(cat.id)) return true;
+      const certCount = this.getCertificateCountForCategory(cat.name);
+      if (certCount > 0) {
+        skippedCount++;
+        return true;
+      }
+      deletedCount++;
+      return false;
+    });
+
+    if (deletedCount > 0) {
+      this.saveLocalCategories(remaining);
+    }
+
+    let message = `Successfully deleted ${deletedCount} categor${deletedCount === 1 ? 'y' : 'ies'}.`;
+    if (skippedCount > 0) {
+      message += ` ${skippedCount} categor${skippedCount === 1 ? 'y' : 'ies'} could not be deleted because they contain active certificates or documents.`;
+    }
+
+    return { success: deletedCount > 0, deletedCount, skippedCount, message };
   }
 
   async migrateCategoryContentAndDelete(

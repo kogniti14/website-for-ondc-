@@ -37,6 +37,7 @@ import {
   INITIAL_CERTIFICATION_CATEGORIES,
 } from '../../services/certificationService';
 import { CategoryManager } from './CategoryManager';
+import { BulkActionBar } from './BulkActionBar';
 
 export const CertificationManagement: React.FC = () => {
   const { currentAdminUser, isSuperAdmin, isAdmin } = useAuth();
@@ -59,6 +60,10 @@ export const CertificationManagement: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedVisibility, setSelectedVisibility] = useState<CertificationVisibility | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<CertificationStatus | 'all'>('all');
+
+  // Bulk Selection State
+  const [selectedCertIds, setSelectedCertIds] = useState<string[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Loading & Toast States
   const [isUploading, setIsUploading] = useState(false);
@@ -117,7 +122,27 @@ export const CertificationManagement: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    setSelectedCertIds([]);
   }, [selectedCategory, selectedVisibility, selectedStatus, searchQuery]);
+
+  const handleBulkDeleteCertificates = async () => {
+    if (selectedCertIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const res = await certificationService.deleteMultipleCertificates(selectedCertIds, currentUserRole);
+      if (res.success) {
+        showToast('success', res.message);
+        setSelectedCertIds([]);
+        loadData();
+      } else {
+        showToast('error', res.message);
+      }
+    } catch (err: any) {
+      showToast('error', err.message || 'Bulk delete failed.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
   const showToast = (type: 'success' | 'error', text: string) => {
     setToastMessage({ type, text });
@@ -860,6 +885,23 @@ export const CertificationManagement: React.FC = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.86rem' }}>
             <thead>
               <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', color: 'var(--slate-700)' }}>
+                {hasDeleteRights && (
+                  <th style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                      checked={certifications.length > 0 && selectedCertIds.length === certifications.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedCertIds(certifications.map((c) => c.id));
+                        } else {
+                          setSelectedCertIds([]);
+                        }
+                      }}
+                      title="Select All Certificates"
+                    />
+                  </th>
+                )}
                 <th style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>Document</th>
                 <th style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>Certificate Details</th>
                 <th style={{ padding: '0.85rem 1rem', fontWeight: 700 }}>Category</th>
@@ -872,7 +914,7 @@ export const CertificationManagement: React.FC = () => {
             <tbody>
               {certifications.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--slate-500)' }}>
+                  <td colSpan={hasDeleteRights ? 8 : 7} style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--slate-500)' }}>
                     <FileText size={36} style={{ color: 'var(--slate-300)', margin: '0 auto 0.75rem' }} />
                     <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--slate-700)' }}>
                       No certificates found
@@ -897,6 +939,22 @@ export const CertificationManagement: React.FC = () => {
                       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--slate-50)')}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
+                      {hasDeleteRights && (
+                        <td style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center', verticalAlign: 'middle' }}>
+                          <input
+                            type="checkbox"
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                            checked={selectedCertIds.includes(cert.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedCertIds((prev) => [...prev, cert.id]);
+                              } else {
+                                setSelectedCertIds((prev) => prev.filter((id) => id !== cert.id));
+                              }
+                            }}
+                          />
+                        </td>
+                      )}
                       {/* Thumbnail / Document Preview Icon */}
                       <td style={{ padding: '0.85rem 1rem', verticalAlign: 'middle', width: '90px' }}>
                         <div
@@ -1166,6 +1224,18 @@ export const CertificationManagement: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {hasDeleteRights && (
+        <BulkActionBar
+          selectedCount={selectedCertIds.length}
+          totalCount={certifications.length}
+          onSelectAll={() => setSelectedCertIds(certifications.map((c) => c.id))}
+          onDeselectAll={() => setSelectedCertIds([])}
+          onBulkDelete={handleBulkDeleteCertificates}
+          isProcessing={isBulkDeleting}
+          label="certificates"
+        />
+      )}
     </>
   )}
 

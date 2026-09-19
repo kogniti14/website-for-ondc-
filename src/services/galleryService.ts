@@ -550,6 +550,50 @@ class GalleryService {
   }
 
   /**
+   * Admin: Bulk Delete gallery stories
+   */
+  async deleteMultipleStories(
+    ids: string[],
+    currentUserRole?: string
+  ): Promise<{ success: boolean; deletedCount: number; message: string }> {
+    if (!this.isAuthorized(currentUserRole)) {
+      return {
+        success: false,
+        deletedCount: 0,
+        message: 'Unauthorized: Admin privileges required to delete stories.',
+      };
+    }
+
+    if (!ids || ids.length === 0) {
+      return { success: true, deletedCount: 0, message: 'No stories selected.' };
+    }
+
+    const currentList = this.getLocalStories();
+    const idSet = new Set(ids);
+    const targets = currentList.filter((s) => idSet.has(s.id));
+    const filtered = currentList.filter((s) => !idSet.has(s.id));
+    this.saveLocalStories(filtered);
+
+    // Asynchronously cleanup in Firestore & Firebase Storage
+    if (isFirebaseConfigured()) {
+      for (const target of targets) {
+        if (db) {
+          deleteDoc(doc(db, 'gallery', target.id)).catch(() => {});
+        }
+        if (storage && target.storagePath) {
+          deleteObject(ref(storage, target.storagePath)).catch(() => {});
+        }
+      }
+    }
+
+    return {
+      success: true,
+      deletedCount: targets.length,
+      message: `${targets.length} stor${targets.length === 1 ? 'y was' : 'ies were'} permanently removed.`,
+    };
+  }
+
+  /**
    * Admin: Quick toggle publish/unpublish
    */
   async togglePublishStatus(
@@ -882,6 +926,42 @@ class GalleryService {
     const updated = currentList.filter((c) => c.id !== id);
     this.saveLocalCategories(updated);
     return { success: true, message: `Category "${cat.name}" deleted successfully.` };
+  }
+
+  deleteMultipleCategories(
+    ids: string[],
+    currentUserRole?: string
+  ): { success: boolean; deletedCount: number; skippedCount: number; message: string } {
+    if (currentUserRole !== 'super_admin') {
+      return { success: false, deletedCount: 0, skippedCount: ids.length, message: 'Unauthorized: Only Super Admin can delete categories.' };
+    }
+
+    const currentList = this.getLocalCategories();
+    const idSet = new Set(ids);
+    let deletedCount = 0;
+    let skippedCount = 0;
+
+    const remaining = currentList.filter((cat) => {
+      if (!idSet.has(cat.id)) return true;
+      const storyCount = this.getStoryCountForCategory(cat.name);
+      if (storyCount > 0) {
+        skippedCount++;
+        return true;
+      }
+      deletedCount++;
+      return false;
+    });
+
+    if (deletedCount > 0) {
+      this.saveLocalCategories(remaining);
+    }
+
+    let message = `Successfully deleted ${deletedCount} categor${deletedCount === 1 ? 'y' : 'ies'}.`;
+    if (skippedCount > 0) {
+      message += ` ${skippedCount} categor${skippedCount === 1 ? 'y' : 'ies'} could not be deleted because they contain active stories.`;
+    }
+
+    return { success: deletedCount > 0, deletedCount, skippedCount, message };
   }
 
   migrateCategoryContentAndDelete(

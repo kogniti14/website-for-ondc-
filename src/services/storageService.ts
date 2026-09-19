@@ -173,6 +173,15 @@ class StorageService {
     this.setItem(KEYS.PRODUCTS, products);
   }
 
+  deleteMultipleProducts(ids: string[]): number {
+    if (!ids || ids.length === 0) return 0;
+    const idSet = new Set(ids);
+    const initial = this.getProducts();
+    const remaining = initial.filter((p) => !idSet.has(p.id));
+    this.setItem(KEYS.PRODUCTS, remaining);
+    return initial.length - remaining.length;
+  }
+
   // --- B2C Users ---
   getB2CUsers(): B2CUser[] {
     return this.getItem<B2CUser[]>(KEYS.B2C_USERS, SEED_B2C_USERS);
@@ -219,6 +228,22 @@ class StorageService {
       users.push(user);
     }
     this.setItem(KEYS.B2C_USERS, users);
+  }
+
+  deleteB2CUser(id: string): boolean {
+    const list = this.getB2CUsers();
+    const remaining = list.filter((u) => u.id !== id);
+    this.setItem(KEYS.B2C_USERS, remaining);
+    return list.length !== remaining.length;
+  }
+
+  deleteMultipleB2CUsers(ids: string[]): number {
+    if (!ids || ids.length === 0) return 0;
+    const idSet = new Set(ids);
+    const initial = this.getB2CUsers();
+    const remaining = initial.filter((u) => !idSet.has(u.id));
+    this.setItem(KEYS.B2C_USERS, remaining);
+    return initial.length - remaining.length;
   }
 
   // --- B2B Businesses ---
@@ -278,6 +303,22 @@ class StorageService {
       if (status === 'approved') target.approvedAt = new Date().toISOString();
       this.setItem(KEYS.B2B_BUSINESSES, list);
     }
+  }
+
+  deleteB2BBusiness(id: string): boolean {
+    const list = this.getB2BBusinesses();
+    const remaining = list.filter((b) => b.id !== id);
+    this.setItem(KEYS.B2B_BUSINESSES, remaining);
+    return list.length !== remaining.length;
+  }
+
+  deleteMultipleB2BBusinesses(ids: string[]): number {
+    if (!ids || ids.length === 0) return 0;
+    const idSet = new Set(ids);
+    const initial = this.getB2BBusinesses();
+    const remaining = initial.filter((b) => !idSet.has(b.id));
+    this.setItem(KEYS.B2B_BUSINESSES, remaining);
+    return initial.length - remaining.length;
   }
 
   // --- B2C Orders ---
@@ -350,6 +391,22 @@ class StorageService {
     return order;
   }
 
+  deleteB2COrder(id: string): boolean {
+    const orders = this.getB2COrders();
+    const remaining = orders.filter((o) => o.id !== id);
+    this.setItem(KEYS.B2C_ORDERS, remaining);
+    return orders.length !== remaining.length;
+  }
+
+  deleteMultipleB2COrders(ids: string[]): number {
+    if (!ids || ids.length === 0) return 0;
+    const idSet = new Set(ids);
+    const initial = this.getB2COrders();
+    const remaining = initial.filter((o) => !idSet.has(o.id));
+    this.setItem(KEYS.B2C_ORDERS, remaining);
+    return initial.length - remaining.length;
+  }
+
   // --- B2B Orders ---
   getB2BOrders(): B2BOrder[] {
     const raw = this.getItem<B2BOrder[]>(KEYS.B2B_ORDERS, []);
@@ -418,6 +475,22 @@ class StorageService {
     });
     this.setItem(KEYS.B2B_ORDERS, orders);
     return order;
+  }
+
+  deleteB2BOrder(id: string): boolean {
+    const orders = this.getB2BOrders();
+    const remaining = orders.filter((o) => o.id !== id);
+    this.setItem(KEYS.B2B_ORDERS, remaining);
+    return orders.length !== remaining.length;
+  }
+
+  deleteMultipleB2BOrders(ids: string[]): number {
+    if (!ids || ids.length === 0) return 0;
+    const idSet = new Set(ids);
+    const initial = this.getB2BOrders();
+    const remaining = initial.filter((o) => !idSet.has(o.id));
+    this.setItem(KEYS.B2B_ORDERS, remaining);
+    return initial.length - remaining.length;
   }
 
   recordB2BOfflinePayment(
@@ -682,6 +755,15 @@ class StorageService {
     this.setItem(KEYS.B2B_QUOTATIONS, quotations);
   }
 
+  deleteMultipleB2BQuotations(ids: string[]): number {
+    if (!ids || ids.length === 0) return 0;
+    const idSet = new Set(ids);
+    const initial = this.getB2BQuotations();
+    const remaining = initial.filter((q) => !idSet.has(q.id));
+    this.setItem(KEYS.B2B_QUOTATIONS, remaining);
+    return initial.length - remaining.length;
+  }
+
   reviseB2BQuotation(
     quotationId: string,
     revisionData: {
@@ -924,6 +1006,17 @@ class StorageService {
     this.setItem(KEYS.COUPONS, coupons);
   }
 
+  deleteMultipleCoupons(idsOrCodes: string[]): number {
+    if (!idsOrCodes || idsOrCodes.length === 0) return 0;
+    const targets = new Set(idsOrCodes.map((s) => s.toUpperCase()));
+    const initial = this.getCoupons();
+    const remaining = initial.filter(
+      (c) => !targets.has(c.id.toUpperCase()) && !targets.has(c.code.toUpperCase())
+    );
+    this.setItem(KEYS.COUPONS, remaining);
+    return initial.length - remaining.length;
+  }
+
   toggleCouponStatus(idOrCode: string): void {
     const coupons = this.getCoupons();
     const c = coupons.find((item) => item.id === idOrCode || item.code.toUpperCase() === idOrCode.toUpperCase());
@@ -1047,6 +1140,48 @@ class StorageService {
     return null;
   }
 
+  deleteAdminUser(id: string): { success: boolean; message: string } {
+    const admin = this.getAdminUserById(id);
+    if (!admin) return { success: false, message: 'Admin account not found.' };
+    if (
+      isSuperAdminIdentifier(admin.userId) ||
+      isSuperAdminIdentifier(admin.email) ||
+      admin.role === 'super_admin' ||
+      admin.id === 'adm_super_01'
+    ) {
+      return { success: false, message: 'Protected account: The Master Super Admin cannot be deleted.' };
+    }
+    const remaining = this.getAdminUsers().filter((u) => u.id !== id);
+    this.setItem(KEYS.ADMIN_USERS, remaining);
+    return { success: true, message: `Staff account @${admin.userId} removed.` };
+  }
+
+  deleteMultipleAdminUsers(ids: string[]): { deletedCount: number; protectedSkipped: number } {
+    if (!ids || ids.length === 0) return { deletedCount: 0, protectedSkipped: 0 };
+    const all = this.getAdminUsers();
+    let protectedSkipped = 0;
+    const deletableIds = new Set<string>();
+
+    for (const id of ids) {
+      const u = all.find((a) => a.id === id);
+      if (
+        u &&
+        (isSuperAdminIdentifier(u.userId) ||
+          isSuperAdminIdentifier(u.email) ||
+          u.role === 'super_admin' ||
+          u.id === 'adm_super_01')
+      ) {
+        protectedSkipped++;
+      } else if (u) {
+        deletableIds.add(u.id);
+      }
+    }
+
+    const remaining = all.filter((u) => !deletableIds.has(u.id));
+    this.setItem(KEYS.ADMIN_USERS, remaining);
+    return { deletedCount: deletableIds.size, protectedSkipped };
+  }
+
   // --- Category Management ---
   getCategories(): Category[] {
     const cats = this.getItem<Category[]>(KEYS.CATEGORIES, CATEGORIES);
@@ -1102,6 +1237,15 @@ class StorageService {
     const filtered = cats.filter((c) => c.id !== id);
     this.setItem(KEYS.CATEGORIES, filtered);
     return true;
+  }
+
+  deleteMultipleCategories(ids: string[]): { deletedCount: number; protectedSkipped: number } {
+    if (!ids || ids.length === 0) return { deletedCount: 0, protectedSkipped: 0 };
+    const cats = this.getCategories();
+    const idSet = new Set(ids);
+    const remaining = cats.filter((c) => !idSet.has(c.id));
+    this.setItem(KEYS.CATEGORIES, remaining);
+    return { deletedCount: cats.length - remaining.length, protectedSkipped: 0 };
   }
 
   // --- OTP & Credential Security Services ---

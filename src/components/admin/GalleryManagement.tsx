@@ -31,6 +31,7 @@ import { GalleryStory, GalleryCategory, GalleryVisibility, GalleryStatus } from 
 import { galleryService } from '../../services/galleryService';
 import { useAuth } from '../../context/AuthContext';
 import { CategoryManager } from './CategoryManager';
+import { BulkActionBar } from './BulkActionBar';
 
 interface GalleryManagementProps {
   onPreviewStory?: (story: GalleryStory) => void;
@@ -38,7 +39,12 @@ interface GalleryManagementProps {
 
 export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewStory }) => {
   const { currentAdminUser, isSuperAdmin, isAdmin } = useAuth();
+  const currentUserRole = currentAdminUser?.role || (isSuperAdmin ? 'super_admin' : 'admin');
   const hasManageStories = isSuperAdmin || isAdmin || Boolean(currentAdminUser?.permissions?.canManageStories);
+
+  // Bulk Selection State
+  const [selectedStoryIds, setSelectedStoryIds] = useState<string[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Section Navigation
   const [activeSection, setActiveSection] = useState<'directory' | 'upload' | 'categories'>('directory');
@@ -99,7 +105,28 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
 
   useEffect(() => {
     loadData();
+    setSelectedStoryIds([]);
   }, [selectedCategory, selectedVisibility, selectedStatus, featuredOnly, searchQuery]);
+
+  const handleBulkDeleteStories = async () => {
+    if (selectedStoryIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const res = await galleryService.deleteMultipleStories(selectedStoryIds, currentUserRole);
+      if (res.success) {
+        setStatusMsg({ success: true, text: res.message });
+        setSelectedStoryIds([]);
+        loadData();
+        setTimeout(() => setStatusMsg(null), 4000);
+      } else {
+        setStatusMsg({ success: false, text: res.message });
+      }
+    } catch (err: any) {
+      setStatusMsg({ success: false, text: err.message || 'Bulk delete failed.' });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
   // Open Create Modal
   const handleOpenCreateModal = () => {
@@ -583,6 +610,23 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
                 <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                  {hasManageStories && (
+                    <th style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        checked={stories.length > 0 && selectedStoryIds.length === stories.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedStoryIds(stories.map((s) => s.id));
+                          } else {
+                            setSelectedStoryIds([]);
+                          }
+                        }}
+                        title="Select All Stories"
+                      />
+                    </th>
+                  )}
                   <th style={{ padding: '0.85rem 1rem', width: '90px' }}>Media</th>
                   <th style={{ padding: '0.85rem 1rem' }}>Story Title & Snippet</th>
                   <th style={{ padding: '0.85rem 1rem' }}>Category</th>
@@ -601,6 +645,22 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
                       transition: 'background 0.15s ease',
                     }}
                   >
+                    {hasManageStories && (
+                      <td style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          checked={selectedStoryIds.includes(s.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedStoryIds((prev) => [...prev, s.id]);
+                            } else {
+                              setSelectedStoryIds((prev) => prev.filter((id) => id !== s.id));
+                            }
+                          }}
+                        />
+                      </td>
+                    )}
                     {/* Media Thumbnail */}
                     <td style={{ padding: '0.85rem 1rem' }}>
                       <div
@@ -773,6 +833,18 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
           </div>
         )}
       </div>
+
+      {hasManageStories && (
+        <BulkActionBar
+          selectedCount={selectedStoryIds.length}
+          totalCount={stories.length}
+          onSelectAll={() => setSelectedStoryIds(stories.map((s) => s.id))}
+          onDeselectAll={() => setSelectedStoryIds([])}
+          onBulkDelete={handleBulkDeleteStories}
+          isProcessing={isBulkDeleting}
+          label="stories"
+        />
+      )}
 
       {/* ========================================================================= */}
       {/* ADD / EDIT STORY MODAL */}

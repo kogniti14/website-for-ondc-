@@ -21,6 +21,7 @@ import { useAuth } from '../../context/AuthContext';
 import { GalleryCategory, CertificationCategory } from '../../types';
 import { galleryService } from '../../services/galleryService';
 import { certificationService } from '../../services/certificationService';
+import { BulkActionBar } from './BulkActionBar';
 
 interface CategoryManagerProps {
   type: 'gallery' | 'certification';
@@ -38,6 +39,10 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
   const [categories, setCategories] = useState<Array<GalleryCategory | CertificationCategory>>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Bulk Selection State
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   // Add / Edit Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -73,7 +78,45 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
 
   useEffect(() => {
     loadCategories();
+    setSelectedCategoryIds([]);
   }, [type]);
+
+  const handleBulkDeleteCategories = async () => {
+    if (selectedCategoryIds.length === 0) return;
+    if (!isSuperAdmin) {
+      showToast('error', 'Only Super Admin can delete categories.');
+      return;
+    }
+
+    setIsBulkDeleting(true);
+    try {
+      if (type === 'gallery') {
+        const res = galleryService.deleteMultipleCategories(selectedCategoryIds, currentUserRole);
+        if (res.success) {
+          showToast('success', res.message);
+          setSelectedCategoryIds([]);
+          loadCategories();
+          onCategoryChanged?.();
+        } else {
+          showToast('error', res.message);
+        }
+      } else {
+        const res = await certificationService.deleteMultipleCategories(selectedCategoryIds, currentUserRole);
+        if (res.success) {
+          showToast('success', res.message);
+          setSelectedCategoryIds([]);
+          loadCategories();
+          onCategoryChanged?.();
+        } else {
+          showToast('error', res.message);
+        }
+      }
+    } catch (err: any) {
+      showToast('error', err.message || 'Bulk delete failed.');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
   // Helper to count linked items
   const getItemCount = (catName: string): number => {
@@ -602,6 +645,26 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.86rem' }}>
             <thead>
               <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid var(--border-color)', color: 'var(--slate-600)', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.05em' }}>
+                {isSuperAdmin && (
+                  <th style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                      checked={
+                        filteredCategories.length > 0 &&
+                        selectedCategoryIds.length === filteredCategories.length
+                      }
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedCategoryIds(filteredCategories.map((c) => c.id));
+                        } else {
+                          setSelectedCategoryIds([]);
+                        }
+                      }}
+                      title="Select All Categories"
+                    />
+                  </th>
+                )}
                 <th style={{ padding: '0.85rem 1rem', width: '110px' }}>Order</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Category Name & Slug</th>
                 <th style={{ padding: '0.85rem 1rem' }}>Description</th>
@@ -613,7 +676,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
             <tbody>
               {filteredCategories.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--slate-400)' }}>
+                  <td colSpan={isSuperAdmin ? 7 : 6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--slate-400)' }}>
                     No categories found matching your search.
                   </td>
                 </tr>
@@ -631,6 +694,22 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
                         transition: 'background 0.15s ease',
                       }}
                     >
+                      {isSuperAdmin && (
+                        <td style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center', verticalAlign: 'middle' }}>
+                          <input
+                            type="checkbox"
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                            checked={selectedCategoryIds.includes(cat.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedCategoryIds((prev) => [...prev, cat.id]);
+                              } else {
+                                setSelectedCategoryIds((prev) => prev.filter((id) => id !== cat.id));
+                              }
+                            }}
+                          />
+                        </td>
+                      )}
                       {/* Display Order & Reorder Arrows */}
                       <td style={{ padding: '0.85rem 1rem', verticalAlign: 'middle' }}>
                         <div className="flex items-center gap-1.5">
@@ -807,6 +886,18 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
             </tbody>
           </table>
         </div>
+
+        {isSuperAdmin && (
+          <BulkActionBar
+            selectedCount={selectedCategoryIds.length}
+            totalCount={filteredCategories.length}
+            onSelectAll={() => setSelectedCategoryIds(filteredCategories.map((c) => c.id))}
+            onDeselectAll={() => setSelectedCategoryIds([])}
+            onBulkDelete={handleBulkDeleteCategories}
+            isProcessing={isBulkDeleting}
+            label="categories"
+          />
+        )}
       </div>
 
       {/* --- ADD / EDIT MODAL --- */}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BarChart3,
   Package,
@@ -56,6 +56,7 @@ import { CertificationManagement } from '../../components/admin/CertificationMan
 import { CategoryManager } from '../../components/admin/CategoryManager';
 import { AdminNavSlider } from '../../components/admin/AdminNavSlider';
 import { PolicyManagement } from '../../components/admin/PolicyManagement';
+import { BulkActionBar } from '../../components/admin/BulkActionBar';
 import { WHATSAPP_NUMBER } from '../../config/whatsappConfig';
 
 interface AdminDashboardPageProps {
@@ -115,6 +116,232 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     storageService.saveSiteMedia(siteMedia);
     setMediaSavedMsg(true);
     setTimeout(() => setMediaSavedMsg(false), 3000);
+  };
+
+  // Bulk Selection States across Admin tabs
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [selectedB2COrderIds, setSelectedB2COrderIds] = useState<string[]>([]);
+  const [selectedB2BOrderIds, setSelectedB2BOrderIds] = useState<string[]>([]);
+  const [selectedBusinessIds, setSelectedBusinessIds] = useState<string[]>([]);
+  const [selectedRfqIds, setSelectedRfqIds] = useState<string[]>([]);
+  const [selectedCouponIds, setSelectedCouponIds] = useState<string[]>([]);
+  const [selectedAdminStaffIds, setSelectedAdminStaffIds] = useState<string[]>([]);
+  const [selectedCredIds, setSelectedCredIds] = useState<{ id: string; type: 'admin' | 'b2b' | 'b2c' }[]>([]);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [bulkFeedbackMsg, setBulkFeedbackMsg] = useState<string | null>(null);
+
+  // Clear selections when switching tabs
+  useEffect(() => {
+    setSelectedProductIds([]);
+    setSelectedCategoryIds([]);
+    setSelectedB2COrderIds([]);
+    setSelectedB2BOrderIds([]);
+    setSelectedBusinessIds([]);
+    setSelectedRfqIds([]);
+    setSelectedCouponIds([]);
+    setSelectedAdminStaffIds([]);
+    setSelectedCredIds([]);
+  }, [activeTab]);
+
+  // Bulk Delete Execution Handlers
+  const handleBulkDeleteProducts = async () => {
+    if (selectedProductIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const count = storageService.deleteMultipleProducts(selectedProductIds);
+      setSelectedProductIds([]);
+      onRefresh();
+      setBulkFeedbackMsg(`Successfully deleted ${count} product${count === 1 ? '' : 's'}.`);
+      setTimeout(() => setBulkFeedbackMsg(null), 4000);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleBulkDeleteProductCategories = async () => {
+    if (selectedCategoryIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const { deletedCount, protectedSkipped } = storageService.deleteMultipleCategories(selectedCategoryIds);
+      setSelectedCategoryIds([]);
+      onRefresh();
+      let msg = `Successfully deleted ${deletedCount} categor${deletedCount === 1 ? 'y' : 'ies'}.`;
+      if (protectedSkipped > 0) {
+        msg += ` (${protectedSkipped} category skipped because it has assigned products or is protected)`;
+      }
+      setCategoryMsg(msg);
+      setTimeout(() => setCategoryMsg(null), 4000);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleBulkDeleteB2COrders = async () => {
+    if (selectedB2COrderIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const count = storageService.deleteMultipleB2COrders(selectedB2COrderIds);
+      setSelectedB2COrderIds([]);
+      onRefresh();
+      setOrderSuccessMsg(`Successfully deleted ${count} retail order${count === 1 ? '' : 's'}.`);
+      setTimeout(() => setOrderSuccessMsg(null), 4000);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleDeleteSingleB2COrder = (id: string) => {
+    if (confirm('Are you sure you want to delete this retail order? This action cannot be undone.')) {
+      storageService.deleteB2COrder(id);
+      setSelectedB2COrderIds((prev) => prev.filter((item) => item !== id));
+      onRefresh();
+      setOrderSuccessMsg('Retail order deleted successfully.');
+      setTimeout(() => setOrderSuccessMsg(null), 3500);
+    }
+  };
+
+  const handleBulkDeleteB2BOrders = async () => {
+    if (selectedB2BOrderIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const count = storageService.deleteMultipleB2BOrders(selectedB2BOrderIds);
+      setSelectedB2BOrderIds([]);
+      onRefresh();
+      setOrderSuccessMsg(`Successfully deleted ${count} B2B order${count === 1 ? '' : 's'}.`);
+      setTimeout(() => setOrderSuccessMsg(null), 4000);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleDeleteSingleB2BOrder = (id: string) => {
+    if (confirm('Are you sure you want to delete this B2B order? This action cannot be undone.')) {
+      storageService.deleteB2BOrder(id);
+      setSelectedB2BOrderIds((prev) => prev.filter((item) => item !== id));
+      onRefresh();
+      setOrderSuccessMsg('B2B order deleted successfully.');
+      setTimeout(() => setOrderSuccessMsg(null), 3500);
+    }
+  };
+
+  const handleBulkDeleteBusinesses = async () => {
+    if (selectedBusinessIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const count = storageService.deleteMultipleB2BBusinesses(selectedBusinessIds);
+      setSelectedBusinessIds([]);
+      onRefresh();
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleDeleteSingleBusiness = (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
+      storageService.deleteB2BBusiness(id);
+      setSelectedBusinessIds((prev) => prev.filter((item) => item !== id));
+      onRefresh();
+    }
+  };
+
+  const handleBulkDeleteQuotations = async () => {
+    if (selectedRfqIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const count = storageService.deleteMultipleB2BQuotations(selectedRfqIds);
+      setSelectedRfqIds([]);
+      onRefresh();
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleBulkDeleteCoupons = async () => {
+    if (selectedCouponIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const count = storageService.deleteMultipleCoupons(selectedCouponIds);
+      setSelectedCouponIds([]);
+      onRefresh();
+      setCouponSuccessMsg(`Successfully deleted ${count} coupon${count === 1 ? '' : 's'}.`);
+      setTimeout(() => setCouponSuccessMsg(null), 4000);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleBulkDeleteAdminStaff = async () => {
+    if (selectedAdminStaffIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const { deletedCount, protectedSkipped } = storageService.deleteMultipleAdminUsers(selectedAdminStaffIds);
+      setSelectedAdminStaffIds([]);
+      refreshAdminUsers();
+      onRefresh();
+      let msg = `Successfully deleted ${deletedCount} staff record${deletedCount === 1 ? '' : 's'}.`;
+      if (protectedSkipped > 0) {
+        msg += ` (${protectedSkipped} Super Admin account protected and retained)`;
+      }
+      setAdminSuccessMsg(msg);
+      setTimeout(() => setAdminSuccessMsg(null), 5000);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleDeleteSingleAdminUser = (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete staff account "${name}"? This action cannot be undone.`)) {
+      const res = storageService.deleteAdminUser(id);
+      if (res.success) {
+        refreshAdminUsers();
+        onRefresh();
+        setAdminSuccessMsg(res.message);
+        setTimeout(() => setAdminSuccessMsg(null), 4000);
+      } else {
+        alert(res.message);
+      }
+    }
+  };
+
+  const handleDeleteSingleB2CUser = (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete customer account "${name}"? This action cannot be undone.`)) {
+      storageService.deleteB2CUser(id);
+      setSelectedCredIds((prev) => prev.filter((c) => !(c.id === id && c.type === 'b2c')));
+      onRefresh();
+      setCredSuccessMsg(`Successfully deleted customer account "${name}".`);
+      setTimeout(() => setCredSuccessMsg(null), 4000);
+    }
+  };
+
+  const handleBulkDeleteCredentials = async () => {
+    if (selectedCredIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const adminIds = selectedCredIds.filter((c) => c.type === 'admin').map((c) => c.id);
+      const b2bIds = selectedCredIds.filter((c) => c.type === 'b2b').map((c) => c.id);
+      const b2cIds = selectedCredIds.filter((c) => c.type === 'b2c').map((c) => c.id);
+
+      let totalDeleted = 0;
+      if (adminIds.length > 0) {
+        const res = storageService.deleteMultipleAdminUsers(adminIds);
+        totalDeleted += res.deletedCount;
+      }
+      if (b2bIds.length > 0) {
+        totalDeleted += storageService.deleteMultipleB2BBusinesses(b2bIds);
+      }
+      if (b2cIds.length > 0) {
+        totalDeleted += storageService.deleteMultipleB2CUsers(b2cIds);
+      }
+
+      setSelectedCredIds([]);
+      refreshAdminUsers();
+      onRefresh();
+      setCredSuccessMsg(`Successfully deleted ${totalDeleted} account record${totalDeleted === 1 ? '' : 's'}.`);
+      setTimeout(() => setCredSuccessMsg(null), 4000);
+    } finally {
+      setIsBulkDeleting(false);
+    }
   };
 
   // Admin Users & Super Admin Approvals State
@@ -928,6 +1155,37 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [credSuccessMsg, setCredSuccessMsg] = useState<string | null>(null);
+
+  const selectableCredAdmins = (credFilter === 'all' || credFilter === 'admin')
+    ? adminUsers.filter((u) => {
+        if (u.role === 'super_admin' || u.id === 'adm_super_01' || u.userId === 'kogniti14') return false;
+        if (!credSearch.trim()) return true;
+        const q = credSearch.toLowerCase();
+        return u.name.toLowerCase().includes(q) || u.userId.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+      })
+    : [];
+
+  const selectableCredB2B = (credFilter === 'all' || credFilter === 'b2b')
+    ? businesses.filter((b) => {
+        if (!credSearch.trim()) return true;
+        const q = credSearch.toLowerCase();
+        return b.companyName.toLowerCase().includes(q) || b.businessEmail.toLowerCase().includes(q) || b.mobile.includes(q) || b.gstin.toLowerCase().includes(q);
+      })
+    : [];
+
+  const selectableCredB2C = (credFilter === 'all' || credFilter === 'b2c')
+    ? b2cUsers.filter((c) => {
+        if (!credSearch.trim()) return true;
+        const q = credSearch.toLowerCase();
+        return c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || c.phone.includes(q);
+      })
+    : [];
+
+  const allSelectableCreds = [
+    ...selectableCredAdmins.map((u) => ({ id: u.id, type: 'admin' as const })),
+    ...selectableCredB2B.map((b) => ({ id: b.id, type: 'b2b' as const })),
+    ...selectableCredB2C.map((c) => ({ id: c.id, type: 'b2c' as const })),
+  ];
 
   // Edit Credentials Modal State
   const [showEditCredModal, setShowEditCredModal] = useState(false);
@@ -2206,10 +2464,45 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               </button>
             </div>
 
+            {bulkFeedbackMsg && (
+              <div
+                style={{
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  color: '#065F46',
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  marginBottom: '1.25rem',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                <CheckCircle2 size={16} />
+                <span>{bulkFeedbackMsg}</span>
+              </div>
+            )}
+
             <div className="card table-responsive-wrapper" style={{ padding: 0, overflowX: 'auto', background: '#FFFFFF' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', minWidth: '700px' }}>
                 <thead>
                   <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                    <th style={{ padding: '0.75rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        checked={products.length > 0 && selectedProductIds.length === products.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedProductIds(products.map((p) => p.id));
+                          } else {
+                            setSelectedProductIds([]);
+                          }
+                        }}
+                        title="Select All Products"
+                      />
+                    </th>
                     <th style={{ padding: '0.75rem 1rem' }}>Product</th>
                     <th style={{ padding: '0.75rem 1rem' }}>Category</th>
                     <th style={{ padding: '0.75rem 1rem' }}>B2C Price</th>
@@ -2221,7 +2514,25 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 </thead>
                 <tbody>
                   {products.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <tr
+                      key={p.id}
+                      style={{
+                        borderBottom: '1px solid var(--border-color)',
+                        backgroundColor: selectedProductIds.includes(p.id) ? 'rgba(147, 51, 234, 0.04)' : undefined,
+                      }}
+                    >
+                      <td style={{ padding: '0.75rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          checked={selectedProductIds.includes(p.id)}
+                          onChange={() => {
+                            setSelectedProductIds((prev) =>
+                              prev.includes(p.id) ? prev.filter((id) => id !== p.id) : [...prev, p.id]
+                            );
+                          }}
+                        />
+                      </td>
                       <td style={{ padding: '0.75rem 1rem' }}>
                         <div className="flex items-center gap-3">
                           <img src={p.images[0]} alt="" style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover' }} />
@@ -2266,6 +2577,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 </tbody>
               </table>
             </div>
+
+            <BulkActionBar
+              selectedCount={selectedProductIds.length}
+              totalCount={products.length}
+              itemLabel="products"
+              onSelectAll={() => setSelectedProductIds(products.map((p) => p.id))}
+              onDeselectAll={() => setSelectedProductIds([])}
+              onConfirmDelete={handleBulkDeleteProducts}
+              isDeleting={isBulkDeleting}
+            />
           </div>
         )}
 
@@ -2307,6 +2628,42 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               </div>
             )}
 
+            {/* Select All / Deselect Toolbar */}
+            <div
+              className="card"
+              style={{
+                padding: '0.65rem 1rem',
+                background: '#FFFFFF',
+                marginBottom: '1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+              }}
+            >
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  checked={categories.length > 0 && selectedCategoryIds.length === categories.length}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedCategoryIds(categories.map((c) => c.id));
+                    } else {
+                      setSelectedCategoryIds([]);
+                    }
+                  }}
+                />
+                <span>Select All Categories ({categories.length})</span>
+              </label>
+              {selectedCategoryIds.length > 0 && (
+                <span style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 700 }}>
+                  {selectedCategoryIds.length} of {categories.length} selected
+                </span>
+              )}
+            </div>
+
             <div
               style={{
                 display: 'grid',
@@ -2327,7 +2684,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       display: 'flex',
                       flexDirection: 'column',
                       borderRadius: 'var(--radius-lg)',
-                      border: '1px solid var(--border-color)',
+                      border: selectedCategoryIds.includes(cat.id) ? '2px solid var(--primary)' : '1px solid var(--border-color)',
                       boxShadow: 'var(--shadow-sm)',
                     }}
                   >
@@ -2346,21 +2703,34 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       }}
                     >
                       <div className="flex justify-between items-start">
-                        <span
-                          style={{
-                            background: 'rgba(255, 255, 255, 0.25)',
-                            backdropFilter: 'blur(6px)',
-                            color: '#FFFFFF',
-                            fontSize: '1.2rem',
-                            padding: '0.2rem 0.5rem',
-                            borderRadius: '6px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          {cat.icon || '📁'}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <input
+                            type="checkbox"
+                            style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                            checked={selectedCategoryIds.includes(cat.id)}
+                            onChange={() => {
+                              setSelectedCategoryIds((prev) =>
+                                prev.includes(cat.id) ? prev.filter((id) => id !== cat.id) : [...prev, cat.id]
+                              );
+                            }}
+                            title={`Select ${cat.name}`}
+                          />
+                          <span
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.25)',
+                              backdropFilter: 'blur(6px)',
+                              color: '#FFFFFF',
+                              fontSize: '1.2rem',
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '6px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            {cat.icon || '📁'}
+                          </span>
+                        </div>
                         <span
                           style={{
                             background: 'rgba(15, 23, 42, 0.7)',
@@ -2501,6 +2871,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 );
               })}
             </div>
+
+            <BulkActionBar
+              selectedCount={selectedCategoryIds.length}
+              totalCount={categories.length}
+              itemLabel="categories"
+              onSelectAll={() => setSelectedCategoryIds(categories.map((c) => c.id))}
+              onDeselectAll={() => setSelectedCategoryIds([])}
+              onConfirmDelete={handleBulkDeleteProductCategories}
+              isDeleting={isBulkDeleting}
+            />
           </div>
         )}
 
@@ -2602,6 +2982,21 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                    <th style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        checked={filteredB2COrders.length > 0 && selectedB2COrderIds.length === filteredB2COrders.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedB2COrderIds(filteredB2COrders.map((o) => o.id));
+                          } else {
+                            setSelectedB2COrderIds([]);
+                          }
+                        }}
+                        title="Select All Retail Orders"
+                      />
+                    </th>
                     <th style={{ padding: '0.85rem 1rem' }}>Order Ref & Date</th>
                     <th style={{ padding: '0.85rem 1rem' }}>Customer & Contact</th>
                     <th style={{ padding: '0.85rem 1rem' }}>Destination</th>
@@ -2616,7 +3011,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <tbody>
                   {filteredB2COrders.length === 0 ? (
                     <tr>
-                      <td colSpan={9} style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--slate-400)' }}>
+                      <td colSpan={10} style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--slate-400)' }}>
                         <ShoppingCart size={36} style={{ margin: '0 auto 0.75rem', opacity: 0.4 }} />
                         <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--slate-700)' }}>
                           No Retail Orders Found
@@ -2632,9 +3027,25 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         key={o.id}
                         style={{
                           borderBottom: '1px solid var(--border-color)',
-                          background: o.orderStatus === 'placed' ? 'rgba(245, 158, 11, 0.03)' : 'transparent',
+                          background: selectedB2COrderIds.includes(o.id)
+                            ? 'rgba(147, 51, 234, 0.04)'
+                            : o.orderStatus === 'placed'
+                            ? 'rgba(245, 158, 11, 0.03)'
+                            : 'transparent',
                         }}
                       >
+                        <td style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                            checked={selectedB2COrderIds.includes(o.id)}
+                            onChange={() => {
+                              setSelectedB2COrderIds((prev) =>
+                                prev.includes(o.id) ? prev.filter((id) => id !== o.id) : [...prev, o.id]
+                              );
+                            }}
+                          />
+                        </td>
                         <td style={{ padding: '0.85rem 1rem' }}>
                           <div style={{ fontWeight: 800, color: 'var(--slate-900)' }}>{o.orderNumber}</div>
                           <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
@@ -2844,6 +3255,19 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                 <FileText size={13} /> Tax Invoice
                               </button>
                             )}
+
+                            <button
+                              onClick={() => handleDeleteSingleB2COrder(o.id)}
+                              className="btn btn-sm btn-outline"
+                              style={{
+                                color: '#DC2626',
+                                borderColor: '#FCA5A5',
+                                padding: '0.35rem 0.5rem',
+                              }}
+                              title="Delete Order"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -2852,6 +3276,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 </tbody>
               </table>
             </div>
+
+            <BulkActionBar
+              selectedCount={selectedB2COrderIds.length}
+              totalCount={filteredB2COrders.length}
+              itemLabel="retail orders"
+              onSelectAll={() => setSelectedB2COrderIds(filteredB2COrders.map((o) => o.id))}
+              onDeselectAll={() => setSelectedB2COrderIds([])}
+              onConfirmDelete={handleBulkDeleteB2COrders}
+              isDeleting={isBulkDeleting}
+            />
           </div>
         )}
 
@@ -3021,6 +3455,21 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead>
                   <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                    <th style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                        checked={filteredB2BOrders.length > 0 && selectedB2BOrderIds.length === filteredB2BOrders.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedB2BOrderIds(filteredB2BOrders.map((o) => o.id));
+                          } else {
+                            setSelectedB2BOrderIds([]);
+                          }
+                        }}
+                        title="Select All B2B Orders"
+                      />
+                    </th>
                     <th style={{ padding: '0.85rem 1rem' }}>Order Ref & PO</th>
                     <th style={{ padding: '0.85rem 1rem' }}>Business Entity & GSTIN</th>
                     <th style={{ padding: '0.85rem 1rem' }}>Order Channel</th>
@@ -3035,7 +3484,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <tbody>
                   {filteredB2BOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={9} style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--slate-400)' }}>
+                      <td colSpan={10} style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--slate-400)' }}>
                         <Building2 size={36} style={{ margin: '0 auto 0.75rem', opacity: 0.4 }} />
                         <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--slate-700)' }}>
                           No Institutional B2B Orders Found
@@ -3070,9 +3519,25 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                           key={o.id}
                           style={{
                             borderBottom: '1px solid var(--border-color)',
-                            background: o.orderStatus === 'placed' ? 'rgba(245, 158, 11, 0.03)' : 'transparent',
+                            background: selectedB2BOrderIds.includes(o.id)
+                              ? 'rgba(147, 51, 234, 0.04)'
+                              : o.orderStatus === 'placed'
+                              ? 'rgba(245, 158, 11, 0.03)'
+                              : 'transparent',
                           }}
                         >
+                          <td style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                              checked={selectedB2BOrderIds.includes(o.id)}
+                              onChange={() => {
+                                setSelectedB2BOrderIds((prev) =>
+                                  prev.includes(o.id) ? prev.filter((id) => id !== o.id) : [...prev, o.id]
+                                );
+                              }}
+                            />
+                          </td>
                           <td style={{ padding: '0.85rem 1rem' }}>
                             <div style={{ fontWeight: 800, color: 'var(--slate-900)' }}>{o.orderNumber}</div>
                             <div style={{ fontSize: '0.75rem', color: '#0284C7', fontWeight: 700 }}>
@@ -3360,6 +3825,19 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                   <FileText size={13} /> Tax Invoice
                                 </button>
                               )}
+
+                              <button
+                                onClick={() => handleDeleteSingleB2BOrder(o.id)}
+                                className="btn btn-sm btn-outline"
+                                style={{
+                                  color: '#DC2626',
+                                  borderColor: '#FCA5A5',
+                                  padding: '0.35rem 0.5rem',
+                                }}
+                                title="Delete B2B Order"
+                              >
+                                <Trash2 size={13} />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -3369,6 +3847,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 </tbody>
               </table>
             </div>
+
+            <BulkActionBar
+              selectedCount={selectedB2BOrderIds.length}
+              totalCount={filteredB2BOrders.length}
+              itemLabel="B2B orders"
+              onSelectAll={() => setSelectedB2BOrderIds(filteredB2BOrders.map((o) => o.id))}
+              onDeselectAll={() => setSelectedB2BOrderIds([])}
+              onConfirmDelete={handleBulkDeleteB2BOrders}
+              isDeleting={isBulkDeleting}
+            />
           </div>
         )}
 
@@ -3379,6 +3867,42 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               B2B Business Compliance & GST Verification
             </h2>
 
+            {/* Select All Toolbar */}
+            <div
+              className="card"
+              style={{
+                padding: '0.65rem 1rem',
+                background: '#FFFFFF',
+                marginBottom: '1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+              }}
+            >
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  checked={businesses.length > 0 && selectedBusinessIds.length === businesses.length}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedBusinessIds(businesses.map((b) => b.id));
+                    } else {
+                      setSelectedBusinessIds([]);
+                    }
+                  }}
+                />
+                <span>Select All Businesses ({businesses.length})</span>
+              </label>
+              {selectedBusinessIds.length > 0 && (
+                <span style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 700 }}>
+                  {selectedBusinessIds.length} of {businesses.length} selected
+                </span>
+              )}
+            </div>
+
             <div className="flex flex-col gap-3">
               {businesses.map((biz) => (
                 <div
@@ -3387,11 +3911,21 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   style={{
                     padding: '1.5rem',
                     background: '#FFFFFF',
-                    border: '1px solid var(--border-color)',
+                    border: selectedBusinessIds.includes(biz.id) ? '2px solid var(--primary)' : '1px solid var(--border-color)',
                   }}
                 >
                   <div className="flex justify-between items-center flex-wrap gap-2" style={{ marginBottom: '1rem' }}>
                     <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                        checked={selectedBusinessIds.includes(biz.id)}
+                        onChange={() => {
+                          setSelectedBusinessIds((prev) =>
+                            prev.includes(biz.id) ? prev.filter((id) => id !== biz.id) : [...prev, biz.id]
+                          );
+                        }}
+                      />
                       <div
                         style={{
                           width: '42px',
@@ -3425,6 +3959,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       >
                         {biz.status.toUpperCase()}
                       </span>
+                      <button
+                        onClick={() => handleDeleteSingleBusiness(biz.id, biz.companyName)}
+                        className="btn btn-sm btn-outline"
+                        style={{ color: '#DC2626', borderColor: '#FCA5A5', padding: '0.35rem 0.5rem' }}
+                        title="Delete Business Application"
+                      >
+                        <Trash2 size={13} />
+                      </button>
                     </div>
                   </div>
 
@@ -3464,6 +4006,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 </div>
               ))}
             </div>
+
+            <BulkActionBar
+              selectedCount={selectedBusinessIds.length}
+              totalCount={businesses.length}
+              itemLabel="business accounts"
+              onSelectAll={() => setSelectedBusinessIds(businesses.map((b) => b.id))}
+              onDeselectAll={() => setSelectedBusinessIds([])}
+              onConfirmDelete={handleBulkDeleteBusinesses}
+              isDeleting={isBulkDeleting}
+            />
           </div>
         )}
 
@@ -3489,6 +4041,42 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               </button>
             </div>
 
+            {/* Select All Toolbar */}
+            <div
+              className="card"
+              style={{
+                padding: '0.65rem 1rem',
+                background: '#FFFFFF',
+                marginBottom: '1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+              }}
+            >
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  checked={quotations.length > 0 && selectedRfqIds.length === quotations.length}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedRfqIds(quotations.map((q) => q.id));
+                    } else {
+                      setSelectedRfqIds([]);
+                    }
+                  }}
+                />
+                <span>Select All Quotations ({quotations.length})</span>
+              </label>
+              {selectedRfqIds.length > 0 && (
+                <span style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 700 }}>
+                  {selectedRfqIds.length} of {quotations.length} selected
+                </span>
+              )}
+            </div>
+
             {quotations.length === 0 ? (
               <div className="card" style={{ padding: '3rem 1.5rem', textAlign: 'center', background: '#FFFFFF' }}>
                 <p style={{ color: 'var(--slate-500)', marginBottom: '1rem' }}>No quotations or RFQs logged yet.</p>
@@ -3499,20 +4087,40 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             ) : (
               <div className="flex flex-col gap-3">
                 {quotations.map((q) => (
-                  <div key={q.id} className="card" style={{ padding: '1.5rem', background: '#FFFFFF', border: '1px solid var(--border-color)' }}>
+                  <div
+                    key={q.id}
+                    className="card"
+                    style={{
+                      padding: '1.5rem',
+                      background: '#FFFFFF',
+                      border: selectedRfqIds.includes(q.id) ? '2px solid var(--primary)' : '1px solid var(--border-color)',
+                    }}
+                  >
                     <div className="flex justify-between items-center flex-wrap gap-2" style={{ marginBottom: '1rem' }}>
-                      <div>
-                        <strong style={{ fontSize: '1.05rem', color: 'var(--slate-900)' }}>{q.rfqNumber}</strong>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--slate-600)', marginLeft: '0.5rem', fontWeight: 600 }}>
-                          Client: {q.businessName} ({q.contactPerson})
-                        </span>
-                        {q.gstin && (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--primary)', marginLeft: '0.5rem', fontWeight: 700 }}>
-                            GSTIN: {q.gstin}
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          style={{ width: '18px', height: '18px', cursor: 'pointer', marginTop: '3px', accentColor: 'var(--primary)' }}
+                          checked={selectedRfqIds.includes(q.id)}
+                          onChange={() => {
+                            setSelectedRfqIds((prev) =>
+                              prev.includes(q.id) ? prev.filter((id) => id !== q.id) : [...prev, q.id]
+                            );
+                          }}
+                        />
+                        <div>
+                          <strong style={{ fontSize: '1.05rem', color: 'var(--slate-900)' }}>{q.rfqNumber}</strong>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--slate-600)', marginLeft: '0.5rem', fontWeight: 600 }}>
+                            Client: {q.businessName} ({q.contactPerson})
                           </span>
-                        )}
-                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginTop: '0.15rem' }}>
-                          Phone: {q.phone || 'N/A'} | Email: {q.email || 'N/A'} | Created: {q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-IN') : (q.submittedAt ? new Date(q.submittedAt).toLocaleDateString('en-IN') : 'N/A')}
+                          {q.gstin && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--primary)', marginLeft: '0.5rem', fontWeight: 700 }}>
+                              GSTIN: {q.gstin}
+                            </span>
+                          )}
+                          <div style={{ fontSize: '0.75rem', color: 'var(--slate-400)', marginTop: '0.15rem' }}>
+                            Phone: {q.phone || 'N/A'} | Email: {q.email || 'N/A'} | Created: {q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-IN') : (q.submittedAt ? new Date(q.submittedAt).toLocaleDateString('en-IN') : 'N/A')}
+                          </div>
                         </div>
                       </div>
 
@@ -3558,85 +4166,62 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       <div style={{ fontSize: '0.75rem', color: '#7E22CE', fontWeight: 600, marginBottom: '0.75rem', background: '#FAF5FF', padding: '0.35rem 0.75rem', borderRadius: '6px', border: '1px dashed #D8B4FE', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <span>🔄</span>
                         <span>
-                          Quotation has been revised <strong>{q.revisions.length} time{q.revisions.length !== 1 ? 's' : ''}</strong>. Last revision: ₹{q.revisions[q.revisions.length - 1].newGrandTotal.toLocaleString('en-IN')} by {q.revisions[q.revisions.length - 1].revisedBy}.
+                          {q.revisions.length} Revision{q.revisions.length > 1 ? 's' : ''} logged • Last updated: {new Date(q.revisions[q.revisions.length - 1].revisedAt || '').toLocaleDateString('en-IN')}
                         </span>
                       </div>
                     )}
 
-                    {/* Quotation Line Items or Summary */}
-                    {q.items && q.items.length > 0 ? (
-                      <div style={{ marginBottom: '1rem' }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--slate-500)', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
-                          Itemized Line Items ({q.items.length} Product{q.items.length !== 1 ? 's' : ''}):
-                        </div>
-                        <div className="table-responsive-wrapper" style={{ border: '1px solid var(--border-subtle)', borderRadius: '6px', overflowX: 'auto' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: '550px' }}>
-                            <thead>
-                              <tr style={{ background: 'var(--slate-50)', textAlign: 'left', borderBottom: '1px solid var(--border-subtle)' }}>
-                                <th style={{ padding: '0.4rem 0.6rem' }}>Product</th>
-                                <th style={{ padding: '0.4rem 0.6rem' }}>HSN</th>
-                                <th style={{ padding: '0.4rem 0.6rem', textAlign: 'center' }}>Qty</th>
-                                <th style={{ padding: '0.4rem 0.6rem', textAlign: 'right' }}>Agreed Rate (₹)</th>
-                                <th style={{ padding: '0.4rem 0.6rem', textAlign: 'right' }}>GST</th>
-                                <th style={{ padding: '0.4rem 0.6rem', textAlign: 'right' }}>Total (₹)</th>
+                    {/* Line Items Table */}
+                    <div style={{ overflowX: 'auto', marginBottom: '1rem', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                        <thead>
+                          <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                            <th style={{ padding: '0.5rem 0.75rem' }}>Item Description</th>
+                            <th style={{ padding: '0.5rem 0.75rem' }}>HSN</th>
+                            <th style={{ padding: '0.5rem 0.75rem' }}>Qty</th>
+                            <th style={{ padding: '0.5rem 0.75rem' }}>Unit Rate</th>
+                            <th style={{ padding: '0.5rem 0.75rem' }}>Discount</th>
+                            <th style={{ padding: '0.5rem 0.75rem' }}>Taxable Amt</th>
+                            <th style={{ padding: '0.5rem 0.75rem' }}>18% GST</th>
+                            <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right' }}>Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(q.items || []).map((item, idx) => {
+                            const itemUnitPrice = (item as any).targetUnitPrice ?? item.unitPrice ?? 0;
+                            const discRate = item.discountPercent ? itemUnitPrice * (1 - item.discountPercent / 100) : itemUnitPrice;
+                            const taxable = discRate * item.quantity;
+                            const gst = taxable * ((item.gstRate || 18) / 100);
+                            const total = taxable + gst;
+                            return (
+                              <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                <td style={{ padding: '0.5rem 0.75rem', fontWeight: 600 }}>{item.productName}</td>
+                                <td style={{ padding: '0.5rem 0.75rem', color: 'var(--slate-500)' }}>{(item as any).hsnCode || item.hsn || '4802'}</td>
+                                <td style={{ padding: '0.5rem 0.75rem' }}>{item.quantity} Units</td>
+                                <td style={{ padding: '0.5rem 0.75rem' }}>₹{itemUnitPrice.toLocaleString('en-IN')}</td>
+                                <td style={{ padding: '0.5rem 0.75rem', color: item.discountPercent ? '#059669' : 'var(--slate-400)' }}>
+                                  {item.discountPercent ? `${item.discountPercent}%` : '-'}
+                                </td>
+                                <td style={{ padding: '0.5rem 0.75rem' }}>₹{Math.round(taxable).toLocaleString('en-IN')}</td>
+                                <td style={{ padding: '0.5rem 0.75rem', color: '#D97706' }}>₹{Math.round(gst).toLocaleString('en-IN')}</td>
+                                <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: 700 }}>₹{Math.round(total).toLocaleString('en-IN')}</td>
                               </tr>
-                            </thead>
-                            <tbody>
-                              {q.items.map((it, idx) => (
-                                <tr key={idx} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                                  <td style={{ padding: '0.4rem 0.6rem', fontWeight: 600 }}>{it.productName}</td>
-                                  <td style={{ padding: '0.4rem 0.6rem', color: 'var(--slate-500)' }}>{it.hsn || '8471'}</td>
-                                  <td style={{ padding: '0.4rem 0.6rem', textAlign: 'center' }}>{it.quantity}</td>
-                                  <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right' }}>₹{it.unitPrice.toLocaleString('en-IN')}</td>
-                                  <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right' }}>{it.gstRate || 18}%</td>
-                                  <td style={{ padding: '0.4rem 0.6rem', textAlign: 'right', fontWeight: 700 }}>₹{it.total.toLocaleString('en-IN')}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                        <div>
-                          <span style={{ color: 'var(--slate-400)' }}>Product Requested:</span>
-                          <div style={{ fontWeight: 700 }}>{q.productName}</div>
-                          <div>SKU: {q.sku}</div>
-                        </div>
-                        <div>
-                          <span style={{ color: 'var(--slate-400)' }}>Volume & Target:</span>
-                          <div><strong>{q.requestedQty} Units</strong> @ Target ₹{q.targetUnitPrice} / unit</div>
-                        </div>
-                        <div>
-                          <span style={{ color: 'var(--slate-400)' }}>Destination:</span>
-                          <div>PIN: {q.deliveryPincode} • By: {q.requiredByDate}</div>
-                        </div>
-                      </div>
-                    )}
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
 
-                    {/* Financial Figures */}
+                    {/* Financial Summary */}
                     {q.adminQuotation && (
-                      <div
-                        style={{
-                          background: 'var(--slate-50)',
-                          borderRadius: '8px',
-                          padding: '0.75rem 1rem',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          flexWrap: 'wrap',
-                          gap: '1rem',
-                          fontSize: '0.85rem',
-                          marginBottom: '1rem',
-                        }}
-                      >
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1.5rem', fontSize: '0.85rem', marginBottom: '0.75rem', padding: '0.75rem', background: 'var(--slate-50)', borderRadius: '8px' }}>
                         <div>
-                          <span style={{ color: 'var(--slate-500)' }}>Taxable Base: </span>
-                          <strong>₹{q.adminQuotation.totalTaxable.toLocaleString('en-IN')}</strong>
+                          <span style={{ color: 'var(--slate-500)' }}>Taxable Subtotal: </span>
+                          <strong>₹{(q.adminQuotation.totalTaxable ?? (q.adminQuotation as any).subtotal ?? 0).toLocaleString('en-IN')}</strong>
                         </div>
                         <div>
-                          <span style={{ color: 'var(--slate-500)' }}>GST (18%): </span>
-                          <strong style={{ color: '#0284C7' }}>₹{q.adminQuotation.gstAmount.toLocaleString('en-IN')}</strong>
+                          <span style={{ color: 'var(--slate-500)' }}>18% Total GST: </span>
+                          <strong style={{ color: '#D97706' }}>₹{q.adminQuotation.gstAmount.toLocaleString('en-IN')}</strong>
                         </div>
                         <div>
                           <span style={{ color: 'var(--slate-500)' }}>Freight / Shipping: </span>
@@ -3708,6 +4293,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 ))}
               </div>
             )}
+
+            <BulkActionBar
+              selectedCount={selectedRfqIds.length}
+              totalCount={quotations.length}
+              itemLabel="quotations"
+              onSelectAll={() => setSelectedRfqIds(quotations.map((q) => q.id))}
+              onDeselectAll={() => setSelectedRfqIds([])}
+              onConfirmDelete={handleBulkDeleteQuotations}
+              isDeleting={isBulkDeleting}
+            />
           </div>
         )}
 
@@ -3806,12 +4401,48 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               ))}
             </div>
 
+            {/* Select All Toolbar */}
+            <div
+              className="card"
+              style={{
+                padding: '0.65rem 1rem',
+                background: '#FFFFFF',
+                marginBottom: '1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '0.75rem',
+              }}
+            >
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  checked={filteredCoupons.length > 0 && selectedCouponIds.length === filteredCoupons.length}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedCouponIds(filteredCoupons.map((c) => c.id || c.code));
+                    } else {
+                      setSelectedCouponIds([]);
+                    }
+                  }}
+                />
+                <span>Select All Coupons ({filteredCoupons.length})</span>
+              </label>
+              {selectedCouponIds.length > 0 && (
+                <span style={{ fontSize: '0.82rem', color: 'var(--primary)', fontWeight: 700 }}>
+                  {selectedCouponIds.length} of {filteredCoupons.length} selected
+                </span>
+              )}
+            </div>
+
             {/* Coupons List / Cards */}
             {filteredCoupons.length === 0 ? (
               <div
                 className="card"
                 style={{
-                  padding: '3rem 1.5rem',
+                  padding: '3.5rem 1.5rem',
                   textAlign: 'center',
                   background: '#FFFFFF',
                   color: 'var(--slate-500)',
@@ -3841,6 +4472,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 {filteredCoupons.map((c) => {
                   const isExpired = c.expiryDate ? new Date(c.expiryDate).getTime() < Date.now() : false;
                   const isInactive = c.isActive === false;
+                  const isSelected = selectedCouponIds.includes(c.id || c.code);
 
                   return (
                     <div
@@ -3849,7 +4481,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       style={{
                         padding: '1.25rem',
                         background: '#FFFFFF',
-                        border: isExpired
+                        border: isSelected
+                          ? '2px solid var(--primary)'
+                          : isExpired
                           ? '1px solid var(--border-color)'
                           : isInactive
                           ? '1px dashed var(--slate-300)'
@@ -3863,6 +4497,17 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       <div>
                         <div className="flex justify-between items-start" style={{ marginBottom: '0.75rem' }}>
                           <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                              checked={isSelected}
+                              onChange={() => {
+                                const key = c.id || c.code;
+                                setSelectedCouponIds((prev) =>
+                                  prev.includes(key) ? prev.filter((id) => id !== key) : [...prev, key]
+                                );
+                              }}
+                            />
                             <span
                               style={{
                                 background: 'var(--slate-900)',
@@ -3999,6 +4644,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 })}
               </div>
             )}
+
+            <BulkActionBar
+              selectedCount={selectedCouponIds.length}
+              totalCount={filteredCoupons.length}
+              itemLabel="coupons"
+              onSelectAll={() => setSelectedCouponIds(filteredCoupons.map((c) => c.id || c.code))}
+              onDeselectAll={() => setSelectedCouponIds([])}
+              onConfirmDelete={handleBulkDeleteCoupons}
+              isDeleting={isBulkDeleting}
+            />
           </div>
         )}
 
@@ -4261,6 +4916,28 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                     <thead>
                       <tr style={{ background: 'var(--slate-50)', borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+                        <th style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                            checked={
+                              adminUsers.filter((u) => u.role !== 'super_admin' && u.id !== 'adm_super_01' && u.userId !== 'kogniti14').length > 0 &&
+                              selectedAdminStaffIds.length === adminUsers.filter((u) => u.role !== 'super_admin' && u.id !== 'adm_super_01' && u.userId !== 'kogniti14').length
+                            }
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedAdminStaffIds(
+                                  adminUsers
+                                    .filter((u) => u.role !== 'super_admin' && u.id !== 'adm_super_01' && u.userId !== 'kogniti14')
+                                    .map((u) => u.id)
+                                );
+                              } else {
+                                setSelectedAdminStaffIds([]);
+                              }
+                            }}
+                            title="Select All Eligible Staff"
+                          />
+                        </th>
                         <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>Administrator</th>
                         <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>User ID</th>
                         <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>Department</th>
@@ -4268,17 +4945,40 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>Operational Permissions</th>
                         <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>Approval Status</th>
                         <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>Authorized By</th>
+                        <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700, textAlign: 'right' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {adminUsers
                         .filter((u) => u.status === 'approved')
-                        .map((staff) => (
-                          <tr key={staff.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                            <td style={{ padding: '0.85rem 1rem' }}>
-                              <div style={{ fontWeight: 700, color: 'var(--slate-900)' }}>{staff.name}</div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>{staff.email}</div>
-                            </td>
+                        .map((staff) => {
+                          const isSuperAdminStaff = staff.role === 'super_admin' || staff.id === 'adm_super_01' || staff.userId === 'kogniti14';
+                          return (
+                            <tr key={staff.id} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                              <td style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                                {isSuperAdminStaff ? (
+                                  <span title="Master Super Admin (Protected)" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#9333EA' }}>
+                                    <Shield size={16} />
+                                  </span>
+                                ) : (
+                                  <input
+                                    type="checkbox"
+                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                    checked={selectedAdminStaffIds.includes(staff.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedAdminStaffIds((prev) => [...prev, staff.id]);
+                                      } else {
+                                        setSelectedAdminStaffIds((prev) => prev.filter((id) => id !== staff.id));
+                                      }
+                                    }}
+                                  />
+                                )}
+                              </td>
+                              <td style={{ padding: '0.85rem 1rem' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--slate-900)' }}>{staff.name}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>{staff.email}</div>
+                              </td>
                             <td style={{ padding: '0.85rem 1rem' }}>
                               <code style={{ background: 'var(--slate-100)', padding: '0.15rem 0.4rem', borderRadius: '4px', fontWeight: 600 }}>
                                 @{staff.userId}
@@ -4470,12 +5170,54 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                 </div>
                               )}
                             </td>
+                            <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
+                              {isSuperAdminStaff ? (
+                                <span style={{ fontSize: '0.75rem', color: '#9333EA', fontWeight: 600 }}>Root Account</span>
+                              ) : (
+                                <button
+                                  onClick={() => handleDeleteSingleAdminUser(staff.id, staff.name)}
+                                  disabled={isBulkDeleting}
+                                  style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#DC2626',
+                                    cursor: 'pointer',
+                                    padding: '0.35rem',
+                                    borderRadius: '4px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.15s ease',
+                                  }}
+                                  title={`Delete staff user ${staff.name}`}
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              )}
+                            </td>
                           </tr>
-                        ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               </div>
+
+              <BulkActionBar
+                selectedCount={selectedAdminStaffIds.length}
+                totalCount={adminUsers.filter((u) => u.status === 'approved' && u.role !== 'super_admin' && u.id !== 'adm_super_01' && u.userId !== 'kogniti14').length}
+                onSelectAll={() => {
+                  setSelectedAdminStaffIds(
+                    adminUsers
+                      .filter((u) => u.status === 'approved' && u.role !== 'super_admin' && u.id !== 'adm_super_01' && u.userId !== 'kogniti14')
+                      .map((u) => u.id)
+                  );
+                }}
+                onDeselectAll={() => setSelectedAdminStaffIds([])}
+                onBulkDelete={handleBulkDeleteAdminStaff}
+                isProcessing={isBulkDeleting}
+                label="staff members"
+              />
             </div>
           </div>
         )}
@@ -4689,6 +5431,24 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         textAlign: 'left',
                       }}
                     >
+                      <th style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          checked={
+                            allSelectableCreds.length > 0 &&
+                            selectedCredIds.length === allSelectableCreds.length
+                          }
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedCredIds(allSelectableCreds);
+                            } else {
+                              setSelectedCredIds([]);
+                            }
+                          }}
+                          title="Select All Accounts"
+                        />
+                      </th>
                       <th style={{ padding: '0.85rem 1rem', color: 'var(--slate-600)', fontWeight: 700 }}>
                         User / Entity
                       </th>
@@ -4725,8 +5485,29 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         .map((u) => {
                           const isRevealed = !!revealedPasswords[`admin_${u.id}`];
                           const pwd = u.password || 'AdminOps@123';
+                          const isSuperAdminUser = u.role === 'super_admin' || u.id === 'adm_super_01' || u.userId === 'kogniti14';
                           return (
                             <tr key={`admin_${u.id}`} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                              <td style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                                {isSuperAdminUser ? (
+                                  <span title="Master Super Admin (Protected)" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#9333EA' }}>
+                                    <Shield size={16} />
+                                  </span>
+                                ) : (
+                                  <input
+                                    type="checkbox"
+                                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                    checked={selectedCredIds.some((c) => c.id === u.id && c.type === 'admin')}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedCredIds((prev) => [...prev, { id: u.id, type: 'admin' }]);
+                                      } else {
+                                        setSelectedCredIds((prev) => prev.filter((c) => !(c.id === u.id && c.type === 'admin')));
+                                      }
+                                    }}
+                                  />
+                                )}
+                              </td>
                               <td style={{ padding: '0.85rem 1rem' }}>
                                 <div style={{ fontWeight: 700, color: 'var(--slate-900)' }}>{u.name}</div>
                                 <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
@@ -4864,6 +5645,26 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                   >
                                     Reset via OTP
                                   </button>
+                                  {!isSuperAdminUser && (
+                                    <button
+                                      onClick={() => handleDeleteSingleAdminUser(u.id, u.name)}
+                                      disabled={isBulkDeleting}
+                                      style={{
+                                        background: 'transparent',
+                                        border: 'none',
+                                        color: '#DC2626',
+                                        cursor: 'pointer',
+                                        padding: '0.35rem',
+                                        borderRadius: '4px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                      }}
+                                      title={`Delete admin account ${u.name}`}
+                                    >
+                                      <Trash2 size={15} />
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -4889,6 +5690,20 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                           const pwd = b.password || (b.firebaseUid ? 'Firebase Auth Managed' : 'Corporate OTP Managed');
                           return (
                             <tr key={`b2b_${b.id}`} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                              <td style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                                <input
+                                  type="checkbox"
+                                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                  checked={selectedCredIds.some((c) => c.id === b.id && c.type === 'b2b')}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedCredIds((prev) => [...prev, { id: b.id, type: 'b2b' }]);
+                                    } else {
+                                      setSelectedCredIds((prev) => prev.filter((c) => !(c.id === b.id && c.type === 'b2b')));
+                                    }
+                                  }}
+                                />
+                              </td>
                               <td style={{ padding: '0.85rem 1rem' }}>
                                 <div style={{ fontWeight: 700, color: 'var(--slate-900)' }}>{b.companyName}</div>
                                 <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
@@ -5015,6 +5830,24 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                   >
                                     Reset via OTP
                                   </button>
+                                  <button
+                                    onClick={() => handleDeleteSingleBusiness(b.id, b.companyName)}
+                                    disabled={isBulkDeleting}
+                                    style={{
+                                      background: 'transparent',
+                                      border: 'none',
+                                      color: '#DC2626',
+                                      cursor: 'pointer',
+                                      padding: '0.35rem',
+                                      borderRadius: '4px',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                    }}
+                                    title={`Delete business account ${b.companyName}`}
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
                                 </div>
                               </td>
                             </tr>
@@ -5039,6 +5872,20 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                           const pwd = c.password || (c.firebaseUid ? 'Firebase Auth Managed' : 'Email OTP Managed');
                           return (
                             <tr key={`b2c_${c.id}`} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                              <td style={{ padding: '0.85rem 0.6rem', width: '44px', textAlign: 'center' }}>
+                                <input
+                                  type="checkbox"
+                                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                                  checked={selectedCredIds.some((sel) => sel.id === c.id && sel.type === 'b2c')}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedCredIds((prev) => [...prev, { id: c.id, type: 'b2c' }]);
+                                    } else {
+                                      setSelectedCredIds((prev) => prev.filter((sel) => !(sel.id === c.id && sel.type === 'b2c')));
+                                    }
+                                  }}
+                                />
+                              </td>
                               <td style={{ padding: '0.85rem 1rem' }}>
                                 <div style={{ fontWeight: 700, color: 'var(--slate-900)' }}>{c.name}</div>
                                 <div style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
@@ -5154,6 +6001,24 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                   >
                                     Reset via OTP
                                   </button>
+                                  <button
+                                    onClick={() => handleDeleteSingleB2CUser(c.id, c.name)}
+                                    disabled={isBulkDeleting}
+                                    style={{
+                                      background: 'transparent',
+                                      border: 'none',
+                                      color: '#DC2626',
+                                      cursor: 'pointer',
+                                      padding: '0.35rem',
+                                      borderRadius: '4px',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                    }}
+                                    title={`Delete customer account ${c.name}`}
+                                  >
+                                    <Trash2 size={15} />
+                                  </button>
                                 </div>
                               </td>
                             </tr>
@@ -5163,6 +6028,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 </table>
               </div>
             </div>
+
+            <BulkActionBar
+              selectedCount={selectedCredIds.length}
+              totalCount={allSelectableCreds.length}
+              onSelectAll={() => setSelectedCredIds(allSelectableCreds)}
+              onDeselectAll={() => setSelectedCredIds([])}
+              onBulkDelete={handleBulkDeleteCredentials}
+              isProcessing={isBulkDeleting}
+              label="account records"
+            />
           </div>
         )}
 
