@@ -303,13 +303,45 @@ async function runTests() {
   assert(updateRes.status === 200, 'POST /update responded with HTTP 200');
   assert(updateRes.body.message?.ack?.status === 'ACK', 'POST /update responded with synchronous ACK for return flow');
 
-  // POST /cancel
+  // Test cancellation of an active unfulfilled order
+  const cancelTxnId = 'txn_test_cancel_flow';
+  await makeReq('/search', 'POST', {
+    context: { ...testContext, transaction_id: cancelTxnId, action: 'search' },
+    message: { intent: { item: { descriptor: { name: 'stationery' } } } },
+  });
+  await makeReq('/select', 'POST', {
+    context: { ...testContext, transaction_id: cancelTxnId, action: 'select' },
+    message: { order: { items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }] } },
+  });
+  await makeReq('/init', 'POST', {
+    context: { ...testContext, transaction_id: cancelTxnId, action: 'init' },
+    message: {
+      order: {
+        billing: { name: 'Test School', address: { pin: '201301', state: 'Uttar Pradesh' } },
+        fulfillments: [{ end: { location: { address: { pin: '201301', state: 'Uttar Pradesh' } } } }],
+      },
+    },
+  });
+  await makeReq('/confirm', 'POST', {
+    context: { ...testContext, transaction_id: cancelTxnId, action: 'confirm' },
+    message: { order: { id: 'ord_cancel_test_01' } },
+  });
+
+  // POST /cancel on active confirmed order -> should succeed with ACK
   const cancelRes = await makeReq('/cancel', 'POST', {
+    context: { ...testContext, transaction_id: cancelTxnId, action: 'cancel' },
+    message: { order_id: 'ord_cancel_test_01', cancellation_reason_id: '001' },
+  });
+  assert(cancelRes.status === 200, 'POST /cancel responded with HTTP 200 for active order');
+  assert(cancelRes.body.message?.ack?.status === 'ACK', 'POST /cancel responded with synchronous ACK');
+
+  // Verify state rejection when trying to cancel an already delivered order (ord_http_test_01)
+  const cancelDeliveredRes = await makeReq('/cancel', 'POST', {
     context: { ...testContext, action: 'cancel' },
     message: { order_id: 'ord_http_test_01', cancellation_reason_id: '001' },
   });
-  assert(cancelRes.status === 200, 'POST /cancel responded with HTTP 200');
-  assert(cancelRes.body.message?.ack?.status === 'ACK', 'POST /cancel responded with synchronous ACK');
+  assert(cancelDeliveredRes.status === 400, 'POST /cancel rejected cancellation of delivered order with HTTP 400');
+  assert(cancelDeliveredRes.body.error?.code === '40003', 'State manager returned ONDC code 40003 for delivered order');
 
   // Close live test server
   await new Promise((resolve) => server.close(resolve));

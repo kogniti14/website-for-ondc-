@@ -283,10 +283,20 @@ export function cancelOrder(id, reasonId = '001', note = '') {
   return order;
 }
 
+/**
+ * Return all registered ONDC orders for admin dashboard
+ */
+export function getAllOndcOrders() {
+  return Array.from(ondcOrdersStore.values()).sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  );
+}
+
 export default {
   calculateQuote,
   createOndcOrder,
   getOrderById,
+  getAllOndcOrders,
   updateOrderStatus,
   cancelOrder,
   ondcOrdersStore,

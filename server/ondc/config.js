@@ -13,7 +13,7 @@ export const ondcConfig = {
   domain: process.env.ONDC_REGISTRY_DOMAIN || 'ONDC:RETeB2B',
   city: process.env.ONDC_CITY || 'std:080',
   country: process.env.ONDC_COUNTRY || 'IND',
-  coreVersion: process.env.ONDC_CORE_VERSION || '1.2.0',
+  coreVersion: process.env.ONDC_CORE_VERSION || '1.2.5',
   
   // Cryptographic Keys (Ed25519 Signing & X25519 Encryption)
   keyId: process.env.ONDC_KEY_ID || 'kogniti-key-01',

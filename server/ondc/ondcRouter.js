@@ -13,17 +13,55 @@ import {
   calculateQuote,
   createOndcOrder,
   getOrderById,
+  getAllOndcOrders,
   updateOrderStatus,
   cancelOrder,
 } from './orderManager.js';
 import { handleBuyerInitiatedReturn } from './returnHandler.js';
 import ondcLogger from './logger.js';
+import stateManager from './stateManager.js';
 
 export const ondcRouter = express.Router();
+
+// Sliding-window in-memory rate limiter (240 requests/minute per IP)
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const MAX_REQUESTS_PER_WINDOW = 240;
+
+export function ondcRateLimiter(req, res, next) {
+  const ip = req.ip || req.connection?.remoteAddress || '127.0.0.1';
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip) || { count: 0, resetTime: now + RATE_LIMIT_WINDOW_MS };
+
+  if (now > entry.resetTime) {
+    entry.count = 1;
+    entry.resetTime = now + RATE_LIMIT_WINDOW_MS;
+  } else {
+    entry.count++;
+  }
+
+  rateLimitMap.set(ip, entry);
+
+  if (entry.count > MAX_REQUESTS_PER_WINDOW) {
+    return res.status(429).json({
+      message: { ack: { status: 'NACK' } },
+      error: {
+        type: 'CORE-ERROR',
+        code: '90001',
+        message: 'Rate limit exceeded. Too many requests from this IP.',
+      },
+    });
+  }
+
+  next();
+}
+
+ondcRouter.use(ondcRateLimiter);
 
 // Middleware to capture raw body for signature verification
 ondcRouter.use(
   express.json({
+    limit: '5mb',
     verify: (req, res, buf) => {
       req.rawBody = buf.toString('utf8');
     },
@@ -148,7 +186,7 @@ async function dispatchCallback(bapUri, action, payload) {
 }
 
 /**
- * Middleware to validate common ONDC context
+ * Middleware to validate common ONDC context and state transitions
  */
 async function validateOndcRequest(req, res, next) {
   const { context } = req.body || {};
@@ -156,6 +194,12 @@ async function validateOndcRequest(req, res, next) {
     return sendNack(res, '10000', 'Missing required context attributes (domain, action, transaction_id, message_id)');
   }
 
+  // Domain verification: must be ONDC:RETeB2B
+  if (context.domain !== ondcConfig.domain) {
+    return sendNack(res, '10001', `Invalid domain '${context.domain}'. Expected '${ondcConfig.domain}'.`);
+  }
+
+  // Cryptographic authorization verification
   const authHeader = req.headers['authorization'];
   const verification = await verifyAuthorization({
     header: authHeader,
@@ -169,6 +213,36 @@ async function validateOndcRequest(req, res, next) {
     });
     return sendNack(res, '20001', verification.error || 'Unauthorized ONDC request');
   }
+
+  // State machine transition validation
+  const transitionCheck = stateManager.validateTransition(
+    context.transaction_id,
+    context.action,
+    req.body.message
+  );
+
+  if (!transitionCheck.valid) {
+    ondcLogger.warn(context.action, `State transition rejected: ${transitionCheck.message}`, {
+      transactionId: context.transaction_id,
+      code: transitionCheck.code,
+    });
+    stateManager.addLog({
+      action: context.action,
+      transactionId: context.transaction_id,
+      messageId: context.message_id,
+      status: 400,
+      error: { message: transitionCheck.message },
+    });
+    return sendNack(res, transitionCheck.code || '30000', transitionCheck.message);
+  }
+
+  // Record valid transition in state manager
+  stateManager.recordTransition({
+    transactionId: context.transaction_id,
+    messageId: context.message_id,
+    action: context.action,
+    orderId: req.body.message?.order?.id || req.body.message?.order_id || null,
+  });
 
   next();
 }
@@ -601,6 +675,72 @@ ondcRouter.post('/support', validateOndcRequest, async (req, res) => {
       },
     };
     await dispatchCallback(context.bap_uri, 'on_support', callbackPayload);
+  });
+});
+
+/* ==========================================================================
+   Admin & Observability Endpoints
+   ========================================================================== */
+
+/**
+ * GET /api/admin/ondc/orders - Fetch all ONDC orders for admin dashboard
+ */
+ondcRouter.get('/api/admin/ondc/orders', (req, res) => {
+  const orders = getAllOndcOrders();
+  return res.status(200).json({
+    success: true,
+    total: orders.length,
+    orders,
+  });
+});
+
+/**
+ * GET /api/admin/ondc/transactions - Fetch all state machine transaction records
+ */
+ondcRouter.get('/api/admin/ondc/transactions', (req, res) => {
+  const transactions = stateManager.getAllTransactions();
+  return res.status(200).json({
+    success: true,
+    total: transactions.length,
+    transactions,
+  });
+});
+
+/**
+ * GET /api/admin/ondc/logs - Fetch recent audit and error logs
+ */
+ondcRouter.get('/api/admin/ondc/logs', (req, res) => {
+  const limit = parseInt(req.query.limit || '100', 10);
+  const logs = stateManager.getRecentLogs(limit);
+  return res.status(200).json({
+    success: true,
+    total: logs.length,
+    logs,
+  });
+});
+
+/**
+ * GET /api/admin/ondc/stats - Overview metrics
+ */
+ondcRouter.get('/api/admin/ondc/stats', (req, res) => {
+  const orders = getAllOndcOrders();
+  const transactions = stateManager.getAllTransactions();
+  const logs = stateManager.getRecentLogs(200);
+
+  const totalRevenue = orders.reduce((sum, o) => sum + (o.grandTotal || 0), 0);
+  const totalReturns = orders.filter((o) => o.returnDetails || o.orderStatus === 'Return_Approved').length;
+  const totalCancellations = orders.filter((o) => o.orderStatus === 'cancelled').length;
+
+  return res.status(200).json({
+    success: true,
+    domain: ondcConfig.domain,
+    coreVersion: ondcConfig.coreVersion,
+    totalOrders: orders.length,
+    totalRevenue,
+    totalReturns,
+    totalCancellations,
+    activeTransactions: transactions.length,
+    recentErrors: logs.filter((l) => l.error || l.status >= 400).length,
   });
 });
 

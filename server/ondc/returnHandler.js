@@ -9,6 +9,7 @@
 import { getOrderById, updateOrderStatus } from './orderManager.js';
 import ondcConfig from './config.js';
 import { PRODUCTS_CATALOG } from './catalogMapper.js';
+import stateManager from './stateManager.js';
 
 export function handleBuyerInitiatedReturn({ context, updatePayload }) {
   const orderId = updatePayload.order?.id;
@@ -28,6 +29,14 @@ export function handleBuyerInitiatedReturn({ context, updatePayload }) {
     for (const reqItem of requestedReturnItems) {
       const existingItem = order.items.find((i) => i.id === reqItem.id) || order.items[0];
       const returnCount = parseInt(reqItem.quantity?.count || reqItem.quantity || existingItem.quantity, 10);
+      
+      // Strict quantity validation
+      if (returnCount > existingItem.quantity) {
+        const err = new Error(`Return quantity (${returnCount}) exceeds purchased count (${existingItem.quantity}) for item '${existingItem.name}'`);
+        err.code = '40004';
+        throw err;
+      }
+
       const unitPrice = existingItem.effectiveUnitPrice || existingItem.baseWholesalePrice || 198;
       const gstRate = existingItem.gstRate || 18;
       
@@ -94,6 +103,17 @@ export function handleBuyerInitiatedReturn({ context, updatePayload }) {
     status: 'RETURN_APPROVED',
     timestamp: new Date().toISOString(),
     note: `Buyer-initiated return approved (${returnType.replace('_', ' ')}). Refund amount: ₹${totalRefundAmount.toFixed(2)}`,
+  });
+
+  stateManager.recordTransition({
+    transactionId: context.transaction_id,
+    messageId: context.message_id,
+    action: 'update',
+    orderId: order.id,
+    nextState: isFullOrder ? 'Completed' : 'Completed',
+    fulfillmentState: 'Return_Approved',
+    requestSummary: `${returnType}: ${returnItemsDetails.length} items requested for return`,
+    responseSummary: `Return_Approved with refund amount ₹${totalRefundAmount.toFixed(2)}`,
   });
 
   // Build the official /on_update order payload

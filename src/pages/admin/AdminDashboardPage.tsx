@@ -42,6 +42,7 @@ import {
   Sparkles,
   Award,
   Layers,
+  Globe,
 } from 'lucide-react';
 import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, AdminPermissions, Category, B2CUser, SiteMedia, B2BOrderItemSummary, OrderItemSummary, B2BQuotationItem, B2BPaymentRecord, B2CAddress } from '../../types';
 import { storageService } from '../../services/storageService';
@@ -58,6 +59,7 @@ import { AdminNavSlider } from '../../components/admin/AdminNavSlider';
 import { PolicyManagement } from '../../components/admin/PolicyManagement';
 import { BulkActionBar } from '../../components/admin/BulkActionBar';
 import { WHATSAPP_NUMBER } from '../../config/whatsappConfig';
+import { OndcManagement } from '../../components/admin/OndcManagement';
 
 interface AdminDashboardPageProps {
   products: Product[];
@@ -87,7 +89,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const { currentAdminUser, isSuperAdmin, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery' | 'gallery_categories' | 'certifications' | 'cert_categories' | 'policies'
+    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery' | 'gallery_categories' | 'certifications' | 'cert_categories' | 'policies' | 'ondc'
   >('overview');
 
   // Razorpay Gateway State
@@ -2301,6 +2303,43 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 }}
               >
                 Statutory
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('ondc')}
+              data-tab="ondc"
+              data-active={activeTab === 'ondc'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'ondc' ? '#2563EB' : 'var(--slate-600)',
+                borderBottom: activeTab === 'ondc' ? '2px solid #2563EB' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'ondc' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'ondc' ? '#2563EB' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <Globe size={16} style={{ color: '#2563EB' }} /> ONDC Console
+              <span
+                style={{
+                  backgroundColor: '#DBEAFE',
+                  color: '#1E40AF',
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  padding: '0.1rem 0.4rem',
+                  borderRadius: '4px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                ONDC:RETeB2B
               </span>
             </button>
           </AdminNavSlider>
@@ -6691,6 +6730,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         {/* Company Certification & Regulatory Document Category Governance */}
         {activeTab === 'cert_categories' && (
           <CategoryManager type="certification" />
+        )}
+
+        {/* ONDC:RETeB2B Network Management Console */}
+        {activeTab === 'ondc' && (
+          <OndcManagement />
         )}
       </div>
 
