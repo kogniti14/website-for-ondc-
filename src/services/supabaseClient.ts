@@ -14,8 +14,17 @@ const getEnvVar = (key: string): string => {
   return '';
 };
 
-const supabaseUrl = getEnvVar('VITE_SUPABASE_URL') || getEnvVar('SUPABASE_URL') || 'https://placeholder.supabase.co';
-const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY') || getEnvVar('SUPABASE_ANON_KEY') || 'placeholder-key';
+const supabaseUrl =
+  getEnvVar('VITE_SUPABASE_URL') ||
+  getEnvVar('SUPABASE_URL') ||
+  'https://placeholder.supabase.co';
+
+const supabaseAnonKey =
+  getEnvVar('VITE_SUPABASE_ANON_KEY') ||
+  getEnvVar('SUPABASE_ANON_KEY') ||
+  getEnvVar('VITE_SUPABASE_KEY') ||
+  getEnvVar('SUPABASE_KEY') ||
+  'placeholder-key';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 

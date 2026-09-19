@@ -5,6 +5,11 @@ import { storageService } from '../services/storageService';
 import { firebaseAuthService } from '../services/firebaseAuthService';
 import { isFirebaseConfigured } from '../services/firebase';
 import { emailOtpService } from '../services/emailOtpService';
+import {
+  MASTER_SUPER_ADMIN,
+  isSuperAdminIdentifier,
+  adminDbService,
+} from '../services/adminDbService';
 
 export interface AuthContextType {
   role: UserRole;
@@ -159,6 +164,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRole('admin');
       }
     }
+
+    // Sync Super Admin in background with production databases
+    adminDbService.ensureSuperAdminInDatabase().catch(() => {});
   }, []);
 
   const refreshUserData = () => {
@@ -314,7 +322,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     identifier: string,
     password: string
   ): { success: boolean; message: string; user?: AdminUser; isPending?: boolean } => {
-    const admin = storageService.getAdminUserByIdentifier(identifier);
+    let admin = storageService.getAdminUserByIdentifier(identifier);
+    if (!admin && isSuperAdminIdentifier(identifier)) {
+      admin = MASTER_SUPER_ADMIN;
+      storageService.saveAdminUser(admin);
+    }
+
     if (!admin) {
       return {
         success: false,
@@ -322,7 +335,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
 
-    if (admin.password && admin.password !== password) {
+    const isMasterAdmin =
+      isSuperAdminIdentifier(admin.userId) || isSuperAdminIdentifier(admin.email);
+    const passwordMatches =
+      (admin.password && admin.password === password) ||
+      (isMasterAdmin && password === MASTER_SUPER_ADMIN.password);
+
+    if (!passwordMatches) {
       return {
         success: false,
         message: 'Incorrect password entered. Please verify and try again.',
@@ -631,8 +650,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     identifier: string,
     password: string
   ): Promise<{ success: boolean; message: string; user?: AdminUser; isPending?: boolean }> => {
-    // 1. Check local admin record first for permissions & credentials
-    const admin = storageService.getAdminUserByIdentifier(identifier);
+    // 1. Resolve admin record with Super Admin fallback
+    let admin = storageService.getAdminUserByIdentifier(identifier);
+    if (!admin && isSuperAdminIdentifier(identifier)) {
+      admin = MASTER_SUPER_ADMIN;
+      storageService.saveAdminUser(admin);
+    }
+
     if (!admin) {
       return {
         success: false,
@@ -640,7 +664,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     }
 
-    if (admin.password && admin.password !== password) {
+    // Verify password against record or Master Super Admin password
+    const isMasterAdmin =
+      isSuperAdminIdentifier(admin.userId) || isSuperAdminIdentifier(admin.email);
+    const passwordMatches =
+      (admin.password && admin.password === password) ||
+      (isMasterAdmin && password === MASTER_SUPER_ADMIN.password);
+
+    if (!passwordMatches) {
       return {
         success: false,
         message: 'Incorrect password entered. Please verify and try again.',
@@ -672,11 +703,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           admin.firebaseUid = fbRes.user.uid;
           admin.authProvider = 'firebase_email';
           storageService.saveAdminUser(admin);
+        } else if (
+          fbRes.error &&
+          (fbRes.error.toLowerCase().includes('no registered account') ||
+            fbRes.error.toLowerCase().includes('user-not-found'))
+        ) {
+          // Auto-provision Super Admin in Firebase Auth Cloud
+          const regRes = await firebaseAuthService.registerWithEmail(
+            admin.email,
+            password,
+            admin.name
+          );
+          if (regRes.user) {
+            admin.firebaseUid = regRes.user.uid;
+            admin.authProvider = 'firebase_email';
+            storageService.saveAdminUser(admin);
+          }
         }
       } catch {
-        // Fallback gracefully to local admin login
+        // Fallback gracefully to verified admin login
       }
     }
+
+    // Ensure database sync in background
+    adminDbService.ensureSuperAdminInDatabase().catch(() => {});
 
     setCurrentAdminUser(admin);
     setIsAdmin(true);
@@ -689,7 +739,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return {
       success: true,
-      message: `Firebase & Master Authentication successful! Welcome, ${admin.name}.`,
+      message: `Authentication successful! Welcome, ${admin.name}.`,
       user: admin,
     };
   };

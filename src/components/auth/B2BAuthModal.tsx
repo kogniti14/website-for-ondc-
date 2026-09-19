@@ -19,6 +19,7 @@ import { B2BBusiness } from '../../types';
 import { storageService } from '../../services/storageService';
 import { UnregisteredUserModal } from './UnregisteredUserModal';
 import { ImageUpload } from '../common/ImageUpload';
+import { isSuperAdminIdentifier } from '../../services/adminDbService';
 
 interface B2BAuthModalProps {
   onClose: () => void;
@@ -84,6 +85,7 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
     loginB2BWithEmailOtp,
     registerB2BWithEmailOtp,
     resetPasswordWithEmailOtp,
+    loginAdminWithFirebase,
     isFirebaseLive,
   } = useAuth();
 
@@ -114,6 +116,27 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
       return;
     }
     const cleanEmail = email.trim();
+
+    // Check if this identifier belongs to Super Admin / Admin personnel
+    const isAdminId =
+      isSuperAdminIdentifier(cleanEmail) || storageService.isAnyAdminIdentifier(cleanEmail);
+    if (isAdminId) {
+      if (password) {
+        setLoading(true);
+        const adminRes = await loginAdminWithFirebase(cleanEmail, password);
+        setLoading(false);
+        if (adminRes.success) {
+          if (onSuccess) onSuccess();
+          onClose();
+          return;
+        }
+        setError(adminRes.message);
+        return;
+      } else {
+        setError('Kogniti Minds Admin Account detected. Please enter your Admin Password to sign in.');
+        return;
+      }
+    }
 
     const isRegistered = storageService.isB2BIdentifierRegistered(cleanEmail);
     if (!isRegistered) {
@@ -152,6 +175,13 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@')) {
       setError('Please enter your official corporate email address.');
+      return;
+    }
+
+    const isAdminId =
+      isSuperAdminIdentifier(cleanEmail) || storageService.isAnyAdminIdentifier(cleanEmail);
+    if (isAdminId) {
+      setError('This is an Admin account. Please sign in with your Admin Password or visit the Admin Portal.');
       return;
     }
 

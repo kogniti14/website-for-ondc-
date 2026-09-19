@@ -19,6 +19,12 @@ import {
 } from '../types';
 import { MOCK_PRODUCTS, MOCK_COUPONS, CATEGORIES } from '../data/mockProducts';
 import { emailOtpService } from './emailOtpService';
+import {
+  MASTER_SUPER_ADMIN,
+  normalizeAdminIdentifier,
+  isSuperAdminIdentifier,
+  adminDbService,
+} from './adminDbService';
 
 const KEYS = {
   PRODUCTS: 'km_products_v2',
@@ -39,20 +45,7 @@ const KEYS = {
 };
 
 // Initial Seed Data - Production Level (Zero Dummy Accounts)
-const SEED_ADMIN_USERS: AdminUser[] = [
-  {
-    id: 'adm_super_01',
-    userId: 'kogniti14',
-    name: 'Honey Sharma',
-    email: 'kogniti14@kognitiminds.com',
-    password: '28022007Honey@#',
-    role: 'super_admin',
-    department: 'Executive Leadership & Governance',
-    status: 'approved',
-    registeredAt: '2026-08-01T09:00:00Z',
-    approvedAt: '2026-08-01T09:00:00Z',
-  },
-];
+const SEED_ADMIN_USERS: AdminUser[] = [MASTER_SUPER_ADMIN];
 
 const SEED_B2C_USERS: B2CUser[] = [];
 
@@ -951,7 +944,22 @@ class StorageService {
 
   // --- Admin Staff & Governance ---
   getAdminUsers(): AdminUser[] {
-    return this.getItem<AdminUser[]>(KEYS.ADMIN_USERS, SEED_ADMIN_USERS);
+    const list = this.getItem<AdminUser[]>(KEYS.ADMIN_USERS, SEED_ADMIN_USERS);
+    // Guarantee that the Super Admin is ALWAYS present in the admin list
+    const hasSuperAdmin =
+      Array.isArray(list) &&
+      list.some(
+        (u) =>
+          u.userId.toLowerCase() === 'kogniti14' ||
+          u.email.toLowerCase() === 'kogniti14@kognitiminds.com'
+      );
+
+    if (!hasSuperAdmin) {
+      const merged = [MASTER_SUPER_ADMIN, ...(Array.isArray(list) ? list : [])];
+      this.setItem(KEYS.ADMIN_USERS, merged);
+      return merged;
+    }
+    return list;
   }
 
   getAdminUserById(id: string): AdminUser | null {
@@ -960,13 +968,35 @@ class StorageService {
   }
 
   getAdminUserByIdentifier(identifier: string): AdminUser | null {
+    if (!identifier) return null;
+    const clean = normalizeAdminIdentifier(identifier);
+    if (!clean) return null;
+
+    // Check directly for Super Admin identifier or aliases (kogniti14, superadmin, etc.)
+    if (isSuperAdminIdentifier(clean)) {
+      const users = this.getAdminUsers();
+      const superAdmin = users.find(
+        (u) =>
+          u.userId.toLowerCase() === 'kogniti14' ||
+          u.email.toLowerCase() === 'kogniti14@kognitiminds.com'
+      );
+      return superAdmin || MASTER_SUPER_ADMIN;
+    }
+
     const users = this.getAdminUsers();
-    const clean = identifier.trim().toLowerCase();
     return (
       users.find(
-        (u) => u.userId.toLowerCase() === clean || u.email.toLowerCase() === clean
+        (u) =>
+          u.userId.toLowerCase() === clean ||
+          u.email.toLowerCase() === clean ||
+          (u.name && u.name.toLowerCase() === clean)
       ) || null
     );
+  }
+
+  isAnyAdminIdentifier(identifier: string): boolean {
+    if (!identifier) return false;
+    return Boolean(this.getAdminUserByIdentifier(identifier));
   }
 
   saveAdminUser(admin: AdminUser): void {

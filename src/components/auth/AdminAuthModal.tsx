@@ -19,6 +19,11 @@ import { useAuth } from '../../context/AuthContext';
 import { AdminRole } from '../../types';
 import { storageService } from '../../services/storageService';
 import { UnregisteredUserModal } from './UnregisteredUserModal';
+import {
+  MASTER_SUPER_ADMIN,
+  isSuperAdminIdentifier,
+  adminDbService,
+} from '../../services/adminDbService';
 
 interface AdminAuthModalProps {
   onClose: () => void;
@@ -189,7 +194,23 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
     }
 
     const cleanId = loginIdentifier.trim();
-    const admin = storageService.getAdminUserByIdentifier(cleanId);
+    let admin = storageService.getAdminUserByIdentifier(cleanId);
+
+    if (!admin && isSuperAdminIdentifier(cleanId)) {
+      admin = MASTER_SUPER_ADMIN;
+      storageService.saveAdminUser(admin);
+    }
+
+    if (!admin) {
+      setLoading(true);
+      const dbAdmin = await adminDbService.findAdminUser(cleanId);
+      setLoading(false);
+      if (dbAdmin) {
+        admin = dbAdmin;
+        storageService.saveAdminUser(admin);
+      }
+    }
+
     if (!admin) {
       setUnregisteredIdentifier(cleanId);
       setShowUnregisteredModal(true);
@@ -522,7 +543,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                       type="text"
                       value={loginIdentifier}
                       onChange={(e) => setLoginIdentifier(e.target.value)}
-                      placeholder="superadmin or admin_ops"
+                      placeholder="kogniti14 or kogniti14@kognitiminds.com"
                       required
                       style={{
                         width: '100%',

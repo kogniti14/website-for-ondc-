@@ -3,6 +3,7 @@ import { X, Mail, Lock, User, Phone, CheckCircle2, AlertCircle, ArrowLeft, KeyRo
 import { useAuth } from '../../context/AuthContext';
 import { storageService } from '../../services/storageService';
 import { UnregisteredUserModal } from './UnregisteredUserModal';
+import { isSuperAdminIdentifier } from '../../services/adminDbService';
 
 interface AuthModalProps {
   initialMode?: 'login' | 'register';
@@ -56,6 +57,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
     loginB2CWithEmailOtp,
     registerB2CWithEmailOtp,
     resetPasswordWithEmailOtp,
+    loginAdminWithFirebase,
     isFirebaseLive,
   } = useAuth();
 
@@ -94,6 +96,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
     }
     const cleanEmail = email.trim();
 
+    // Check if this identifier belongs to Super Admin / Admin personnel
+    const isAdminId =
+      isSuperAdminIdentifier(cleanEmail) || storageService.isAnyAdminIdentifier(cleanEmail);
+    if (isAdminId) {
+      if (password) {
+        setLoading(true);
+        const adminRes = await loginAdminWithFirebase(cleanEmail, password);
+        setLoading(false);
+        if (adminRes.success) {
+          onClose();
+          return;
+        }
+        setError(adminRes.message);
+        return;
+      } else {
+        setError('Kogniti Minds Admin Account detected. Please enter your Admin Password to sign in.');
+        return;
+      }
+    }
+
     const isRegistered = storageService.isB2CIdentifierRegistered(cleanEmail);
     if (!isRegistered) {
       setUnregisteredIdentifier(cleanEmail);
@@ -129,6 +151,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !cleanEmail.includes('@')) {
       setError('Please enter a valid email address to receive your verification OTP.');
+      return;
+    }
+
+    const isAdminId =
+      isSuperAdminIdentifier(cleanEmail) || storageService.isAnyAdminIdentifier(cleanEmail);
+    if (isAdminId) {
+      setError('This is an Admin account. Please sign in with your Admin Password or visit the Admin Portal.');
       return;
     }
 
