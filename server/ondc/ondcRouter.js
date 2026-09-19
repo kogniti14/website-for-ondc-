@@ -106,9 +106,9 @@ function buildCallbackContext(incomingContext, action) {
     country: incomingContext.country || ondcConfig.country,
     city: incomingContext.city || ondcConfig.city,
     action,
-    core_version: incomingContext.core_version || ondcConfig.coreVersion,
-    bap_id: incomingContext.bap_id,
-    bap_uri: incomingContext.bap_uri,
+    core_version: incomingContext.core_version || ondcConfig.coreVersion || '1.2.5',
+    bap_id: incomingContext.bap_id || 'workbench.ondc.tech',
+    bap_uri: incomingContext.bap_uri || ondcConfig.buyerBaseUrl || 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer',
     bpp_id: ondcConfig.subscriberId,
     bpp_uri: ondcConfig.subscriberUri,
     transaction_id: incomingContext.transaction_id,
@@ -122,13 +122,14 @@ function buildCallbackContext(incomingContext, action) {
  * Dispatch asynchronous callback to BAP with cryptographic authorization
  */
 async function dispatchCallback(bapUri, action, payload) {
-  if (!bapUri) {
+  const targetUri = bapUri || ondcConfig.buyerBaseUrl || 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer';
+  if (!targetUri) {
     ondcLogger.warn(action, 'No bap_uri provided in request context; skipping HTTP dispatch');
     return;
   }
 
-  // Format destination URL: e.g. https://buyer-app.com/on_search
-  const cleanUri = bapUri.replace(/\/+$/, '');
+  // Format destination URL: e.g. https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer/<action>
+  const cleanUri = targetUri.replace(/\/+$/, '');
   const url = cleanUri.endsWith(action) ? cleanUri : `${cleanUri}/${action}`;
 
   const stringifiedBody = JSON.stringify(payload);

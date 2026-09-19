@@ -4,14 +4,14 @@
     "action": "on_search",
     "country": "IND",
     "city": "std:080",
-    "core_version": "1.2.0",
-    "bap_id": "buyer-app-preprod.ondc.org",
-    "bap_uri": "https://buyer-app-preprod.ondc.org/protocol/v1",
+    "core_version": "1.2.5",
+    "bap_id": "workbench.ondc.tech",
+    "bap_uri": "https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer",
     "bpp_id": "kognitiminds.com",
     "bpp_uri": "https://kognitiminds.com",
     "transaction_id": "54e3d489-0be3-455b-9d41-3da39d520377",
     "message_id": "0b0e557b-7b56-4c4f-9e7c-86cf330de223",
-    "timestamp": "2026-09-19T20:16:26.443Z",
+    "timestamp": "2026-09-19T20:48:10.457Z",
     "ttl": "PT30S"
   },
   "message": {
@@ -92,7 +92,7 @@
           "id": "kogniti-minds-bpp",
           "time": {
             "label": "enable",
-            "timestamp": "2026-09-19T20:16:26.445Z"
+            "timestamp": "2026-09-19T20:48:10.458Z"
           },
           "descriptor": {
             "name": "KOGNITI MINDS PRIVATE LIMITED",
@@ -155,7 +155,7 @@
               },
               "time": {
                 "label": "enable",
-                "timestamp": "2026-09-19T20:16:26.445Z",
+                "timestamp": "2026-09-19T20:48:10.458Z",
                 "days": "1,2,3,4,5,6",
                 "schedule": {
                   "holidays": [],
@@ -219,7 +219,7 @@
               },
               "time": {
                 "label": "enable",
-                "timestamp": "2026-09-19T20:16:26.444Z"
+                "timestamp": "2026-09-19T20:48:10.458Z"
               },
               "matched": true,
               "recommended": true,
@@ -349,7 +349,7 @@
               },
               "time": {
                 "label": "enable",
-                "timestamp": "2026-09-19T20:16:26.444Z"
+                "timestamp": "2026-09-19T20:48:10.458Z"
               },
               "matched": true,
               "recommended": true,
@@ -475,7 +475,7 @@
               },
               "time": {
                 "label": "enable",
-                "timestamp": "2026-09-19T20:16:26.444Z"
+                "timestamp": "2026-09-19T20:48:10.458Z"
               },
               "matched": true,
               "recommended": true,
@@ -601,7 +601,7 @@
               },
               "time": {
                 "label": "enable",
-                "timestamp": "2026-09-19T20:16:26.444Z"
+                "timestamp": "2026-09-19T20:48:10.458Z"
               },
               "matched": true,
               "recommended": true,
@@ -727,7 +727,7 @@
               },
               "time": {
                 "label": "enable",
-                "timestamp": "2026-09-19T20:16:26.444Z"
+                "timestamp": "2026-09-19T20:48:10.458Z"
               },
               "matched": true,
               "recommended": true,
@@ -853,7 +853,7 @@
               },
               "time": {
                 "label": "enable",
-                "timestamp": "2026-09-19T20:16:26.444Z"
+                "timestamp": "2026-09-19T20:48:10.458Z"
               },
               "matched": true,
               "recommended": true,
@@ -979,7 +979,7 @@
               },
               "time": {
                 "label": "enable",
-                "timestamp": "2026-09-19T20:16:26.444Z"
+                "timestamp": "2026-09-19T20:48:10.458Z"
               },
               "matched": true,
               "recommended": true,
@@ -1105,7 +1105,7 @@
               },
               "time": {
                 "label": "enable",
-                "timestamp": "2026-09-19T20:16:26.444Z"
+                "timestamp": "2026-09-19T20:48:10.458Z"
               },
               "matched": true,
               "recommended": true,
@@ -1231,7 +1231,7 @@
               },
               "time": {
                 "label": "enable",
-                "timestamp": "2026-09-19T20:16:26.445Z"
+                "timestamp": "2026-09-19T20:48:10.458Z"
               },
               "matched": true,
               "recommended": true,
@@ -1357,7 +1357,7 @@
               },
               "time": {
                 "label": "enable",
-                "timestamp": "2026-09-19T20:16:26.445Z"
+                "timestamp": "2026-09-19T20:48:10.458Z"
               },
               "matched": true,
               "recommended": true,
@@ -1483,7 +1483,7 @@
               },
               "time": {
                 "label": "enable",
-                "timestamp": "2026-09-19T20:16:26.445Z"
+                "timestamp": "2026-09-19T20:48:10.458Z"
               },
               "matched": true,
               "recommended": true,
@@ -1609,7 +1609,7 @@
               },
               "time": {
                 "label": "enable",
-                "timestamp": "2026-09-19T20:16:26.445Z"
+                "timestamp": "2026-09-19T20:48:10.458Z"
               },
               "matched": true,
               "recommended": true,

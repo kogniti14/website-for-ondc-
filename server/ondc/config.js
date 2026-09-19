@@ -15,6 +15,9 @@ export const ondcConfig = {
   country: process.env.ONDC_COUNTRY || 'IND',
   coreVersion: process.env.ONDC_CORE_VERSION || '1.2.5',
   
+  // ONDC Workbench / Buyer App Callback Destination
+  buyerBaseUrl: process.env.ONDC_BUYER_BASE_URL || 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer',
+  
   // Cryptographic Keys (Ed25519 Signing & X25519 Encryption)
   keyId: process.env.ONDC_KEY_ID || 'kogniti-key-01',
   privateKey: (process.env.ONDC_PRIVATE_KEY || '').trim(),
