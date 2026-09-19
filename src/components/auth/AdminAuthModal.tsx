@@ -543,7 +543,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                       type="text"
                       value={loginIdentifier}
                       onChange={(e) => setLoginIdentifier(e.target.value)}
-                      placeholder="kogniti14 or kogniti14@kognitiminds.com"
+                      placeholder="User Id / Email id"
                       required
                       style={{
                         width: '100%',
