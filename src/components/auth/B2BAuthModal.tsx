@@ -163,7 +163,10 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
     let isRegistered = storageService.isB2BIdentifierRegistered(cleanEmail);
     if (!isRegistered) {
       try {
-        const checkRes = await fetch(`/api/data/b2b_businesses`).catch(() => null);
+        let checkRes = await fetch(`/api/data.php?collection=b2b_businesses`).catch(() => null);
+        if (!checkRes || !checkRes.ok) {
+          checkRes = await fetch(`/api/data/b2b_businesses`).catch(() => null);
+        }
         if (checkRes && checkRes.ok) {
           const serverBiz = await checkRes.json();
           const match = serverBiz.find((b: any) => (b.businessEmail || '').toLowerCase() === cleanEmail.toLowerCase());
@@ -211,7 +214,10 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
     let isRegistered = storageService.isB2BIdentifierRegistered(cleanEmail);
     if (!isRegistered) {
       try {
-        const checkRes = await fetch(`/api/data/b2b_businesses`).catch(() => null);
+        let checkRes = await fetch(`/api/data.php?collection=b2b_businesses`).catch(() => null);
+        if (!checkRes || !checkRes.ok) {
+          checkRes = await fetch(`/api/data/b2b_businesses`).catch(() => null);
+        }
         if (checkRes && checkRes.ok) {
           const serverBiz = await checkRes.json();
           const match = serverBiz.find((b: any) => (b.businessEmail || '').toLowerCase() === cleanEmail.toLowerCase());

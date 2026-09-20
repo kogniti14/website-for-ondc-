@@ -140,7 +140,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
     let isRegistered = storageService.isB2CIdentifierRegistered(cleanEmail);
     if (!isRegistered) {
       try {
-        const checkRes = await fetch(`/api/data/b2c_users`).catch(() => null);
+        let checkRes = await fetch(`/api/data.php?collection=b2c_users`).catch(() => null);
+        if (!checkRes || !checkRes.ok) {
+          checkRes = await fetch(`/api/data/b2c_users`).catch(() => null);
+        }
         if (checkRes && checkRes.ok) {
           const serverUsers = await checkRes.json();
           const match = serverUsers.find((u: any) => (u.email || '').toLowerCase() === cleanEmail.toLowerCase());
@@ -187,7 +190,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
     let isRegistered = storageService.isB2CIdentifierRegistered(cleanEmail);
     if (!isRegistered) {
       try {
-        const checkRes = await fetch(`/api/data/b2c_users`).catch(() => null);
+        let checkRes = await fetch(`/api/data.php?collection=b2c_users`).catch(() => null);
+        if (!checkRes || !checkRes.ok) {
+          checkRes = await fetch(`/api/data/b2c_users`).catch(() => null);
+        }
         if (checkRes && checkRes.ok) {
           const serverUsers = await checkRes.json();
           const match = serverUsers.find((u: any) => (u.email || '').toLowerCase() === cleanEmail.toLowerCase());

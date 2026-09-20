@@ -130,24 +130,24 @@ class StorageService {
 
   /**
    * Background server synchronization helper
-   * Syncs changes to Express backend /api/data or PHP fallback /api/data.php
+   * Syncs changes to persistent store via data.php or /api/data
    */
-  private syncServer(collection: string, payload: any, method: 'POST' | 'DELETE' = 'POST', id?: string): void {
+  private async syncServer(collection: string, payload: any, method: 'POST' | 'DELETE' = 'POST', id?: string): Promise<void> {
     if (typeof window === 'undefined') return;
-    const url = method === 'DELETE' && id ? `/api/data/${collection}/${id}` : `/api/data/${collection}`;
-    fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: method !== 'DELETE' ? JSON.stringify(payload) : undefined,
-    }).catch(() => {
-      // Fallback to PHP dispatcher if Node reverse proxy is not active
+    const body = method !== 'DELETE' ? JSON.stringify(payload) : undefined;
+    const headers = { 'Content-Type': 'application/json' };
+
+    try {
+      // Direct native PHP dispatcher (guaranteed active on Hostinger LiteSpeed/Apache)
       const phpUrl = method === 'DELETE' && id ? `/api/data.php?collection=${collection}&id=${id}` : `/api/data.php?collection=${collection}`;
-      fetch(phpUrl, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: method !== 'DELETE' ? JSON.stringify(payload) : undefined,
-      }).catch(() => {});
-    });
+      const res = await fetch(phpUrl, { method, headers, body }).catch(() => null);
+      if (!res || !res.ok) {
+        const url = method === 'DELETE' && id ? `/api/data/${collection}/${id}` : `/api/data/${collection}`;
+        await fetch(url, { method, headers, body }).catch(() => null);
+      }
+    } catch {
+      // Non-blocking background sync
+    }
   }
 
   /**
@@ -169,9 +169,10 @@ class StorageService {
 
     for (const item of mappings) {
       try {
-        let res = await fetch(`/api/data/${item.collection}`).catch(() => null);
+        // Fast direct path on LiteSpeed PHP
+        let res = await fetch(`/api/data.php?collection=${item.collection}`).catch(() => null);
         if (!res || !res.ok) {
-          res = await fetch(`/api/data.php?collection=${item.collection}`).catch(() => null);
+          res = await fetch(`/api/data/${item.collection}`).catch(() => null);
         }
         if (res && res.ok) {
           const serverData = await res.json();

@@ -2,10 +2,11 @@
   RewriteEngine On
   RewriteBase /
 
-  # 1. Do not proxy existing physical files or PHP scripts
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
-  RewriteCond %{REQUEST_FILENAME} -d
-  RewriteRule ^ - [L]
+  # 1. Direct Native Handlers for Production APIs (Zero proxy overhead, zero 503 errors)
+  RewriteRule ^api/auth/send-otp/?$ public/api/send-email.php [QSA,L]
+  RewriteRule ^api/resend/?$ public/api/send-email.php [QSA,L]
+  RewriteRule ^api/health/?$ public/api/health.php [QSA,L]
+  RewriteRule ^api/data/([a-zA-Z0-9_-]+)/?([a-zA-Z0-9_-]*)?$ public/api/data.php?collection=$1&id=$2 [QSA,L]
 
   # 2. Never proxy PHP files to Node.js (executes via Hostinger LiteSpeed/Apache PHP engine)
   RewriteCond %{REQUEST_URI} \.php$ [NC]
@@ -20,10 +21,10 @@
   RewriteCond %{DOCUMENT_ROOT}/dist/api/$1 -f
   RewriteRule ^api/(.*\.php)$ dist/api/$1 [L]
 
-  # 3. Reverse Proxy ONDC Protocol and API endpoints to Node.js backend (Port 3000) ONLY IF NOT A PHP FILE
+  # 3. Dedicated ONDC Protocol routes to Node.js backend (Port 3000) ONLY
   <IfModule mod_proxy.c>
     RewriteCond %{REQUEST_URI} !\.php$ [NC]
-    RewriteCond %{REQUEST_URI} ^/(search|select|init|confirm|status|cancel|update|rating|track|support|ondc|api) [NC]
+    RewriteCond %{REQUEST_URI} ^/(search|select|init|confirm|status|cancel|update|rating|track|support|ondc) [NC]
     RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
   </IfModule>
 

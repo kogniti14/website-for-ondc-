@@ -33,8 +33,12 @@ function getEnvValue($key) {
     $possiblePaths = array_filter([
         $docRoot ? $docRoot . '/.env' : null,
         $docRoot ? dirname($docRoot) . '/.env' : null,
+        $docRoot ? $docRoot . '/data/.env' : null,
+        $docRoot ? $docRoot . '/data/storage/.env' : null,
         $docRoot ? $docRoot . '/.env.production' : null,
         dirname(__DIR__, 2) . '/.env',
+        dirname(__DIR__, 2) . '/data/.env',
+        dirname(__DIR__, 2) . '/data/storage/.env',
         dirname(__DIR__) . '/.env',
         __DIR__ . '/.env',
         dirname(__DIR__, 3) . '/.env',
@@ -66,8 +70,9 @@ function getEnvValue($key) {
 
 $apiKey = getEnvValue('RESEND_API_KEY');
 
-// Safe Diagnostic Health Check (GET /api/send-email.php)
+// Safe Diagnostic Health Check (GET /api/send-email.php or GET /api/auth/send-otp)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    http_response_code(200);
     echo json_encode([
         'status' => 'healthy',
         'resendConfigured' => !empty($apiKey),
@@ -94,12 +99,12 @@ if (empty($apiKey)) {
 $rawInput = file_get_contents('php://input');
 $data = json_decode($rawInput, true) ?: [];
 
-$to = $data['to'] ?? ($data['email'] ?? []);
+$to = $data['to'] ?? ($data['email'] ?? ($data['recipient'] ?? []));
 if (is_string($to)) {
     $to = [$to];
 }
 
-if (empty($to)) {
+if (empty($to) || !is_array($to) || empty($to[0])) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Recipient email is required']);
     exit;
@@ -128,7 +133,12 @@ if (!empty($text)) {
 if (empty($html) && empty($text)) {
     $otpVal = isset($data['otp']) ? htmlspecialchars($data['otp']) : '';
     $payload['html'] = $otpVal
-        ? '<p>Your verification code is: <strong>' . $otpVal . '</strong></p>'
+        ? '<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:12px;">' .
+          '<h2 style="color:#0f172a;margin-top:0;">Kogniti Minds Security</h2>' .
+          '<p style="color:#475569;font-size:15px;">Your one-time verification code is:</p>' .
+          '<div style="background:#f8fafc;border:1px solid #cbd5e1;padding:16px;text-align:center;border-radius:8px;font-size:28px;font-weight:bold;letter-spacing:6px;color:#0f172a;margin:16px 0;">' . $otpVal . '</div>' .
+          '<p style="color:#64748b;font-size:13px;">This code expires in 10 minutes. If you did not request this, please disregard this message.</p>' .
+          '</div>'
         : '<p>' . htmlspecialchars($subject) . '</p>';
 }
 

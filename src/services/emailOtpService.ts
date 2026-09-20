@@ -164,7 +164,6 @@ class EmailOtpService {
       '/api/auth/send-otp',
       '/api/send-email.php',
       '/api/resend',
-      '/api/resend/emails',
     ];
 
     let lastError: string | undefined;
@@ -193,15 +192,13 @@ class EmailOtpService {
           return { delivered: true, provider: 'Server Dispatcher' };
         }
 
-        // If endpoint not found (404), try next endpoint in cascade
-        if (response.status === 404) {
-          continue;
-        }
-
-        const errMsg = data.message || data.error || `HTTP ${response.status}`;
-        console.error('Email dispatcher error at', endpoint, errMsg);
+        const errMsg = data.error || data.message || `HTTP ${response.status}`;
+        console.warn(`[Email Dispatcher] Candidate endpoint ${endpoint} failed (${response.status}):`, errMsg);
         lastError = errMsg;
+        // Continue cascade to next candidate endpoint
+        continue;
       } catch (err: any) {
+        console.warn(`[Email Dispatcher] Candidate endpoint ${endpoint} network error:`, err.message);
         lastError = err.message;
         continue;
       }
@@ -230,11 +227,22 @@ class EmailOtpService {
       }
     }
 
-    // Strict Production Check: Server dispatch failed
+    // Customer-friendly error formatting
+    let formattedError = 'Unable to send verification code right now. Please try again in a few moments.';
+    if (lastError) {
+      if (lastError.includes('RESEND_API_KEY') || lastError.includes('Server configuration error')) {
+        formattedError = 'Server configuration error: RESEND_API_KEY is not configured on the production server. Please check Hostinger environment settings.';
+      } else if (lastError.includes('503') || lastError.includes('502') || lastError.includes('504')) {
+        formattedError = 'Email delivery temporarily unavailable (service starting up or busy). Please try again in a moment.';
+      } else {
+        formattedError = lastError;
+      }
+    }
+
     return {
       delivered: false,
       provider: 'none',
-      error: lastError || 'Server configuration error: RESEND_API_KEY is not configured on the production server.',
+      error: formattedError,
     };
   }
 
