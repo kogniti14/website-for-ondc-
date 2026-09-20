@@ -1,3 +1,20 @@
+/**
+ * KOGNITI MINDS - Official Razorpay Payment Integration Service
+ *
+ * Core Responsibility:
+ * Orchestrates secure client-side and server-side payment processing:
+ * 1. Dynamic Script Loader: Injects official Razorpay Standard Checkout SDK (checkout.js).
+ * 2. Order Creation: Requests server-side order generation with currency and amount in paise.
+ * 3. Modal Invocation: Launches checkout modal with customer prefill and theme customization.
+ * 4. Cryptographic HMAC Verification: Dispatches payment ID, order ID, and signature to backend
+ *    (/api/payment/verify) for SHA-256 HMAC signature verification.
+ * 5. Audit Ledger: Persists completed transactions into internal accounting store.
+ *
+ * Security Notice:
+ * Key Secrets (RAZORPAY_KEY_SECRET) are NEVER exposed to this service; secrets reside
+ * exclusively on the backend server.
+ */
+
 import { storageService } from './storageService';
 
 export interface RazorpayConfig {

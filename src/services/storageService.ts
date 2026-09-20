@@ -1,3 +1,26 @@
+/**
+ * KOGNITI MINDS - Central Storage & Data Persistence Service
+ *
+ * Core Responsibility:
+ * Manages the platform's dual-tier data persistence architecture:
+ * 1. Tier 1 (Client-Side Cache): Rapid in-memory & localStorage caching for sub-millisecond UI rendering.
+ * 2. Tier 2 (Server-Side Persistence): Asynchronous background synchronization to Hostinger LiteSpeed
+ *    PHP storage (/api/data.php) and persistent atomic JSON files under data/storage/.
+ *
+ * Managed Business Entities:
+ * - Products & Categories
+ * - B2C Customer Accounts & Profiles
+ * - B2B Corporate Accounts, Profiles & RFQ Quotations
+ * - Customer Orders & Invoices (B2C & B2B)
+ * - Cart & Wishlist persistence
+ * - Admin Personnel Registry
+ * - Promotional Coupons & Media
+ *
+ * Guarantees:
+ * - Safe Deployments: Production data is decoupled from code updates (data/storage is gitignored).
+ * - Offline/Lag Resilience: UI operates uninterrupted even during temporary network interruptions.
+ */
+
 import {
   Product,
   B2CUser,

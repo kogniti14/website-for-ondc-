@@ -1,0 +1,39 @@
+# GitHub Code Owners Configuration for Kogniti Minds
+
+# Default owners for everything
+* @kogniti-team
+
+# Architecture, Types & Config
+/src/config/ @kogniti-architect
+/src/types/ @kogniti-architect
+vite.config.ts @kogniti-architect
+tsconfig.json @kogniti-architect
+
+# Authentication & OTP Service
+/src/services/emailOtpService.ts @kogniti-auth
+/src/components/auth/ @kogniti-auth
+/public/api/send-email.php @kogniti-auth
+
+# Payment Integration
+/src/services/razorpayService.ts @kogniti-payments
+/src/components/payment/ @kogniti-payments
+
+# B2B Wholesale Engine
+/src/services/b2bService.ts @kogniti-b2b
+/src/components/b2b/ @kogniti-b2b
+/src/pages/b2b/ @kogniti-b2b
+
+# ONDC Network Protocol Engine
+server.js @kogniti-ondc
+/server/ @kogniti-ondc
+test-ondc.js @kogniti-ondc
+
+# Storage & Backend APIs
+/src/services/storageService.ts @kogniti-backend
+/public/api/ @kogniti-backend
+/data/ @kogniti-backend
+
+# Infrastructure & Web Server
+.htaccess @kogniti-devops
+AGENTS.md @kogniti-devops
+docs/deployment.md @kogniti-devops
