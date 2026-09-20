@@ -24,8 +24,8 @@ export default defineConfig(({ mode }) => {
     define: {
       'process.env.SUPABASE_URL': JSON.stringify(supabaseUrl),
       'process.env.SUPABASE_ANON_KEY': JSON.stringify(supabaseKey),
-      'process.env.SUPABASE_KEY': JSON.stringify(supabaseKey),
       'import.meta.env.VITE_EMAIL_FROM': JSON.stringify(process.env.VITE_EMAIL_FROM || env.VITE_EMAIL_FROM || 'Kogniti Minds Security <security@kognitiminds.com>'),
+      'import.meta.env.VITE_RESEND_API_KEY': JSON.stringify(process.env.VITE_RESEND_API_KEY || env.VITE_RESEND_API_KEY || ''),
     },
     server: {
       proxy: {
