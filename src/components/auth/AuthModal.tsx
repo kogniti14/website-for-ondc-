@@ -61,30 +61,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
     isFirebaseLive,
   } = useAuth();
 
-  // Cooldown timers
+  // Cooldown timers - Real-time countdown
   React.useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (loginCooldown > 0) {
-      timer = setTimeout(() => setLoginCooldown((prev) => prev - 1), 1000);
-    }
-    return () => clearTimeout(timer);
-  }, [loginCooldown]);
+    if (loginCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setLoginCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [loginCooldown > 0]);
 
   React.useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (regCooldown > 0) {
-      timer = setTimeout(() => setRegCooldown((prev) => prev - 1), 1000);
-    }
-    return () => clearTimeout(timer);
-  }, [regCooldown]);
+    if (regCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setRegCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [regCooldown > 0]);
 
   React.useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (forgotCooldown > 0) {
-      timer = setTimeout(() => setForgotCooldown((prev) => prev - 1), 1000);
-    }
-    return () => clearTimeout(timer);
-  }, [forgotCooldown]);
+    if (forgotCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setForgotCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [forgotCooldown > 0]);
 
   // Handlers
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -216,7 +216,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
     setLoading(false);
     if (res.success) {
       setLoginOtpSent(true);
-      setLoginCooldown(res.cooldownSeconds || 60);
+      setLoginCooldown(res.cooldownSeconds || 10);
     } else {
       setError(res.message);
     }
@@ -272,7 +272,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
     setLoading(false);
     if (res.success) {
       setRegOtpSent(true);
-      setRegCooldown(res.cooldownSeconds || 60);
+      setRegCooldown(res.cooldownSeconds || 10);
     } else {
       setError(res.message);
     }
@@ -360,7 +360,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
     setLoading(false);
     if (res.success) {
       setForgotOtpSent(true);
-      setForgotCooldown(res.cooldownSeconds || 60);
+      setForgotCooldown(res.cooldownSeconds || 10);
     } else {
       setError(res.message);
     }

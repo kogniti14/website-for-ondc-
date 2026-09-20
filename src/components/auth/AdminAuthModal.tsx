@@ -81,10 +81,12 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
 
   React.useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (forgotCooldown > 0) timer = setTimeout(() => setForgotCooldown((prev) => prev - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [forgotCooldown]);
+    if (forgotCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setForgotCooldown((prev) => (prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [forgotCooldown > 0]);
 
   const fillDemoCredentials = (id: string, pass: string) => {
     setLoginIdentifier(id);
@@ -132,7 +134,7 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
     setLoading(false);
     if (res.success) {
       setForgotOtpSent(true);
-      setForgotCooldown(res.cooldownSeconds || 60);
+      setForgotCooldown(res.cooldownSeconds || 10);
     } else {
       setErrorMsg(res.message);
     }

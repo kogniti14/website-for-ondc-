@@ -32,7 +32,7 @@ class EmailOtpService {
   private activeOtps: Map<string, EmailOtpRecord> = new Map();
   private lastSentTime: Map<string, number> = new Map();
   private readonly OTP_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
-  private readonly RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
+  private readonly RESEND_COOLDOWN_MS = 10 * 1000; // 10 seconds
   private readonly MAX_VERIFY_ATTEMPTS = 5;
 
   /**
@@ -258,14 +258,14 @@ class EmailOtpService {
       return { success: false, message: 'Please provide a valid email address.' };
     }
 
-    // Rate-limiting check: 60s cooldown
+    // Rate-limiting check: 10s cooldown
     const lastSent = this.lastSentTime.get(cleanEmail);
     const now = Date.now();
     if (lastSent && now - lastSent < this.RESEND_COOLDOWN_MS) {
       const waitSec = Math.ceil((this.RESEND_COOLDOWN_MS - (now - lastSent)) / 1000);
       return {
         success: false,
-        message: `Please wait ${waitSec} seconds before requesting a fresh verification code.`,
+        message: `Please wait ${waitSec}s before requesting a fresh verification code.`,
         cooldownSeconds: waitSec,
       };
     }
@@ -303,7 +303,7 @@ class EmailOtpService {
       return {
         success: true,
         message: `A 6-digit verification code has been dispatched to ${cleanEmail}. Please check your inbox and spam folder.`,
-        cooldownSeconds: 60,
+        cooldownSeconds: 10,
       };
     }
 
