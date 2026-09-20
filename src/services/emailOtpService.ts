@@ -146,67 +146,59 @@ class EmailOtpService {
     otp: string,
     purpose: EmailOtpRecord['purpose']
   ): Promise<{ delivered: boolean; provider: string; error?: string }> {
-    const resendApiKey = (import.meta.env.VITE_RESEND_API_KEY || '').trim();
+    const defaultFrom = 'Kogniti Minds Security <security@kognitiminds.com>';
     const emailWebhookUrl = import.meta.env.VITE_EMAIL_WEBHOOK_URL || '';
 
-    // Sender resolution: Enforce verified custom domain (kognitiminds.com) to prevent Resend test-mode lockdown
-    let rawFrom = (import.meta.env.VITE_EMAIL_FROM || '').trim().replace(/^["']|["']$/g, '');
+    // Sender resolution: Enforce verified custom domain (kognitiminds.com)
+    let rawFrom = (import.meta.env.VITE_EMAIL_FROM || defaultFrom).trim().replace(/^["']|["']$/g, '');
     const emailFrom = (rawFrom && !rawFrom.includes('resend.dev') && !rawFrom.includes('example.com'))
       ? rawFrom
-      : 'Kogniti Minds Security <security@kognitiminds.com>';
+      : defaultFrom;
 
     const htmlContent = this.generateEmailHtml(otp, purpose);
     const subject = `Your Kogniti Minds Verification Code: ${otp}`;
 
-    // Provider 1: Resend REST API (via Vite Dev Proxy / serverless handler or direct)
-    if (resendApiKey && resendApiKey.startsWith('re_')) {
-      const endpoints = [
-        '/api/resend/emails',
-        '/api/resend',
-        'https://api.resend.com/emails',
-      ];
+    // Provider 1: Secure Server Dispatcher (Hostinger PHP dispatcher or Express /api/resend)
+    // Server endpoints hold the secret server-side, protecting production keys
+    const endpoints = [
+      '/api/send-email.php',
+      '/api/resend',
+      '/api/resend/emails',
+    ];
 
-      let lastError: string | undefined;
+    let lastError: string | undefined;
 
-      for (const endpoint of endpoints) {
-        try {
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${resendApiKey.trim()}`,
-            },
-            body: JSON.stringify({
-              from: emailFrom,
-              to: [toEmail],
-              subject,
-              html: htmlContent,
-            }),
-          });
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: emailFrom,
+            to: [toEmail],
+            subject,
+            html: htmlContent,
+          }),
+        });
 
-          if (response.ok) {
-            return { delivered: true, provider: 'Resend API' };
-          }
+        if (response.ok) {
+          return { delivered: true, provider: 'Secure Email Dispatcher' };
+        }
 
-          // If endpoint not found (404), try next endpoint
-          if (response.status === 404) {
-            continue;
-          }
-
-          const errData = await response.json().catch(() => ({}));
-          const errMsg = errData.message || `Resend HTTP ${response.status}`;
-          console.error('Resend delivery error:', errMsg);
-          return { delivered: false, provider: 'Resend API', error: errMsg };
-        } catch (err: any) {
-          lastError = err.message;
-          // Network or CORS error, try next endpoint
+        // If endpoint not found (404), try next endpoint in cascade
+        if (response.status === 404) {
           continue;
         }
-      }
 
-      if (lastError) {
-        console.error('Failed to communicate with Resend API:', lastError);
-        return { delivered: false, provider: 'Resend API', error: lastError };
+        const errData = await response.json().catch(() => ({}));
+        const errMsg = errData.message || errData.error || `HTTP ${response.status}`;
+        console.error('Email dispatcher error at', endpoint, errMsg);
+        lastError = errMsg;
+      } catch (err: any) {
+        lastError = err.message;
+        continue;
       }
     }
 

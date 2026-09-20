@@ -116,7 +116,42 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
       }
     }
 
-    const isRegistered = storageService.isB2CIdentifierRegistered(cleanEmail);
+    if (cleanEmail.includes('@') && password) {
+      setLoading(true);
+      const res = await loginB2CWithFirebase(cleanEmail.toLowerCase(), password);
+      setLoading(false);
+      if (res.success) {
+        onClose();
+        return;
+      }
+      if (
+        res.error &&
+        (res.error.toLowerCase().includes('no registered account') ||
+          res.error.toLowerCase().includes('user-not-found'))
+      ) {
+        setUnregisteredIdentifier(cleanEmail);
+        setShowUnregisteredModal(true);
+        return;
+      }
+      setError(res.error || 'Invalid credentials.');
+      return;
+    }
+
+    let isRegistered = storageService.isB2CIdentifierRegistered(cleanEmail);
+    if (!isRegistered) {
+      try {
+        const checkRes = await fetch(`/api/data/b2c_users`).catch(() => null);
+        if (checkRes && checkRes.ok) {
+          const serverUsers = await checkRes.json();
+          const match = serverUsers.find((u: any) => (u.email || '').toLowerCase() === cleanEmail.toLowerCase());
+          if (match) {
+            storageService.saveB2CUser(match);
+            isRegistered = true;
+          }
+        }
+      } catch {}
+    }
+
     if (!isRegistered) {
       setUnregisteredIdentifier(cleanEmail);
       setShowUnregisteredModal(true);
@@ -124,18 +159,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
     }
 
     setLoading(true);
-
-    if (cleanEmail.includes('@') && password) {
-      const res = await loginB2CWithFirebase(cleanEmail.toLowerCase(), password);
-      setLoading(false);
-      if (res.success) {
-        onClose();
-        return;
-      }
-      setError(res.error || 'Invalid credentials.');
-      return;
-    }
-
     const success = loginB2C(cleanEmail);
     setLoading(false);
     if (success) {
@@ -161,7 +184,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
       return;
     }
 
-    const isRegistered = storageService.isB2CIdentifierRegistered(cleanEmail);
+    let isRegistered = storageService.isB2CIdentifierRegistered(cleanEmail);
+    if (!isRegistered) {
+      try {
+        const checkRes = await fetch(`/api/data/b2c_users`).catch(() => null);
+        if (checkRes && checkRes.ok) {
+          const serverUsers = await checkRes.json();
+          const match = serverUsers.find((u: any) => (u.email || '').toLowerCase() === cleanEmail.toLowerCase());
+          if (match) {
+            storageService.saveB2CUser(match);
+            isRegistered = true;
+          }
+        }
+      } catch {}
+    }
+
     if (!isRegistered) {
       setUnregisteredIdentifier(cleanEmail);
       setShowUnregisteredModal(true);

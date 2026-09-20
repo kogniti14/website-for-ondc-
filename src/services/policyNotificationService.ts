@@ -261,37 +261,35 @@ class PolicyNotificationService {
     htmlContent: string
   ): Promise<{ delivered: boolean; error?: string }> {
     const env = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
-    const resendApiKey = (env.VITE_RESEND_API_KEY || '').trim();
+    const defaultFrom = 'Kogniti Minds Legal & Compliance <support@kognitiminds.com>';
     const emailWebhookUrl = env.VITE_EMAIL_WEBHOOK_URL || '';
 
-    let rawFrom = (env.VITE_EMAIL_FROM || '').trim().replace(/^["']|["']$/g, '');
+    let rawFrom = (env.VITE_EMAIL_FROM || defaultFrom).trim().replace(/^["']|["']$/g, '');
     const emailFrom = (rawFrom && !rawFrom.includes('resend.dev') && !rawFrom.includes('example.com'))
       ? rawFrom
-      : 'Kogniti Minds Legal & Compliance <support@kognitiminds.com>';
+      : defaultFrom;
 
-    // Provider 1: Resend REST API
-    if (resendApiKey && resendApiKey.startsWith('re_')) {
-      const endpoints = [
-        '/api/resend/emails',
-        '/api/resend',
-        'https://api.resend.com/emails',
-      ];
+    // Secure Server Dispatchers (PHP / Express endpoints)
+    const endpoints = [
+      '/api/send-email.php',
+      '/api/resend',
+      '/api/resend/emails',
+    ];
 
-      for (const endpoint of endpoints) {
-        try {
-          const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${resendApiKey}`,
-            },
-            body: JSON.stringify({
-              from: emailFrom,
-              to: [toEmail],
-              subject,
-              html: htmlContent,
-            }),
-          });
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: emailFrom,
+            to: [toEmail],
+            subject,
+            html: htmlContent,
+          }),
+        });
 
           if (response.ok) {
             return { delivered: true };
@@ -302,13 +300,10 @@ class PolicyNotificationService {
           }
 
           const errData = await response.json().catch(() => ({}));
-          const errMsg = errData.message || `Resend HTTP ${response.status}`;
-          return { delivered: false, error: errMsg };
         } catch (err: any) {
           continue;
         }
       }
-    }
 
     // Provider 2: Webhook Endpoint
     if (emailWebhookUrl) {

@@ -6406,27 +6406,19 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   </span>
                 </div>
 
-                <div className="form-group">
-                  <div className="flex justify-between items-center">
-                    <label className="form-label">Razorpay Key Secret (Server-Side)</label>
-                    <button
-                      type="button"
-                      onClick={() => setShowKeySecret(!showKeySecret)}
-                      className="flex items-center gap-1 text-slate-500 hover:text-slate-900"
-                      style={{ fontSize: '0.75rem', background: 'none', border: 'none', cursor: 'pointer' }}
-                    >
-                      {showKeySecret ? <EyeOff size={13} /> : <Eye size={13} />}
-                      <span>{showKeySecret ? 'Hide' : 'Show'}</span>
-                    </button>
+                <div className="form-group" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 14px' }}>
+                  <div className="flex items-center justify-between">
+                    <label className="form-label" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                      <Lock size={14} className="text-emerald-600" />
+                      Razorpay Key Secret (Server-Side)
+                    </label>
+                    <span className="badge badge-success" style={{ fontSize: '0.72rem', background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>
+                      Securely Managed on Server
+                    </span>
                   </div>
-                  <input
-                    type={showKeySecret ? 'text' : 'password'}
-                    value={razorpayConfig.keySecret || ''}
-                    onChange={(e) => setRazorpayConfig({ ...razorpayConfig, keySecret: e.target.value.trim() })}
-                    placeholder="Enter Key Secret"
-                    className="form-input"
-                    style={{ fontFamily: 'monospace', fontSize: '0.88rem' }}
-                  />
+                  <p style={{ margin: '6px 0 0', fontSize: '0.75rem', color: 'var(--slate-500)', lineHeight: '1.4' }}>
+                    Configured via Hostinger environment variable <code style={{ fontFamily: 'monospace', background: '#e2e8f0', padding: '1px 4px', borderRadius: '3px' }}>RAZORPAY_KEY_SECRET</code>. For PCI-DSS compliance, the key secret is never exposed to client browsers or local storage.
+                  </p>
                 </div>
 
                 <div className="form-group">

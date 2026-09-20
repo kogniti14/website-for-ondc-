@@ -25,3 +25,11 @@ dist-ssr
 *.sln
 *.sw?
 scratch/
+
+# Persistent Production Data & Uploads (Never overwritten by Git pulls)
+data/storage/
+persistent/
+uploads/
+public/uploads/
+*.sqlite
+*.db

@@ -13,12 +13,19 @@
     RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
   </IfModule>
 
-  # 3. Serve static files directly if they exist
+  # 3. Serve from dist/ if root is deployed
+  RewriteCond %{DOCUMENT_ROOT}/dist/$1 -f
+  RewriteRule ^(.*)$ dist/$1 [L]
+
+  # 4. Serve static files directly if they exist
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteCond %{REQUEST_FILENAME} !-l
 
-  # 4. Client-side SPA route fallback
+  # 5. Client-side SPA route fallback
+  RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
+  RewriteRule . /dist/index.html [L]
+
   RewriteRule . /index.html [L]
 </IfModule>

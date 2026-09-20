@@ -25,17 +25,14 @@ export default defineConfig(({ mode }) => {
       'process.env.SUPABASE_URL': JSON.stringify(supabaseUrl),
       'process.env.SUPABASE_ANON_KEY': JSON.stringify(supabaseKey),
       'process.env.SUPABASE_KEY': JSON.stringify(supabaseKey),
+      'import.meta.env.VITE_EMAIL_FROM': JSON.stringify(process.env.VITE_EMAIL_FROM || env.VITE_EMAIL_FROM || 'Kogniti Minds Security <security@kognitiminds.com>'),
     },
     server: {
       proxy: {
-        '/api/resend': {
-          target: 'https://api.resend.com',
+        '/api': {
+          target: 'http://localhost:3000',
           changeOrigin: true,
-          rewrite: (path) => {
-            const sub = path.replace(/^\/api\/resend/, '');
-            return sub === '' || sub === '/' ? '/emails' : sub;
-          },
-          secure: true,
+          secure: false,
         },
       },
     },

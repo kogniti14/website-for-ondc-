@@ -138,16 +138,8 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
       }
     }
 
-    const isRegistered = storageService.isB2BIdentifierRegistered(cleanEmail);
-    if (!isRegistered) {
-      setUnregisteredIdentifier(cleanEmail);
-      setShowUnregisteredModal(true);
-      return;
-    }
-
-    setLoading(true);
-
     if (cleanEmail.includes('@') && password) {
+      setLoading(true);
       const res = await loginB2BWithFirebase(cleanEmail.toLowerCase(), password);
       setLoading(false);
       if (res.success) {
@@ -155,10 +147,41 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
         onClose();
         return;
       }
+      if (
+        res.error &&
+        (res.error.toLowerCase().includes('no registered account') ||
+          res.error.toLowerCase().includes('user-not-found'))
+      ) {
+        setUnregisteredIdentifier(cleanEmail);
+        setShowUnregisteredModal(true);
+        return;
+      }
       setError(res.error || 'Authentication failed.');
       return;
     }
 
+    let isRegistered = storageService.isB2BIdentifierRegistered(cleanEmail);
+    if (!isRegistered) {
+      try {
+        const checkRes = await fetch(`/api/data/b2b_businesses`).catch(() => null);
+        if (checkRes && checkRes.ok) {
+          const serverBiz = await checkRes.json();
+          const match = serverBiz.find((b: any) => (b.businessEmail || '').toLowerCase() === cleanEmail.toLowerCase());
+          if (match) {
+            storageService.saveB2BBusiness(match);
+            isRegistered = true;
+          }
+        }
+      } catch {}
+    }
+
+    if (!isRegistered) {
+      setUnregisteredIdentifier(cleanEmail);
+      setShowUnregisteredModal(true);
+      return;
+    }
+
+    setLoading(true);
     const success = loginB2B(cleanEmail.toLowerCase());
     setLoading(false);
     if (success) {
@@ -185,7 +208,21 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
       return;
     }
 
-    const isRegistered = storageService.isB2BIdentifierRegistered(cleanEmail);
+    let isRegistered = storageService.isB2BIdentifierRegistered(cleanEmail);
+    if (!isRegistered) {
+      try {
+        const checkRes = await fetch(`/api/data/b2b_businesses`).catch(() => null);
+        if (checkRes && checkRes.ok) {
+          const serverBiz = await checkRes.json();
+          const match = serverBiz.find((b: any) => (b.businessEmail || '').toLowerCase() === cleanEmail.toLowerCase());
+          if (match) {
+            storageService.saveB2BBusiness(match);
+            isRegistered = true;
+          }
+        }
+      } catch {}
+    }
+
     if (!isRegistered) {
       setUnregisteredIdentifier(cleanEmail);
       setShowUnregisteredModal(true);

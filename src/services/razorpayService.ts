@@ -2,7 +2,6 @@ import { storageService } from './storageService';
 
 export interface RazorpayConfig {
   keyId: string;
-  keySecret?: string;
   mode: 'test' | 'live';
   merchantName: string;
   themeColor: string;
@@ -20,6 +19,7 @@ export interface RazorpayPaymentSuccessResponse {
   razorpay_signature?: string;
   method?: string;
   bank_rrn?: string;
+  isVerified?: boolean;
 }
 
 export interface RazorpayCheckoutOptions {
@@ -33,6 +33,7 @@ export interface RazorpayCheckoutOptions {
   isB2B?: boolean;
   onSuccess: (response: RazorpayPaymentSuccessResponse) => void;
   onDismiss?: () => void;
+  onError?: (error: string) => void;
 }
 
 export interface RazorpayTransactionRecord {
@@ -55,10 +56,12 @@ export interface RazorpayTransactionRecord {
 const RAZORPAY_CONFIG_KEY = 'km_razorpay_config_v1';
 const RAZORPAY_TRANSACTIONS_KEY = 'km_razorpay_transactions_v1';
 
+// Public Key ID only - Secret is strictly stored on backend server in environment variables
+const PUBLIC_KEY_ID = (import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_live_TarTjUQ1NhuUru').trim();
+
 const DEFAULT_CONFIG: RazorpayConfig = {
-  keyId: 'rzp_live_TarTjUQ1NhuUru',
-  keySecret: 'bBBZ8zi8iYb5h23x9sca2gO1',
-  mode: 'live',
+  keyId: PUBLIC_KEY_ID,
+  mode: PUBLIC_KEY_ID.startsWith('rzp_test_') ? 'test' : 'live',
   merchantName: 'Kogniti Minds Private Limited',
   themeColor: '#0F172A',
   enabledMethods: {
@@ -78,12 +81,11 @@ class RazorpayService {
       const saved = localStorage.getItem(RAZORPAY_CONFIG_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Automatically ensure the live credentials are active
+        // Ensure public key ID is sanitized without any exposed secret
+        delete parsed.keySecret;
         if (!parsed.keyId || parsed.keyId.startsWith('rzp_test_')) {
           parsed.keyId = DEFAULT_CONFIG.keyId;
-          parsed.keySecret = DEFAULT_CONFIG.keySecret;
-          parsed.mode = 'live';
-          this.saveConfig(parsed);
+          parsed.mode = DEFAULT_CONFIG.mode;
         }
         return { ...DEFAULT_CONFIG, ...parsed };
       }
@@ -95,7 +97,10 @@ class RazorpayService {
 
   saveConfig(config: RazorpayConfig): void {
     try {
-      localStorage.setItem(RAZORPAY_CONFIG_KEY, JSON.stringify(config));
+      // Never allow saving secret key in localStorage
+      const safeConfig = { ...config };
+      delete (safeConfig as any).keySecret;
+      localStorage.setItem(RAZORPAY_CONFIG_KEY, JSON.stringify(safeConfig));
     } catch (e) {
       console.error('Error saving Razorpay config:', e);
     }
@@ -182,7 +187,8 @@ class RazorpayService {
   }
 
   /**
-   * Opens the official Razorpay Checkout SDK popup if available.
+   * Opens the official Razorpay Checkout SDK popup with server-side order generation
+   * and cryptographic signature verification.
    * Returns false if script is unavailable (caller can render embedded fallback modal).
    */
   async openOfficialCheckout(options: RazorpayCheckoutOptions): Promise<boolean> {
@@ -196,7 +202,33 @@ class RazorpayService {
     const config = this.getConfig();
     const amountInPaise = Math.round(options.amount * 100);
 
-    const rzpOptions = {
+    // 1. Create Server-Side Razorpay Order
+    let serverOrderId: string | undefined;
+    try {
+      const orderRes = await fetch('/api/payment/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: options.amount,
+          orderNumber: options.orderNumber,
+          customerName: options.customerName,
+          customerEmail: options.customerEmail,
+          customerPhone: options.customerPhone,
+          isB2B: options.isB2B || false,
+        }),
+      });
+
+      if (orderRes.ok) {
+        const orderData = await orderRes.json();
+        if (orderData.orderId) {
+          serverOrderId = orderData.orderId;
+        }
+      }
+    } catch (e) {
+      console.warn('Backend payment order creation notice (proceeding with direct options):', e);
+    }
+
+    const rzpOptions: any = {
       key: config.keyId,
       amount: amountInPaise,
       currency: 'INR',
@@ -221,7 +253,30 @@ class RazorpayService {
           if (options.onDismiss) options.onDismiss();
         },
       },
-      handler: (response: any) => {
+      handler: async (response: any) => {
+        // 2. Server-side Cryptographic HMAC Signature Verification
+        let isSignatureVerified = false;
+        try {
+          const verifyRes = await fetch('/api/payment/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id || serverOrderId,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              orderNumber: options.orderNumber,
+              amount: options.amount,
+            }),
+          });
+
+          if (verifyRes.ok) {
+            const verifyData = await verifyRes.json();
+            isSignatureVerified = Boolean(verifyData.verified);
+          }
+        } catch (e) {
+          console.warn('Payment server signature verification notice:', e);
+        }
+
         // Record in internal ledger
         const bankRrn = Math.floor(100000000000 + Math.random() * 900000000000).toString();
         this.recordTransaction({
@@ -241,20 +296,26 @@ class RazorpayService {
 
         options.onSuccess({
           razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_order_id: response.razorpay_order_id,
+          razorpay_order_id: response.razorpay_order_id || serverOrderId,
           razorpay_signature: response.razorpay_signature,
-          method: 'Razorpay Gateway',
+          method: 'Razorpay Official Gateway',
           bank_rrn: bankRrn,
+          isVerified: isSignatureVerified,
         });
       },
     };
+
+    if (serverOrderId) {
+      rzpOptions.order_id = serverOrderId;
+    }
 
     try {
       const rzpInstance = new RazorpayConstructor(rzpOptions);
       rzpInstance.open();
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error invoking Razorpay instance:', err);
+      if (options.onError) options.onError(err?.message || 'Failed to open Razorpay gateway');
       return false;
     }
   }

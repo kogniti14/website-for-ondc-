@@ -91,6 +91,13 @@ const SEED_B2B_QUOTATIONS: B2BQuotation[] = [
 
 class StorageService {
   private memoryStore: Record<string, string> = {};
+  private isHydrated = false;
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      setTimeout(() => this.hydrateFromServer(), 50);
+    }
+  }
 
   private getItem<T>(key: string, defaultVal: T): T {
     try {
@@ -121,9 +128,76 @@ class StorageService {
     }
   }
 
+  /**
+   * Background server synchronization helper
+   * Syncs changes to Express backend /api/data or PHP fallback /api/data.php
+   */
+  private syncServer(collection: string, payload: any, method: 'POST' | 'DELETE' = 'POST', id?: string): void {
+    if (typeof window === 'undefined') return;
+    const url = method === 'DELETE' && id ? `/api/data/${collection}/${id}` : `/api/data/${collection}`;
+    fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: method !== 'DELETE' ? JSON.stringify(payload) : undefined,
+    }).catch(() => {
+      // Fallback to PHP dispatcher if Node reverse proxy is not active
+      const phpUrl = method === 'DELETE' && id ? `/api/data.php?collection=${collection}&id=${id}` : `/api/data.php?collection=${collection}`;
+      fetch(phpUrl, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: method !== 'DELETE' ? JSON.stringify(payload) : undefined,
+      }).catch(() => {});
+    });
+  }
+
+  /**
+   * Hydrates local cache with live persistent data from server on startup
+   */
+  async hydrateFromServer(): Promise<void> {
+    if (typeof window === 'undefined' || this.isHydrated) return;
+    this.isHydrated = true;
+
+    const mappings: Array<{ collection: string; key: string; defaultVal: any }> = [
+      { collection: 'products', key: KEYS.PRODUCTS, defaultVal: MOCK_PRODUCTS },
+      { collection: 'categories', key: KEYS.CATEGORIES, defaultVal: CATEGORIES },
+      { collection: 'b2c_users', key: KEYS.B2C_USERS, defaultVal: [] },
+      { collection: 'b2b_businesses', key: KEYS.B2B_BUSINESSES, defaultVal: [] },
+      { collection: 'b2c_orders', key: KEYS.B2C_ORDERS, defaultVal: [] },
+      { collection: 'b2b_orders', key: KEYS.B2B_ORDERS, defaultVal: [] },
+      { collection: 'b2b_quotations', key: KEYS.B2B_QUOTATIONS, defaultVal: SEED_B2B_QUOTATIONS },
+    ];
+
+    for (const item of mappings) {
+      try {
+        let res = await fetch(`/api/data/${item.collection}`).catch(() => null);
+        if (!res || !res.ok) {
+          res = await fetch(`/api/data.php?collection=${item.collection}`).catch(() => null);
+        }
+        if (res && res.ok) {
+          const serverData = await res.json();
+          if (Array.isArray(serverData) && serverData.length > 0) {
+            const localData = this.getItem<any[]>(item.key, item.defaultVal);
+            const map = new Map();
+            for (const d of localData) {
+              if (d && d.id) map.set(d.id, d);
+            }
+            for (const d of serverData) {
+              if (d && d.id) map.set(d.id, d);
+            }
+            const merged = Array.from(map.values());
+            this.setItem(item.key, merged);
+          }
+        }
+      } catch {
+        // Non-blocking
+      }
+    }
+  }
+
   // --- Products ---
   getProducts(): Product[] {
-    const products = this.getItem<Product[]>(KEYS.PRODUCTS, MOCK_PRODUCTS);
+    let products = this.getItem<Product[]>(KEYS.PRODUCTS, MOCK_PRODUCTS);
+    // Non-destructive: filter out individual deprecated IDs if found, never wipe catalog
     const hasDeprecated = products.some(
       (p) =>
         p.id === 'km-ergo-01' ||
@@ -132,8 +206,14 @@ class StorageService {
         p.category === 'Smart EdTech & Display'
     );
     if (hasDeprecated) {
-      this.setItem(KEYS.PRODUCTS, MOCK_PRODUCTS);
-      return MOCK_PRODUCTS;
+      products = products.filter(
+        (p) =>
+          p.id !== 'km-ergo-01' &&
+          p.id !== 'km-ifp-75' &&
+          p.category !== 'Ergonomic Furniture' &&
+          p.category !== 'Smart EdTech & Display'
+      );
+      this.setItem(KEYS.PRODUCTS, products);
     }
 
     // Auto-migrate any cached products with 12% GST to 18% GST
@@ -166,11 +246,13 @@ class StorageService {
       products.unshift(product);
     }
     this.setItem(KEYS.PRODUCTS, products);
+    this.syncServer('products', product);
   }
 
   deleteProduct(id: string): void {
     const products = this.getProducts().filter((p) => p.id !== id);
     this.setItem(KEYS.PRODUCTS, products);
+    this.syncServer('products', null, 'DELETE', id);
   }
 
   deleteMultipleProducts(ids: string[]): number {
@@ -179,6 +261,7 @@ class StorageService {
     const initial = this.getProducts();
     const remaining = initial.filter((p) => !idSet.has(p.id));
     this.setItem(KEYS.PRODUCTS, remaining);
+    ids.forEach((id) => this.syncServer('products', null, 'DELETE', id));
     return initial.length - remaining.length;
   }
 
@@ -228,12 +311,14 @@ class StorageService {
       users.push(user);
     }
     this.setItem(KEYS.B2C_USERS, users);
+    this.syncServer('b2c_users', user);
   }
 
   deleteB2CUser(id: string): boolean {
     const list = this.getB2CUsers();
     const remaining = list.filter((u) => u.id !== id);
     this.setItem(KEYS.B2C_USERS, remaining);
+    this.syncServer('b2c_users', null, 'DELETE', id);
     return list.length !== remaining.length;
   }
 
@@ -243,6 +328,7 @@ class StorageService {
     const initial = this.getB2CUsers();
     const remaining = initial.filter((u) => !idSet.has(u.id));
     this.setItem(KEYS.B2C_USERS, remaining);
+    ids.forEach((id) => this.syncServer('b2c_users', null, 'DELETE', id));
     return initial.length - remaining.length;
   }
 
@@ -292,6 +378,7 @@ class StorageService {
       list.unshift(business);
     }
     this.setItem(KEYS.B2B_BUSINESSES, list);
+    this.syncServer('b2b_businesses', business);
   }
 
   updateBusinessStatus(id: string, status: B2BBusiness['status'], reason?: string): void {
@@ -302,6 +389,7 @@ class StorageService {
       if (reason) target.statusReason = reason;
       if (status === 'approved') target.approvedAt = new Date().toISOString();
       this.setItem(KEYS.B2B_BUSINESSES, list);
+      this.syncServer('b2b_businesses', target);
     }
   }
 
@@ -309,6 +397,7 @@ class StorageService {
     const list = this.getB2BBusinesses();
     const remaining = list.filter((b) => b.id !== id);
     this.setItem(KEYS.B2B_BUSINESSES, remaining);
+    this.syncServer('b2b_businesses', null, 'DELETE', id);
     return list.length !== remaining.length;
   }
 
@@ -318,6 +407,7 @@ class StorageService {
     const initial = this.getB2BBusinesses();
     const remaining = initial.filter((b) => !idSet.has(b.id));
     this.setItem(KEYS.B2B_BUSINESSES, remaining);
+    ids.forEach((id) => this.syncServer('b2b_businesses', null, 'DELETE', id));
     return initial.length - remaining.length;
   }
 
@@ -340,6 +430,7 @@ class StorageService {
       orders.unshift(order);
     }
     this.setItem(KEYS.B2C_ORDERS, orders);
+    this.syncServer('b2c_orders', order);
   }
 
   updateB2COrderStatus(id: string, status: B2COrder['orderStatus'], note?: string): void {
@@ -353,6 +444,7 @@ class StorageService {
         note: note || `Status updated to ${status.replace('_', ' ').toUpperCase()}`,
       });
       this.setItem(KEYS.B2C_ORDERS, orders);
+      this.syncServer('b2c_orders', order);
     }
   }
 
@@ -370,6 +462,7 @@ class StorageService {
       note: `Order confirmed by ${adminName}. Proceeding to packaging and dispatch.`,
     });
     this.setItem(KEYS.B2C_ORDERS, orders);
+    this.syncServer('b2c_orders', order);
     return order;
   }
 
@@ -388,6 +481,7 @@ class StorageService {
       note: `Order rejected by ${adminName}. Reason: ${reason || 'Not specified'}`,
     });
     this.setItem(KEYS.B2C_ORDERS, orders);
+    this.syncServer('b2c_orders', order);
     return order;
   }
 
@@ -395,6 +489,7 @@ class StorageService {
     const orders = this.getB2COrders();
     const remaining = orders.filter((o) => o.id !== id);
     this.setItem(KEYS.B2C_ORDERS, remaining);
+    this.syncServer('b2c_orders', null, 'DELETE', id);
     return orders.length !== remaining.length;
   }
 
@@ -426,6 +521,7 @@ class StorageService {
       orders.unshift(order);
     }
     this.setItem(KEYS.B2B_ORDERS, orders);
+    this.syncServer('b2b_orders', order);
   }
 
   updateB2BOrderStatus(id: string, status: B2BOrder['orderStatus'], note?: string): void {
@@ -439,6 +535,7 @@ class StorageService {
         note: note || `Status updated to ${status.replace('_', ' ').toUpperCase()}`,
       });
       this.setItem(KEYS.B2B_ORDERS, orders);
+      this.syncServer('b2b_orders', order);
     }
   }
 
@@ -456,6 +553,7 @@ class StorageService {
       note: `B2B purchase order verified and confirmed by ${adminName}. Proceeding to wholesale allocation.`,
     });
     this.setItem(KEYS.B2B_ORDERS, orders);
+    this.syncServer('b2b_orders', order);
     return order;
   }
 
@@ -474,6 +572,7 @@ class StorageService {
       note: `B2B Order rejected by ${adminName}. Reason: ${reason || 'Not specified'}`,
     });
     this.setItem(KEYS.B2B_ORDERS, orders);
+    this.syncServer('b2b_orders', order);
     return order;
   }
 
@@ -481,6 +580,7 @@ class StorageService {
     const orders = this.getB2BOrders();
     const remaining = orders.filter((o) => o.id !== id);
     this.setItem(KEYS.B2B_ORDERS, remaining);
+    this.syncServer('b2b_orders', null, 'DELETE', id);
     return orders.length !== remaining.length;
   }
 
@@ -748,11 +848,13 @@ class StorageService {
       quotations.unshift(quotation);
     }
     this.setItem(KEYS.B2B_QUOTATIONS, quotations);
+    this.syncServer('b2b_quotations', quotation);
   }
 
   deleteB2BQuotation(id: string): void {
     const quotations = this.getB2BQuotations().filter((q) => q.id !== id);
     this.setItem(KEYS.B2B_QUOTATIONS, quotations);
+    this.syncServer('b2b_quotations', null, 'DELETE', id);
   }
 
   deleteMultipleB2BQuotations(ids: string[]): number {
@@ -761,6 +863,7 @@ class StorageService {
     const initial = this.getB2BQuotations();
     const remaining = initial.filter((q) => !idSet.has(q.id));
     this.setItem(KEYS.B2B_QUOTATIONS, remaining);
+    ids.forEach((id) => this.syncServer('b2b_quotations', null, 'DELETE', id));
     return initial.length - remaining.length;
   }
 
