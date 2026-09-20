@@ -1,13 +1,14 @@
 <?php
 /**
- * Kogniti Minds - Production Transactional Email Dispatcher
- * Dispatches OTP and transactional emails via Resend API using server-side cURL.
+ * Kogniti Minds - Production Server-Side Resend Email Dispatcher
+ * Securely uses RESEND_API_KEY from Hostinger server environment or server-side .env file.
+ * Never accepts secret keys from client headers or frontend requests.
  */
 
 // Handle CORS
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -16,61 +17,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 header('Content-Type: application/json; charset=utf-8');
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['error' => 'Method Not Allowed']);
-    exit;
-}
-
-$rawInput = file_get_contents('php://input');
-$data = json_decode($rawInput, true) ?: [];
-
-$to = $data['to'] ?? [];
-if (is_string($to)) {
-    $to = [$to];
-}
-
-if (empty($to)) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Recipient email is required']);
-    exit;
-}
-
-$subject = $data['subject'] ?? 'Kogniti Minds Verification Code';
-$html = $data['html'] ?? '';
-$text = $data['text'] ?? '';
-
-// Helper to read env variables from server environment or local .env file
+// Helper to read env variables from server environment or server-side .env file
 function getEnvValue($key) {
     $val = getenv($key);
     if (!empty($val)) return trim($val);
     if (isset($_ENV[$key]) && !empty($_ENV[$key])) return trim($_ENV[$key]);
     if (isset($_SERVER[$key]) && !empty($_SERVER[$key])) return trim($_SERVER[$key]);
+    if (function_exists('apache_getenv')) {
+        $a = apache_getenv($key);
+        if (!empty($a)) return trim($a);
+    }
 
-    // Check .env file in parent directories
+    // Check .env files in server filesystem paths
+    $docRoot = isset($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/') : '';
     $possiblePaths = array_filter([
-        dirname(__DIR__, 3) . '/.env',
+        $docRoot ? $docRoot . '/.env' : null,
+        $docRoot ? dirname($docRoot) . '/.env' : null,
+        $docRoot ? $docRoot . '/.env.production' : null,
         dirname(__DIR__, 2) . '/.env',
         dirname(__DIR__) . '/.env',
         __DIR__ . '/.env',
-        isset($_SERVER['DOCUMENT_ROOT']) ? $_SERVER['DOCUMENT_ROOT'] . '/.env' : null,
-        isset($_SERVER['DOCUMENT_ROOT']) ? dirname($_SERVER['DOCUMENT_ROOT']) . '/.env' : null,
+        dirname(__DIR__, 3) . '/.env',
         dirname(__DIR__, 2) . '/.env.local',
-        dirname(__DIR__, 3) . '/.env.local'
+        dirname(__DIR__, 2) . '/.env.production',
     ]);
 
     foreach ($possiblePaths as $envPath) {
         if (file_exists($envPath) && is_readable($envPath)) {
             $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            foreach ($lines as $line) {
-                $line = trim($line);
-                if (empty($line) || strpos($line, '#') === 0) continue;
-                if (strpos($line, '=') !== false) {
-                    list($name, $value) = explode('=', $line, 2);
-                    $name = trim($name);
-                    $value = trim($value, " \t\n\r\0\x0B\"'");
-                    if ($name === $key) {
-                        return $value;
+            if ($lines !== false) {
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (empty($line) || strpos($line, '#') === 0) continue;
+                    if (strpos($line, '=') !== false) {
+                        list($name, $value) = explode('=', $line, 2);
+                        $name = trim($name);
+                        $value = trim($value, " \t\n\r\0\x0B\"'");
+                        if ($name === $key) {
+                            return $value;
+                        }
                     }
                 }
             }
@@ -79,25 +64,52 @@ function getEnvValue($key) {
     return '';
 }
 
-$apiKey = getEnvValue('RESEND_API_KEY') ?: getEnvValue('VITE_RESEND_API_KEY');
+$apiKey = getEnvValue('RESEND_API_KEY');
 
-// Fallback: check Authorization header if server env is not populated yet
-if (empty($apiKey)) {
-    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION']) ? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] : '');
-    if (preg_match('/Bearer\s+(re_[a-zA-Z0-9_]+)/i', $authHeader, $matches)) {
-        $apiKey = $matches[1];
-    }
+// Safe Diagnostic Health Check (GET /api/send-email.php)
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    echo json_encode([
+        'status' => 'healthy',
+        'resendConfigured' => !empty($apiKey),
+        'timestamp' => date('c')
+    ]);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'error' => 'Method Not Allowed']);
+    exit;
 }
 
 if (empty($apiKey)) {
     http_response_code(500);
     echo json_encode([
-        'error' => 'Server configuration error: RESEND_API_KEY not found in environment or Authorization header.'
+        'success' => false,
+        'error' => 'Server configuration error: RESEND_API_KEY is not configured on the production server.'
     ]);
     exit;
 }
 
-$rawFrom = getEnvValue('EMAIL_FROM') ?: getEnvValue('VITE_EMAIL_FROM') ?: 'Kogniti Minds Security <security@kognitiminds.com>';
+$rawInput = file_get_contents('php://input');
+$data = json_decode($rawInput, true) ?: [];
+
+$to = $data['to'] ?? ($data['email'] ?? []);
+if (is_string($to)) {
+    $to = [$to];
+}
+
+if (empty($to)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'Recipient email is required']);
+    exit;
+}
+
+$subject = $data['subject'] ?? 'Kogniti Minds Verification Code';
+$html = $data['html'] ?? '';
+$text = $data['text'] ?? '';
+
+$rawFrom = getEnvValue('EMAIL_FROM') ?: 'Kogniti Minds Security <security@kognitiminds.com>';
 $from = (strpos($rawFrom, 'resend.dev') === false && strpos($rawFrom, 'example.com') === false)
     ? $rawFrom
     : 'Kogniti Minds Security <security@kognitiminds.com>';
@@ -114,7 +126,10 @@ if (!empty($text)) {
     $payload['text'] = $text;
 }
 if (empty($html) && empty($text)) {
-    $payload['html'] = '<p>' . htmlspecialchars($subject) . '</p>';
+    $otpVal = isset($data['otp']) ? htmlspecialchars($data['otp']) : '';
+    $payload['html'] = $otpVal
+        ? '<p>Your verification code is: <strong>' . $otpVal . '</strong></p>'
+        : '<p>' . htmlspecialchars($subject) . '</p>';
 }
 
 $ch = curl_init('https://api.resend.com/emails');
@@ -136,10 +151,25 @@ curl_close($ch);
 if ($response === false || !empty($curlError)) {
     http_response_code(502);
     echo json_encode([
+        'success' => false,
         'error' => 'cURL dispatch failed: ' . $curlError
     ]);
     exit;
 }
 
-http_response_code($httpCode ?: 200);
-echo $response;
+if ($httpCode >= 200 && $httpCode < 300) {
+    http_response_code(200);
+    echo json_encode([
+        'success' => true,
+        'message' => 'OTP sent successfully'
+    ]);
+    exit;
+}
+
+http_response_code($httpCode ?: 500);
+$resData = json_decode($response, true) ?: [];
+$errMsg = $resData['message'] ?? ($resData['error'] ?? 'Email dispatch failed');
+echo json_encode([
+    'success' => false,
+    'error' => $errMsg
+]);

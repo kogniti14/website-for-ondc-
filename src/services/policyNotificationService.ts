@@ -260,18 +260,17 @@ class PolicyNotificationService {
     subject: string,
     htmlContent: string
   ): Promise<{ delivered: boolean; error?: string }> {
-    const env = (typeof import.meta !== 'undefined' && (import.meta as any).env) || {};
     const defaultFrom = 'Kogniti Minds Legal & Compliance <support@kognitiminds.com>';
-    const emailWebhookUrl = env.VITE_EMAIL_WEBHOOK_URL || '';
+    const emailWebhookUrl = import.meta.env.VITE_EMAIL_WEBHOOK_URL || '';
 
-    let rawFrom = (env.VITE_EMAIL_FROM || defaultFrom).trim().replace(/^["']|["']$/g, '');
+    let rawFrom = (import.meta.env.VITE_EMAIL_FROM || defaultFrom).trim().replace(/^["']|["']$/g, '');
     const emailFrom = (rawFrom && !rawFrom.includes('resend.dev') && !rawFrom.includes('example.com'))
       ? rawFrom
       : defaultFrom;
 
     // Secure Server Dispatchers (PHP / Express endpoints)
-    const activeResendKey = (env.VITE_RESEND_API_KEY || '').trim();
     const endpoints = [
+      '/api/auth/send-otp',
       '/api/send-email.php',
       '/api/resend',
       '/api/resend/emails',
@@ -279,58 +278,31 @@ class PolicyNotificationService {
 
     for (const endpoint of endpoints) {
       try {
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        };
-        if (activeResendKey && activeResendKey.startsWith('re_')) {
-          headers['Authorization'] = `Bearer ${activeResendKey}`;
-        }
-
         const response = await fetch(endpoint, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            from: emailFrom,
-            to: [toEmail],
-            subject,
-            html: htmlContent,
-          }),
-        });
-
-        if (response.ok) {
-          return { delivered: true };
-        }
-
-        if (response.status === 404 || response.status === 502 || response.status === 503) {
-          continue;
-        }
-      } catch (err: any) {
-        continue;
-      }
-    }
-
-    // Provider 2: Direct Resend API Fallback
-    if (activeResendKey && activeResendKey.startsWith('re_')) {
-      try {
-        const response = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${activeResendKey}`,
           },
           body: JSON.stringify({
             from: emailFrom,
             to: [toEmail],
+            email: toEmail,
             subject,
             html: htmlContent,
           }),
         });
 
-        if (response.ok) {
+        const data = await response.json().catch(() => ({}));
+
+        if (response.ok && data.success !== false) {
           return { delivered: true };
         }
+
+        if (response.status === 404) {
+          continue;
+        }
       } catch (err: any) {
-        // Fallthrough to webhook
+        continue;
       }
     }
 

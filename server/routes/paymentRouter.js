@@ -17,8 +17,8 @@ import { persistentStore } from '../storage/persistentStore.js';
 
 export const paymentRouter = express.Router();
 
-const getKeyId = () => (process.env.RAZORPAY_KEY_ID || 'rzp_live_TarTjUQ1NhuUru').trim();
-const getKeySecret = () => (process.env.RAZORPAY_KEY_SECRET || 'bBBZ8zi8iYb5h23x9sca2gO1').trim();
+const getKeyId = () => (process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || '').trim();
+const getKeySecret = () => (process.env.RAZORPAY_KEY_SECRET || '').trim();
 const getWebhookSecret = () => (process.env.RAZORPAY_WEBHOOK_SECRET || '').trim();
 
 // 1. Get Public Gateway Config

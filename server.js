@@ -78,7 +78,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // 1. Production Health Check Endpoint
 app.get('/api/health', (req, res) => {
-  const hasResend = Boolean(process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY);
+  const hasResend = Boolean(process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim());
   const hasRazorpay = Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
   const collections = ['products', 'b2c_orders', 'b2b_orders', 'b2c_users', 'b2b_businesses'];
   const storeHealth = {};
@@ -135,13 +135,40 @@ app.use('/', ondcRouter);
 app.use('/ondc', ondcRouter);
 
 // 5. Existing API Endpoints (e.g. Email OTP delivery via Resend)
+app.post('/api/auth/send-otp', async (req, res) => {
+  try {
+    await resendHandler(req, res);
+  } catch (err) {
+    logger.error('Server', 'auth_send_otp_error', 'API Resend Handler failed', err);
+    res.status(500).json({ success: false, message: err.message || 'Internal Server Error' });
+  }
+});
+
 app.all('/api/resend', async (req, res) => {
   try {
     await resendHandler(req, res);
   } catch (err) {
     logger.error('Server', 'api_resend_error', 'API Resend Handler failed', err);
-    res.status(500).json({ message: err.message || 'Internal Server Error' });
+    res.status(500).json({ success: false, message: err.message || 'Internal Server Error' });
   }
+});
+
+app.all('/api/resend/emails', async (req, res) => {
+  try {
+    await resendHandler(req, res);
+  } catch (err) {
+    logger.error('Server', 'api_resend_emails_error', 'API Resend Handler failed', err);
+    res.status(500).json({ success: false, message: err.message || 'Internal Server Error' });
+  }
+});
+
+// Safe diagnostic endpoint for verifying email configuration without revealing secrets
+app.get('/api/email-health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    resendConfigured: Boolean(process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim()),
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // 3. Serve Static Frontend Assets (Vite Production Build from /dist)
@@ -149,19 +176,24 @@ const distPath = path.join(__dirname, 'dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
 
-  // SPA fallback: any GET request not handled above returns index.html
-  app.get('*', (req, res) => {
-    // If request has file extension (e.g. .png, .js) that was not found, return 404
-    if (path.extname(req.path)) {
-      return res.status(404).end();
+  // SPA Route Fallback: Any unknown route serves index.html for React Router
+  app.get('*', (req, res, next) => {
+    // Skip API, ONDC, and PHP paths
+    if (
+      req.path.startsWith('/api') ||
+      req.path.startsWith('/ondc') ||
+      req.path.endsWith('.php') ||
+      ['/search', '/select', '/init', '/confirm', '/status', '/cancel', '/update', '/rating', '/track', '/support'].includes(req.path)
+    ) {
+      return next();
     }
     res.sendFile(path.join(distPath, 'index.html'));
   });
 } else {
-  // If dist not yet built (e.g. initial dev bootstrap)
+  // If dist not built yet, output a helpful status page
   app.get('/', (req, res) => {
     res.json({
-      service: 'Kogniti Minds Production Server & ONDC Engine',
+      name: 'Kogniti Minds Platform & ONDC B2B Gateway API',
       status: 'active',
       note: 'Run `npm run build` to compile the frontend SPA to dist/',
       ondc: ondcConfig.getSanitized(),
@@ -174,6 +206,7 @@ app.listen(PORT, () => {
   console.log('===========================================================');
   console.log(`  KOGNITI MINDS SERVER STARTED ON PORT ${PORT}`);
   console.log(`  Mode: ${process.env.NODE_ENV || 'production'}`);
+  console.log(`  Resend configuration: ${process.env.RESEND_API_KEY ? 'configured' : 'missing'}`);
   console.log(`  ONDC Domain: ${ondcConfig.domain} (${ondcConfig.env})`);
   console.log(`  ONDC Callback Base: ${ondcConfig.subscriberUri}/<action>`);
   console.log(`  Health Check: http://localhost:${PORT}/ondc/health`);
