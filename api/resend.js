@@ -27,7 +27,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
   }
 
-  const apiKey = (process.env.RESEND_API_KEY || '').trim();
+  const apiKey = (
+    process.env.RESEND_API_KEY ||
+    process.env.VITE_RESEND_API_KEY ||
+    process.env.REDIRECT_RESEND_API_KEY ||
+    process.env.RESEND_KEY ||
+    ''
+  ).trim();
 
   if (!apiKey) {
     console.warn('[Resend Service] Resend configuration: missing (process.env.RESEND_API_KEY is not set)');

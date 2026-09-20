@@ -16,48 +16,144 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 header('Content-Type: application/json; charset=utf-8');
 
-function checkEnvKey($key) {
-    $val = getenv($key);
-    if (!empty($val)) return true;
-    if (isset($_ENV[$key]) && !empty($_ENV[$key])) return true;
-    if (isset($_SERVER[$key]) && !empty($_SERVER[$key])) return true;
-    if (function_exists('apache_getenv')) {
-        $a = apache_getenv($key);
-        if (!empty($a)) return true;
+function resolveServerEnvKey($key, &$source = null) {
+    $keysToCheck = [
+        $key,
+        'REDIRECT_' . $key,
+        'REDIRECT_REDIRECT_' . $key,
+        'VITE_' . $key,
+        'REDIRECT_VITE_' . $key,
+        strtolower($key),
+        strtoupper($key),
+    ];
+
+    // Check getenv()
+    foreach ($keysToCheck as $k) {
+        $val = getenv($k);
+        if ($val !== false && trim($val) !== '') {
+            $source = "getenv($k)";
+            return trim($val);
+        }
     }
 
-    $docRoot = isset($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/') : '';
-    $possiblePaths = array_filter([
-        $docRoot ? $docRoot . '/.env' : null,
-        $docRoot ? dirname($docRoot) . '/.env' : null,
-        dirname(__DIR__, 2) . '/.env',
-        dirname(__DIR__) . '/.env',
-        __DIR__ . '/.env',
-        dirname(__DIR__, 2) . '/data/.env',
-    ]);
+    // Check $_ENV
+    foreach ($keysToCheck as $k) {
+        if (isset($_ENV[$k]) && trim((string)$_ENV[$k]) !== '') {
+            $source = "\$_ENV[$k]";
+            return trim((string)$_ENV[$k]);
+        }
+    }
 
-    foreach ($possiblePaths as $envPath) {
-        if (file_exists($envPath) && is_readable($envPath)) {
-            $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            if ($lines !== false) {
-                foreach ($lines as $line) {
-                    $line = trim($line);
-                    if (empty($line) || strpos($line, '#') === 0) continue;
-                    if (strpos($line, '=') !== false) {
-                        list($name, $value) = explode('=', $line, 2);
-                        if (trim($name) === $key && !empty(trim($value, " \t\n\r\0\x0B\"'"))) {
-                            return true;
+    // Check $_SERVER
+    foreach ($keysToCheck as $k) {
+        if (isset($_SERVER[$k]) && trim((string)$_SERVER[$k]) !== '') {
+            $source = "\$_SERVER[$k]";
+            return trim((string)$_SERVER[$k]);
+        }
+    }
+
+    // Check apache_getenv()
+    if (function_exists('apache_getenv')) {
+        foreach ($keysToCheck as $k) {
+            $val = apache_getenv($k);
+            if ($val !== false && !empty($val) && trim($val) !== '') {
+                $source = "apache_getenv($k)";
+                return trim($val);
+            }
+        }
+    }
+
+    // Substring search in $_SERVER and $_ENV
+    foreach ([$_SERVER, $_ENV] as $idx => $arr) {
+        $label = $idx === 0 ? '$_SERVER' : '$_ENV';
+        foreach ($arr as $k => $v) {
+            if (stripos($k, $key) !== false && is_string($v) && trim($v) !== '') {
+                $source = "$label[$k]";
+                return trim($v);
+            }
+        }
+    }
+
+    // Comprehensive Filesystem Check
+    $docRoot = isset($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/') : '';
+    $scriptDir = __DIR__;
+    $userHome = '';
+    if (!empty($_SERVER['HOME'])) {
+        $userHome = rtrim($_SERVER['HOME'], '/');
+    } elseif (function_exists('get_current_user')) {
+        $u = get_current_user();
+        if (!empty($u)) {
+            $userHome = '/home/' . $u;
+        }
+    }
+
+    $baseDirs = array_unique(array_filter([
+        $docRoot,
+        $docRoot ? dirname($docRoot) : null,
+        $docRoot ? dirname(dirname($docRoot)) : null,
+        $scriptDir,
+        dirname($scriptDir),
+        dirname(dirname($scriptDir)),
+        dirname(dirname(dirname($scriptDir))),
+        $userHome,
+        $userHome ? $userHome . '/public_html' : null,
+        $userHome ? $userHome . '/domains/kognitiminds.com' : null,
+        $userHome ? $userHome . '/domains/kognitiminds.com/public_html' : null,
+    ]));
+
+    $fileNames = ['.env', '.env.production', '.env.local', 'data/.env', 'data/storage/.env', 'public/.env'];
+    $targetKeyPatterns = [
+        $key,
+        'VITE_' . $key,
+        strtolower($key),
+    ];
+
+    foreach ($baseDirs as $dir) {
+        if (!is_dir($dir)) continue;
+        foreach ($fileNames as $fn) {
+            $filePath = $dir . '/' . $fn;
+            if (file_exists($filePath) && is_readable($filePath)) {
+                $lines = @file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                if ($lines !== false) {
+                    foreach ($lines as $line) {
+                        $line = preg_replace('/^\xEF\xBB\xBF/', '', trim($line));
+                        if (empty($line) || strpos($line, '#') === 0) continue;
+                        if (strpos($line, '=') !== false) {
+                            list($varName, $varValue) = explode('=', $line, 2);
+                            $varName = trim($varName);
+                            $varValue = trim($varValue, " \t\n\r\0\x0B\"'");
+                            foreach ($targetKeyPatterns as $tp) {
+                                if ($varName === $tp && !empty($varValue)) {
+                                    $source = "file: $filePath ($varName)";
+                                    return $varValue;
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
-    return false;
+
+    return '';
 }
 
-$hasResend = checkEnvKey('RESEND_API_KEY');
-$hasRazorpay = checkEnvKey('RAZORPAY_KEY_ID');
+$resendSource = '';
+$resendVal = resolveServerEnvKey('RESEND_API_KEY', $resendSource);
+$hasResend = !empty($resendVal);
+
+$razorpaySource = '';
+$razorpayVal = resolveServerEnvKey('RAZORPAY_KEY_ID', $razorpaySource);
+$hasRazorpay = !empty($razorpayVal);
+
+// Gather safe diagnostics (keys only, NEVER values)
+$matchingServerKeys = [];
+foreach (array_merge(array_keys($_SERVER), array_keys($_ENV)) as $k) {
+    if (stripos($k, 'RESEND') !== false || stripos($k, 'RAZORPAY') !== false) {
+        $matchingServerKeys[] = $k;
+    }
+}
+$matchingServerKeys = array_values(array_unique($matchingServerKeys));
 
 $dataDir = dirname(__DIR__, 2) . '/data/storage';
 $storageWritable = is_dir($dataDir) ? is_writable($dataDir) : is_writable(dirname(__DIR__, 2));
@@ -84,15 +180,23 @@ echo json_encode([
         'php_version' => PHP_VERSION,
         'email' => [
             'configured' => $hasResend,
-            'provider' => 'Resend Server Dispatcher'
+            'source' => $resendSource ?: 'not_found',
+            'provider' => 'Resend Server Dispatcher',
         ],
         'payment' => [
             'configured' => $hasRazorpay,
-            'provider' => 'Razorpay'
+            'source' => $razorpaySource ?: 'not_found',
+            'provider' => 'Razorpay',
         ],
         'storage' => [
             'status' => $storageWritable ? 'active' : 'read-only',
-            'counts' => $counts
-        ]
+            'counts' => $counts,
+        ],
+        'diagnostics' => [
+            'detected_env_keys' => $matchingServerKeys,
+            'doc_root' => $docRoot,
+            'php_sapi' => php_sapi_name(),
+            'variables_order' => ini_get('variables_order'),
+        ],
     ]
 ], JSON_PRETTY_PRINT);

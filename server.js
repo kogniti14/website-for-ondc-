@@ -20,26 +20,43 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Auto-load .env file if available (zero-dependency Node.js env loader)
-const envPath = path.join(__dirname, '.env');
-if (fs.existsSync(envPath)) {
-  try {
-    const envContent = fs.readFileSync(envPath, 'utf8');
-    for (const line of envContent.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-      const idx = trimmed.indexOf('=');
-      if (idx > 0) {
-        const key = trimmed.slice(0, idx).trim();
-        const rawVal = trimmed.slice(idx + 1).trim();
-        const cleanVal = rawVal.replace(/^["']|["']$/g, '');
-        if (!process.env[key]) {
-          process.env[key] = cleanVal;
+const possibleEnvPaths = [
+  path.join(__dirname, '.env'),
+  path.join(__dirname, '.env.production'),
+  path.join(__dirname, '.env.local'),
+  path.join(path.dirname(__dirname), '.env'),
+  path.join(process.cwd(), '.env'),
+];
+
+for (const p of possibleEnvPaths) {
+  if (fs.existsSync(p)) {
+    try {
+      const envContent = fs.readFileSync(p, 'utf8');
+      for (const line of envContent.split('\n')) {
+        const trimmed = line.replace(/^\uFEFF/, '').trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+        const idx = trimmed.indexOf('=');
+        if (idx > 0) {
+          const key = trimmed.slice(0, idx).trim();
+          const rawVal = trimmed.slice(idx + 1).trim();
+          const cleanVal = rawVal.replace(/^["']|["']$/g, '');
+          if (!process.env[key]) {
+            process.env[key] = cleanVal;
+          }
         }
       }
+    } catch (e) {
+      console.warn('Notice: Could not auto-read env file at', p, e.message);
     }
-  } catch (e) {
-    console.warn('Notice: Could not auto-read .env file:', e.message);
   }
+}
+
+// Fallback aliases
+if (!process.env.RESEND_API_KEY && process.env.VITE_RESEND_API_KEY) {
+  process.env.RESEND_API_KEY = process.env.VITE_RESEND_API_KEY;
+}
+if (!process.env.RESEND_API_KEY && process.env.REDIRECT_RESEND_API_KEY) {
+  process.env.RESEND_API_KEY = process.env.REDIRECT_RESEND_API_KEY;
 }
 
 const app = express();

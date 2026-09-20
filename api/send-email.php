@@ -17,58 +17,130 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 header('Content-Type: application/json; charset=utf-8');
 
-// Helper to read env variables from server environment or server-side .env file
-function getEnvValue($key) {
-    $val = getenv($key);
-    if (!empty($val)) return trim($val);
-    if (isset($_ENV[$key]) && !empty($_ENV[$key])) return trim($_ENV[$key]);
-    if (isset($_SERVER[$key]) && !empty($_SERVER[$key])) return trim($_SERVER[$key]);
-    if (function_exists('apache_getenv')) {
-        $a = apache_getenv($key);
-        if (!empty($a)) return trim($a);
+function resolveServerEnvKey($key, &$source = null) {
+    $keysToCheck = [
+        $key,
+        'REDIRECT_' . $key,
+        'REDIRECT_REDIRECT_' . $key,
+        'VITE_' . $key,
+        'REDIRECT_VITE_' . $key,
+        strtolower($key),
+        strtoupper($key),
+    ];
+
+    // Check getenv()
+    foreach ($keysToCheck as $k) {
+        $val = getenv($k);
+        if ($val !== false && trim($val) !== '') {
+            $source = "getenv($k)";
+            return trim($val);
+        }
     }
 
-    // Check .env files in server filesystem paths
-    $docRoot = isset($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/') : '';
-    $possiblePaths = array_filter([
-        $docRoot ? $docRoot . '/.env' : null,
-        $docRoot ? dirname($docRoot) . '/.env' : null,
-        $docRoot ? $docRoot . '/data/.env' : null,
-        $docRoot ? $docRoot . '/data/storage/.env' : null,
-        $docRoot ? $docRoot . '/.env.production' : null,
-        dirname(__DIR__, 2) . '/.env',
-        dirname(__DIR__, 2) . '/data/.env',
-        dirname(__DIR__, 2) . '/data/storage/.env',
-        dirname(__DIR__) . '/.env',
-        __DIR__ . '/.env',
-        dirname(__DIR__, 3) . '/.env',
-        dirname(__DIR__, 2) . '/.env.local',
-        dirname(__DIR__, 2) . '/.env.production',
-    ]);
+    // Check $_ENV
+    foreach ($keysToCheck as $k) {
+        if (isset($_ENV[$k]) && trim((string)$_ENV[$k]) !== '') {
+            $source = "\$_ENV[$k]";
+            return trim((string)$_ENV[$k]);
+        }
+    }
 
-    foreach ($possiblePaths as $envPath) {
-        if (file_exists($envPath) && is_readable($envPath)) {
-            $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            if ($lines !== false) {
-                foreach ($lines as $line) {
-                    $line = trim($line);
-                    if (empty($line) || strpos($line, '#') === 0) continue;
-                    if (strpos($line, '=') !== false) {
-                        list($name, $value) = explode('=', $line, 2);
-                        $name = trim($name);
-                        $value = trim($value, " \t\n\r\0\x0B\"'");
-                        if ($name === $key) {
-                            return $value;
+    // Check $_SERVER
+    foreach ($keysToCheck as $k) {
+        if (isset($_SERVER[$k]) && trim((string)$_SERVER[$k]) !== '') {
+            $source = "\$_SERVER[$k]";
+            return trim((string)$_SERVER[$k]);
+        }
+    }
+
+    // Check apache_getenv()
+    if (function_exists('apache_getenv')) {
+        foreach ($keysToCheck as $k) {
+            $val = apache_getenv($k);
+            if ($val !== false && !empty($val) && trim($val) !== '') {
+                $source = "apache_getenv($k)";
+                return trim($val);
+            }
+        }
+    }
+
+    // Substring search in $_SERVER and $_ENV
+    foreach ([$_SERVER, $_ENV] as $idx => $arr) {
+        $label = $idx === 0 ? '$_SERVER' : '$_ENV';
+        foreach ($arr as $k => $v) {
+            if (stripos($k, $key) !== false && is_string($v) && trim($v) !== '') {
+                $source = "$label[$k]";
+                return trim($v);
+            }
+        }
+    }
+
+    // Comprehensive Filesystem Check
+    $docRoot = isset($_SERVER['DOCUMENT_ROOT']) ? rtrim($_SERVER['DOCUMENT_ROOT'], '/') : '';
+    $scriptDir = __DIR__;
+    $userHome = '';
+    if (!empty($_SERVER['HOME'])) {
+        $userHome = rtrim($_SERVER['HOME'], '/');
+    } elseif (function_exists('get_current_user')) {
+        $u = get_current_user();
+        if (!empty($u)) {
+            $userHome = '/home/' . $u;
+        }
+    }
+
+    $baseDirs = array_unique(array_filter([
+        $docRoot,
+        $docRoot ? dirname($docRoot) : null,
+        $docRoot ? dirname(dirname($docRoot)) : null,
+        $scriptDir,
+        dirname($scriptDir),
+        dirname(dirname($scriptDir)),
+        dirname(dirname(dirname($scriptDir))),
+        $userHome,
+        $userHome ? $userHome . '/public_html' : null,
+        $userHome ? $userHome . '/domains/kognitiminds.com' : null,
+        $userHome ? $userHome . '/domains/kognitiminds.com/public_html' : null,
+    ]));
+
+    $fileNames = ['.env', '.env.production', '.env.local', 'data/.env', 'data/storage/.env', 'public/.env'];
+    $targetKeyPatterns = [
+        $key,
+        'VITE_' . $key,
+        strtolower($key),
+    ];
+
+    foreach ($baseDirs as $dir) {
+        if (!is_dir($dir)) continue;
+        foreach ($fileNames as $fn) {
+            $filePath = $dir . '/' . $fn;
+            if (file_exists($filePath) && is_readable($filePath)) {
+                $lines = @file($filePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                if ($lines !== false) {
+                    foreach ($lines as $line) {
+                        $line = preg_replace('/^\xEF\xBB\xBF/', '', trim($line));
+                        if (empty($line) || strpos($line, '#') === 0) continue;
+                        if (strpos($line, '=') !== false) {
+                            list($varName, $varValue) = explode('=', $line, 2);
+                            $varName = trim($varName);
+                            $varValue = trim($varValue, " \t\n\r\0\x0B\"'");
+                            foreach ($targetKeyPatterns as $tp) {
+                                if ($varName === $tp && !empty($varValue)) {
+                                    $source = "file: $filePath ($varName)";
+                                    return $varValue;
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     }
+
     return '';
 }
 
-$apiKey = getEnvValue('RESEND_API_KEY');
+$keySource = '';
+$apiKey = resolveServerEnvKey('RESEND_API_KEY', $keySource);
 
 // Safe Diagnostic Health Check (GET /api/send-email.php or GET /api/auth/send-otp)
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -114,7 +186,7 @@ $subject = $data['subject'] ?? 'Kogniti Minds Verification Code';
 $html = $data['html'] ?? '';
 $text = $data['text'] ?? '';
 
-$rawFrom = getEnvValue('EMAIL_FROM') ?: 'Kogniti Minds Security <security@kognitiminds.com>';
+$rawFrom = resolveServerEnvKey('EMAIL_FROM') ?: 'Kogniti Minds Security <security@kognitiminds.com>';
 $from = (strpos($rawFrom, 'resend.dev') === false && strpos($rawFrom, 'example.com') === false)
     ? $rawFrom
     : 'Kogniti Minds Security <security@kognitiminds.com>';

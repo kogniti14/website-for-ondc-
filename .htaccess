@@ -1,3 +1,11 @@
+<IfModule mod_env.c>
+  PassEnv RESEND_API_KEY
+  PassEnv VITE_RESEND_API_KEY
+  PassEnv RAZORPAY_KEY_ID
+  PassEnv RAZORPAY_KEY_SECRET
+  PassEnv EMAIL_FROM
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
