@@ -244,14 +244,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const newBiz: B2BBusiness = {
       id: `biz_${Date.now()}`,
       companyName: data.companyName || 'Registered Enterprise',
+      tradeName: data.tradeName?.trim() || undefined,
       contactPerson: data.contactPerson || 'Authorized Representative',
+      designation: data.designation?.trim() || 'Procurement Authority',
       businessEmail: data.businessEmail || '',
       mobile: data.mobile || '',
       password: data.password,
       gstin: data.gstin?.toUpperCase() || '',
+      udyamNumber: data.udyamNumber?.trim().toUpperCase() || undefined,
+      cinNumber: data.cinNumber?.trim().toUpperCase() || undefined,
       pan: data.pan?.toUpperCase() || (data.gstin ? data.gstin.slice(2, 12).toUpperCase() : ''),
       businessType: data.businessType || 'Corporate Office',
       status: 'pending',
+      verificationStatus: data.verificationStatus || 'pending',
       statusReason: 'Documents uploaded. Compliance desk verification underway (SLA: 24h).',
       creditLimit: 0,
       paymentTerms: 'Prepaid',
@@ -287,7 +292,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addressType: 'work',
         isDefault: true,
       },
-      documents: [
+      kycDocuments: data.kycDocuments || [],
+      documents: (data.documents && data.documents.length > 0) ? data.documents : [
         {
           name: `GST_Certificate_${data.gstin || 'Doc'}.pdf`,
           type: 'GST Certificate',
@@ -582,16 +588,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const newBiz: B2BBusiness = {
       id: `biz_${Date.now()}`,
       companyName: bizData.companyName || 'Enterprise Client',
+      tradeName: bizData.tradeName?.trim() || undefined,
       contactPerson: bizData.contactPerson || 'Authorized Representative',
+      designation: bizData.designation?.trim() || 'Procurement Authority',
       businessEmail: email,
       mobile: bizData.mobile || '+91 98000 00000',
       password,
       firebaseUid: res.user?.uid,
       authProvider: 'firebase_email',
       gstin: bizData.gstin?.toUpperCase() || '29AAAAA0000A1Z5',
+      udyamNumber: bizData.udyamNumber?.trim().toUpperCase() || undefined,
+      cinNumber: bizData.cinNumber?.trim().toUpperCase() || undefined,
       pan: bizData.pan?.toUpperCase() || (bizData.gstin ? bizData.gstin.slice(2, 12).toUpperCase() : 'AAAAA0000A'),
       businessType: bizData.businessType || 'Corporate Office',
       status: 'pending',
+      verificationStatus: bizData.verificationStatus || 'pending',
       statusReason: 'Documents uploaded. Compliance desk verification underway (SLA: 24h).',
       creditLimit: 0,
       paymentTerms: 'Prepaid',
@@ -624,7 +635,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addressType: 'work',
         isDefault: true,
       },
-      documents: [
+      kycDocuments: bizData.kycDocuments || [],
+      documents: (bizData.documents && bizData.documents.length > 0) ? bizData.documents : [
         {
           name: `GST_Certificate_${bizData.gstin || 'Doc'}.pdf`,
           type: 'GST Certificate',
@@ -1032,16 +1044,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const newBiz: B2BBusiness = {
       id: `biz_${Date.now()}`,
       companyName: bizData.companyName?.trim() || 'Registered Enterprise',
+      tradeName: bizData.tradeName?.trim() || undefined,
       contactPerson: bizData.contactPerson?.trim() || 'Authorized Representative',
+      designation: bizData.designation?.trim() || 'Procurement Authority',
       businessEmail: email,
       mobile: bizData.mobile?.trim() || '',
       password: password || undefined,
       firebaseUid,
       authProvider: firebaseUid ? 'firebase_email' : 'email_otp',
       gstin: bizData.gstin?.toUpperCase() || '',
+      udyamNumber: bizData.udyamNumber?.trim().toUpperCase() || undefined,
+      cinNumber: bizData.cinNumber?.trim().toUpperCase() || undefined,
       pan: bizData.pan?.toUpperCase() || (bizData.gstin ? bizData.gstin.slice(2, 12).toUpperCase() : ''),
       businessType: bizData.businessType || 'Corporate Office',
       status: 'pending',
+      verificationStatus: 'pending',
       statusReason: 'Documents uploaded. Compliance desk verification underway (SLA: 24h).',
       creditLimit: 0,
       paymentTerms: 'Prepaid',
@@ -1077,7 +1094,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addressType: 'work',
         isDefault: true,
       },
-      documents: [
+      kycDocuments: bizData.kycDocuments || [],
+      documents: bizData.documents || [
         {
           name: `GST_Certificate_${bizData.gstin || 'Doc'}.pdf`,
           type: 'GST Certificate',

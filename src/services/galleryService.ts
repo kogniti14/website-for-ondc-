@@ -17,6 +17,7 @@ import {
   getDownloadURL,
   deleteObject,
 } from 'firebase/storage';
+import { dataSyncBus } from './dataSyncBus';
 
 const LOCAL_STORAGE_STORIES_KEY = 'km_gallery_stories_v1';
 const LOCAL_STORAGE_CATEGORIES_KEY = 'km_gallery_categories_v1';
@@ -210,6 +211,69 @@ Partner Impact:
 class GalleryService {
   private memoryStories: GalleryStory[] | null = null;
   private memoryCategories: GalleryCategory[] | null = null;
+  private isHydrated = false;
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      setTimeout(() => this.hydrateFromServer(), 60);
+    }
+  }
+
+  private async syncServer(collection: string, payload: any, method: 'POST' | 'DELETE' = 'POST', id?: string): Promise<void> {
+    if (typeof window === 'undefined') return;
+    const body = method !== 'DELETE' ? JSON.stringify(payload) : undefined;
+    const headers = { 'Content-Type': 'application/json' };
+
+    try {
+      const phpUrl = method === 'DELETE' && id ? `/api/data.php?collection=${collection}&id=${id}` : `/api/data.php?collection=${collection}`;
+      const res = await fetch(phpUrl, { method, headers, body }).catch(() => null);
+      if (!res || !res.ok) {
+        const url = method === 'DELETE' && id ? `/api/data/${collection}/${id}` : `/api/data/${collection}`;
+        await fetch(url, { method, headers, body }).catch(() => null);
+      }
+    } catch {
+      // Non-blocking background sync
+    }
+  }
+
+  async hydrateFromServer(): Promise<void> {
+    if (typeof window === 'undefined' || this.isHydrated) return;
+    this.isHydrated = true;
+
+    try {
+      // 1. Hydrate Stories from authoritative server
+      let res = await fetch('/api/data.php?collection=stories').catch(() => null);
+      if (!res || !res.ok) {
+        res = await fetch('/api/data/stories').catch(() => null);
+      }
+      if (res && res.ok) {
+        const serverData = await res.json();
+        if (Array.isArray(serverData) && serverData.length > 0) {
+          this.saveLocalStories(serverData);
+          dataSyncBus.emit('stories', serverData);
+        } else {
+          this.syncServer('stories', INITIAL_GALLERY_STORIES, 'POST');
+        }
+      }
+
+      // 2. Hydrate Categories from authoritative server
+      let catRes = await fetch('/api/data.php?collection=gallery_categories').catch(() => null);
+      if (!catRes || !catRes.ok) {
+        catRes = await fetch('/api/data/gallery_categories').catch(() => null);
+      }
+      if (catRes && catRes.ok) {
+        const serverCats = await catRes.json();
+        if (Array.isArray(serverCats) && serverCats.length > 0) {
+          this.saveLocalCategories(serverCats);
+          dataSyncBus.emit('gallery_categories', serverCats);
+        } else {
+          this.syncServer('gallery_categories', INITIAL_GALLERY_CATEGORIES, 'POST');
+        }
+      }
+    } catch {
+      // Non-blocking
+    }
+  }
 
   /**
    * Role authorization check: allows super_admin, admin, operations_admin, catalog_manager, or staff
@@ -422,6 +486,10 @@ class GalleryService {
     currentList.unshift(newStory);
     this.saveLocalStories(currentList);
 
+    // Sync to authoritative server storage and notify subscribers
+    this.syncServer('stories', newStory, 'POST');
+    dataSyncBus.emit('stories', currentList);
+
     // Save to Firestore if live Firebase is active
     if (isFirebaseConfigured() && db) {
       try {
@@ -482,6 +550,10 @@ class GalleryService {
     currentList[index] = updatedStory;
     this.saveLocalStories(currentList);
 
+    // Sync to authoritative server storage and notify subscribers
+    this.syncServer('stories', updatedStory, 'POST', id);
+    dataSyncBus.emit('stories', currentList);
+
     if (isFirebaseConfigured() && db) {
       try {
         await updateDoc(doc(db, 'gallery', id), {
@@ -523,6 +595,10 @@ class GalleryService {
 
     const filtered = currentList.filter((s) => s.id !== id);
     this.saveLocalStories(filtered);
+
+    // Sync deletion to authoritative server storage and notify subscribers
+    this.syncServer('stories', null, 'DELETE', id);
+    dataSyncBus.emit('stories', filtered);
 
     // Delete from Firestore & Firebase Storage if active
     if (isFirebaseConfigured()) {
@@ -573,6 +649,10 @@ class GalleryService {
     const targets = currentList.filter((s) => idSet.has(s.id));
     const filtered = currentList.filter((s) => !idSet.has(s.id));
     this.saveLocalStories(filtered);
+
+    // Sync deletions to authoritative server storage and notify subscribers
+    ids.forEach((id) => this.syncServer('stories', null, 'DELETE', id));
+    dataSyncBus.emit('stories', filtered);
 
     // Asynchronously cleanup in Firestore & Firebase Storage
     if (isFirebaseConfigured()) {
@@ -626,7 +706,7 @@ class GalleryService {
   }
 
   /**
-   * Admin: Upload image or PDF to Firebase Storage with local preview fallback
+   * Admin: Upload image or PDF to server endpoint with local preview fallback
    */
   async uploadImage(
     file: File,
@@ -668,6 +748,43 @@ class GalleryService {
     const cleanCat = this.generateSlug(categoryName) || 'general';
     const cleanFileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
     const storagePath = `company-gallery/${cleanCat}/${cleanFileName}`;
+
+    // 4. Primary: Upload to authoritative server endpoint (/api/upload.php or /api/upload)
+    if (typeof window !== 'undefined' && typeof FormData !== 'undefined') {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'gallery');
+
+        let uploadRes = await fetch('/api/upload.php', {
+          method: 'POST',
+          body: formData,
+        }).catch(() => null);
+
+        if (!uploadRes || !uploadRes.ok) {
+          uploadRes = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          }).catch(() => null);
+        }
+
+        if (uploadRes && uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          if (uploadData.success && uploadData.url) {
+            return {
+              success: true,
+              imageUrl: uploadData.url,
+              documentUrl: isPdf ? uploadData.url : undefined,
+              fileType: isPdf ? 'pdf' : 'image',
+              storagePath: uploadData.path || uploadData.url,
+              message: isPdf ? 'PDF document successfully uploaded to server!' : 'Image successfully uploaded to server storage!',
+            };
+          }
+        }
+      } catch (uploadErr) {
+        console.warn('Server gallery media upload notice, trying cloud fallback:', uploadErr);
+      }
+    }
 
     // Attempt Firebase Storage upload if configured
     if (isFirebaseConfigured() && storage) {
@@ -793,6 +910,10 @@ class GalleryService {
     currentList.push(newCat);
     this.saveLocalCategories(currentList);
 
+    // Sync to authoritative server storage and notify subscribers
+    this.syncServer('gallery_categories', newCat, 'POST');
+    dataSyncBus.emit('gallery_categories', currentList);
+
     return { success: true, category: newCat, message: `Category "${cleanName}" created successfully.` };
   }
 
@@ -832,6 +953,8 @@ class GalleryService {
       }
       if (updatedStoriesCount > 0) {
         this.saveLocalStories(stories);
+        this.syncServer('stories', stories, 'POST');
+        dataSyncBus.emit('stories', stories);
       }
     }
 
@@ -847,6 +970,10 @@ class GalleryService {
 
     currentList[index] = updatedCat;
     this.saveLocalCategories(currentList);
+
+    // Sync to authoritative server storage and notify subscribers
+    this.syncServer('gallery_categories', updatedCat, 'POST', id);
+    dataSyncBus.emit('gallery_categories', currentList);
 
     return { success: true, category: updatedCat, message: `Category "${newName}" updated successfully.` };
   }
@@ -868,6 +995,9 @@ class GalleryService {
     cat.isActive = !(cat.isActive !== false);
     cat.updatedAt = new Date().toISOString();
     this.saveLocalCategories(currentList);
+
+    this.syncServer('gallery_categories', cat, 'POST', id);
+    dataSyncBus.emit('gallery_categories', currentList);
 
     return {
       success: true,
@@ -895,7 +1025,11 @@ class GalleryService {
       }
     });
 
-    this.saveLocalCategories(Array.from(map.values()));
+    const updatedList = Array.from(map.values());
+    this.saveLocalCategories(updatedList);
+
+    this.syncServer('gallery_categories', updatedList, 'POST');
+    dataSyncBus.emit('gallery_categories', updatedList);
     return { success: true, message: 'Category display order updated successfully.' };
   }
 
@@ -925,6 +1059,9 @@ class GalleryService {
 
     const updated = currentList.filter((c) => c.id !== id);
     this.saveLocalCategories(updated);
+
+    this.syncServer('gallery_categories', null, 'DELETE', id);
+    dataSyncBus.emit('gallery_categories', updated);
     return { success: true, message: `Category "${cat.name}" deleted successfully.` };
   }
 
@@ -954,6 +1091,12 @@ class GalleryService {
 
     if (deletedCount > 0) {
       this.saveLocalCategories(remaining);
+      ids.forEach((id) => {
+        if (!remaining.some((r) => r.id === id)) {
+          this.syncServer('gallery_categories', null, 'DELETE', id);
+        }
+      });
+      dataSyncBus.emit('gallery_categories', remaining);
     }
 
     let message = `Successfully deleted ${deletedCount} categor${deletedCount === 1 ? 'y' : 'ies'}.`;
@@ -997,10 +1140,15 @@ class GalleryService {
       }
     }
     this.saveLocalStories(stories);
+    this.syncServer('stories', stories, 'POST');
+    dataSyncBus.emit('stories', stories);
 
     // Delete source category
     const updatedCategories = currentList.filter((c) => c.id !== sourceId);
     this.saveLocalCategories(updatedCategories);
+
+    this.syncServer('gallery_categories', null, 'DELETE', sourceId);
+    dataSyncBus.emit('gallery_categories', updatedCategories);
 
     return {
       success: true,

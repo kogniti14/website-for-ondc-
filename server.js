@@ -141,6 +141,59 @@ app.get('/api/health', (req, res) => {
 // 2. Mount Data Persistence Router
 app.use('/api/data', dataRouter);
 
+// 2b. Mount File Upload API Endpoint & Static Upload Directory
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+
+app.post('/api/upload', (req, res) => {
+  try {
+    const body = req.body;
+    if (!body || (!body.base64 && !body.fileData)) {
+      return res.status(400).json({ success: false, message: 'JSON payload with base64/fileData required' });
+    }
+    const dataStr = body.base64 || body.fileData;
+    const folder = (body.folder || 'certificates').replace(/[^a-zA-Z0-9_-]/g, '');
+    let mimeType = body.fileType || 'application/pdf';
+    let fileBuffer;
+
+    const matches = dataStr.match(/^data:([^;]+);base64,(.*)$/s);
+    if (matches) {
+      mimeType = matches[1];
+      fileBuffer = Buffer.from(matches[2], 'base64');
+    } else {
+      fileBuffer = Buffer.from(dataStr, 'base64');
+    }
+
+    let ext = path.extname(body.fileName || '').replace('.', '').toLowerCase();
+    if (!ext) {
+      ext = mimeType.includes('pdf') ? 'pdf' : mimeType.includes('png') ? 'png' : 'jpg';
+    }
+
+    const uploadDir = path.join(__dirname, 'public', 'uploads', folder);
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    const timestamp = Math.floor(Date.now() / 1000);
+    const rand = Math.random().toString(36).substring(2, 8);
+    const safeName = `${folder}_${timestamp}_${rand}.${ext}`;
+    const dest = path.join(uploadDir, safeName);
+    fs.writeFileSync(dest, fileBuffer);
+
+    const publicUrl = `/uploads/${folder}/${safeName}?v=${timestamp}`;
+    res.status(200).json({
+      success: true,
+      fileUrl: publicUrl,
+      fileName: safeName,
+      fileType: mimeType,
+      size: fileBuffer.length,
+      version: timestamp,
+    });
+  } catch (err) {
+    logger.error('Server', 'upload_error', 'Failed to process file upload', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 3. Mount Server-Side Payment Router (Razorpay)
 app.use('/api/payment', paymentRouter);
 

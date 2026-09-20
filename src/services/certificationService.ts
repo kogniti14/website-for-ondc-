@@ -17,6 +17,7 @@ import {
   getDownloadURL,
   deleteObject,
 } from 'firebase/storage';
+import { dataSyncBus } from './dataSyncBus';
 
 const LOCAL_STORAGE_CERTS_KEY = 'kogniti_company_certifications';
 const LOCAL_STORAGE_CATEGORIES_KEY = 'kogniti_certification_categories';
@@ -313,6 +314,70 @@ Membership Rights & Standing:
 class CertificationService {
   private memoryCerts: CompanyCertification[] | null = null;
   private memoryCategories: CertificationCategory[] | null = null;
+  private isHydrated = false;
+
+  constructor() {
+    if (typeof window !== 'undefined') {
+      setTimeout(() => this.hydrateFromServer(), 50);
+    }
+  }
+
+  private async syncServer(collection: string, payload: any, method: 'POST' | 'DELETE' = 'POST', id?: string): Promise<void> {
+    if (typeof window === 'undefined') return;
+    const body = method !== 'DELETE' ? JSON.stringify(payload) : undefined;
+    const headers = { 'Content-Type': 'application/json' };
+
+    try {
+      const phpUrl = method === 'DELETE' && id ? `/api/data.php?collection=${collection}&id=${id}` : `/api/data.php?collection=${collection}`;
+      const res = await fetch(phpUrl, { method, headers, body }).catch(() => null);
+      if (!res || !res.ok) {
+        const url = method === 'DELETE' && id ? `/api/data/${collection}/${id}` : `/api/data/${collection}`;
+        await fetch(url, { method, headers, body }).catch(() => null);
+      }
+    } catch {
+      // Non-blocking background sync
+    }
+  }
+
+  async hydrateFromServer(): Promise<void> {
+    if (typeof window === 'undefined' || this.isHydrated) return;
+    this.isHydrated = true;
+
+    try {
+      // 1. Hydrate Certifications from authoritative server
+      let res = await fetch('/api/data.php?collection=certifications').catch(() => null);
+      if (!res || !res.ok) {
+        res = await fetch('/api/data/certifications').catch(() => null);
+      }
+      if (res && res.ok) {
+        const serverData = await res.json();
+        if (Array.isArray(serverData) && serverData.length > 0) {
+          this.saveLocalCertificates(serverData);
+          dataSyncBus.emit('certifications', serverData);
+        } else {
+          // Initialize server persistence with official seeds if empty
+          this.syncServer('certifications', INITIAL_CERTIFICATIONS, 'POST');
+        }
+      }
+
+      // 2. Hydrate Categories from authoritative server
+      let catRes = await fetch('/api/data.php?collection=certification_categories').catch(() => null);
+      if (!catRes || !catRes.ok) {
+        catRes = await fetch('/api/data/certification_categories').catch(() => null);
+      }
+      if (catRes && catRes.ok) {
+        const serverCats = await catRes.json();
+        if (Array.isArray(serverCats) && serverCats.length > 0) {
+          this.saveLocalCategories(serverCats);
+          dataSyncBus.emit('certification_categories', serverCats);
+        } else {
+          this.syncServer('certification_categories', INITIAL_CERTIFICATION_CATEGORIES, 'POST');
+        }
+      }
+    } catch {
+      // Non-blocking
+    }
+  }
 
   /**
    * Role authorization check: allows super_admin, admin, operations_admin, catalog_manager, or staff
@@ -594,6 +659,10 @@ class CertificationService {
     currentList.unshift(newCert);
     this.saveLocalCertificates(currentList);
 
+    // Sync to persistent server storage (/api/data/certifications)
+    this.syncServer('certifications', newCert, 'POST');
+    dataSyncBus.emit('certifications', currentList);
+
     // Save to Firestore if live Firebase is active
     if (isFirebaseConfigured() && db) {
       try {
@@ -645,6 +714,10 @@ class CertificationService {
     currentList[index] = updatedCert;
     this.saveLocalCertificates(currentList);
 
+    // Sync to persistent server storage (/api/data/certifications)
+    this.syncServer('certifications', updatedCert, 'POST', id);
+    dataSyncBus.emit('certifications', currentList);
+
     if (isFirebaseConfigured() && db) {
       try {
         await setDoc(doc(db, 'certifications', id), updatedCert, { merge: true });
@@ -683,6 +756,10 @@ class CertificationService {
     // Remove from local cache
     const filtered = currentList.filter((c) => c.id !== id);
     this.saveLocalCertificates(filtered);
+
+    // Sync deletion to persistent server storage (/api/data/certifications)
+    this.syncServer('certifications', null, 'DELETE', id);
+    dataSyncBus.emit('certifications', filtered);
 
     // Remove from Firestore
     if (isFirebaseConfigured() && db) {
@@ -733,6 +810,10 @@ class CertificationService {
     const targets = currentList.filter((c) => idSet.has(c.id));
     const filtered = currentList.filter((c) => !idSet.has(c.id));
     this.saveLocalCertificates(filtered);
+
+    // Sync deletions to persistent server storage
+    ids.forEach((id) => this.syncServer('certifications', null, 'DELETE', id));
+    dataSyncBus.emit('certifications', filtered);
 
     // Asynchronously remove from Firestore & Firebase Storage
     if (isFirebaseConfigured()) {
@@ -843,6 +924,43 @@ class CertificationService {
     const cleanCat = this.generateSlug(categoryName) || 'other';
     const cleanFileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
     const storagePath = `company-certifications/${cleanCat}/${cleanFileName}`;
+
+    // 4. Primary: Upload to authoritative server endpoint (/api/upload.php or /api/upload)
+    if (typeof window !== 'undefined' && typeof FormData !== 'undefined') {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'certificates');
+
+        let uploadRes = await fetch('/api/upload.php', {
+          method: 'POST',
+          body: formData,
+        }).catch(() => null);
+
+        if (!uploadRes || !uploadRes.ok) {
+          uploadRes = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          }).catch(() => null);
+        }
+
+        if (uploadRes && uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          if (uploadData.success && uploadData.url) {
+            return {
+              success: true,
+              fileUrl: uploadData.url,
+              storagePath: uploadData.path || uploadData.url,
+              fileType: file.type,
+              thumbnailUrl: file.type === 'application/pdf' ? '' : uploadData.url,
+              message: 'Certificate uploaded and verified on server storage.',
+            };
+          }
+        }
+      } catch (uploadErr) {
+        console.warn('Server upload notice, attempting cloud fallback:', uploadErr);
+      }
+    }
 
     // Upload to Firebase Storage if configured
     if (isFirebaseConfigured() && storage) {
@@ -970,6 +1088,10 @@ class CertificationService {
     currentList.push(newCat);
     this.saveLocalCategories(currentList);
 
+    // Sync to authoritative server storage and notify subscribers
+    this.syncServer('certification_categories', newCat, 'POST');
+    dataSyncBus.emit('certification_categories', currentList);
+
     if (isFirebaseConfigured() && db) {
       try {
         await setDoc(doc(db, 'certification_categories', newCat.id), newCat);
@@ -1016,6 +1138,8 @@ class CertificationService {
       }
       if (updatedCount > 0) {
         this.saveLocalCertificates(certs);
+        this.syncServer('certifications', certs, 'POST');
+        dataSyncBus.emit('certifications', certs);
       }
     }
 
@@ -1031,6 +1155,10 @@ class CertificationService {
 
     currentList[index] = updatedCat;
     this.saveLocalCategories(currentList);
+
+    // Sync to authoritative server storage and notify subscribers
+    this.syncServer('certification_categories', updatedCat, 'POST', id);
+    dataSyncBus.emit('certification_categories', currentList);
 
     if (isFirebaseConfigured() && db) {
       try {
@@ -1060,6 +1188,9 @@ class CertificationService {
     cat.isActive = !(cat.isActive !== false);
     cat.updatedAt = new Date().toISOString();
     this.saveLocalCategories(currentList);
+
+    this.syncServer('certification_categories', cat, 'POST', id);
+    dataSyncBus.emit('certification_categories', currentList);
 
     if (isFirebaseConfigured() && db) {
       try {
@@ -1097,6 +1228,9 @@ class CertificationService {
 
     const updatedList = Array.from(map.values());
     this.saveLocalCategories(updatedList);
+
+    this.syncServer('certification_categories', updatedList, 'POST');
+    dataSyncBus.emit('certification_categories', updatedList);
     return { success: true, message: 'Category display order updated successfully.' };
   }
 
@@ -1126,6 +1260,9 @@ class CertificationService {
 
     const updated = currentList.filter((c) => c.id !== id);
     this.saveLocalCategories(updated);
+
+    this.syncServer('certification_categories', null, 'DELETE', id);
+    dataSyncBus.emit('certification_categories', updated);
     return { success: true, message: `Category "${cat.name}" deleted successfully.` };
   }
 
@@ -1155,6 +1292,12 @@ class CertificationService {
 
     if (deletedCount > 0) {
       this.saveLocalCategories(remaining);
+      ids.forEach((id) => {
+        if (!remaining.some((r) => r.id === id)) {
+          this.syncServer('certification_categories', null, 'DELETE', id);
+        }
+      });
+      dataSyncBus.emit('certification_categories', remaining);
     }
 
     let message = `Successfully deleted ${deletedCount} categor${deletedCount === 1 ? 'y' : 'ies'}.`;
@@ -1198,10 +1341,14 @@ class CertificationService {
       }
     }
     this.saveLocalCertificates(certs);
+    this.syncServer('certifications', certs, 'POST');
+    dataSyncBus.emit('certifications', certs);
 
     // Delete source category
     const updatedCategories = currentList.filter((c) => c.id !== sourceId);
     this.saveLocalCategories(updatedCategories);
+    this.syncServer('certification_categories', null, 'DELETE', sourceId);
+    dataSyncBus.emit('certification_categories', updatedCategories);
 
     return {
       success: true,
@@ -1229,6 +1376,9 @@ class CertificationService {
       current.push({ ...cat, isActive: cat.isActive !== false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
     }
     this.saveLocalCategories(current);
+
+    this.syncServer('certification_categories', cat, 'POST', cat.id);
+    dataSyncBus.emit('certification_categories', current);
 
     if (isFirebaseConfigured() && db) {
       try {

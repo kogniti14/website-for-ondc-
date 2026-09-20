@@ -6,6 +6,7 @@
   RewriteRule ^api/auth/send-otp/?$ api/send-email.php [QSA,L]
   RewriteRule ^api/resend/?$ api/send-email.php [QSA,L]
   RewriteRule ^api/health/?$ api/health.php [QSA,L]
+  RewriteRule ^api/upload/?$ api/upload.php [QSA,L]
   RewriteRule ^api/data/([a-zA-Z0-9_-]+)/?([a-zA-Z0-9_-]*)?$ api/data.php?collection=$1&id=$2 [QSA,L]
 
   # 2. Do not rewrite existing physical files or PHP scripts

@@ -1,7 +1,7 @@
 /**
  * Kogniti Minds - Data Persistence REST Router
  * Enables cross-device synchronized persistence for Products, Orders, Users,
- * B2B Businesses, and Quotations.
+ * B2B Businesses, Quotations, Certifications, Stories, and Site Media.
  */
 
 import express from 'express';
@@ -21,6 +21,14 @@ const ALLOWED_COLLECTIONS = new Set([
   'admin_users',
   'coupons',
   'settings',
+  'certifications',
+  'certification_categories',
+  'stories',
+  'gallery_categories',
+  'site_media',
+  'policies',
+  'policy_records',
+  'policy_versions',
 ]);
 
 function validateCollection(req, res, next) {
@@ -28,6 +36,10 @@ function validateCollection(req, res, next) {
   if (!ALLOWED_COLLECTIONS.has(collection)) {
     return res.status(400).json({ error: `Collection '${collection}' is not supported.` });
   }
+  // Enforce zero-caching for fresh data synchronization
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   next();
 }
 
@@ -96,7 +108,7 @@ dataRouter.delete('/:collection/:id', validateCollection, (req, res) => {
       return res.status(404).json({ error: 'Item not found or already deleted' });
     }
     logger.info('DataRouter', 'delete', `Deleted item ${req.params.id} from ${req.params.collection}`);
-    res.status(200).json({ success: true, id: req.params.id });
+    res.status(200).json({ success: true, id: req.params.id, deleted: true });
   } catch (err) {
     logger.error('DataRouter', 'delete_error', `Error deleting item ${req.params.id}`, err);
     res.status(500).json({ error: 'Failed to delete item' });

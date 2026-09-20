@@ -13,9 +13,15 @@ import {
   Upload,
   ArrowLeft,
   KeyRound,
+  Eye,
+  Download,
+  RefreshCw,
+  Check,
+  Loader2,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { B2BBusiness } from '../../types';
+import { B2BBusiness, B2BDocumentType, B2BDocumentAttachment } from '../../types';
 import { storageService } from '../../services/storageService';
 import { UnregisteredUserModal } from './UnregisteredUserModal';
 import { ImageUpload } from '../common/ImageUpload';
@@ -25,6 +31,50 @@ interface B2BAuthModalProps {
   onClose: () => void;
   onSuccess?: () => void;
 }
+
+export const MANDATORY_DOC_CONFIG: Array<{
+  type: B2BDocumentType;
+  title: string;
+  code: string;
+  description: string;
+  validationError: string;
+}> = [
+  {
+    type: 'gst_certificate',
+    title: 'GST Certificate',
+    code: 'GST REG-06',
+    description: 'Government issued GST Certificate with official seal & annexures',
+    validationError: 'GST Certificate is required.',
+  },
+  {
+    type: 'msme_udyam',
+    title: 'MSME / Udyam Certificate',
+    code: 'UDYAM',
+    description: 'Government of India Udyam Registration Certificate for MSE/SME',
+    validationError: 'MSME/Udyam Certificate is required.',
+  },
+  {
+    type: 'moa',
+    title: 'MOA — Memorandum of Association',
+    code: 'MOA',
+    description: 'Corporate charter establishing company scope and operations',
+    validationError: 'MOA is required.',
+  },
+  {
+    type: 'aoa',
+    title: 'AOA — Articles of Association',
+    code: 'AOA',
+    description: 'Statutory bylaws governing management and administration',
+    validationError: 'AOA is required.',
+  },
+  {
+    type: 'coi',
+    title: 'COI — Certificate of Incorporation',
+    code: 'COI',
+    description: 'Registrar of Companies (RoC) issued Incorporation Certificate',
+    validationError: 'COI is required.',
+  },
+];
 
 export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }) => {
   const [tab, setTab] = useState<'login' | 'register' | 'forgot'>('login');
@@ -38,10 +88,14 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
 
   // Registration Fields
   const [companyName, setCompanyName] = useState('');
+  const [tradeName, setTradeName] = useState('');
   const [contactPerson, setContactPerson] = useState('');
+  const [designation, setDesignation] = useState('Procurement Authority');
   const [businessEmail, setBusinessEmail] = useState('');
   const [mobile, setMobile] = useState('');
   const [gstin, setGstin] = useState('');
+  const [udyamNumber, setUdyamNumber] = useState('');
+  const [cinNumber, setCinNumber] = useState('');
   const [businessType, setBusinessType] = useState<B2BBusiness['businessType']>('Corporate Office');
   const [street, setStreet] = useState('');
   const [city, setCity] = useState('');
@@ -49,6 +103,25 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
   const [pincode, setPincode] = useState('');
   const [docUploaded, setDocUploaded] = useState(false);
   const [docImage, setDocImage] = useState('');
+
+  // 5 Compulsory KYC Documents State
+  const [kycDocs, setKycDocs] = useState<Record<B2BDocumentType, B2BDocumentAttachment | null>>({
+    gst_certificate: null,
+    msme_certificate: null,
+    msme_udyam: null,
+    moa: null,
+    aoa: null,
+    coi: null,
+  });
+  const [kycUploading, setKycUploading] = useState<Record<B2BDocumentType, boolean>>({
+    gst_certificate: false,
+    msme_certificate: false,
+    msme_udyam: false,
+    moa: false,
+    aoa: false,
+    coi: false,
+  });
+  const [previewDoc, setPreviewDoc] = useState<B2BDocumentAttachment | null>(null);
 
   // Login Method & OTP
   const [loginMethod, setLoginMethod] = useState<'password' | 'email_otp'>('password');
@@ -61,6 +134,95 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
   const [regOtpSent, setRegOtpSent] = useState(false);
   const [regOtp, setRegOtp] = useState('');
   const [regCooldown, setRegCooldown] = useState(0);
+
+  // Handle uploading compulsory KYC files to /api/upload.php
+  const handleKycFileUpload = async (docType: B2BDocumentType, file: File) => {
+    if (!file) return;
+    const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!allowed.includes(file.type.toLowerCase())) {
+      setError(`Invalid format for ${file.name}. Please upload PDF, JPG, or PNG.`);
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError(`File is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 10 MB.`);
+      return;
+    }
+
+    setKycUploading((prev) => ({ ...prev, [docType]: true }));
+    setError(null);
+
+    try {
+      let docUrl = '';
+      let storedPath = '';
+
+      if (typeof window !== 'undefined' && typeof FormData !== 'undefined') {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'b2b_documents');
+
+        let uploadRes = await fetch('/api/upload.php', {
+          method: 'POST',
+          body: formData,
+        }).catch(() => null);
+
+        if (!uploadRes || !uploadRes.ok) {
+          uploadRes = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          }).catch(() => null);
+        }
+
+        if (uploadRes && uploadRes.ok) {
+          const data = await uploadRes.json();
+          if (data.success && data.url) {
+            docUrl = data.url;
+            storedPath = data.path || data.url;
+          }
+        }
+      }
+
+      // Browser fallback (FileReader data URL) if server upload not reached
+      if (!docUrl && typeof FileReader !== 'undefined') {
+        docUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => resolve('');
+          reader.readAsDataURL(file);
+        });
+        storedPath = `/uploads/b2b_documents/${Date.now()}_${file.name}`;
+      }
+
+      if (!docUrl) {
+        setError(`Failed to process ${file.name}. Please try again.`);
+        setKycUploading((prev) => ({ ...prev, [docType]: false }));
+        return;
+      }
+
+      const cfg = MANDATORY_DOC_CONFIG.find((c) => c.type === docType);
+      const attachment: B2BDocumentAttachment = {
+        id: `kyc_${docType}_${Date.now()}`,
+        documentType: docType,
+        name: cfg ? cfg.title : docType,
+        originalFilename: file.name,
+        storedPath,
+        documentUrl: docUrl,
+        uploadedAt: new Date().toISOString(),
+        fileSize: file.size,
+        mimeType: file.type || 'application/pdf',
+        verificationStatus: 'pending',
+      };
+
+      setKycDocs((prev) => ({ ...prev, [docType]: attachment }));
+      if (docType === 'gst_certificate') {
+        setDocImage(docUrl);
+        setDocUploaded(true);
+      }
+    } catch (err: any) {
+      setError(`Failed to upload ${file.name}: ${err.message || 'Network error'}`);
+    } finally {
+      setKycUploading((prev) => ({ ...prev, [docType]: false }));
+    }
+  };
 
   // Policy Acceptance State for B2B Registration
   const [agreePolicies, setAgreePolicies] = useState(false);
@@ -368,21 +530,37 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
     e.preventDefault();
     setError(null);
 
-    if (!companyName.trim() || !businessEmail.trim() || !mobile.trim() || !gstin.trim() || !regPassword) {
-      setError('Please fill in all mandatory corporate fields and enter a password.');
+    if (!companyName.trim()) {
+      setError('Company/Business Legal Name is required.');
       return;
     }
-    if (!businessEmail.includes('@')) {
-      setError('Please enter a valid corporate email address.');
+    if (!contactPerson.trim()) {
+      setError('Authorized Contact Person Name is required.');
       return;
     }
-    if (gstin.trim().length !== 15) {
-      setError('Please enter a valid 15-character Indian GSTIN.');
+    if (!businessEmail.trim() || !businessEmail.includes('@')) {
+      setError('Official Business Email is required.');
       return;
     }
-    if (regPassword.length < 6) {
+    if (!mobile.trim() || mobile.trim().length < 10) {
+      setError('Valid 10-digit mobile number is required.');
+      return;
+    }
+    if (!gstin.trim() || gstin.trim().length !== 15) {
+      setError('Valid 15-character Indian GSTIN is required.');
+      return;
+    }
+    if (!regPassword || regPassword.length < 6) {
       setError('Password must be at least 6 characters long.');
       return;
+    }
+
+    // 5 COMPULSORY Document Upload Validations (Section 25, 27, 33)
+    for (const doc of MANDATORY_DOC_CONFIG) {
+      if (!kycDocs[doc.type]?.documentUrl) {
+        setError(doc.validationError);
+        return;
+      }
     }
 
     if (!agreePolicies) {
@@ -417,24 +595,49 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
       return;
     }
 
+    // Double-check 5 mandatory documents
+    for (const doc of MANDATORY_DOC_CONFIG) {
+      if (!kycDocs[doc.type]?.documentUrl) {
+        setError(doc.validationError);
+        return;
+      }
+    }
+
     if (!agreePolicies) {
       setError('Please accept the Terms & Conditions, Privacy Policy, Refund & Return Policy, and Shipping & Logistics Policy to continue.');
       return;
     }
 
+    const compiledKycDocuments: B2BDocumentAttachment[] = MANDATORY_DOC_CONFIG
+      .map((cfg) => kycDocs[cfg.type])
+      .filter((doc): doc is B2BDocumentAttachment => doc !== null);
+
     setLoading(true);
     const res = await registerB2BWithEmailOtp(
       {
         companyName: companyName.trim(),
+        tradeName: tradeName.trim() || undefined,
         contactPerson: contactPerson.trim() || 'Authorized Representative',
+        designation: designation.trim() || 'Procurement Authority',
         businessEmail: businessEmail.trim().toLowerCase(),
         mobile: mobile.trim(),
         gstin: gstin.trim().toUpperCase(),
+        udyamNumber: udyamNumber.trim().toUpperCase() || undefined,
+        cinNumber: cinNumber.trim().toUpperCase() || undefined,
         pan: gstin.trim().slice(2, 12).toUpperCase(),
         businessType,
         policyAccepted: true,
         policyAcceptedAt: new Date().toISOString(),
         policyAcceptedVersion: '2026-09-18',
+        verificationStatus: 'pending',
+        kycDocuments: compiledKycDocuments,
+        documents: compiledKycDocuments.map((d) => ({
+          name: d.originalFilename || d.originalFileName || d.name || 'KYC Document',
+          type: d.name,
+          uploadedAt: d.uploadedAt,
+          status: 'pending' as const,
+        })),
+        avatarUrl: kycDocs.gst_certificate?.documentUrl || undefined,
         billingAddress: {
           id: `baddr_${Date.now()}`,
           fullName: companyName.trim(),
@@ -457,17 +660,6 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
           addressType: 'work',
           isDefault: true,
         },
-        documents: docImage
-          ? [
-              {
-                name: 'GST Registration Certificate',
-                type: 'image',
-                uploadedAt: new Date().toISOString(),
-                status: 'pending' as const,
-              },
-            ]
-          : [],
-        avatarUrl: docImage || undefined,
       },
       regOtp.trim(),
       regPassword
@@ -487,7 +679,9 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
       <div
         className="modal-content"
         style={{
-          maxWidth: tab === 'register' ? '640px' : '440px',
+          maxWidth: tab === 'register' ? '780px' : '440px',
+          maxHeight: '92vh',
+          overflowY: 'auto',
           padding: '2rem',
           position: 'relative',
           backgroundColor: '#0F172A',
@@ -1087,7 +1281,7 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
               <form onSubmit={handleSendB2BRegisterOtp}>
                 <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
                   <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                    <label className="form-label" style={{ color: '#CBD5E1' }}>Company / Entity Name *</label>
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>Company / Business Legal Name *</label>
                     <input
                       type="text"
                       placeholder="e.g. Apex Global Technologies Pvt Ltd"
@@ -1100,12 +1294,37 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
                   </div>
 
                   <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>Trade / Brand Name (If different)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Apex CleanTech"
+                      value={tradeName}
+                      onChange={(e) => setTradeName(e.target.value)}
+                      className="form-input"
+                      style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '0.5rem' }}>
                     <label className="form-label" style={{ color: '#CBD5E1' }}>Authorized Contact Person *</label>
                     <input
                       type="text"
-                      placeholder="e.g. Rajesh Khurana (Procurement Head)"
+                      placeholder="e.g. Rajesh Khurana"
                       value={contactPerson}
                       onChange={(e) => setContactPerson(e.target.value)}
+                      className="form-input"
+                      style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>Designation / Authority *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Procurement Head / Director"
+                      value={designation}
+                      onChange={(e) => setDesignation(e.target.value)}
                       className="form-input"
                       style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
                       required
@@ -1154,6 +1373,30 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
                   </div>
 
                   <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>MSME / Udyam Number</label>
+                    <input
+                      type="text"
+                      placeholder="UDYAM-XX-00-0000000"
+                      value={udyamNumber}
+                      onChange={(e) => setUdyamNumber(e.target.value.toUpperCase())}
+                      className="form-input"
+                      style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>Company CIN / Reg Number</label>
+                    <input
+                      type="text"
+                      placeholder="U74999KA2023PTC123456"
+                      value={cinNumber}
+                      onChange={(e) => setCinNumber(e.target.value.toUpperCase())}
+                      className="form-input"
+                      style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.15)', color: '#FFF' }}
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '0.5rem' }}>
                     <label className="form-label" style={{ color: '#CBD5E1' }}>Create Portal Password * (Min 6 chars)</label>
                     <input
                       type="password"
@@ -1166,7 +1409,7 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
                     />
                   </div>
 
-                  <div className="form-group" style={{ marginBottom: '0.5rem' }}>
+                  <div className="form-group" style={{ marginBottom: '0.5rem', gridColumn: '1 / -1' }}>
                     <label className="form-label" style={{ color: '#CBD5E1' }}>Business Classification *</label>
                     <select
                       value={businessType}
@@ -1188,10 +1431,10 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
                 {/* Address Row */}
                 <div style={{ marginTop: '0.5rem' }}>
                   <div className="form-group" style={{ marginBottom: '0.5rem' }}>
-                    <label className="form-label" style={{ color: '#CBD5E1' }}>Corporate Facility Street Address</label>
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>Registered Business Address *</label>
                     <input
                       type="text"
-                      placeholder="Building 4, Tech Park, Outer Ring Road"
+                      placeholder="Building, Plot, Tech Park, Street"
                       value={street}
                       onChange={(e) => setStreet(e.target.value)}
                       className="form-input"
@@ -1237,20 +1480,180 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
                   </div>
                 </div>
 
-                {/* Device Document Upload */}
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <ImageUpload
-                    label="Attach GST Certificate / Incorporation Proof"
-                    helperText="Upload official business registration proof directly from device (JPG, PNG, WebP)."
-                    variant="dark"
-                    value={docImage}
-                    onChange={(val) => {
-                      const img = typeof val === 'string' ? val : val[0] || '';
-                      setDocImage(img);
-                      setDocUploaded(!!img);
-                    }}
-                  />
+                {/* Dedicated Business Documents / KYC Documents Section (Sections 25, 26, 27, 33) */}
+                <div
+                  style={{
+                    marginTop: '1.25rem',
+                    marginBottom: '1.25rem',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: 'var(--radius-lg)',
+                    padding: '1.25rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <FileText size={18} className="text-amber-400" />
+                        <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+                          Business Documents / KYC Documents
+                        </h4>
+                      </div>
+                      <p style={{ fontSize: '0.76rem', color: '#94A3B8', marginTop: '0.2rem', marginBottom: 0 }}>
+                        All 5 statutory documents below are mandatory for B2B institutional account verification.
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span
+                        style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '0.25rem 0.6rem',
+                          borderRadius: '999px',
+                          background: Object.values(kycDocs).filter(Boolean).length === 5 ? 'rgba(52, 211, 153, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                          color: Object.values(kycDocs).filter(Boolean).length === 5 ? '#34D399' : '#F87171',
+                          border: `1px solid ${Object.values(kycDocs).filter(Boolean).length === 5 ? 'rgba(52, 211, 153, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+                        }}
+                      >
+                        {Object.values(kycDocs).filter(Boolean).length} / 5 Attached
+                      </span>
+                    </div>
                   </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    {MANDATORY_DOC_CONFIG.map((cfg) => {
+                      const doc = kycDocs[cfg.type];
+                      const isUploading = kycUploading[cfg.type];
+
+                      return (
+                        <div
+                          key={cfg.type}
+                          style={{
+                            background: doc ? 'rgba(52, 211, 153, 0.05)' : 'rgba(15, 23, 42, 0.6)',
+                            border: `1px solid ${doc ? 'rgba(52, 211, 153, 0.3)' : 'rgba(255, 255, 255, 0.12)'}`,
+                            borderRadius: 'var(--radius-md)',
+                            padding: '0.85rem 1rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '1rem',
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <div style={{ flex: '1 1 240px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                              <span style={{ fontSize: '0.86rem', fontWeight: 700, color: '#FFFFFF' }}>{cfg.title}</span>
+                              <span
+                                style={{
+                                  fontSize: '0.65rem',
+                                  fontWeight: 800,
+                                  padding: '0.15rem 0.4rem',
+                                  borderRadius: '4px',
+                                  background: doc ? 'rgba(52, 211, 153, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                  color: doc ? '#34D399' : '#F87171',
+                                  border: `1px solid ${doc ? 'rgba(52, 211, 153, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
+                                  letterSpacing: '0.04em',
+                                }}
+                              >
+                                {doc ? 'ATTACHED' : '[ REQUIRED ]'}
+                              </span>
+                            </div>
+                            <p style={{ fontSize: '0.72rem', color: '#94A3B8', margin: 0 }}>
+                              {doc ? (
+                                <span style={{ color: '#34D399', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                  <Check size={13} /> {doc.originalFilename} ({(doc.fileSize / 1024).toFixed(0)} KB)
+                                </span>
+                              ) : (
+                                cfg.description
+                              )}
+                            </p>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                            {doc && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setPreviewDoc(doc)}
+                                  className="btn btn-sm btn-outline-b2b"
+                                  style={{
+                                    fontSize: '0.72rem',
+                                    padding: '0.3rem 0.55rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem',
+                                    color: '#38BDF8',
+                                    borderColor: 'rgba(56, 189, 248, 0.3)',
+                                  }}
+                                >
+                                  <Eye size={13} /> View
+                                </button>
+                                <a
+                                  href={doc.documentUrl}
+                                  download={doc.originalFilename}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn btn-sm btn-outline-b2b"
+                                  style={{
+                                    fontSize: '0.72rem',
+                                    padding: '0.3rem 0.55rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.3rem',
+                                    color: '#FFFFFF',
+                                  }}
+                                >
+                                  <Download size={13} /> Download
+                                </a>
+                              </>
+                            )}
+
+                            <label
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                fontSize: '0.72rem',
+                                fontWeight: 600,
+                                padding: '0.35rem 0.75rem',
+                                borderRadius: 'var(--radius-sm)',
+                                background: doc ? 'rgba(255, 255, 255, 0.08)' : 'linear-gradient(135deg, #D97706 0%, #B45309 100%)',
+                                color: '#FFFFFF',
+                                border: doc ? '1px solid rgba(255, 255, 255, 0.2)' : 'none',
+                                cursor: isUploading ? 'not-allowed' : 'pointer',
+                              }}
+                            >
+                              {isUploading ? (
+                                <>
+                                  <Loader2 size={13} className="animate-spin" /> Uploading...
+                                </>
+                              ) : doc ? (
+                                <>
+                                  <RefreshCw size={13} /> Replace
+                                </>
+                              ) : (
+                                <>
+                                  <Upload size={13} /> Attach Document
+                                </>
+                              )}
+                              <input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                                disabled={isUploading}
+                                style={{ display: 'none' }}
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) handleKycFileUpload(cfg.type, f);
+                                  e.target.value = '';
+                                }}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 {/* Mandatory Single Policy Agreement Checkbox */}
                 <div style={{ margin: '1rem 0 0.85rem', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
@@ -1441,6 +1844,120 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }
             setError(null);
           }}
         />
+      )}
+
+      {/* KYC Document Viewer Modal */}
+      {previewDoc && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.88)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 11000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.25rem',
+          }}
+          onClick={() => setPreviewDoc(null)}
+        >
+          <div
+            style={{
+              background: '#0F172A',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: 'var(--radius-xl)',
+              maxWidth: '850px',
+              width: '100%',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                padding: '1rem 1.25rem',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#1E293B',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <FileText size={18} className="text-amber-400" />
+                <div>
+                  <div style={{ fontWeight: 700, color: '#FFF', fontSize: '0.92rem' }}>
+                    {previewDoc.name}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
+                    {previewDoc.originalFilename} • {(previewDoc.fileSize / 1024).toFixed(0)} KB
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <a
+                  href={previewDoc.documentUrl}
+                  download={previewDoc.originalFilename}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-sm btn-outline-b2b"
+                  style={{ color: '#FFF', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem' }}
+                >
+                  <Download size={13} /> Download
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDoc(null)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '30px',
+                    height: '30px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#FFF',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            <div
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                padding: '1rem',
+                background: '#020617',
+                minHeight: '420px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {(previewDoc.mimeType || '').includes('pdf') || (previewDoc.documentUrl || previewDoc.fileUrl || '').toLowerCase().includes('.pdf') ? (
+                <iframe
+                  src={previewDoc.documentUrl || previewDoc.fileUrl || ''}
+                  title={previewDoc.name}
+                  style={{ width: '100%', height: '540px', border: 'none', borderRadius: '8px', background: '#FFFFFF' }}
+                />
+              ) : (
+                <img
+                  src={previewDoc.documentUrl || previewDoc.fileUrl || ''}
+                  alt={previewDoc.name}
+                  style={{ maxWidth: '100%', maxHeight: '540px', objectFit: 'contain', borderRadius: '8px' }}
+                />
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

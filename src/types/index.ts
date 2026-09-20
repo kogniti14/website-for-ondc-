@@ -63,11 +63,42 @@ export interface B2CUser {
   policyAcceptedVersion?: string;
 }
 
+export type B2BDocumentType =
+  | 'gst_certificate'
+  | 'msme_certificate'
+  | 'msme_udyam'
+  | 'moa'
+  | 'aoa'
+  | 'coi';
+
+export interface B2BDocumentAttachment {
+  id?: string;
+  documentType: B2BDocumentType;
+  name: string;
+  originalFileName?: string;
+  originalFilename?: string;
+  storedFileName?: string;
+  storedPath?: string;
+  fileUrl?: string;
+  documentUrl?: string;
+  fileType?: string;
+  mimeType?: string;
+  fileSize: number;
+  uploadedAt: string;
+  updatedAt?: string;
+  status?: 'pending' | 'under_review' | 'verified' | 'rejected' | 'requires_resubmission';
+  verificationStatus?: 'pending' | 'under_review' | 'verified' | 'rejected' | 'requires_resubmission';
+  verificationNotes?: string;
+  version?: number;
+}
+
 export interface B2BBusiness {
   id: string;
   companyName: string;
   legalName?: string;
+  tradeName?: string;
   contactPerson: string;
+  designation?: string;
   businessEmail: string;
   mobile: string;
   password?: string;
@@ -76,6 +107,24 @@ export interface B2BBusiness {
   avatarUrl?: string;
   gstin: string;
   pan: string;
+  udyamNumber?: string;
+  cin?: string;
+  cinNumber?: string;
+  createdAt?: string;
+  registeredAt?: string;
+  approvedAt?: string;
+  policyAccepted?: boolean;
+  policyAcceptedAt?: string;
+  policyAcceptedVersion?: string;
+  entityType?:
+    | 'Private Limited Company'
+    | 'Public Limited Company'
+    | 'Limited Liability Partnership (LLP)'
+    | 'Partnership Firm'
+    | 'Sole Proprietorship'
+    | 'Trust / NGO'
+    | 'Government / PSU'
+    | 'Other Corporate Entity';
   businessType:
     | 'Education / School'
     | 'Corporate Office'
@@ -86,14 +135,29 @@ export interface B2BBusiness {
     | 'Other';
   status: 'pending' | 'approved' | 'rejected' | 'suspended';
   statusReason?: string;
+  verificationStatus?: 'pending' | 'under_review' | 'verified' | 'rejected' | 'requires_resubmission';
+  registeredAddress?: B2CAddress;
   billingAddress: B2CAddress;
   shippingAddress: B2CAddress;
   documents: {
     name: string;
     type: string;
     uploadedAt: string;
-    status: 'verified' | 'pending' | 'rejected';
+    status: 'verified' | 'pending' | 'rejected' | 'under_review' | 'requires_resubmission';
+    url?: string;
+    fileUrl?: string;
+    documentType?: string;
+    originalFileName?: string;
+    fileSize?: number;
+    version?: number;
   }[];
+  kycDocuments?: {
+    gstCertificate?: B2BDocumentAttachment;
+    msmeCertificate?: B2BDocumentAttachment;
+    moaDocument?: B2BDocumentAttachment;
+    aoaDocument?: B2BDocumentAttachment;
+    coiDocument?: B2BDocumentAttachment;
+  } | B2BDocumentAttachment[] | any;
   creditLimit: number;
   paymentTerms: 'Prepaid' | 'Net 15' | 'Net 30';
   accountManager: {
@@ -102,11 +166,6 @@ export interface B2BBusiness {
     phone: string;
     designation: string;
   };
-  registeredAt: string;
-  approvedAt?: string;
-  policyAccepted?: boolean;
-  policyAcceptedAt?: string;
-  policyAcceptedVersion?: string;
 }
 
 export interface CartItem {
@@ -259,6 +318,7 @@ export interface B2BOrder {
     | 'delivered'
     | 'cancelled'
     | 'rejected';
+  status?: string;
   rejectionReason?: string;
   confirmedAt?: string;
   confirmedBy?: string;

@@ -14,6 +14,7 @@
   RewriteRule ^api/auth/send-otp/?$ public/api/send-email.php [QSA,L]
   RewriteRule ^api/resend/?$ public/api/send-email.php [QSA,L]
   RewriteRule ^api/health/?$ public/api/health.php [QSA,L]
+  RewriteRule ^api/upload/?$ public/api/upload.php [QSA,L]
   RewriteRule ^api/data/([a-zA-Z0-9_-]+)/?([a-zA-Z0-9_-]*)?$ public/api/data.php?collection=$1&id=$2 [QSA,L]
 
   # 2. Never proxy PHP files to Node.js (executes via Hostinger LiteSpeed/Apache PHP engine)

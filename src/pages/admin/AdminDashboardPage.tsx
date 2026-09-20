@@ -43,9 +43,12 @@ import {
   Award,
   Layers,
   Globe,
+  Download,
+  ExternalLink,
 } from 'lucide-react';
-import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, AdminPermissions, Category, B2CUser, SiteMedia, B2BOrderItemSummary, OrderItemSummary, B2BQuotationItem, B2BPaymentRecord, B2CAddress } from '../../types';
+import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, AdminPermissions, Category, B2CUser, SiteMedia, B2BOrderItemSummary, OrderItemSummary, B2BQuotationItem, B2BPaymentRecord, B2CAddress, B2BDocumentType, B2BDocumentAttachment } from '../../types';
 import { storageService } from '../../services/storageService';
+import { dataSyncBus } from '../../services/dataSyncBus';
 import { useAuth } from '../../context/AuthContext';
 import { OrderInvoiceModal } from '../../components/common/OrderInvoiceModal';
 import { isFirebaseConfigured } from '../../services/firebase';
@@ -132,6 +135,229 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [selectedCredIds, setSelectedCredIds] = useState<{ id: string; type: 'admin' | 'b2b' | 'b2c' }[]>([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkFeedbackMsg, setBulkFeedbackMsg] = useState<string | null>(null);
+
+  // B2B KYC Review and Document Management States (Section 28-32, 34)
+  const [selectedBizForKycReview, setSelectedBizForKycReview] = useState<B2BBusiness | null>(null);
+  const [adminPreviewDoc, setAdminPreviewDoc] = useState<{ name: string; url: string; fileType?: string } | null>(null);
+  const [isReplacingKycDoc, setIsReplacingKycDoc] = useState(false);
+  const [replacingDocType, setReplacingDocType] = useState<B2BDocumentType | null>(null);
+  const [b2bKycMessage, setB2bKycMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [reviewNotes, setReviewNotes] = useState('');
+  const [reviewStatus, setReviewStatus] = useState<NonNullable<B2BBusiness['verificationStatus']>>('pending');
+  const [reviewAccountStatus, setReviewAccountStatus] = useState<B2BBusiness['status']>('pending');
+
+  // Real-time synchronization subscription for Admin Dashboard
+  useEffect(() => {
+    const unsubBiz = dataSyncBus.subscribe('b2b_businesses', (list: B2BBusiness[]) => {
+      setSelectedBizForKycReview((current) => {
+        if (!current) return null;
+        return list.find((b) => b.id === current.id) || current;
+      });
+      onRefresh();
+    });
+    const unsubOrders = dataSyncBus.subscribe('orders_updated', () => {
+      onRefresh();
+    });
+    return () => {
+      unsubBiz();
+      unsubOrders();
+    };
+  }, [onRefresh]);
+
+  const KYC_STATUTORY_DOCS: Array<{
+    type: B2BDocumentType;
+    label: string;
+    code: string;
+    description: string;
+  }> = [
+    { type: 'gst_certificate', label: 'GST Certificate', code: 'GST REG-06', description: 'Mandatory Government GST Registration Certificate' },
+    { type: 'msme_certificate', label: 'MSME / Udyam Certificate', code: 'UDYAM', description: 'Udyam Registration Certificate issued by Ministry of MSME' },
+    { type: 'moa', label: 'MOA — Memorandum of Association', code: 'MOA', description: 'Constitutional Charter defining company objects & scope' },
+    { type: 'aoa', label: 'AOA — Articles of Association', code: 'AOA', description: 'Corporate Bylaws governing management & operations' },
+    { type: 'coi', label: 'COI — Certificate of Incorporation', code: 'COI', description: 'Certificate of Incorporation issued by Registrar of Companies' },
+  ];
+
+  const getDocForBusiness = (biz: B2BBusiness, docType: B2BDocumentType) => {
+    if (Array.isArray(biz.kycDocuments)) {
+      const found = (biz.kycDocuments as any[]).find((d: any) => d.type === docType || d.documentType === docType);
+      if (found) return found;
+    } else if (biz.kycDocuments && typeof biz.kycDocuments === 'object') {
+      const map: Record<string, string> = {
+        gst_certificate: 'gstCertificate',
+        msme_certificate: 'msmeCertificate',
+        moa: 'moaDocument',
+        aoa: 'aoaDocument',
+        coi: 'coiDocument',
+      };
+      const key = map[docType];
+      if (key && (biz.kycDocuments as any)[key]) {
+        return (biz.kycDocuments as any)[key];
+      }
+    }
+    if (Array.isArray(biz.documents)) {
+      const found = biz.documents.find((d: any) =>
+        d.documentType === docType ||
+        (d.type && d.type.toLowerCase().includes(docType.replace('_', ' '))) ||
+        (d.name && d.name.toLowerCase().includes(docType.split('_')[0]))
+      );
+      if (found) {
+        return {
+          name: found.type || found.name,
+          originalFilename: found.originalFileName || found.name,
+          documentUrl: found.fileUrl || found.url || '',
+          mimeType: found.type === 'pdf' ? 'application/pdf' : 'image/jpeg',
+          fileType: found.type === 'pdf' ? 'application/pdf' : 'image/jpeg',
+          uploadedAt: found.uploadedAt,
+          fileSize: found.fileSize || 0,
+          status: found.status || 'pending',
+          version: found.version || 1,
+        };
+      }
+    }
+    return null;
+  };
+
+  const getKycAttachmentCount = (biz: B2BBusiness) => {
+    let count = 0;
+    for (const doc of KYC_STATUTORY_DOCS) {
+      if (getDocForBusiness(biz, doc.type)) {
+        count++;
+      }
+    }
+    return count;
+  };
+
+  const handleOpenKycReview = (biz: B2BBusiness) => {
+    setSelectedBizForKycReview(biz);
+    setReviewStatus(biz.verificationStatus || 'pending');
+    setReviewAccountStatus(biz.status);
+    setReviewNotes(biz.statusReason || '');
+    setB2bKycMessage(null);
+  };
+
+  const handleSaveKycStatus = () => {
+    if (!selectedBizForKycReview) return;
+    storageService.updateB2BVerificationStatus(
+      selectedBizForKycReview.id,
+      reviewStatus,
+      reviewAccountStatus,
+      reviewNotes.trim() || undefined
+    );
+    setSelectedBizForKycReview((prev) =>
+      prev
+        ? {
+            ...prev,
+            verificationStatus: reviewStatus,
+            status: reviewAccountStatus,
+            statusReason: reviewNotes.trim() || prev.statusReason,
+            approvedAt: reviewAccountStatus === 'approved' ? new Date().toISOString() : prev.approvedAt,
+          }
+        : null
+    );
+    setB2bKycMessage({
+      type: 'success',
+      text: `B2B Account & KYC verification status updated to "${reviewStatus.toUpperCase().replace('_', ' ')}" (Account: ${reviewAccountStatus.toUpperCase()}). Synchronized with database.`,
+    });
+    onRefresh();
+    setTimeout(() => setB2bKycMessage(null), 5000);
+  };
+
+  const handleReplaceKycDocument = async (docType: B2BDocumentType, file: File) => {
+    if (!selectedBizForKycReview) return;
+    setIsReplacingKycDoc(true);
+    setReplacingDocType(docType);
+    setB2bKycMessage(null);
+
+    try {
+      let finalUrl = '';
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'b2b_documents');
+
+      try {
+        const uploadRes = await fetch('/api/upload.php', {
+          method: 'POST',
+          body: formData,
+        });
+        if (uploadRes.ok) {
+          const data = await uploadRes.json();
+          if (data.url) finalUrl = data.url;
+        }
+      } catch (uploadErr) {
+        console.warn('Server file upload failed, falling back to base64 reader:', uploadErr);
+      }
+
+      if (!finalUrl) {
+        finalUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const versionedUrl = finalUrl.startsWith('data:')
+        ? finalUrl
+        : `${finalUrl.split('?')[0]}?v=${Date.now()}`;
+
+      const existingDoc = getDocForBusiness(selectedBizForKycReview, docType);
+      const nextVersion = ((existingDoc?.version as number) || 1) + 1;
+
+      const docConfig = KYC_STATUTORY_DOCS.find((d) => d.type === docType);
+      const docLabel = docConfig?.label || docType;
+
+      const attachment: B2BDocumentAttachment = {
+        documentType: docType,
+        originalFilename: file.name,
+        storedPath: finalUrl.split('?')[0],
+        documentUrl: versionedUrl,
+        fileUrl: versionedUrl,
+        uploadedAt: new Date().toISOString(),
+        fileSize: file.size,
+        mimeType: file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
+        fileType: file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
+        verificationStatus: 'under_review',
+        status: 'under_review',
+        version: nextVersion,
+        name: docLabel,
+      };
+
+      storageService.updateB2BDocument(selectedBizForKycReview.id, docType, attachment);
+
+      const updatedBusinesses = storageService.getB2BBusinesses();
+      const updatedBiz = updatedBusinesses.find((b) => b.id === selectedBizForKycReview.id);
+      if (updatedBiz) {
+        setSelectedBizForKycReview(updatedBiz);
+      }
+
+      onRefresh();
+      setB2bKycMessage({
+        type: 'success',
+        text: `${docLabel} replaced successfully (Version ${nextVersion}). Fresh file synchronized to database and cache invalidated.`,
+      });
+      setTimeout(() => setB2bKycMessage(null), 5000);
+    } catch (err: any) {
+      setB2bKycMessage({
+        type: 'error',
+        text: `Failed to replace document: ${err.message || 'Unknown upload error'}`,
+      });
+    } finally {
+      setIsReplacingKycDoc(false);
+      setReplacingDocType(null);
+    }
+  };
+
+  const handleDownloadDoc = (url: string, filename: string) => {
+    if (!url) return;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename || 'b2b-document';
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   // Clear selections when switching tabs
   useEffect(() => {
@@ -3986,7 +4212,39 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* KYC Statutory Count Badge */}
+                      {(() => {
+                        const kycCount = getKycAttachmentCount(biz);
+                        return (
+                          <span
+                            className={`badge ${kycCount === 5 ? 'badge-green' : 'badge-amber'}`}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem' }}
+                          >
+                            <ShieldCheck size={12} /> {kycCount}/5 KYC Docs
+                          </span>
+                        );
+                      })()}
+
+                      {/* Verification Status Badge */}
+                      {biz.verificationStatus && (
+                        <span
+                          className={`badge ${
+                            biz.verificationStatus === 'verified'
+                              ? 'badge-green'
+                              : biz.verificationStatus === 'requires_resubmission'
+                              ? 'badge-amber'
+                              : biz.verificationStatus === 'rejected'
+                              ? 'badge-rose'
+                              : 'badge-blue'
+                          }`}
+                          style={{ fontSize: '0.72rem' }}
+                        >
+                          {biz.verificationStatus.toUpperCase().replace('_', ' ')}
+                        </span>
+                      )}
+
+                      {/* Account Status Badge */}
                       <span
                         className={`badge ${
                           biz.status === 'approved'
@@ -3998,6 +4256,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       >
                         {biz.status.toUpperCase()}
                       </span>
+
                       <button
                         onClick={() => handleDeleteSingleBusiness(biz.id, biz.companyName)}
                         className="btn btn-sm btn-outline"
@@ -4012,36 +4271,53 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', fontSize: '0.82rem', marginBottom: '1rem' }}>
                     <div>
                       <span style={{ color: 'var(--slate-400)' }}>Contact Person:</span>
-                      <div style={{ fontWeight: 600 }}>{biz.contactPerson}</div>
+                      <div style={{ fontWeight: 600 }}>{biz.contactPerson} {biz.designation ? `(${biz.designation})` : ''}</div>
                       <div>{biz.businessEmail} • {biz.mobile}</div>
                     </div>
                     <div>
                       <span style={{ color: 'var(--slate-400)' }}>Registered Location:</span>
                       <div style={{ fontWeight: 600 }}>{biz.billingAddress.city}, {biz.billingAddress.state}</div>
+                      <div style={{ color: 'var(--slate-500)' }}>PIN: {biz.billingAddress.pincode}</div>
                     </div>
                     <div>
-                      <span style={{ color: 'var(--slate-400)' }}>Documents Submitted:</span>
-                      <div style={{ fontWeight: 600 }}>{biz.documents.length} Attachment(s)</div>
+                      <span style={{ color: 'var(--slate-400)' }}>KYC Compliance & Documents:</span>
+                      <div style={{ fontWeight: 700, color: getKycAttachmentCount(biz) === 5 ? '#059669' : '#D97706' }}>
+                        {getKycAttachmentCount(biz)}/5 Statutory Documents
+                      </div>
+                      <div style={{ color: 'var(--slate-500)', fontSize: '0.75rem' }}>
+                        {biz.documents.length} Total Attachment(s)
+                      </div>
                     </div>
                   </div>
 
-                  {biz.status === 'pending' && (
-                    <div className="flex gap-2" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem' }}>
-                      <button
-                        onClick={() => handleApproveBusiness(biz.id)}
-                        className="btn btn-sm btn-primary"
-                      >
-                        <CheckCircle2 size={14} /> Approve Verified Business Account
-                      </button>
-                      <button
-                        onClick={() => handleRejectBusiness(biz.id)}
-                        className="btn btn-sm btn-outline"
-                        style={{ color: 'var(--rose-600)' }}
-                      >
-                        <XCircle size={14} /> Reject Application
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex gap-2 flex-wrap items-center" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '0.85rem' }}>
+                    <button
+                      onClick={() => handleOpenKycReview(biz)}
+                      className="btn btn-sm btn-primary"
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+                    >
+                      <FileText size={14} /> Review KYC & Business Documents ({getKycAttachmentCount(biz)}/5)
+                    </button>
+
+                    {biz.status === 'pending' && (
+                      <>
+                        <button
+                          onClick={() => handleApproveBusiness(biz.id)}
+                          className="btn btn-sm btn-outline"
+                          style={{ color: 'var(--emerald-600)', borderColor: 'var(--emerald-300)' }}
+                        >
+                          <CheckCircle2 size={14} /> Quick Approve
+                        </button>
+                        <button
+                          onClick={() => handleRejectBusiness(biz.id)}
+                          className="btn btn-sm btn-outline"
+                          style={{ color: 'var(--rose-600)', borderColor: 'var(--rose-300)' }}
+                        >
+                          <XCircle size={14} /> Reject Application
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -9852,6 +10128,598 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* SUPER ADMIN B2B ACCOUNT DETAILS & KYC REVIEW MODAL (Req 28-32, 34) */}
+      {/* ============================================================ */}
+      {selectedBizForKycReview && (
+        <div
+          className="modal-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem',
+            overflowY: 'auto',
+          }}
+          onClick={() => setSelectedBizForKycReview(null)}
+        >
+          <div
+            className="modal-content"
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              maxWidth: '960px',
+              width: '100%',
+              maxHeight: '92vh',
+              overflowY: 'auto',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid var(--slate-200)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: '1.25rem 1.75rem',
+                borderBottom: '1px solid var(--slate-200)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                position: 'sticky',
+                top: 0,
+                background: '#FFFFFF',
+                zIndex: 10,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div
+                  style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%)',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Building2 size={22} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)', margin: 0 }}>
+                    {selectedBizForKycReview.companyName}
+                  </h3>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: '2px' }}>
+                    B2B Enterprise Account ID: <code style={{ color: 'var(--primary)', fontWeight: 600 }}>{selectedBizForKycReview.id}</code>
+                    {selectedBizForKycReview.tradeName && ` • Trade Name: ${selectedBizForKycReview.tradeName}`}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedBizForKycReview(null)}
+                className="btn btn-sm btn-ghost"
+                style={{ padding: '0.4rem', borderRadius: '50%', color: 'var(--slate-500)' }}
+                title="Close Modal"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.5rem 1.75rem' }}>
+              {/* Flash message */}
+              {b2bKycMessage && (
+                <div
+                  style={{
+                    padding: '0.75rem 1rem',
+                    borderRadius: '8px',
+                    marginBottom: '1.25rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: b2bKycMessage.type === 'success' ? '#ECFDF5' : '#FEF2F2',
+                    color: b2bKycMessage.type === 'success' ? '#065F46' : '#991B1B',
+                    border: `1px solid ${b2bKycMessage.type === 'success' ? '#A7F3D0' : '#FECACA'}`,
+                  }}
+                >
+                  {b2bKycMessage.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                  <span>{b2bKycMessage.text}</span>
+                </div>
+              )}
+
+              {/* SECTION 1: B2B ACCOUNT DETAILS / BUSINESS INFORMATION */}
+              <div style={{ marginBottom: '1.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <Building2 size={18} className="text-primary" />
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--slate-800)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    B2B Account Details & Business Information
+                  </h4>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '0.75rem',
+                    background: 'var(--slate-50)',
+                    border: '1px solid var(--slate-200)',
+                    borderRadius: '12px',
+                    padding: '1.25rem',
+                    fontSize: '0.84rem',
+                  }}
+                >
+                  <div>
+                    <span style={{ color: 'var(--slate-500)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Company Legal Name</span>
+                    <div style={{ fontWeight: 700, color: 'var(--slate-900)' }}>{selectedBizForKycReview.companyName}</div>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--slate-500)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Trade / Brand Name</span>
+                    <div style={{ fontWeight: 600, color: 'var(--slate-800)' }}>{selectedBizForKycReview.tradeName || '— (Same as legal name)'}</div>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--slate-500)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Business / Entity Type</span>
+                    <div style={{ fontWeight: 600, color: 'var(--slate-800)' }}>{selectedBizForKycReview.businessType}</div>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--slate-500)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>GSTIN</span>
+                    <div style={{ fontWeight: 700, color: 'var(--primary)', fontFamily: 'monospace', letterSpacing: '0.04em' }}>{selectedBizForKycReview.gstin}</div>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--slate-500)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>PAN Number</span>
+                    <div style={{ fontWeight: 700, color: 'var(--slate-800)', fontFamily: 'monospace' }}>{selectedBizForKycReview.pan}</div>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--slate-500)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Udyam Registration No.</span>
+                    <div style={{ fontWeight: 600, color: 'var(--slate-800)', fontFamily: 'monospace' }}>{selectedBizForKycReview.udyamNumber || '— Not provided'}</div>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--slate-500)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Company CIN (RoC)</span>
+                    <div style={{ fontWeight: 600, color: 'var(--slate-800)', fontFamily: 'monospace' }}>{selectedBizForKycReview.cinNumber || '— Not provided'}</div>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--slate-500)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Contact Person & Role</span>
+                    <div style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
+                      {selectedBizForKycReview.contactPerson} {selectedBizForKycReview.designation ? `(${selectedBizForKycReview.designation})` : ''}
+                    </div>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--slate-500)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Corporate Email</span>
+                    <div style={{ fontWeight: 600, color: 'var(--slate-800)' }}>{selectedBizForKycReview.businessEmail}</div>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--slate-500)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Mobile Number</span>
+                    <div style={{ fontWeight: 600, color: 'var(--slate-800)' }}>{selectedBizForKycReview.mobile}</div>
+                  </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <span style={{ color: 'var(--slate-500)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Registered / Billing Address</span>
+                    <div style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
+                      {selectedBizForKycReview.billingAddress.street}, {selectedBizForKycReview.billingAddress.city}, {selectedBizForKycReview.billingAddress.state} - {selectedBizForKycReview.billingAddress.pincode}
+                    </div>
+                  </div>
+                  {selectedBizForKycReview.shippingAddress && (
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <span style={{ color: 'var(--slate-500)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Shipping / Facility Address</span>
+                      <div style={{ fontWeight: 600, color: 'var(--slate-800)' }}>
+                        {selectedBizForKycReview.shippingAddress.street}, {selectedBizForKycReview.shippingAddress.city}, {selectedBizForKycReview.shippingAddress.state} - {selectedBizForKycReview.shippingAddress.pincode}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* SECTION 2: KYC / BUSINESS DOCUMENTS (5 Compulsory Attachments) */}
+              <div style={{ marginBottom: '1.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <ShieldCheck size={18} className="text-emerald-600" />
+                    <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--slate-800)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      KYC / Statutory Business Documents
+                    </h4>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      padding: '0.25rem 0.65rem',
+                      borderRadius: '999px',
+                      background: getKycAttachmentCount(selectedBizForKycReview) === 5 ? '#DEF7EC' : '#FEF3C7',
+                      color: getKycAttachmentCount(selectedBizForKycReview) === 5 ? '#03543F' : '#92400E',
+                    }}
+                  >
+                    {getKycAttachmentCount(selectedBizForKycReview)} of 5 Statutory Documents Verified
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {KYC_STATUTORY_DOCS.map((doc) => {
+                    const attached = getDocForBusiness(selectedBizForKycReview, doc.type);
+                    const fileUrl = attached?.documentUrl || attached?.fileUrl || attached?.url || '';
+                    const fileName = attached?.originalFilename || attached?.name || `${doc.label}.pdf`;
+                    const isPdf = attached?.mimeType?.includes('pdf') || attached?.fileType?.includes('pdf') || fileUrl.includes('.pdf');
+
+                    return (
+                      <div
+                        key={doc.type}
+                        style={{
+                          border: attached ? '1px solid var(--slate-200)' : '1px dashed #FCA5A5',
+                          borderRadius: '10px',
+                          padding: '0.9rem 1.1rem',
+                          background: attached ? '#FFFFFF' : '#FEF2F2',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexWrap: 'wrap',
+                          gap: '0.75rem',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: '240px' }}>
+                          <div
+                            style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: '8px',
+                              background: attached ? '#EFF6FF' : '#FEE2E2',
+                              color: attached ? 'var(--primary)' : '#DC2626',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {attached ? <FileText size={18} /> : <AlertCircle size={18} />}
+                          </div>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                              <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--slate-900)' }}>
+                                {doc.label}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: '0.7rem',
+                                  fontWeight: 700,
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  background: '#F1F5F9',
+                                  color: '#475569',
+                                }}
+                              >
+                                {doc.code}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
+                              {attached ? (
+                                <>
+                                  <span style={{ fontWeight: 600, color: 'var(--slate-700)' }}>{fileName}</span>
+                                  {attached.fileSize ? ` • ${(attached.fileSize / 1024).toFixed(1)} KB` : ''}
+                                  {attached.uploadedAt ? ` • Uploaded ${new Date(attached.uploadedAt).toLocaleDateString()}` : ''}
+                                  {attached.version ? ` • v${attached.version}` : ''}
+                                </>
+                              ) : (
+                                <span style={{ color: '#DC2626', fontWeight: 600 }}>Missing mandatory document</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          {attached && fileUrl && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setAdminPreviewDoc({
+                                    name: `${doc.label} — ${selectedBizForKycReview.companyName}`,
+                                    url: fileUrl,
+                                    fileType: isPdf ? 'application/pdf' : 'image',
+                                  })
+                                }
+                                className="btn btn-sm btn-outline"
+                                style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0.65rem' }}
+                              >
+                                <Eye size={13} /> View Document
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadDoc(fileUrl, fileName)}
+                                className="btn btn-sm btn-outline"
+                                style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0.65rem' }}
+                              >
+                                <Download size={13} /> Download
+                              </button>
+                            </>
+                          )}
+
+                          {/* Replace Document Button */}
+                          <label
+                            className="btn btn-sm btn-secondary"
+                            style={{
+                              fontSize: '0.78rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              padding: '0.35rem 0.65rem',
+                              cursor: isReplacingKycDoc ? 'not-allowed' : 'pointer',
+                              opacity: isReplacingKycDoc && replacingDocType === doc.type ? 0.6 : 1,
+                            }}
+                          >
+                            <RefreshCw size={13} className={isReplacingKycDoc && replacingDocType === doc.type ? 'spin' : ''} />
+                            {attached ? 'Replace Document' : 'Upload Document'}
+                            <input
+                              type="file"
+                              accept="application/pdf,image/jpeg,image/png,image/webp"
+                              style={{ display: 'none' }}
+                              disabled={isReplacingKycDoc}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  handleReplaceKycDocument(doc.type, file);
+                                  e.target.value = '';
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* SECTION 3: ACCOUNT STATUS & VERIFICATION GOVERNANCE */}
+              <div
+                style={{
+                  background: 'var(--slate-50)',
+                  border: '1px solid var(--slate-200)',
+                  borderRadius: '12px',
+                  padding: '1.25rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
+                  <Shield size={18} className="text-primary" />
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--slate-800)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Account Status & Verification Governance
+                  </h4>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                    gap: '1rem',
+                    marginBottom: '1rem',
+                  }}
+                >
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--slate-600)', marginBottom: '0.35rem', textTransform: 'uppercase' }}>
+                      KYC Verification Status
+                    </label>
+                    <select
+                      value={reviewStatus}
+                      onChange={(e) => setReviewStatus(e.target.value as any)}
+                      className="form-input"
+                      style={{ fontSize: '0.85rem', fontWeight: 600 }}
+                    >
+                      <option value="pending">Pending Review</option>
+                      <option value="under_review">Under Review</option>
+                      <option value="verified">Verified (Compliant)</option>
+                      <option value="requires_resubmission">Requires Resubmission</option>
+                      <option value="rejected">Rejected (Non-Compliant)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--slate-600)', marginBottom: '0.35rem', textTransform: 'uppercase' }}>
+                      B2B Portal Account Status
+                    </label>
+                    <select
+                      value={reviewAccountStatus}
+                      onChange={(e) => setReviewAccountStatus(e.target.value as any)}
+                      className="form-input"
+                      style={{ fontSize: '0.85rem', fontWeight: 600 }}
+                    >
+                      <option value="pending">Pending Approval</option>
+                      <option value="approved">Approved (Active Trading)</option>
+                      <option value="rejected">Rejected / Disabled</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--slate-600)', marginBottom: '0.35rem', textTransform: 'uppercase' }}>
+                      Application Timestamps
+                    </label>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--slate-600)', marginTop: '0.4rem' }}>
+                      <div>Created: <strong>{new Date(selectedBizForKycReview.createdAt || (selectedBizForKycReview as any).registeredAt || Date.now()).toLocaleString()}</strong></div>
+                      {selectedBizForKycReview.approvedAt && (
+                        <div>Approved: <strong>{new Date(selectedBizForKycReview.approvedAt).toLocaleString()}</strong></div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--slate-600)', marginBottom: '0.35rem', textTransform: 'uppercase' }}>
+                    Compliance Audit Notes / Resubmission Reason
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={reviewNotes}
+                    onChange={(e) => setReviewNotes(e.target.value)}
+                    placeholder="e.g. All 5 statutory documents verified against MCA & GST portal. Entity approved for institutional procurement."
+                    className="form-textarea"
+                    style={{ fontSize: '0.85rem' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReviewStatus('verified');
+                        setReviewAccountStatus('approved');
+                      }}
+                      className="btn btn-sm btn-outline"
+                      style={{ color: '#059669', borderColor: '#A7F3D0', fontSize: '0.8rem' }}
+                    >
+                      <CheckCircle2 size={13} /> Quick Set: Verified & Approved
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReviewStatus('requires_resubmission');
+                        setReviewNotes('Please re-upload a clear copy of the statutory documents for compliance verification.');
+                      }}
+                      className="btn btn-sm btn-outline"
+                      style={{ color: '#D97706', borderColor: '#FDE68A', fontSize: '0.8rem' }}
+                    >
+                      <Clock size={13} /> Request Resubmission
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBizForKycReview(null)}
+                      className="btn btn-sm btn-secondary"
+                    >
+                      Close
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveKycStatus}
+                      className="btn btn-sm btn-primary"
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700 }}
+                    >
+                      <Check size={14} /> Save Verification & Account Status
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* IN-ADMIN B2B DOCUMENT VIEWER MODAL (PDF / IMAGE) (Req 29)  */}
+      {/* ============================================================ */}
+      {adminPreviewDoc && (
+        <div
+          className="modal-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '1rem',
+          }}
+          onClick={() => setAdminPreviewDoc(null)}
+        >
+          <div
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              maxWidth: '920px',
+              width: '100%',
+              maxHeight: '94vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Viewer Header */}
+            <div
+              style={{
+                padding: '1rem 1.5rem',
+                borderBottom: '1px solid var(--slate-200)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'var(--slate-900)',
+                color: '#FFFFFF',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                <FileText size={18} style={{ color: '#38BDF8' }} />
+                <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, color: '#FFFFFF' }}>
+                  {adminPreviewDoc.name}
+                </h4>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadDoc(adminPreviewDoc.url, adminPreviewDoc.name)}
+                  className="btn btn-sm btn-outline"
+                  style={{ color: '#FFFFFF', borderColor: '#475569', fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}
+                >
+                  <Download size={13} /> Download
+                </button>
+                <a
+                  href={adminPreviewDoc.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-sm btn-outline"
+                  style={{ color: '#FFFFFF', borderColor: '#475569', fontSize: '0.75rem', padding: '0.3rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                >
+                  <ExternalLink size={13} /> Open in New Tab
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setAdminPreviewDoc(null)}
+                  className="btn btn-sm btn-ghost"
+                  style={{ color: '#94A3B8', padding: '0.3rem' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Viewer Body */}
+            <div
+              style={{
+                flex: 1,
+                minHeight: '450px',
+                maxHeight: 'calc(94vh - 80px)',
+                background: '#0F172A',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'auto',
+                padding: '1rem',
+              }}
+            >
+              {adminPreviewDoc.url.includes('.pdf') || adminPreviewDoc.fileType?.includes('pdf') ? (
+                <iframe
+                  src={adminPreviewDoc.url}
+                  title={adminPreviewDoc.name}
+                  style={{ width: '100%', height: '70vh', border: 'none', borderRadius: '8px', background: '#FFFFFF' }}
+                />
+              ) : (
+                <img
+                  src={adminPreviewDoc.url}
+                  alt={adminPreviewDoc.name}
+                  style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px' }}
+                />
+              )}
+            </div>
           </div>
         </div>
       )}

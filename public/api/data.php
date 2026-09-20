@@ -7,6 +7,9 @@
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Cache-Control: no-cache, no-store, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -25,13 +28,21 @@ $allowedCollections = [
     'b2b_quotations',
     'admin_users',
     'coupons',
-    'settings'
+    'settings',
+    'certifications',
+    'certification_categories',
+    'stories',
+    'gallery_categories',
+    'site_media',
+    'policies',
+    'policy_records',
+    'policy_versions'
 ];
 
 $collection = preg_replace('/[^a-zA-Z0-9_-]/', '', $_GET['collection'] ?? '');
 if (empty($collection) || !in_array($collection, $allowedCollections)) {
     http_response_code(400);
-    echo json_encode(['error' => 'Invalid or missing collection parameter']);
+    echo json_encode(['error' => 'Invalid or missing collection parameter: ' . htmlspecialchars($collection)]);
     exit;
 }
 
@@ -60,7 +71,7 @@ function writeStore($filePath, $data) {
 if ($method === 'GET') {
     $data = readStore($filePath);
     $id = $_GET['id'] ?? null;
-    if ($id !== null) {
+    if ($id !== null && $id !== '') {
         if (is_array($data)) {
             foreach ($data as $item) {
                 if (isset($item['id']) && $item['id'] === $id) {
@@ -80,17 +91,20 @@ if ($method === 'GET') {
 $rawInput = file_get_contents('php://input');
 $body = json_decode($rawInput, true);
 
-if ($method === 'POST') {
+if ($method === 'POST' || $method === 'PUT') {
     $isBatch = isset($_GET['batch']) && $_GET['batch'] === 'true';
     $data = readStore($filePath);
 
     if ($isBatch && is_array($body)) {
+        $savedItems = [];
         foreach ($body as $newItem) {
             $tid = $newItem['id'] ?? ('item_' . time() . '_' . mt_rand(100, 999));
             $found = false;
             foreach ($data as $idx => $existing) {
                 if (isset($existing['id']) && $existing['id'] === $tid) {
-                    $data[$idx] = array_merge($existing, $newItem, ['updatedAt' => date('c')]);
+                    $merged = array_merge($existing, $newItem, ['updatedAt' => date('c')]);
+                    $data[$idx] = $merged;
+                    $savedItems[] = $merged;
                     $found = true;
                     break;
                 }
@@ -98,11 +112,13 @@ if ($method === 'POST') {
             if (!$found) {
                 $newItem['id'] = $tid;
                 $newItem['createdAt'] = $newItem['createdAt'] ?? date('c');
+                $newItem['updatedAt'] = date('c');
                 array_unshift($data, $newItem);
+                $savedItems[] = $newItem;
             }
         }
         writeStore($filePath, $data);
-        echo json_encode(['success' => true, 'count' => count($body)]);
+        echo json_encode(['success' => true, 'count' => count($body), 'items' => $savedItems]);
         exit;
     }
 
@@ -112,23 +128,32 @@ if ($method === 'POST') {
         exit;
     }
 
-    $targetId = $body['id'] ?? ('item_' . time() . '_' . mt_rand(100, 999));
+    $targetId = $body['id'] ?? ($_GET['id'] ?? ('item_' . time() . '_' . mt_rand(100, 999)));
+    $savedRecord = null;
     $found = false;
+
     foreach ($data as $idx => $existing) {
         if (isset($existing['id']) && $existing['id'] === $targetId) {
-            $data[$idx] = array_merge($existing, $body, ['updatedAt' => date('c')]);
+            $savedRecord = array_merge($existing, $body, [
+                'id' => $targetId,
+                'updatedAt' => date('c')
+            ]);
+            $data[$idx] = $savedRecord;
             $found = true;
             break;
         }
     }
+
     if (!$found) {
-        $body['id'] = $targetId;
-        $body['createdAt'] = $body['createdAt'] ?? date('c');
-        array_unshift($data, $body);
+        $savedRecord = $body;
+        $savedRecord['id'] = $targetId;
+        $savedRecord['createdAt'] = $savedRecord['createdAt'] ?? date('c');
+        $savedRecord['updatedAt'] = date('c');
+        array_unshift($data, $savedRecord);
     }
 
     writeStore($filePath, $data);
-    echo json_encode(['success' => true, 'item' => $body]);
+    echo json_encode(['success' => true, 'item' => $savedRecord]);
     exit;
 }
 
@@ -148,7 +173,7 @@ if ($method === 'DELETE') {
 
     if (count($data) < $initialCount) {
         writeStore($filePath, $data);
-        echo json_encode(['success' => true, 'id' => $id]);
+        echo json_encode(['success' => true, 'id' => $id, 'deleted' => true]);
     } else {
         http_response_code(404);
         echo json_encode(['error' => 'Item not found']);

@@ -75,6 +75,19 @@ class PersistentStore {
       contactPhone: '+91 99316 48595',
       updatedAt: new Date().toISOString(),
     });
+    this.ensureCollection('certifications', []);
+    this.ensureCollection('certification_categories', []);
+    this.ensureCollection('stories', []);
+    this.ensureCollection('gallery_categories', []);
+    this.ensureCollection('site_media', {});
+    this.ensureCollection('policies', {});
+    this.ensureCollection('policy_records', []);
+    this.ensureCollection('policy_versions', {
+      terms: '1.0.0',
+      privacy: '1.0.0',
+      refund: '1.0.0',
+      shipping: '1.0.0',
+    });
   }
 
   ensureCollection(collection, defaultData) {

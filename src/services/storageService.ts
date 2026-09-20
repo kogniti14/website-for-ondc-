@@ -39,9 +39,12 @@ import {
   B2BPaymentRecord,
   B2BOrderItemSummary,
   B2CAddress,
+  B2BDocumentType,
+  B2BDocumentAttachment,
 } from '../types';
 import { MOCK_PRODUCTS, MOCK_COUPONS, CATEGORIES } from '../data/mockProducts';
 import { emailOtpService } from './emailOtpService';
+import { dataSyncBus } from './dataSyncBus';
 import {
   MASTER_SUPER_ADMIN,
   normalizeAdminIdentifier,
@@ -180,42 +183,91 @@ class StorageService {
     if (typeof window === 'undefined' || this.isHydrated) return;
     this.isHydrated = true;
 
-    const mappings: Array<{ collection: string; key: string; defaultVal: any }> = [
-      { collection: 'products', key: KEYS.PRODUCTS, defaultVal: MOCK_PRODUCTS },
-      { collection: 'categories', key: KEYS.CATEGORIES, defaultVal: CATEGORIES },
-      { collection: 'b2c_users', key: KEYS.B2C_USERS, defaultVal: [] },
-      { collection: 'b2b_businesses', key: KEYS.B2B_BUSINESSES, defaultVal: [] },
-      { collection: 'b2c_orders', key: KEYS.B2C_ORDERS, defaultVal: [] },
-      { collection: 'b2b_orders', key: KEYS.B2B_ORDERS, defaultVal: [] },
-      { collection: 'b2b_quotations', key: KEYS.B2B_QUOTATIONS, defaultVal: SEED_B2B_QUOTATIONS },
+    const mappings: Array<{ collection: string; key: string; defaultVal: any; isArray: boolean }> = [
+      { collection: 'products', key: KEYS.PRODUCTS, defaultVal: MOCK_PRODUCTS, isArray: true },
+      { collection: 'categories', key: KEYS.CATEGORIES, defaultVal: CATEGORIES, isArray: true },
+      { collection: 'b2c_users', key: KEYS.B2C_USERS, defaultVal: [], isArray: true },
+      { collection: 'b2b_businesses', key: KEYS.B2B_BUSINESSES, defaultVal: [], isArray: true },
+      { collection: 'b2c_orders', key: KEYS.B2C_ORDERS, defaultVal: [], isArray: true },
+      { collection: 'b2b_orders', key: KEYS.B2B_ORDERS, defaultVal: [], isArray: true },
+      { collection: 'b2b_quotations', key: KEYS.B2B_QUOTATIONS, defaultVal: SEED_B2B_QUOTATIONS, isArray: true },
+      { collection: 'coupons', key: KEYS.COUPONS, defaultVal: MOCK_COUPONS, isArray: true },
+      { collection: 'admin_users', key: KEYS.ADMIN_USERS, defaultVal: SEED_ADMIN_USERS, isArray: true },
+      { collection: 'site_media', key: KEYS.SITE_MEDIA, defaultVal: {}, isArray: false },
     ];
 
     for (const item of mappings) {
       try {
-        // Fast direct path on LiteSpeed PHP
         let res = await fetch(`/api/data.php?collection=${item.collection}`).catch(() => null);
         if (!res || !res.ok) {
           res = await fetch(`/api/data/${item.collection}`).catch(() => null);
         }
         if (res && res.ok) {
           const serverData = await res.json();
-          if (Array.isArray(serverData) && serverData.length > 0) {
-            const localData = this.getItem<any[]>(item.key, item.defaultVal);
-            const map = new Map();
-            for (const d of localData) {
-              if (d && d.id) map.set(d.id, d);
+          if (item.isArray && Array.isArray(serverData)) {
+            if (serverData.length > 0) {
+              this.setItem(item.key, serverData);
+              dataSyncBus.emit(item.collection, serverData);
             }
-            for (const d of serverData) {
-              if (d && d.id) map.set(d.id, d);
-            }
-            const merged = Array.from(map.values());
-            this.setItem(item.key, merged);
+          } else if (!item.isArray && serverData && typeof serverData === 'object') {
+            this.setItem(item.key, serverData);
+            dataSyncBus.emit(item.collection, serverData);
           }
         }
       } catch {
-        // Non-blocking
+        // Non-blocking background hydration
       }
     }
+
+    // Notify listeners that order and counter metrics are freshly hydrated
+    dataSyncBus.emit('orders_updated');
+  }
+
+  /**
+   * Real-time dynamic Pan-India Units Delivered Counter
+   * Baseline start count: 200 units.
+   * Directly synchronized with the actual order database.
+   * Counts item quantities of valid confirmed/delivered B2C and B2B orders.
+   * Deducts quantity when an order is cancelled or rejected.
+   */
+  getDeliveredUnitsCount(): number {
+    const BASELINE_DELIVERED = 200;
+
+    // 1. Sum B2C order item quantities
+    const b2cOrders = this.getB2COrders();
+    const b2cUnits = b2cOrders.reduce((total, order) => {
+      if (
+        order.orderStatus === 'cancelled' ||
+        order.orderStatus === 'rejected' ||
+        order.paymentStatus === 'failed'
+      ) {
+        return total;
+      }
+      const qty = Array.isArray(order.items)
+        ? order.items.reduce((sum, it) => sum + (Number(it.quantity) || 1), 0)
+        : 1;
+      return total + qty;
+    }, 0);
+
+    // 2. Sum B2B order item quantities
+    const b2bOrders = this.getB2BOrders();
+    const b2bUnits = b2bOrders.reduce((total, order) => {
+      if (
+        order.orderStatus === 'cancelled' ||
+        order.orderStatus === 'rejected' ||
+        order.status === 'cancelled' ||
+        order.status === 'draft' ||
+        order.paymentStatus === 'failed'
+      ) {
+        return total;
+      }
+      const qty = Array.isArray(order.items)
+        ? order.items.reduce((sum, it) => sum + (Number(it.quantity) || 1), 0)
+        : 1;
+      return total + qty;
+    }, 0);
+
+    return BASELINE_DELIVERED + b2cUnits + b2bUnits;
   }
 
   // --- Products ---
@@ -271,12 +323,14 @@ class StorageService {
     }
     this.setItem(KEYS.PRODUCTS, products);
     this.syncServer('products', product);
+    dataSyncBus.emit('products', products);
   }
 
   deleteProduct(id: string): void {
     const products = this.getProducts().filter((p) => p.id !== id);
     this.setItem(KEYS.PRODUCTS, products);
     this.syncServer('products', null, 'DELETE', id);
+    dataSyncBus.emit('products', products);
   }
 
   deleteMultipleProducts(ids: string[]): number {
@@ -286,6 +340,7 @@ class StorageService {
     const remaining = initial.filter((p) => !idSet.has(p.id));
     this.setItem(KEYS.PRODUCTS, remaining);
     ids.forEach((id) => this.syncServer('products', null, 'DELETE', id));
+    dataSyncBus.emit('products', remaining);
     return initial.length - remaining.length;
   }
 
@@ -336,6 +391,7 @@ class StorageService {
     }
     this.setItem(KEYS.B2C_USERS, users);
     this.syncServer('b2c_users', user);
+    dataSyncBus.emit('b2c_users', users);
   }
 
   deleteB2CUser(id: string): boolean {
@@ -343,6 +399,7 @@ class StorageService {
     const remaining = list.filter((u) => u.id !== id);
     this.setItem(KEYS.B2C_USERS, remaining);
     this.syncServer('b2c_users', null, 'DELETE', id);
+    dataSyncBus.emit('b2c_users', remaining);
     return list.length !== remaining.length;
   }
 
@@ -353,6 +410,7 @@ class StorageService {
     const remaining = initial.filter((u) => !idSet.has(u.id));
     this.setItem(KEYS.B2C_USERS, remaining);
     ids.forEach((id) => this.syncServer('b2c_users', null, 'DELETE', id));
+    dataSyncBus.emit('b2c_users', remaining);
     return initial.length - remaining.length;
   }
 
@@ -403,6 +461,7 @@ class StorageService {
     }
     this.setItem(KEYS.B2B_BUSINESSES, list);
     this.syncServer('b2b_businesses', business);
+    dataSyncBus.emit('b2b_businesses', list);
   }
 
   updateBusinessStatus(id: string, status: B2BBusiness['status'], reason?: string): void {
@@ -411,10 +470,84 @@ class StorageService {
     if (target) {
       target.status = status;
       if (reason) target.statusReason = reason;
-      if (status === 'approved') target.approvedAt = new Date().toISOString();
+      if (status === 'approved') {
+        target.approvedAt = new Date().toISOString();
+        target.verificationStatus = 'verified';
+      } else if (status === 'rejected') {
+        target.verificationStatus = 'rejected';
+      }
       this.setItem(KEYS.B2B_BUSINESSES, list);
       this.syncServer('b2b_businesses', target);
+      dataSyncBus.emit('b2b_businesses', list);
     }
+  }
+
+  updateB2BVerificationStatus(
+    id: string,
+    verificationStatus: NonNullable<B2BBusiness['verificationStatus']>,
+    status?: B2BBusiness['status'],
+    reason?: string
+  ): void {
+    const list = this.getB2BBusinesses();
+    const target = list.find((b) => b.id === id);
+    if (target) {
+      target.verificationStatus = verificationStatus;
+      if (status) {
+        target.status = status;
+        if (status === 'approved') target.approvedAt = new Date().toISOString();
+      }
+      if (reason) target.statusReason = reason;
+      this.setItem(KEYS.B2B_BUSINESSES, list);
+      this.syncServer('b2b_businesses', target);
+      dataSyncBus.emit('b2b_businesses', list);
+    }
+  }
+
+  updateB2BDocument(
+    businessId: string,
+    docType: B2BDocumentType,
+    attachment: B2BDocumentAttachment
+  ): boolean {
+    const list = this.getB2BBusinesses();
+    const target = list.find((b) => b.id === businessId);
+    if (!target) return false;
+
+    if (!target.kycDocuments) {
+      target.kycDocuments = {};
+    }
+
+    if (docType === 'gst_certificate') target.kycDocuments.gstCertificate = attachment;
+    else if (docType === 'msme_certificate' || (docType as any) === 'msme_udyam') target.kycDocuments.msmeCertificate = attachment;
+    else if (docType === 'moa') target.kycDocuments.moaDocument = attachment;
+    else if (docType === 'aoa') target.kycDocuments.aoaDocument = attachment;
+    else if (docType === 'coi') target.kycDocuments.coiDocument = attachment;
+
+    const docName = attachment.name;
+    const existingIdx = target.documents.findIndex(
+      (d) => d.name === docName || (d as any).documentType === docType
+    );
+    const docEntry = {
+      name: docName,
+      type: (attachment.fileType || attachment.mimeType || '').includes('pdf') ? 'pdf' : 'image',
+      uploadedAt: attachment.uploadedAt,
+      status: attachment.status || 'pending',
+      url: attachment.fileUrl || attachment.documentUrl,
+      fileUrl: attachment.fileUrl || attachment.documentUrl,
+      documentType: docType,
+      originalFileName: attachment.originalFileName || attachment.originalFilename,
+      fileSize: attachment.fileSize,
+      version: attachment.version,
+    };
+    if (existingIdx >= 0) {
+      target.documents[existingIdx] = docEntry;
+    } else {
+      target.documents.push(docEntry);
+    }
+
+    this.setItem(KEYS.B2B_BUSINESSES, list);
+    this.syncServer('b2b_businesses', target);
+    dataSyncBus.emit('b2b_businesses', list);
+    return true;
   }
 
   deleteB2BBusiness(id: string): boolean {
@@ -422,6 +555,7 @@ class StorageService {
     const remaining = list.filter((b) => b.id !== id);
     this.setItem(KEYS.B2B_BUSINESSES, remaining);
     this.syncServer('b2b_businesses', null, 'DELETE', id);
+    dataSyncBus.emit('b2b_businesses', remaining);
     return list.length !== remaining.length;
   }
 
@@ -432,6 +566,7 @@ class StorageService {
     const remaining = initial.filter((b) => !idSet.has(b.id));
     this.setItem(KEYS.B2B_BUSINESSES, remaining);
     ids.forEach((id) => this.syncServer('b2b_businesses', null, 'DELETE', id));
+    dataSyncBus.emit('b2b_businesses', remaining);
     return initial.length - remaining.length;
   }
 
@@ -455,6 +590,8 @@ class StorageService {
     }
     this.setItem(KEYS.B2C_ORDERS, orders);
     this.syncServer('b2c_orders', order);
+    dataSyncBus.emit('b2c_orders', orders);
+    dataSyncBus.emit('orders_updated');
   }
 
   updateB2COrderStatus(id: string, status: B2COrder['orderStatus'], note?: string): void {
@@ -462,6 +599,9 @@ class StorageService {
     const order = orders.find((o) => o.id === id);
     if (order) {
       order.orderStatus = status;
+      if (!Array.isArray(order.statusTimeline)) {
+        order.statusTimeline = [];
+      }
       order.statusTimeline.push({
         status: status.replace('_', ' ').toUpperCase(),
         timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
@@ -469,6 +609,8 @@ class StorageService {
       });
       this.setItem(KEYS.B2C_ORDERS, orders);
       this.syncServer('b2c_orders', order);
+      dataSyncBus.emit('b2c_orders', orders);
+      dataSyncBus.emit('orders_updated');
     }
   }
 
@@ -480,6 +622,9 @@ class StorageService {
     order.orderStatus = 'confirmed';
     order.confirmedAt = new Date().toISOString();
     order.confirmedBy = adminName;
+    if (!Array.isArray(order.statusTimeline)) {
+      order.statusTimeline = [];
+    }
     order.statusTimeline.push({
       status: 'ORDER CONFIRMED',
       timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
@@ -487,6 +632,8 @@ class StorageService {
     });
     this.setItem(KEYS.B2C_ORDERS, orders);
     this.syncServer('b2c_orders', order);
+    dataSyncBus.emit('b2c_orders', orders);
+    dataSyncBus.emit('orders_updated');
     return order;
   }
 
@@ -499,6 +646,9 @@ class StorageService {
     order.rejectionReason = reason || 'Order rejected during admin verification';
     order.rejectedAt = new Date().toISOString();
     order.rejectedBy = adminName;
+    if (!Array.isArray(order.statusTimeline)) {
+      order.statusTimeline = [];
+    }
     order.statusTimeline.push({
       status: 'ORDER REJECTED',
       timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
@@ -506,6 +656,8 @@ class StorageService {
     });
     this.setItem(KEYS.B2C_ORDERS, orders);
     this.syncServer('b2c_orders', order);
+    dataSyncBus.emit('b2c_orders', orders);
+    dataSyncBus.emit('orders_updated');
     return order;
   }
 
@@ -514,6 +666,8 @@ class StorageService {
     const remaining = orders.filter((o) => o.id !== id);
     this.setItem(KEYS.B2C_ORDERS, remaining);
     this.syncServer('b2c_orders', null, 'DELETE', id);
+    dataSyncBus.emit('b2c_orders', remaining);
+    dataSyncBus.emit('orders_updated');
     return orders.length !== remaining.length;
   }
 
@@ -523,6 +677,9 @@ class StorageService {
     const initial = this.getB2COrders();
     const remaining = initial.filter((o) => !idSet.has(o.id));
     this.setItem(KEYS.B2C_ORDERS, remaining);
+    ids.forEach((id) => this.syncServer('b2c_orders', null, 'DELETE', id));
+    dataSyncBus.emit('b2c_orders', remaining);
+    dataSyncBus.emit('orders_updated');
     return initial.length - remaining.length;
   }
 
@@ -546,6 +703,8 @@ class StorageService {
     }
     this.setItem(KEYS.B2B_ORDERS, orders);
     this.syncServer('b2b_orders', order);
+    dataSyncBus.emit('b2b_orders', orders);
+    dataSyncBus.emit('orders_updated');
   }
 
   updateB2BOrderStatus(id: string, status: B2BOrder['orderStatus'], note?: string): void {
@@ -553,6 +712,9 @@ class StorageService {
     const order = orders.find((o) => o.id === id);
     if (order) {
       order.orderStatus = status;
+      if (!Array.isArray(order.statusTimeline)) {
+        order.statusTimeline = [];
+      }
       order.statusTimeline.push({
         status: status.replace('_', ' ').toUpperCase(),
         timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
@@ -560,6 +722,8 @@ class StorageService {
       });
       this.setItem(KEYS.B2B_ORDERS, orders);
       this.syncServer('b2b_orders', order);
+      dataSyncBus.emit('b2b_orders', orders);
+      dataSyncBus.emit('orders_updated');
     }
   }
 
@@ -571,6 +735,9 @@ class StorageService {
     order.orderStatus = 'confirmed';
     order.confirmedAt = new Date().toISOString();
     order.confirmedBy = adminName;
+    if (!Array.isArray(order.statusTimeline)) {
+      order.statusTimeline = [];
+    }
     order.statusTimeline.push({
       status: 'ORDER CONFIRMED',
       timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
@@ -578,6 +745,8 @@ class StorageService {
     });
     this.setItem(KEYS.B2B_ORDERS, orders);
     this.syncServer('b2b_orders', order);
+    dataSyncBus.emit('b2b_orders', orders);
+    dataSyncBus.emit('orders_updated');
     return order;
   }
 
@@ -590,6 +759,9 @@ class StorageService {
     order.rejectionReason = reason || 'PO rejected by administration';
     order.rejectedAt = new Date().toISOString();
     order.rejectedBy = adminName;
+    if (!Array.isArray(order.statusTimeline)) {
+      order.statusTimeline = [];
+    }
     order.statusTimeline.push({
       status: 'ORDER REJECTED',
       timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
@@ -597,6 +769,8 @@ class StorageService {
     });
     this.setItem(KEYS.B2B_ORDERS, orders);
     this.syncServer('b2b_orders', order);
+    dataSyncBus.emit('b2b_orders', orders);
+    dataSyncBus.emit('orders_updated');
     return order;
   }
 
@@ -605,6 +779,8 @@ class StorageService {
     const remaining = orders.filter((o) => o.id !== id);
     this.setItem(KEYS.B2B_ORDERS, remaining);
     this.syncServer('b2b_orders', null, 'DELETE', id);
+    dataSyncBus.emit('b2b_orders', remaining);
+    dataSyncBus.emit('orders_updated');
     return orders.length !== remaining.length;
   }
 
@@ -614,6 +790,9 @@ class StorageService {
     const initial = this.getB2BOrders();
     const remaining = initial.filter((o) => !idSet.has(o.id));
     this.setItem(KEYS.B2B_ORDERS, remaining);
+    ids.forEach((id) => this.syncServer('b2b_orders', null, 'DELETE', id));
+    dataSyncBus.emit('b2b_orders', remaining);
+    dataSyncBus.emit('orders_updated');
     return initial.length - remaining.length;
   }
 
@@ -1124,6 +1303,8 @@ class StorageService {
       coupons.unshift(newCoupon);
     }
     this.setItem(KEYS.COUPONS, coupons);
+    this.syncServer('coupons', newCoupon);
+    dataSyncBus.emit('coupons', coupons);
   }
 
   deleteCoupon(idOrCode: string): void {
@@ -1131,6 +1312,8 @@ class StorageService {
       (c) => c.id !== idOrCode && c.code.toUpperCase() !== idOrCode.toUpperCase()
     );
     this.setItem(KEYS.COUPONS, coupons);
+    this.syncServer('coupons', null, 'DELETE', idOrCode);
+    dataSyncBus.emit('coupons', coupons);
   }
 
   deleteMultipleCoupons(idsOrCodes: string[]): number {
@@ -1141,6 +1324,8 @@ class StorageService {
       (c) => !targets.has(c.id.toUpperCase()) && !targets.has(c.code.toUpperCase())
     );
     this.setItem(KEYS.COUPONS, remaining);
+    idsOrCodes.forEach((id) => this.syncServer('coupons', null, 'DELETE', id));
+    dataSyncBus.emit('coupons', remaining);
     return initial.length - remaining.length;
   }
 
@@ -1339,6 +1524,8 @@ class StorageService {
       cats.unshift(category);
     }
     this.setItem(KEYS.CATEGORIES, cats);
+    this.syncServer('categories', category);
+    dataSyncBus.emit('categories', cats);
 
     // If category was renamed, synchronize existing products assigned to old category name
     if (oldName && oldName.trim() !== category.name.trim()) {
@@ -1352,6 +1539,7 @@ class StorageService {
       });
       if (hasProductUpdates) {
         this.setItem(KEYS.PRODUCTS, products);
+        dataSyncBus.emit('products', products);
       }
     }
   }
@@ -1363,6 +1551,8 @@ class StorageService {
 
     const filtered = cats.filter((c) => c.id !== id);
     this.setItem(KEYS.CATEGORIES, filtered);
+    this.syncServer('categories', null, 'DELETE', id);
+    dataSyncBus.emit('categories', filtered);
     return true;
   }
 
@@ -1372,6 +1562,8 @@ class StorageService {
     const idSet = new Set(ids);
     const remaining = cats.filter((c) => !idSet.has(c.id));
     this.setItem(KEYS.CATEGORIES, remaining);
+    ids.forEach((id) => this.syncServer('categories', null, 'DELETE', id));
+    dataSyncBus.emit('categories', remaining);
     return { deletedCount: cats.length - remaining.length, protectedSkipped: 0 };
   }
 
@@ -1557,6 +1749,8 @@ class StorageService {
 
   saveSiteMedia(media: SiteMedia): void {
     this.setItem(KEYS.SITE_MEDIA, media);
+    this.syncServer('site_media', media);
+    dataSyncBus.emit('site_media', media);
   }
 }
 

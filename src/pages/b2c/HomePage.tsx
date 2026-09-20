@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowRight,
   Briefcase,
@@ -22,6 +22,7 @@ import { ProductCard } from '../../components/products/ProductCard';
 import { storageService } from '../../services/storageService';
 import { galleryService } from '../../services/galleryService';
 import { certificationService } from '../../services/certificationService';
+import { dataSyncBus } from '../../services/dataSyncBus';
 import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
 
 interface HomePageProps {
@@ -47,6 +48,23 @@ export const HomePage: React.FC<HomePageProps> = ({
   onOpenStory,
   onOpenCertificate,
 }) => {
+  const [deliveredUnits, setDeliveredUnits] = useState<number>(() => storageService.getDeliveredUnitsCount());
+
+  useEffect(() => {
+    const updateUnits = () => {
+      setDeliveredUnits(storageService.getDeliveredUnitsCount());
+    };
+    updateUnits();
+    const unsubOrders = dataSyncBus.subscribe('orders_updated', updateUnits);
+    const unsubB2C = dataSyncBus.subscribe('b2c_orders', updateUnits);
+    const unsubB2B = dataSyncBus.subscribe('b2b_orders', updateUnits);
+    return () => {
+      unsubOrders();
+      unsubB2C();
+      unsubB2B();
+    };
+  }, []);
+
   const featuredProducts = products.filter((p) => p.isFeatured || p.isBestSeller).slice(0, 4);
   const newArrivals = products.filter((p) => p.isNewArrival || p.stock > 100).slice(0, 4);
   const featuredStories = galleryService
@@ -216,7 +234,9 @@ export const HomePage: React.FC<HomePageProps> = ({
                 }}
               >
                 <div>
-                  <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.2 }}>50,000+</div>
+                  <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.2 }}>
+                    {deliveredUnits.toLocaleString()}+
+                  </div>
                   <div style={{ fontSize: '0.78rem', color: '#94A3B8', marginTop: '0.25rem' }}>Units Delivered Pan-India</div>
                 </div>
                 <div>
