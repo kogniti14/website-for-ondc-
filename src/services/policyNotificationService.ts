@@ -270,6 +270,7 @@ class PolicyNotificationService {
       : defaultFrom;
 
     // Secure Server Dispatchers (PHP / Express endpoints)
+    const clientResendKey = (env.VITE_RESEND_API_KEY || '').trim();
     const endpoints = [
       '/api/send-email.php',
       '/api/resend',
@@ -278,10 +279,44 @@ class PolicyNotificationService {
 
     for (const endpoint of endpoints) {
       try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (clientResendKey && clientResendKey.startsWith('re_')) {
+          headers['Authorization'] = `Bearer ${clientResendKey}`;
+        }
+
         const response = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            from: emailFrom,
+            to: [toEmail],
+            subject,
+            html: htmlContent,
+          }),
+        });
+
+        if (response.ok) {
+          return { delivered: true };
+        }
+
+        if (response.status === 404) {
+          continue;
+        }
+      } catch (err: any) {
+        continue;
+      }
+    }
+
+    // Provider 2: Direct Resend API Fallback
+    if (clientResendKey && clientResendKey.startsWith('re_')) {
+      try {
+        const response = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            Authorization: `Bearer ${clientResendKey}`,
           },
           body: JSON.stringify({
             from: emailFrom,
@@ -291,19 +326,13 @@ class PolicyNotificationService {
           }),
         });
 
-          if (response.ok) {
-            return { delivered: true };
-          }
-
-          if (response.status === 404) {
-            continue;
-          }
-
-          const errData = await response.json().catch(() => ({}));
-        } catch (err: any) {
-          continue;
+        if (response.ok) {
+          return { delivered: true };
         }
+      } catch (err: any) {
+        // Fallthrough to webhook
       }
+    }
 
     // Provider 2: Webhook Endpoint
     if (emailWebhookUrl) {

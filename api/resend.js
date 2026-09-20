@@ -11,11 +11,17 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const apiKey = (process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY || '').trim();
+  let apiKey = (process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY || '').trim();
+  if (!apiKey && req.headers && req.headers.authorization) {
+    const auth = req.headers.authorization;
+    if (auth.startsWith('Bearer re_')) {
+      apiKey = auth.replace('Bearer ', '').trim();
+    }
+  }
 
   if (!apiKey) {
     return res.status(500).json({
-      message: 'Server configuration error: RESEND_API_KEY is not configured in server environment variables.',
+      message: 'Server configuration error: RESEND_API_KEY is not configured in server environment variables or Authorization header.',
     });
   }
 

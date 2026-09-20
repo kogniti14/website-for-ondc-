@@ -37,6 +37,9 @@ if (empty($to)) {
 }
 
 $subject = $data['subject'] ?? 'Kogniti Minds Verification Code';
+$html = $data['html'] ?? '';
+$text = $data['text'] ?? '';
+
 // Helper to read env variables from server environment or local .env file
 function getEnvValue($key) {
     $val = getenv($key);
@@ -45,11 +48,17 @@ function getEnvValue($key) {
     if (isset($_SERVER[$key]) && !empty($_SERVER[$key])) return trim($_SERVER[$key]);
 
     // Check .env file in parent directories
-    $possiblePaths = [
+    $possiblePaths = array_filter([
+        dirname(__DIR__, 3) . '/.env',
         dirname(__DIR__, 2) . '/.env',
+        dirname(__DIR__) . '/.env',
+        __DIR__ . '/.env',
+        isset($_SERVER['DOCUMENT_ROOT']) ? $_SERVER['DOCUMENT_ROOT'] . '/.env' : null,
+        isset($_SERVER['DOCUMENT_ROOT']) ? dirname($_SERVER['DOCUMENT_ROOT']) . '/.env' : null,
         dirname(__DIR__, 2) . '/.env.local',
-        dirname(__DIR__) . '/.env'
-    ];
+        dirname(__DIR__, 3) . '/.env.local'
+    ]);
+
     foreach ($possiblePaths as $envPath) {
         if (file_exists($envPath) && is_readable($envPath)) {
             $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
@@ -71,9 +80,20 @@ function getEnvValue($key) {
 }
 
 $apiKey = getEnvValue('RESEND_API_KEY') ?: getEnvValue('VITE_RESEND_API_KEY');
+
+// Fallback: check Authorization header if server env is not populated yet
+if (empty($apiKey)) {
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION']) ? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] : '');
+    if (preg_match('/Bearer\s+(re_[a-zA-Z0-9_]+)/i', $authHeader, $matches)) {
+        $apiKey = $matches[1];
+    }
+}
+
 if (empty($apiKey)) {
     http_response_code(500);
-    echo json_encode(['error' => 'Server configuration error: RESEND_API_KEY not found in environment.']);
+    echo json_encode([
+        'error' => 'Server configuration error: RESEND_API_KEY not found in environment or Authorization header.'
+    ]);
     exit;
 }
 
@@ -86,8 +106,16 @@ $payload = [
     'from' => $from,
     'to' => $to,
     'subject' => $subject,
-    'html' => $html
 ];
+if (!empty($html)) {
+    $payload['html'] = $html;
+}
+if (!empty($text)) {
+    $payload['text'] = $text;
+}
+if (empty($html) && empty($text)) {
+    $payload['html'] = '<p>' . htmlspecialchars($subject) . '</p>';
+}
 
 $ch = curl_init('https://api.resend.com/emails');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

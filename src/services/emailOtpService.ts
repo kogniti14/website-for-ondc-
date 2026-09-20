@@ -159,7 +159,7 @@ class EmailOtpService {
     const subject = `Your Kogniti Minds Verification Code: ${otp}`;
 
     // Provider 1: Secure Server Dispatcher (Hostinger PHP dispatcher or Express /api/resend)
-    // Server endpoints hold the secret server-side, protecting production keys
+    const clientResendKey = (import.meta.env.VITE_RESEND_API_KEY || '').trim();
     const endpoints = [
       '/api/send-email.php',
       '/api/resend',
@@ -170,11 +170,16 @@ class EmailOtpService {
 
     for (const endpoint of endpoints) {
       try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (clientResendKey && clientResendKey.startsWith('re_')) {
+          headers['Authorization'] = `Bearer ${clientResendKey}`;
+        }
+
         const response = await fetch(endpoint, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
           body: JSON.stringify({
             from: emailFrom,
             to: [toEmail],
@@ -202,7 +207,37 @@ class EmailOtpService {
       }
     }
 
-    // Provider 2: Custom Webhook or Backend Email Endpoint
+    // Provider 2: Direct Resend REST API (resilient fallback if server endpoints are unavailable or in local development)
+    if (clientResendKey && clientResendKey.startsWith('re_')) {
+      try {
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${clientResendKey}`,
+          },
+          body: JSON.stringify({
+            from: emailFrom,
+            to: [toEmail],
+            subject,
+            html: htmlContent,
+          }),
+        });
+
+        if (response.ok) {
+          return { delivered: true, provider: 'Resend API' };
+        }
+
+        const errData = await response.json().catch(() => ({}));
+        const errMsg = errData.message || errData.error || `Resend HTTP ${response.status}`;
+        console.error('Direct Resend delivery error:', errMsg);
+        lastError = errMsg;
+      } catch (err: any) {
+        lastError = err.message;
+      }
+    }
+
+    // Provider 3: Custom Webhook or Backend Email Endpoint
     if (emailWebhookUrl) {
       try {
         const response = await fetch(emailWebhookUrl, {
@@ -227,11 +262,13 @@ class EmailOtpService {
       }
     }
 
-    // Strict Production Check: No provider configured
+    // Strict Production Check: No provider configured or all failed
     return {
       delivered: false,
       provider: 'none',
-      error: 'Production Email Dispatch requires VITE_RESEND_API_KEY in .env. Please configure your Resend API key to receive live OTP emails.',
+      error: lastError
+        ? `Email delivery failed: ${lastError}`
+        : 'Production Email Dispatch requires RESEND_API_KEY in server environment variables or VITE_RESEND_API_KEY in .env. Please configure your Resend API key to receive live OTP emails.',
     };
   }
 
