@@ -159,11 +159,21 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+$resendCheck = !empty($apiKey);
+error_log("[OTP_DIAGNOSTIC] RESEND_RUNTIME_CHECK=" . ($resendCheck ? 'true' : 'false'));
+error_log("[OTP_DIAGNOSTIC] NODE_ENV=" . (getenv('NODE_ENV') ?: ($_ENV['NODE_ENV'] ?? 'undefined')));
+error_log("[OTP_DIAGNOSTIC] cwd=" . getcwd());
+error_log("[OTP_DIAGNOSTIC] entry=send-email.php");
+
 if (empty($apiKey)) {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'Server configuration error: RESEND_API_KEY is not configured on the production server.'
+        'error' => 'Server configuration error: RESEND_API_KEY is not configured on the production server.',
+        'runtime' => 'php_litespeed',
+        'entry' => 'send-email.php',
+        'cwd' => getcwd(),
+        'resend_runtime_check' => false
     ]);
     exit;
 }

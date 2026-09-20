@@ -27,6 +27,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
   }
 
+  const resendCheck = Boolean(process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim());
+  console.log(`[OTP_DIAGNOSTIC] RESEND_RUNTIME_CHECK=${resendCheck}`);
+  console.log(`[OTP_DIAGNOSTIC] NODE_ENV=${process.env.NODE_ENV || 'undefined'}`);
+  console.log(`[OTP_DIAGNOSTIC] cwd=${process.cwd()}`);
+  console.log(`[OTP_DIAGNOSTIC] entry=server.js -> api/resend.js`);
+
   const apiKey = (
     process.env.RESEND_API_KEY ||
     process.env.VITE_RESEND_API_KEY ||
@@ -41,6 +47,10 @@ export default async function handler(req, res) {
     return res.status(500).json({
       success: false,
       message: 'Server configuration error: RESEND_API_KEY is not configured on the production server.',
+      runtime: 'node',
+      entry: 'server.js -> api/resend.js',
+      cwd: process.cwd(),
+      resend_runtime_check: resendCheck,
     });
   }
 

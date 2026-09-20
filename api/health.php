@@ -170,6 +170,21 @@ foreach ($collections as $col) {
     }
 }
 
+// Check if local Node.js port 3000 is listening
+$fp3000 = @fsockopen('127.0.0.1', 3000, $errno3000, $errstr3000, 0.2);
+$nodePort3000Running = is_resource($fp3000);
+if ($nodePort3000Running) {
+    fclose($fp3000);
+}
+
+// Check node version from system
+$nodeVersion = 'disabled';
+if (function_exists('exec')) {
+    $outNode = [];
+    @exec('node -v 2>&1', $outNode);
+    $nodeVersion = !empty($outNode) ? implode(' ', $outNode) : 'none';
+}
+
 http_response_code(200);
 echo json_encode([
     'status' => 'ok',
@@ -178,6 +193,8 @@ echo json_encode([
     'services' => [
         'server' => 'running',
         'php_version' => PHP_VERSION,
+        'node_daemon_port_3000' => $nodePort3000Running ? 'listening' : 'not_running',
+        'node_system_version' => $nodeVersion,
         'email' => [
             'configured' => $hasResend,
             'source' => $resendSource ?: 'not_found',
