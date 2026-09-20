@@ -195,8 +195,13 @@ echo json_encode([
         'diagnostics' => [
             'detected_env_keys' => $matchingServerKeys,
             'doc_root' => $docRoot,
+            'script_dir' => __DIR__,
+            'parent_dir' => dirname(__DIR__),
+            'root_dotfiles' => array_values(array_filter(@scandir(dirname(__DIR__)) ?: [], fn($f) => str_starts_with($f, '.'))),
+            'parent_dotfiles' => array_values(array_filter(@scandir(dirname(dirname(__DIR__))) ?: [], fn($f) => str_starts_with($f, '.'))),
             'php_sapi' => php_sapi_name(),
             'variables_order' => ini_get('variables_order'),
+            'server_keys_sample' => array_slice(array_keys($_SERVER), 0, 15),
         ],
     ]
 ], JSON_PRETTY_PRINT);
