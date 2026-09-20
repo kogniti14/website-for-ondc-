@@ -7,23 +7,37 @@
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # 2. Reverse Proxy ONDC Protocol and API endpoints to Node.js backend (Port 3000)
+  # 2. Never proxy PHP files to Node.js (executes via Hostinger LiteSpeed/Apache PHP engine)
+  RewriteCond %{REQUEST_URI} \.php$ [NC]
+  RewriteCond %{DOCUMENT_ROOT}/api/$1 -f
+  RewriteRule ^api/(.*\.php)$ api/$1 [L]
+
+  RewriteCond %{REQUEST_URI} \.php$ [NC]
+  RewriteCond %{DOCUMENT_ROOT}/public/api/$1 -f
+  RewriteRule ^api/(.*\.php)$ public/api/$1 [L]
+
+  RewriteCond %{REQUEST_URI} \.php$ [NC]
+  RewriteCond %{DOCUMENT_ROOT}/dist/api/$1 -f
+  RewriteRule ^api/(.*\.php)$ dist/api/$1 [L]
+
+  # 3. Reverse Proxy ONDC Protocol and API endpoints to Node.js backend (Port 3000) ONLY IF NOT A PHP FILE
   <IfModule mod_proxy.c>
+    RewriteCond %{REQUEST_URI} !\.php$ [NC]
     RewriteCond %{REQUEST_URI} ^/(search|select|init|confirm|status|cancel|update|rating|track|support|ondc|api) [NC]
     RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
   </IfModule>
 
-  # 3. Serve from dist/ if root is deployed
+  # 4. Serve from dist/ if root is deployed
   RewriteCond %{DOCUMENT_ROOT}/dist/$1 -f
   RewriteRule ^(.*)$ dist/$1 [L]
 
-  # 4. Serve static files directly if they exist
+  # 5. Serve static files directly if they exist
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteCond %{REQUEST_FILENAME} !-l
 
-  # 5. Client-side SPA route fallback
+  # 6. Client-side SPA route fallback
   RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
   RewriteRule . /dist/index.html [L]
 

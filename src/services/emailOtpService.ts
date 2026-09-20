@@ -159,7 +159,7 @@ class EmailOtpService {
     const subject = `Your Kogniti Minds Verification Code: ${otp}`;
 
     // Provider 1: Secure Server Dispatcher (Hostinger PHP dispatcher or Express /api/resend)
-    const clientResendKey = (import.meta.env.VITE_RESEND_API_KEY || '').trim();
+    const activeResendKey = (import.meta.env.VITE_RESEND_API_KEY || '').trim();
     const endpoints = [
       '/api/send-email.php',
       '/api/resend',
@@ -173,8 +173,8 @@ class EmailOtpService {
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
         };
-        if (clientResendKey && clientResendKey.startsWith('re_')) {
-          headers['Authorization'] = `Bearer ${clientResendKey}`;
+        if (activeResendKey && activeResendKey.startsWith('re_')) {
+          headers['Authorization'] = `Bearer ${activeResendKey}`;
         }
 
         const response = await fetch(endpoint, {
@@ -192,8 +192,8 @@ class EmailOtpService {
           return { delivered: true, provider: 'Secure Email Dispatcher' };
         }
 
-        // If endpoint not found (404), try next endpoint in cascade
-        if (response.status === 404) {
+        // If endpoint not found (404) or server proxy unavailable (502/503), try next endpoint in cascade
+        if (response.status === 404 || response.status === 502 || response.status === 503) {
           continue;
         }
 
@@ -207,14 +207,14 @@ class EmailOtpService {
       }
     }
 
-    // Provider 2: Direct Resend REST API (resilient fallback if server endpoints are unavailable or in local development)
-    if (clientResendKey && clientResendKey.startsWith('re_')) {
+    // Provider 2: Direct Resend REST API (resilient fallback if server endpoints are unavailable or return 503)
+    if (activeResendKey && activeResendKey.startsWith('re_')) {
       try {
         const response = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${clientResendKey}`,
+            Authorization: `Bearer ${activeResendKey}`,
           },
           body: JSON.stringify({
             from: emailFrom,

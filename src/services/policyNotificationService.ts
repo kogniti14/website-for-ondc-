@@ -270,7 +270,7 @@ class PolicyNotificationService {
       : defaultFrom;
 
     // Secure Server Dispatchers (PHP / Express endpoints)
-    const clientResendKey = (env.VITE_RESEND_API_KEY || '').trim();
+    const activeResendKey = (env.VITE_RESEND_API_KEY || '').trim();
     const endpoints = [
       '/api/send-email.php',
       '/api/resend',
@@ -282,8 +282,8 @@ class PolicyNotificationService {
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
         };
-        if (clientResendKey && clientResendKey.startsWith('re_')) {
-          headers['Authorization'] = `Bearer ${clientResendKey}`;
+        if (activeResendKey && activeResendKey.startsWith('re_')) {
+          headers['Authorization'] = `Bearer ${activeResendKey}`;
         }
 
         const response = await fetch(endpoint, {
@@ -301,7 +301,7 @@ class PolicyNotificationService {
           return { delivered: true };
         }
 
-        if (response.status === 404) {
+        if (response.status === 404 || response.status === 502 || response.status === 503) {
           continue;
         }
       } catch (err: any) {
@@ -310,13 +310,13 @@ class PolicyNotificationService {
     }
 
     // Provider 2: Direct Resend API Fallback
-    if (clientResendKey && clientResendKey.startsWith('re_')) {
+    if (activeResendKey && activeResendKey.startsWith('re_')) {
       try {
         const response = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${clientResendKey}`,
+            Authorization: `Bearer ${activeResendKey}`,
           },
           body: JSON.stringify({
             from: emailFrom,

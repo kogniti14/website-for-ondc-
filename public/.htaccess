@@ -7,8 +7,9 @@
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # 2. Reverse Proxy ONDC Protocol and API endpoints to Node.js backend (Port 3000)
+  # 2. Reverse Proxy ONDC Protocol and API endpoints to Node.js backend (Port 3000) ONLY IF NOT A PHP FILE
   <IfModule mod_proxy.c>
+    RewriteCond %{REQUEST_URI} !\.php$ [NC]
     RewriteCond %{REQUEST_URI} ^/(search|select|init|confirm|status|cancel|update|rating|track|support|ondc|api) [NC]
     RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
   </IfModule>
