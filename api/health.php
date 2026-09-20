@@ -202,6 +202,7 @@ echo json_encode([
             'php_sapi' => php_sapi_name(),
             'variables_order' => ini_get('variables_order'),
             'all_server_keys' => array_keys($_SERVER),
+            'getenv_keys' => array_keys(getenv()),
         ],
     ]
 ], JSON_PRETTY_PRINT);
