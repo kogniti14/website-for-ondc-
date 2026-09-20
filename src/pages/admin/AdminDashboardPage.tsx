@@ -139,6 +139,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   // B2B KYC Review and Document Management States (Section 28-32, 34)
   const [selectedBizForKycReview, setSelectedBizForKycReview] = useState<B2BBusiness | null>(null);
   const [adminPreviewDoc, setAdminPreviewDoc] = useState<{ name: string; url: string; fileType?: string } | null>(null);
+  const [docActionModal, setDocActionModal] = useState<{
+    docType: B2BDocumentType;
+    docLabel: string;
+    action: 'approve' | 'reject' | 'request_resubmission';
+    reason: string;
+  } | null>(null);
   const [isReplacingKycDoc, setIsReplacingKycDoc] = useState(false);
   const [replacingDocType, setReplacingDocType] = useState<B2BDocumentType | null>(null);
   const [b2bKycMessage, setB2bKycMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -262,6 +268,52 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setTimeout(() => setB2bKycMessage(null), 5000);
   };
 
+  const handleConfirmDocAction = () => {
+    if (!docActionModal || !selectedBizForKycReview) return;
+    const { docType, docLabel, action, reason } = docActionModal;
+    const now = new Date().toISOString();
+    const adminName = currentAdminUser?.name || 'Super Admin';
+
+    let newStatus: 'verified' | 'rejected' | 'requires_resubmission' = 'verified';
+    const metadata: any = {
+      reviewedBy: adminName,
+      reviewedAt: now,
+    };
+
+    if (action === 'approve') {
+      newStatus = 'verified';
+    } else if (action === 'reject') {
+      newStatus = 'rejected';
+      metadata.rejectionReason = reason.trim() || 'Uploaded document does not satisfy statutory compliance requirements.';
+    } else if (action === 'request_resubmission') {
+      newStatus = 'requires_resubmission';
+      metadata.resubmissionReason = reason.trim() || 'Please re-upload a clear, valid official copy of this statutory certificate.';
+    }
+
+    storageService.updateB2BDocumentStatus(selectedBizForKycReview.id, docType, newStatus, metadata);
+
+    const updatedBusinesses = storageService.getB2BBusinesses();
+    const updatedBiz = updatedBusinesses.find((b) => b.id === selectedBizForKycReview.id);
+    if (updatedBiz) {
+      setSelectedBizForKycReview(updatedBiz);
+    }
+    onRefresh();
+
+    const actionText =
+      action === 'approve'
+        ? 'APPROVED'
+        : action === 'reject'
+        ? 'REJECTED'
+        : 'marked as RESUBMISSION REQUIRED';
+
+    setB2bKycMessage({
+      type: 'success',
+      text: `${docLabel} has been successfully ${actionText}. Database record persisted.`,
+    });
+    setTimeout(() => setB2bKycMessage(null), 5000);
+    setDocActionModal(null);
+  };
+
   const handleReplaceKycDocument = async (docType: B2BDocumentType, file: File) => {
     if (!selectedBizForKycReview) return;
     setIsReplacingKycDoc(true);
@@ -281,7 +333,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         });
         if (uploadRes.ok) {
           const data = await uploadRes.json();
-          if (data.url) finalUrl = data.url;
+          if (data.url || data.fileUrl) finalUrl = data.url || data.fileUrl;
         }
       } catch (uploadErr) {
         console.warn('Server file upload failed, falling back to base64 reader:', uploadErr);
@@ -313,13 +365,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         documentUrl: versionedUrl,
         fileUrl: versionedUrl,
         uploadedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         fileSize: file.size,
         mimeType: file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
         fileType: file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'),
         verificationStatus: 'under_review',
-        status: 'under_review',
+        status: 'under_review', // Resets to PENDING REVIEW per Req 54
         version: nextVersion,
         name: docLabel,
+        lastAction: 'replace',
+        lastActionAt: new Date().toISOString(),
       };
 
       storageService.updateB2BDocument(selectedBizForKycReview.id, docType, attachment);
@@ -333,7 +388,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       onRefresh();
       setB2bKycMessage({
         type: 'success',
-        text: `${docLabel} replaced successfully (Version ${nextVersion}). Fresh file synchronized to database and cache invalidated.`,
+        text: `${docLabel} replaced successfully (Version ${nextVersion}). Status reset to Pending Review. Fresh file synchronized to database.`,
       });
       setTimeout(() => setB2bKycMessage(null), 5000);
     } catch (err: any) {
@@ -10342,12 +10397,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                   {KYC_STATUTORY_DOCS.map((doc) => {
                     const attached = getDocForBusiness(selectedBizForKycReview, doc.type);
                     const fileUrl = attached?.documentUrl || attached?.fileUrl || attached?.url || '';
                     const fileName = attached?.originalFilename || attached?.name || `${doc.label}.pdf`;
                     const isPdf = attached?.mimeType?.includes('pdf') || attached?.fileType?.includes('pdf') || fileUrl.includes('.pdf');
+                    const docStatus = attached?.status || attached?.verificationStatus || 'pending';
 
                     return (
                       <div
@@ -10355,65 +10411,125 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         style={{
                           border: attached ? '1px solid var(--slate-200)' : '1px dashed #FCA5A5',
                           borderRadius: '10px',
-                          padding: '0.9rem 1.1rem',
+                          padding: '1rem 1.2rem',
                           background: attached ? '#FFFFFF' : '#FEF2F2',
                           display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          flexWrap: 'wrap',
+                          flexDirection: 'column',
                           gap: '0.75rem',
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: '240px' }}>
-                          <div
-                            style={{
-                              width: '36px',
-                              height: '36px',
-                              borderRadius: '8px',
-                              background: attached ? '#EFF6FF' : '#FEE2E2',
-                              color: attached ? 'var(--primary)' : '#DC2626',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0,
-                            }}
-                          >
-                            {attached ? <FileText size={18} /> : <AlertCircle size={18} />}
+                        {/* Top row: Info & Status */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '0.75rem',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <div
+                              style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '8px',
+                                background: attached ? '#EFF6FF' : '#FEE2E2',
+                                color: attached ? 'var(--primary)' : '#DC2626',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {attached ? <FileText size={20} /> : <AlertCircle size={20} />}
+                            </div>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--slate-900)' }}>
+                                  {doc.label}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    padding: '1px 6px',
+                                    borderRadius: '4px',
+                                    background: '#F1F5F9',
+                                    color: '#475569',
+                                  }}
+                                >
+                                  {doc.code}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', marginTop: '2px' }}>
+                                {attached ? (
+                                  <>
+                                    <span style={{ fontWeight: 600, color: 'var(--slate-700)' }}>{fileName}</span>
+                                    {attached.fileSize ? ` • ${(attached.fileSize / 1024).toFixed(1)} KB` : ''}
+                                    {attached.uploadedAt ? ` • Uploaded ${new Date(attached.uploadedAt).toLocaleDateString()}` : ''}
+                                    {attached.updatedAt && attached.updatedAt !== attached.uploadedAt ? ` • Updated ${new Date(attached.updatedAt).toLocaleDateString()}` : ''}
+                                    {attached.version ? ` • v${attached.version}` : ''}
+                                  </>
+                                ) : (
+                                  <span style={{ color: '#DC2626', fontWeight: 600 }}>Missing mandatory document</span>
+                                )}
+                              </div>
+                            </div>
                           </div>
+
+                          {/* Independent Status Badge (Req 50 & 55) */}
                           <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                              <span style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--slate-900)' }}>
-                                {doc.label}
+                            {docStatus === 'verified' && (
+                              <span style={{ fontSize: '0.74rem', fontWeight: 700, padding: '3px 10px', borderRadius: '12px', background: '#DCFCE7', color: '#15803D', border: '1px solid #BBF7D0', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <CheckCircle2 size={13} /> APPROVED
                               </span>
-                              <span
-                                style={{
-                                  fontSize: '0.7rem',
-                                  fontWeight: 700,
-                                  padding: '1px 6px',
-                                  borderRadius: '4px',
-                                  background: '#F1F5F9',
-                                  color: '#475569',
-                                }}
-                              >
-                                {doc.code}
+                            )}
+                            {docStatus === 'rejected' && (
+                              <span style={{ fontSize: '0.74rem', fontWeight: 700, padding: '3px 10px', borderRadius: '12px', background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FECACA', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <XCircle size={13} /> REJECTED
                               </span>
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
-                              {attached ? (
-                                <>
-                                  <span style={{ fontWeight: 600, color: 'var(--slate-700)' }}>{fileName}</span>
-                                  {attached.fileSize ? ` • ${(attached.fileSize / 1024).toFixed(1)} KB` : ''}
-                                  {attached.uploadedAt ? ` • Uploaded ${new Date(attached.uploadedAt).toLocaleDateString()}` : ''}
-                                  {attached.version ? ` • v${attached.version}` : ''}
-                                </>
-                              ) : (
-                                <span style={{ color: '#DC2626', fontWeight: 600 }}>Missing mandatory document</span>
-                              )}
-                            </div>
+                            )}
+                            {docStatus === 'requires_resubmission' && (
+                              <span style={{ fontSize: '0.74rem', fontWeight: 700, padding: '3px 10px', borderRadius: '12px', background: '#F3E8FF', color: '#6B21A8', border: '1px solid #E9D5FF', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <AlertCircle size={13} /> RESUBMISSION REQUIRED
+                              </span>
+                            )}
+                            {docStatus !== 'verified' && docStatus !== 'rejected' && docStatus !== 'requires_resubmission' && (
+                              <span style={{ fontSize: '0.74rem', fontWeight: 700, padding: '3px 10px', borderRadius: '12px', background: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <Clock size={13} /> PENDING REVIEW
+                              </span>
+                            )}
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {/* Audit Details: Rejection or Resubmission Reason */}
+                        {attached?.rejectionReason && (
+                          <div style={{ padding: '0.5rem 0.75rem', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', fontSize: '0.75rem', color: '#991B1B' }}>
+                            <div style={{ fontWeight: 700 }}>Rejection Reason:</div>
+                            <div>"{attached.rejectionReason}"</div>
+                            {attached.reviewedBy && (
+                              <div style={{ fontSize: '0.7rem', color: '#B91C1C', marginTop: '2px' }}>
+                                Reviewed by {attached.reviewedBy} {attached.reviewedAt ? `on ${new Date(attached.reviewedAt).toLocaleString()}` : ''}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {attached?.resubmissionReason && (
+                          <div style={{ padding: '0.5rem 0.75rem', background: '#FAF5FF', border: '1px solid #E9D5FF', borderRadius: '6px', fontSize: '0.75rem', color: '#6B21A8' }}>
+                            <div style={{ fontWeight: 700 }}>Resubmission Required:</div>
+                            <div>"{attached.resubmissionReason}"</div>
+                            {attached.reviewedBy && (
+                              <div style={{ fontSize: '0.7rem', color: '#7E22CE', marginTop: '2px' }}>
+                                Requested by {attached.reviewedBy} {attached.reviewedAt ? `on ${new Date(attached.reviewedAt).toLocaleString()}` : ''}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Actions Row (Req 48) */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.45rem', flexWrap: 'wrap', borderTop: '1px solid var(--slate-100)', paddingTop: '0.65rem' }}>
                           {attached && fileUrl && (
                             <>
                               <button
@@ -10426,27 +10542,86 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                   })
                                 }
                                 className="btn btn-sm btn-outline"
-                                style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0.65rem' }}
+                                style={{ fontSize: '0.76rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0.65rem' }}
                               >
-                                <Eye size={13} /> View Document
+                                <Eye size={13} /> View
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleDownloadDoc(fileUrl, fileName)}
                                 className="btn btn-sm btn-outline"
-                                style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0.65rem' }}
+                                style={{ fontSize: '0.76rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.35rem 0.65rem' }}
                               >
                                 <Download size={13} /> Download
                               </button>
                             </>
                           )}
 
-                          {/* Replace Document Button */}
+                          {/* Approve Action */}
+                          <button
+                            type="button"
+                            onClick={() => setDocActionModal({ docType: doc.type, docLabel: doc.label, action: 'approve', reason: '' })}
+                            className="btn btn-sm"
+                            style={{
+                              fontSize: '0.76rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              padding: '0.35rem 0.65rem',
+                              background: docStatus === 'verified' ? '#F1F5F9' : '#059669',
+                              color: docStatus === 'verified' ? '#94A3B8' : '#FFFFFF',
+                              border: 'none',
+                              cursor: docStatus === 'verified' ? 'default' : 'pointer',
+                            }}
+                            disabled={docStatus === 'verified'}
+                          >
+                            <CheckCircle2 size={13} /> {docStatus === 'verified' ? 'Approved' : 'Approve'}
+                          </button>
+
+                          {/* Reject Action */}
+                          <button
+                            type="button"
+                            onClick={() => setDocActionModal({ docType: doc.type, docLabel: doc.label, action: 'reject', reason: attached?.rejectionReason || '' })}
+                            className="btn btn-sm"
+                            style={{
+                              fontSize: '0.76rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              padding: '0.35rem 0.65rem',
+                              background: '#DC2626',
+                              color: '#FFFFFF',
+                              border: 'none',
+                            }}
+                          >
+                            <XCircle size={13} /> Reject
+                          </button>
+
+                          {/* Request Resubmission Action */}
+                          <button
+                            type="button"
+                            onClick={() => setDocActionModal({ docType: doc.type, docLabel: doc.label, action: 'request_resubmission', reason: attached?.resubmissionReason || '' })}
+                            className="btn btn-sm"
+                            style={{
+                              fontSize: '0.76rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              padding: '0.35rem 0.65rem',
+                              background: '#7C3AED',
+                              color: '#FFFFFF',
+                              border: 'none',
+                            }}
+                          >
+                            <AlertCircle size={13} /> Request Resubmission
+                          </button>
+
+                          {/* Replace Document Action */}
                           <label
                             className="btn btn-sm btn-secondary"
                             style={{
-                              fontSize: '0.78rem',
-                              display: 'flex',
+                              fontSize: '0.76rem',
+                              display: 'inline-flex',
                               alignItems: 'center',
                               gap: '0.3rem',
                               padding: '0.35rem 0.65rem',
@@ -10455,7 +10630,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                             }}
                           >
                             <RefreshCw size={13} className={isReplacingKycDoc && replacingDocType === doc.type ? 'spin' : ''} />
-                            {attached ? 'Replace Document' : 'Upload Document'}
+                            {attached ? 'Replace' : 'Upload'}
                             <input
                               type="file"
                               accept="application/pdf,image/jpeg,image/png,image/webp"
@@ -10719,6 +10894,142 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px' }}
                 />
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* B2B KYC DOCUMENT ACTION CONFIRMATION MODAL (Req 48, 51-53, 56) */}
+      {/* ============================================================ */}
+      {docActionModal && (
+        <div
+          className="modal-backdrop"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10001,
+            padding: '1rem',
+          }}
+          onClick={() => setDocActionModal(null)}
+        >
+          <div
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '14px',
+              maxWidth: '520px',
+              width: '100%',
+              padding: '1.5rem',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.25)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+              {docActionModal.action === 'approve' && (
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <CheckCircle2 size={22} />
+                </div>
+              )}
+              {docActionModal.action === 'reject' && (
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <XCircle size={22} />
+                </div>
+              )}
+              {docActionModal.action === 'request_resubmission' && (
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#EDE9FE', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <AlertCircle size={22} />
+                </div>
+              )}
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--slate-900)' }}>
+                  {docActionModal.action === 'approve' && 'Approve Document'}
+                  {docActionModal.action === 'reject' && 'Reject Document'}
+                  {docActionModal.action === 'request_resubmission' && 'Request Resubmission'}
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--slate-500)' }}>
+                  {docActionModal.docLabel}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '1.25rem', fontSize: '0.88rem', color: 'var(--slate-600)', lineHeight: 1.5 }}>
+              {docActionModal.action === 'approve' && (
+                <p style={{ margin: 0 }}>
+                  Are you sure you want to approve the <strong>{docActionModal.docLabel}</strong> for <strong>{selectedBizForKycReview?.companyName}</strong>? This marks the statutory document as verified and saves the audit timestamp in persistent storage.
+                </p>
+              )}
+              {docActionModal.action === 'reject' && (
+                <div>
+                  <p style={{ margin: '0 0 0.5rem 0' }}>
+                    Please specify the reason for rejecting <strong>{docActionModal.docLabel}</strong> for <strong>{selectedBizForKycReview?.companyName}</strong>. This rejection will be stored in the document audit record.
+                  </p>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--slate-700)', marginBottom: '0.25rem' }}>
+                    Rejection Reason
+                  </label>
+                  <textarea
+                    rows={3}
+                    className="form-control"
+                    placeholder="e.g. Uploaded document is unclear, illegible, or does not match GSTIN..."
+                    value={docActionModal.reason}
+                    onChange={(e) => setDocActionModal({ ...docActionModal, reason: e.target.value })}
+                    style={{ width: '100%', fontSize: '0.85rem' }}
+                  />
+                </div>
+              )}
+              {docActionModal.action === 'request_resubmission' && (
+                <div>
+                  <p style={{ margin: '0 0 0.5rem 0' }}>
+                    Request a fresh statutory document upload from <strong>{selectedBizForKycReview?.companyName}</strong>. Please provide clear instructions for the customer:
+                  </p>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--slate-700)', marginBottom: '0.25rem' }}>
+                    Resubmission Instructions
+                  </label>
+                  <textarea
+                    rows={3}
+                    className="form-control"
+                    placeholder="e.g. Please re-upload complete pages 1-3 with official stamp & signature visible..."
+                    value={docActionModal.reason}
+                    onChange={(e) => setDocActionModal({ ...docActionModal, reason: e.target.value })}
+                    style={{ width: '100%', fontSize: '0.85rem' }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ fontSize: '0.85rem' }}
+                onClick={() => setDocActionModal(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn"
+                style={{
+                  fontSize: '0.85rem',
+                  background:
+                    docActionModal.action === 'approve'
+                      ? '#059669'
+                      : docActionModal.action === 'reject'
+                      ? '#DC2626'
+                      : '#7C3AED',
+                  color: '#FFFFFF',
+                  border: 'none',
+                }}
+                onClick={handleConfirmDocAction}
+              >
+                {docActionModal.action === 'approve' && 'Approve Document'}
+                {docActionModal.action === 'reject' && 'Confirm Rejection'}
+                {docActionModal.action === 'request_resubmission' && 'Send Request'}
+              </button>
             </div>
           </div>
         </div>

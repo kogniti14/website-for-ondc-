@@ -151,7 +151,9 @@ $publicUrl = "/uploads/{$folder}/{$safeFileName}?v={$timestamp}";
 echo json_encode([
     'success' => true,
     'message' => 'File saved and registered successfully',
+    'url' => $publicUrl,
     'fileUrl' => $publicUrl,
+    'path' => "uploads/{$folder}/{$safeFileName}",
     'filePath' => "uploads/{$folder}/{$safeFileName}",
     'fileName' => $safeFileName,
     'fileType' => $mimeType,

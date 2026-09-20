@@ -770,13 +770,14 @@ class GalleryService {
 
         if (uploadRes && uploadRes.ok) {
           const uploadData = await uploadRes.json();
-          if (uploadData.success && uploadData.url) {
+          const finalUrl = uploadData.url || uploadData.fileUrl;
+          if (uploadData.success && finalUrl) {
             return {
               success: true,
-              imageUrl: uploadData.url,
-              documentUrl: isPdf ? uploadData.url : undefined,
+              imageUrl: finalUrl,
+              documentUrl: isPdf ? finalUrl : undefined,
               fileType: isPdf ? 'pdf' : 'image',
-              storagePath: uploadData.path || uploadData.url,
+              storagePath: uploadData.path || uploadData.filePath || finalUrl,
               message: isPdf ? 'PDF document successfully uploaded to server!' : 'Image successfully uploaded to server storage!',
             };
           }

@@ -46,9 +46,26 @@ if (empty($collection) || !in_array($collection, $allowedCollections)) {
     exit;
 }
 
-$dataDir = dirname(__DIR__, 2) . '/data/storage';
-if (!file_exists($dataDir)) {
-    @mkdir($dataDir, 0755, true);
+$candidates = [
+    dirname(__DIR__, 2) . '/data/storage',
+    dirname(__DIR__) . '/data/storage',
+    __DIR__ . '/../../data/storage',
+    sys_get_temp_dir() . '/kogniti_storage'
+];
+
+$dataDir = null;
+foreach ($candidates as $cand) {
+    if (!file_exists($cand)) {
+        @mkdir($cand, 0775, true);
+    }
+    if (file_exists($cand) && is_writable($cand)) {
+        $dataDir = $cand;
+        break;
+    }
+}
+if (!$dataDir) {
+    $dataDir = $candidates[0];
+    @mkdir($dataDir, 0775, true);
 }
 
 $filePath = $dataDir . '/' . $collection . '.json';

@@ -89,6 +89,12 @@ export interface B2BDocumentAttachment {
   status?: 'pending' | 'under_review' | 'verified' | 'rejected' | 'requires_resubmission';
   verificationStatus?: 'pending' | 'under_review' | 'verified' | 'rejected' | 'requires_resubmission';
   verificationNotes?: string;
+  rejectionReason?: string;
+  resubmissionReason?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  lastAction?: 'approve' | 'reject' | 'request_resubmission' | 'replace' | 'upload';
+  lastActionAt?: string;
   version?: number;
 }
 
@@ -111,8 +117,6 @@ export interface B2BBusiness {
   cin?: string;
   cinNumber?: string;
   createdAt?: string;
-  registeredAt?: string;
-  approvedAt?: string;
   policyAccepted?: boolean;
   policyAcceptedAt?: string;
   policyAcceptedVersion?: string;
@@ -133,9 +137,13 @@ export interface B2BBusiness {
     | 'Co-Working & Real Estate'
     | 'Government / PSU'
     | 'Other';
-  status: 'pending' | 'approved' | 'rejected' | 'suspended';
+  status: 'pending' | 'under_review' | 'approved' | 'rejected' | 'suspended';
   statusReason?: string;
   verificationStatus?: 'pending' | 'under_review' | 'verified' | 'rejected' | 'requires_resubmission';
+  registeredAt: string;
+  approvedAt?: string;
+  rejectedAt?: string;
+  suspendedAt?: string;
   registeredAddress?: B2CAddress;
   billingAddress: B2CAddress;
   shippingAddress: B2CAddress;
@@ -143,12 +151,17 @@ export interface B2BBusiness {
     name: string;
     type: string;
     uploadedAt: string;
+    updatedAt?: string;
     status: 'verified' | 'pending' | 'rejected' | 'under_review' | 'requires_resubmission';
     url?: string;
     fileUrl?: string;
     documentType?: string;
     originalFileName?: string;
     fileSize?: number;
+    rejectionReason?: string;
+    resubmissionReason?: string;
+    reviewedBy?: string;
+    reviewedAt?: string;
     version?: number;
   }[];
   kycDocuments?: {

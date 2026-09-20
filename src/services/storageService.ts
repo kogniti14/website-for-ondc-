@@ -512,17 +512,45 @@ class StorageService {
     const target = list.find((b) => b.id === businessId);
     if (!target) return false;
 
-    if (!target.kycDocuments) {
-      target.kycDocuments = {};
+    const now = new Date().toISOString();
+    const map: Record<string, string> = {
+      gst_certificate: 'gstCertificate',
+      msme_certificate: 'msmeCertificate',
+      moa: 'moaDocument',
+      aoa: 'aoaDocument',
+      coi: 'coiDocument',
+    };
+    const key = map[docType];
+
+    // Ensure status is under_review on document upload/replacement unless explicitly set
+    attachment.status = attachment.status || 'under_review';
+    attachment.verificationStatus = attachment.verificationStatus || 'under_review';
+    attachment.updatedAt = now;
+    attachment.lastAction = attachment.lastAction || 'replace';
+    attachment.lastActionAt = now;
+
+    if (Array.isArray(target.kycDocuments)) {
+      const idx = target.kycDocuments.findIndex(
+        (d: any) => d.type === docType || d.documentType === docType
+      );
+      if (idx >= 0) {
+        target.kycDocuments[idx] = { ...target.kycDocuments[idx], ...attachment };
+      } else {
+        target.kycDocuments.push(attachment);
+      }
+    } else {
+      if (!target.kycDocuments || typeof target.kycDocuments !== 'object') {
+        target.kycDocuments = {};
+      }
+      if (key) {
+        (target.kycDocuments as any)[key] = attachment;
+      }
     }
 
-    if (docType === 'gst_certificate') target.kycDocuments.gstCertificate = attachment;
-    else if (docType === 'msme_certificate' || (docType as any) === 'msme_udyam') target.kycDocuments.msmeCertificate = attachment;
-    else if (docType === 'moa') target.kycDocuments.moaDocument = attachment;
-    else if (docType === 'aoa') target.kycDocuments.aoaDocument = attachment;
-    else if (docType === 'coi') target.kycDocuments.coiDocument = attachment;
-
     const docName = attachment.name;
+    if (!Array.isArray(target.documents)) {
+      target.documents = [];
+    }
     const existingIdx = target.documents.findIndex(
       (d) => d.name === docName || (d as any).documentType === docType
     );
@@ -530,18 +558,122 @@ class StorageService {
       name: docName,
       type: (attachment.fileType || attachment.mimeType || '').includes('pdf') ? 'pdf' : 'image',
       uploadedAt: attachment.uploadedAt,
-      status: attachment.status || 'pending',
+      updatedAt: now,
+      status: attachment.status,
       url: attachment.fileUrl || attachment.documentUrl,
       fileUrl: attachment.fileUrl || attachment.documentUrl,
       documentType: docType,
       originalFileName: attachment.originalFileName || attachment.originalFilename,
       fileSize: attachment.fileSize,
       version: attachment.version,
+      rejectionReason: attachment.rejectionReason,
+      resubmissionReason: attachment.resubmissionReason,
+      reviewedBy: attachment.reviewedBy,
+      reviewedAt: attachment.reviewedAt,
     };
     if (existingIdx >= 0) {
       target.documents[existingIdx] = docEntry;
     } else {
       target.documents.push(docEntry);
+    }
+
+    this.setItem(KEYS.B2B_BUSINESSES, list);
+    this.syncServer('b2b_businesses', target);
+    dataSyncBus.emit('b2b_businesses', list);
+    return true;
+  }
+
+  updateB2BDocumentStatus(
+    businessId: string,
+    docType: B2BDocumentType,
+    status: 'verified' | 'rejected' | 'requires_resubmission' | 'under_review' | 'pending',
+    metadata?: {
+      rejectionReason?: string;
+      resubmissionReason?: string;
+      reviewedBy?: string;
+      reviewedAt?: string;
+    }
+  ): boolean {
+    const list = this.getB2BBusinesses();
+    const target = list.find((b) => b.id === businessId);
+    if (!target) return false;
+
+    const now = new Date().toISOString();
+    const map: Record<string, string> = {
+      gst_certificate: 'gstCertificate',
+      msme_certificate: 'msmeCertificate',
+      moa: 'moaDocument',
+      aoa: 'aoaDocument',
+      coi: 'coiDocument',
+    };
+    const key = map[docType];
+
+    const actionType =
+      status === 'verified'
+        ? 'approve'
+        : status === 'rejected'
+        ? 'reject'
+        : status === 'requires_resubmission'
+        ? 'request_resubmission'
+        : 'replace';
+
+    // 1. Update kycDocuments if array
+    if (Array.isArray(target.kycDocuments)) {
+      const idx = target.kycDocuments.findIndex(
+        (d: any) => d.type === docType || d.documentType === docType
+      );
+      if (idx >= 0) {
+        target.kycDocuments[idx] = {
+          ...target.kycDocuments[idx],
+          status,
+          verificationStatus: status,
+          updatedAt: now,
+          reviewedAt: metadata?.reviewedAt || now,
+          reviewedBy: metadata?.reviewedBy || 'Super Admin',
+          rejectionReason: metadata?.rejectionReason,
+          resubmissionReason: metadata?.resubmissionReason,
+          lastAction: actionType,
+          lastActionAt: now,
+        };
+      }
+    }
+    // 2. Update kycDocuments if object
+    else if (target.kycDocuments && typeof target.kycDocuments === 'object' && key) {
+      if ((target.kycDocuments as any)[key]) {
+        (target.kycDocuments as any)[key] = {
+          ...(target.kycDocuments as any)[key],
+          status,
+          verificationStatus: status,
+          updatedAt: now,
+          reviewedAt: metadata?.reviewedAt || now,
+          reviewedBy: metadata?.reviewedBy || 'Super Admin',
+          rejectionReason: metadata?.rejectionReason,
+          resubmissionReason: metadata?.resubmissionReason,
+          lastAction: actionType,
+          lastActionAt: now,
+        };
+      }
+    }
+
+    // 3. Update documents array
+    if (Array.isArray(target.documents)) {
+      const docIdx = target.documents.findIndex(
+        (d: any) =>
+          d.documentType === docType ||
+          (d.name && d.name.toLowerCase().includes(docType.replace('_', ' '))) ||
+          (d.type && d.type.toLowerCase().includes(docType.replace('_', ' ')))
+      );
+      if (docIdx >= 0) {
+        target.documents[docIdx] = {
+          ...target.documents[docIdx],
+          status,
+          updatedAt: now,
+          rejectionReason: metadata?.rejectionReason,
+          resubmissionReason: metadata?.resubmissionReason,
+          reviewedBy: metadata?.reviewedBy || 'Super Admin',
+          reviewedAt: metadata?.reviewedAt || now,
+        } as any;
+      }
     }
 
     this.setItem(KEYS.B2B_BUSINESSES, list);

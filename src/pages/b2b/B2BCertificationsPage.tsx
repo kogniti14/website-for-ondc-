@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   Building2,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { CompanyCertification } from '../../types';
 import { certificationService } from '../../services/certificationService';
+import { dataSyncBus } from '../../services/dataSyncBus';
 
 interface B2BCertificationsPageProps {
   onOpenCertificate: (cert: CompanyCertification) => void;
@@ -25,14 +26,32 @@ export const B2BCertificationsPage: React.FC<B2BCertificationsPageProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [allB2BCerts, setAllB2BCerts] = useState<CompanyCertification[]>(() =>
+    certificationService.getCertificates({
+      visibility: 'b2b',
+      status: 'published',
+    })
+  );
+  const [categories, setCategories] = useState(() => certificationService.getCategories());
 
-  // Query published certificates visible on B2B portal
-  const allB2BCerts = certificationService.getCertificates({
-    visibility: 'b2b',
-    status: 'published',
-  });
+  useEffect(() => {
+    const refresh = () => {
+      setAllB2BCerts(
+        certificationService.getCertificates({
+          visibility: 'b2b',
+          status: 'published',
+        })
+      );
+      setCategories(certificationService.getCategories());
+    };
 
-  const categories = certificationService.getCategories();
+    const unsubCerts = dataSyncBus.subscribe('certifications', refresh);
+    const unsubCats = dataSyncBus.subscribe('certification_categories', refresh);
+    return () => {
+      unsubCerts();
+      unsubCats();
+    };
+  }, []);
 
   const filteredCerts = allB2BCerts.filter((cert) => {
     const matchesCat = selectedCategory === 'All' || cert.category.toLowerCase() === selectedCategory.toLowerCase();

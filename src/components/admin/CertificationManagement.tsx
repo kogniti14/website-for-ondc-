@@ -36,6 +36,7 @@ import {
   certificationService,
   INITIAL_CERTIFICATION_CATEGORIES,
 } from '../../services/certificationService';
+import { dataSyncBus } from '../../services/dataSyncBus';
 import { CategoryManager } from './CategoryManager';
 import { BulkActionBar } from './BulkActionBar';
 
@@ -124,6 +125,19 @@ export const CertificationManagement: React.FC = () => {
     loadData();
     setSelectedCertIds([]);
   }, [selectedCategory, selectedVisibility, selectedStatus, searchQuery]);
+
+  useEffect(() => {
+    const unsubCerts = dataSyncBus.subscribe('certifications', () => {
+      loadData();
+    });
+    const unsubCats = dataSyncBus.subscribe('certification_categories', () => {
+      loadData();
+    });
+    return () => {
+      unsubCerts();
+      unsubCats();
+    };
+  }, []);
 
   const handleBulkDeleteCertificates = async () => {
     if (selectedCertIds.length === 0) return;
