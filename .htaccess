@@ -42,6 +42,10 @@ DirectoryIndex dist/index.html index.html
   RewriteCond %{HTTP:X-Forwarded-Proto} !https
   RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
+  # Strip tracking query parameters (e.g. srsltid from Google Search/Merchant)
+  RewriteCond %{QUERY_STRING} (?:^|&)srsltid=[^&]* [NC]
+  RewriteRule ^(.*)$ https://kognitiminds.com/$1? [R=301,L]
+
   # 1. Direct Native Handlers for Production APIs (Zero proxy overhead, zero 503 errors)
   RewriteRule ^api/auth/send-otp/?$ public/api/send-email.php [QSA,L]
   RewriteRule ^api/resend/?$ public/api/send-email.php [QSA,L]

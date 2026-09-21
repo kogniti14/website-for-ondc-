@@ -95,6 +95,20 @@ const MainApp: React.FC = () => {
     setCoupons(storageService.getCoupons());
   };
 
+  // Clean URL: Automatically strip Google Search tracking parameter (?srsltid=...) from URL bar
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search && window.location.search.indexOf('srsltid') !== -1) {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('srsltid');
+        const cleanPath = url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : '') + url.hash;
+        window.history.replaceState(null, '', cleanPath);
+      } catch (e) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const unsubProd = dataSyncBus.subscribe('products', (data) => {
       if (Array.isArray(data)) setProducts(data);
