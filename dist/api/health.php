@@ -155,8 +155,8 @@ foreach (array_merge(array_keys($_SERVER), array_keys($_ENV)) as $k) {
 }
 $matchingServerKeys = array_values(array_unique($matchingServerKeys));
 
-$dataDir = dirname(__DIR__, 2) . '/data/storage';
-$storageWritable = is_dir($dataDir) ? is_writable($dataDir) : is_writable(dirname(__DIR__, 2));
+$dataDir = dirname(__DIR__) . '/data/storage';
+$storageWritable = is_dir($dataDir) ? is_writable($dataDir) : is_writable(dirname(__DIR__));
 
 $collections = ['products', 'categories', 'b2c_users', 'b2b_businesses', 'b2c_orders'];
 $counts = [];
@@ -215,6 +215,15 @@ echo json_encode([
             'script_dir' => __DIR__,
             'parent_dir' => dirname(__DIR__),
             'parent_files' => array_values(@scandir(dirname(__DIR__)) ?: []),
+            'domain_files' => array_values(@scandir(dirname(dirname(__DIR__))) ?: []),
+            'user_files' => array_values(@scandir('/home/u455093035') ?: []),
+            'git_locations' => array_values(array_filter([
+                file_exists('/home/u455093035/.git') ? '/home/u455093035/.git' : null,
+                file_exists(dirname(__DIR__) . '/.git') ? dirname(__DIR__) . '/.git' : null,
+                file_exists(dirname(dirname(__DIR__)) . '/.git') ? dirname(dirname(__DIR__)) . '/.git' : null,
+                file_exists('/home/u455093035/git') ? '/home/u455093035/git' : null,
+                file_exists('/home/u455093035/repositories') ? '/home/u455093035/repositories' : null,
+            ])),
             'dist_files' => is_dir(dirname(__DIR__) . '/dist') ? array_values(@scandir(dirname(__DIR__) . '/dist') ?: []) : null,
             'assets_files' => is_dir(dirname(__DIR__) . '/assets') ? array_values(@scandir(dirname(__DIR__) . '/assets') ?: []) : null,
             'root_dotfiles' => array_values(array_filter(@scandir(dirname(__DIR__)) ?: [], fn($f) => str_starts_with($f, '.'))),
