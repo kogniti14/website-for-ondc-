@@ -118,8 +118,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [siteMedia, setSiteMedia] = useState<SiteMedia>(() => storageService.getSiteMedia());
   const [mediaSavedMsg, setMediaSavedMsg] = useState(false);
 
-  const handleSaveSiteMedia = () => {
-    storageService.saveSiteMedia(siteMedia);
+  const handleSaveSiteMedia = async () => {
+    await storageService.saveSiteMedia(siteMedia);
     onRefresh();
     setMediaSavedMsg(true);
     setTimeout(() => setMediaSavedMsg(false), 3000);
@@ -434,7 +434,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     if (selectedProductIds.length === 0) return;
     setIsBulkDeleting(true);
     try {
-      const count = storageService.deleteMultipleProducts(selectedProductIds);
+      const count = await storageService.deleteMultipleProducts(selectedProductIds);
       setSelectedProductIds([]);
       onRefresh();
       setBulkFeedbackMsg(`Successfully deleted ${count} product${count === 1 ? '' : 's'}.`);
@@ -448,7 +448,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     if (selectedCategoryIds.length === 0) return;
     setIsBulkDeleting(true);
     try {
-      const { deletedCount, protectedSkipped } = storageService.deleteMultipleCategories(selectedCategoryIds);
+      const { deletedCount, protectedSkipped } = await storageService.deleteMultipleCategories(selectedCategoryIds);
       setSelectedCategoryIds([]);
       onRefresh();
       let msg = `Successfully deleted ${deletedCount} categor${deletedCount === 1 ? 'y' : 'ies'}.`;
@@ -546,7 +546,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     if (selectedCouponIds.length === 0) return;
     setIsBulkDeleting(true);
     try {
-      const count = storageService.deleteMultipleCoupons(selectedCouponIds);
+      const count = await storageService.deleteMultipleCoupons(selectedCouponIds);
       setSelectedCouponIds([]);
       onRefresh();
       setCouponSuccessMsg(`Successfully deleted ${count} coupon${count === 1 ? '' : 's'}.`);
@@ -718,7 +718,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setShowCategoryModal(true);
   };
 
-  const handleSaveCategorySubmit = (e: React.FormEvent) => {
+  const handleSaveCategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!categoryForm.name.trim()) return;
 
@@ -734,7 +734,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       icon: categoryForm.icon.trim() || '📦',
     };
 
-    storageService.saveCategory(catToSave, categoryForm.isNew ? undefined : categoryOriginalName || undefined);
+    await storageService.saveCategory(catToSave, categoryForm.isNew ? undefined : categoryOriginalName || undefined);
     onRefresh();
     setShowCategoryModal(false);
     setCategoryMsg(
@@ -745,14 +745,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setTimeout(() => setCategoryMsg(null), 5000);
   };
 
-  const handleDeleteCategory = (cat: Category) => {
+  const handleDeleteCategory = async (cat: Category) => {
     const assignedCount = products.filter((p) => p.category === cat.name).length;
     const confirmMsg = assignedCount > 0
       ? `Warning: Category "${cat.name}" has ${assignedCount} product(s) linked to it. Are you sure you want to delete it?`
       : `Are you sure you want to delete category "${cat.name}"?`;
 
     if (window.confirm(confirmMsg)) {
-      storageService.deleteCategory(cat.id);
+      await storageService.deleteCategory(cat.id);
       onRefresh();
       setCategoryMsg(`Category "${cat.name}" deleted successfully.`);
       setTimeout(() => setCategoryMsg(null), 4000);
@@ -1754,13 +1754,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     onRefresh();
   };
 
-  const handleUpdateB2COrderStatus = (orderId: string, newStatus: any) => {
-    storageService.updateB2COrderStatus(orderId, newStatus);
+  const handleUpdateB2COrderStatus = async (orderId: string, newStatus: any) => {
+    await storageService.updateB2COrderStatus(orderId, newStatus);
     onRefresh();
   };
 
-  const handleUpdateB2BOrderStatus = (orderId: string, newStatus: any) => {
-    storageService.updateB2BOrderStatus(orderId, newStatus);
+  const handleUpdateB2BOrderStatus = async (orderId: string, newStatus: any) => {
+    await storageService.updateB2BOrderStatus(orderId, newStatus);
     onRefresh();
   };
 
@@ -1791,18 +1791,18 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     alert(`Commercial proposal published to client ${activeRfqForQuote.businessName}!`);
   };
 
-  const handleSaveProduct = (e: React.FormEvent) => {
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
-    storageService.saveProduct(editingProduct);
+    await storageService.saveProduct(editingProduct);
     setShowProductModal(false);
     setEditingProduct(null);
     onRefresh();
   };
 
-  const handleDeleteProduct = (id: string) => {
+  const handleDeleteProduct = async (id: string) => {
     if (confirm('Are you sure you want to remove this product from the catalog?')) {
-      storageService.deleteProduct(id);
+      await storageService.deleteProduct(id);
       onRefresh();
     }
   };
@@ -1837,7 +1837,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setShowCouponModal(true);
   };
 
-  const handleSaveCouponSubmit = (e: React.FormEvent) => {
+  const handleSaveCouponSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponCodeInput.trim()) return;
 
@@ -1861,36 +1861,36 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       createdBy: currentAdminUser?.name || 'Super Admin',
     };
 
-    storageService.saveCoupon(couponData);
+    await storageService.saveCoupon(couponData);
     setShowCouponModal(false);
     onRefresh();
     setCouponSuccessMsg(`Coupon '${cleanCode}' ${editingCoupon ? 'updated' : 'created'} successfully!`);
     setTimeout(() => setCouponSuccessMsg(null), 3500);
   };
 
-  const handleDeleteCoupon = (idOrCode: string) => {
+  const handleDeleteCoupon = async (idOrCode: string) => {
     if (confirm('Are you sure you want to permanently remove this coupon?')) {
-      storageService.deleteCoupon(idOrCode);
+      await storageService.deleteCoupon(idOrCode);
       onRefresh();
       setCouponSuccessMsg('Coupon deleted successfully.');
       setTimeout(() => setCouponSuccessMsg(null), 3500);
     }
   };
 
-  const handleToggleCoupon = (idOrCode: string) => {
-    storageService.toggleCouponStatus(idOrCode);
+  const handleToggleCoupon = async (idOrCode: string) => {
+    await storageService.toggleCouponStatus(idOrCode);
     onRefresh();
   };
 
-  const handleConfirmOrder = (type: 'b2c' | 'b2b', id: string) => {
+  const handleConfirmOrder = async (type: 'b2c' | 'b2b', id: string) => {
     const adminName = currentAdminUser?.name || 'Operations Lead';
     if (type === 'b2c') {
-      const updated = storageService.confirmB2COrder(id, adminName);
+      const updated = await storageService.confirmB2COrder(id, adminName);
       if (selectedOrderForInspection && selectedOrderForInspection.order.id === id && updated) {
         setSelectedOrderForInspection({ type: 'b2c', order: updated });
       }
     } else {
-      const updated = storageService.confirmB2BOrder(id, adminName);
+      const updated = await storageService.confirmB2BOrder(id, adminName);
       if (selectedOrderForInspection && selectedOrderForInspection.order.id === id && updated) {
         setSelectedOrderForInspection({ type: 'b2b', order: updated });
       }
@@ -1905,16 +1905,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setOrderRejectionReason('Verification criteria not met / Address unserviceable');
   };
 
-  const handleConfirmOrderRejection = () => {
+  const handleConfirmOrderRejection = async () => {
     if (!orderRejectionModal) return;
     const adminName = currentAdminUser?.name || 'Operations Lead';
     if (orderRejectionModal.type === 'b2c') {
-      const updated = storageService.rejectB2COrder(orderRejectionModal.id, adminName, orderRejectionReason);
+      const updated = await storageService.rejectB2COrder(orderRejectionModal.id, adminName, orderRejectionReason);
       if (selectedOrderForInspection && selectedOrderForInspection.order.id === orderRejectionModal.id && updated) {
         setSelectedOrderForInspection({ type: 'b2c', order: updated });
       }
     } else {
-      const updated = storageService.rejectB2BOrder(orderRejectionModal.id, adminName, orderRejectionReason);
+      const updated = await storageService.rejectB2BOrder(orderRejectionModal.id, adminName, orderRejectionReason);
       if (selectedOrderForInspection && selectedOrderForInspection.order.id === orderRejectionModal.id && updated) {
         setSelectedOrderForInspection({ type: 'b2b', order: updated });
       }

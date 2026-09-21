@@ -8,7 +8,7 @@
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Admin-Role');
 header('Cache-Control: no-cache, no-store, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
@@ -34,8 +34,9 @@ $allowedMimes = [
     'image/png',
     'image/webp',
     'image/jpg',
+    'image/svg+xml',
 ];
-$allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'webp'];
+$allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'svg'];
 
 $folder = 'certificates';
 $originalName = 'upload_' . time();

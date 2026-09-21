@@ -182,6 +182,14 @@ class PersistentStore {
         this.cache.set(collection, filtered);
       }
       return deletedCount > 0;
+    } else if (typeof items === 'object' && items !== null) {
+      if (id in items) {
+        const copy = { ...items };
+        delete copy[id];
+        this.writeToFile(this.getFilePath(collection), copy);
+        this.cache.set(collection, copy);
+        return true;
+      }
     }
     return false;
   }

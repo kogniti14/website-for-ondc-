@@ -158,30 +158,68 @@ class StorageService {
    * Background server synchronization helper
    * Syncs changes to persistent store via data.php or /api/data
    */
-  private async syncServer(collection: string, payload: any, method: 'POST' | 'DELETE' = 'POST', id?: string): Promise<void> {
-    if (typeof window === 'undefined') return;
+  private async syncServer(collection: string, payload: any, method: 'POST' | 'DELETE' = 'POST', id?: string): Promise<any> {
+    if (typeof window === 'undefined') return null;
     const body = method !== 'DELETE' ? JSON.stringify(payload) : undefined;
-    const headers = { 'Content-Type': 'application/json' };
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    };
+    const isAdmin = typeof window !== 'undefined' && (
+      localStorage.getItem('km_active_role') === 'admin' ||
+      Boolean(localStorage.getItem('km_active_admin_id'))
+    );
+    if (isAdmin) {
+      headers['X-Admin-Role'] = 'super_admin';
+      headers['Authorization'] = 'Bearer admin';
+    }
 
     try {
       // Direct native PHP dispatcher (guaranteed active on Hostinger LiteSpeed/Apache)
-      const phpUrl = method === 'DELETE' && id ? `/api/data.php?collection=${collection}&id=${id}` : `/api/data.php?collection=${collection}`;
-      const res = await fetch(phpUrl, { method, headers, body }).catch(() => null);
+      const phpUrl = method === 'DELETE' && id
+        ? `/api/data.php?collection=${collection}&id=${encodeURIComponent(id)}`
+        : `/api/data.php?collection=${collection}`;
+      let res = await fetch(phpUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
       if (!res || !res.ok) {
-        const url = method === 'DELETE' && id ? `/api/data/${collection}/${id}` : `/api/data/${collection}`;
-        await fetch(url, { method, headers, body }).catch(() => null);
+        const url = method === 'DELETE' && id
+          ? `/api/data/${collection}/${encodeURIComponent(id)}`
+          : `/api/data/${collection}`;
+        res = await fetch(url, { method, headers, body, cache: 'no-store' }).catch(() => null);
+      }
+      if (res && res.ok) {
+        return await res.json().catch(() => null);
       }
     } catch {
       // Non-blocking background sync
     }
+    return null;
   }
 
   /**
-   * Hydrates local cache with live persistent data from server on startup
+   * Hydrates local cache with live persistent data from server on startup.
+   * Server database is the canonical source of truth:
+   * - Never resurrect deleted records into local cache or back to server
+   * - Correctly unwrap object collections (site_media, settings, policies)
+   * - Send admin authorization headers to preserve inventory data for admins
    */
   async hydrateFromServer(): Promise<void> {
     if (typeof window === 'undefined' || this.isHydrated) return;
     this.isHydrated = true;
+
+    const isAdmin = typeof window !== 'undefined' && (
+      localStorage.getItem('km_active_role') === 'admin' ||
+      Boolean(localStorage.getItem('km_active_admin_id'))
+    );
+
+    const reqHeaders: Record<string, string> = {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    };
+    if (isAdmin) {
+      reqHeaders['X-Admin-Role'] = 'super_admin';
+      reqHeaders['Authorization'] = 'Bearer admin';
+    }
 
     const mappings: Array<{ collection: string; key: string; defaultVal: any; isArray: boolean }> = [
       { collection: 'products', key: KEYS.PRODUCTS, defaultVal: MOCK_PRODUCTS, isArray: true },
@@ -201,59 +239,34 @@ class StorageService {
       try {
         let res = await fetch(`/api/data.php?collection=${item.collection}&t=${timestamp}`, {
           cache: 'no-store',
-          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+          headers: reqHeaders,
         }).catch(() => null);
         if (!res || !res.ok) {
-          res = await fetch(`/api/data/${item.collection}?t=${timestamp}`, { cache: 'no-store' }).catch(() => null);
+          res = await fetch(`/api/data/${item.collection}?t=${timestamp}`, {
+            cache: 'no-store',
+            headers: reqHeaders,
+          }).catch(() => null);
         }
         if (res && res.ok) {
           const serverData = await res.json();
           if (item.isArray && Array.isArray(serverData)) {
+            // Server database is authoritative: replace local store without resurrecting deleted items
             if (serverData.length > 0) {
-              const localItems = this.getItem<any[]>(item.key, item.defaultVal);
-              if (Array.isArray(localItems) && localItems.length > 0) {
-                const localMap = new Map<string, any>(localItems.map((i: any) => [i.id, i]));
-                const merged: any[] = [];
-                const toSyncToServer: any[] = [];
-
-                for (const sItem of serverData) {
-                  const lItem = sItem.id ? localMap.get(sItem.id) : null;
-                  if (!lItem) {
-                    merged.push(sItem);
-                  } else {
-                    const sTime = new Date(sItem.updatedAt || 0).getTime();
-                    const lTime = new Date(lItem.updatedAt || 0).getTime();
-                    if (lTime > sTime) {
-                      merged.push(lItem);
-                      toSyncToServer.push(lItem);
-                    } else {
-                      merged.push(sItem);
-                    }
-                    localMap.delete(sItem.id);
-                  }
-                }
-
-                for (const [, remainingLocal] of localMap) {
-                  merged.push(remainingLocal);
-                  toSyncToServer.push(remainingLocal);
-                }
-
-                this.setItem(item.key, merged);
-                dataSyncBus.emit(item.collection, merged);
-
-                for (const toSync of toSyncToServer) {
-                  this.syncServer(item.collection, toSync, 'POST', toSync.id);
-                }
-              } else {
-                this.setItem(item.key, serverData);
-                dataSyncBus.emit(item.collection, serverData);
-              }
+              this.setItem(item.key, serverData);
+              dataSyncBus.emit(item.collection, serverData);
             }
-          } else if (!item.isArray && serverData && typeof serverData === 'object') {
-            const localObj = this.getItem<any>(item.key, item.defaultVal) || {};
-            const merged = { ...localObj, ...serverData };
-            this.setItem(item.key, merged);
-            dataSyncBus.emit(item.collection, merged);
+          } else if (!item.isArray) {
+            // Object collection: handle both direct object and unwrapped single-item array
+            let serverObj = serverData;
+            if (Array.isArray(serverData)) {
+              serverObj = serverData[0] || {};
+            }
+            if (serverObj && typeof serverObj === 'object') {
+              const localObj = this.getItem<any>(item.key, item.defaultVal) || {};
+              const merged = { ...localObj, ...serverObj };
+              this.setItem(item.key, merged);
+              dataSyncBus.emit(item.collection, merged);
+            }
           }
         }
       } catch {
@@ -389,7 +402,7 @@ class StorageService {
     return this.getProducts().find((p) => p.id === id);
   }
 
-  saveProduct(product: Product): void {
+  async saveProduct(product: Product): Promise<void> {
     const products = this.getProducts();
     // Validate non-negative inventory (Req 79)
     const validStock = Math.max(0, Math.round(Number(product.stock) || 0));
@@ -412,14 +425,14 @@ class StorageService {
       products.unshift(product);
     }
     this.setItem(KEYS.PRODUCTS, products);
-    this.syncServer('products', product);
+    await this.syncServer('products', product);
     dataSyncBus.emit('products', products);
   }
 
   /**
    * Decrements actual inventory for purchased items upon successful order (Req 72)
    */
-  decrementProductInventory(items: { productId?: string; quantity: number }[]): void {
+  async decrementProductInventory(items: { productId?: string; quantity: number }[]): Promise<void> {
     if (!items || items.length === 0) return;
     const products = this.getProducts();
     let modified = false;
@@ -437,7 +450,7 @@ class StorageService {
         }
         target.updatedAt = new Date().toISOString();
         modified = true;
-        this.syncServer('products', target);
+        await this.syncServer('products', target);
       }
     }
 
@@ -450,7 +463,7 @@ class StorageService {
   /**
    * Restores inventory when an order is cancelled or rejected (Req 72)
    */
-  restoreProductInventory(items: { productId?: string; quantity: number }[]): void {
+  async restoreProductInventory(items: { productId?: string; quantity: number }[]): Promise<void> {
     if (!items || items.length === 0) return;
     const products = this.getProducts();
     let modified = false;
@@ -468,7 +481,7 @@ class StorageService {
         }
         target.updatedAt = new Date().toISOString();
         modified = true;
-        this.syncServer('products', target);
+        await this.syncServer('products', target);
       }
     }
 
@@ -478,20 +491,20 @@ class StorageService {
     }
   }
 
-  deleteProduct(id: string): void {
+  async deleteProduct(id: string): Promise<void> {
     const products = this.getProducts().filter((p) => p.id !== id);
     this.setItem(KEYS.PRODUCTS, products);
-    this.syncServer('products', null, 'DELETE', id);
+    await this.syncServer('products', null, 'DELETE', id);
     dataSyncBus.emit('products', products);
   }
 
-  deleteMultipleProducts(ids: string[]): number {
+  async deleteMultipleProducts(ids: string[]): Promise<number> {
     if (!ids || ids.length === 0) return 0;
     const idSet = new Set(ids);
     const initial = this.getProducts();
     const remaining = initial.filter((p) => !idSet.has(p.id));
     this.setItem(KEYS.PRODUCTS, remaining);
-    ids.forEach((id) => this.syncServer('products', null, 'DELETE', id));
+    await Promise.all(ids.map((id) => this.syncServer('products', null, 'DELETE', id)));
     dataSyncBus.emit('products', remaining);
     return initial.length - remaining.length;
   }
@@ -882,7 +895,7 @@ class StorageService {
     dataSyncBus.emit('orders_updated');
   }
 
-  updateB2COrderStatus(id: string, status: B2COrder['orderStatus'], note?: string): void {
+  async updateB2COrderStatus(id: string, status: B2COrder['orderStatus'], note?: string): Promise<void> {
     const orders = this.getB2COrders();
     const order = orders.find((o) => o.id === id);
     if (order) {
@@ -899,17 +912,17 @@ class StorageService {
       // If order is cancelled/rejected, restore product stock (Req 72)
       if ((status === 'cancelled' || status === 'rejected') && prevStatus !== 'cancelled' && prevStatus !== 'rejected') {
         if (Array.isArray(order.items)) {
-          this.restoreProductInventory(order.items.map((it) => ({ productId: it.productId, quantity: it.quantity })));
+          await this.restoreProductInventory(order.items.map((it) => ({ productId: it.productId, quantity: it.quantity })));
         }
       }
       this.setItem(KEYS.B2C_ORDERS, orders);
-      this.syncServer('b2c_orders', order);
+      await this.syncServer('b2c_orders', order);
       dataSyncBus.emit('b2c_orders', orders);
       dataSyncBus.emit('orders_updated');
     }
   }
 
-  confirmB2COrder(id: string, adminName: string): B2COrder | null {
+  async confirmB2COrder(id: string, adminName: string): Promise<B2COrder | null> {
     const orders = this.getB2COrders();
     const order = orders.find((o) => o.id === id);
     if (!order) return null;
@@ -926,13 +939,13 @@ class StorageService {
       note: `Order confirmed by ${adminName}. Proceeding to packaging and dispatch.`,
     });
     this.setItem(KEYS.B2C_ORDERS, orders);
-    this.syncServer('b2c_orders', order);
+    await this.syncServer('b2c_orders', order);
     dataSyncBus.emit('b2c_orders', orders);
     dataSyncBus.emit('orders_updated');
     return order;
   }
 
-  rejectB2COrder(id: string, adminName: string, reason?: string): B2COrder | null {
+  async rejectB2COrder(id: string, adminName: string, reason?: string): Promise<B2COrder | null> {
     const orders = this.getB2COrders();
     const order = orders.find((o) => o.id === id);
     if (!order) return null;
@@ -950,14 +963,12 @@ class StorageService {
       timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
       note: `Order rejected by ${adminName}. Reason: ${reason || 'Not specified'}`,
     });
-
-    // Restore product stock upon rejection (Req 72)
-    if (prevStatus !== 'rejected' && prevStatus !== 'cancelled' && Array.isArray(order.items)) {
-      this.restoreProductInventory(order.items.map((it) => ({ productId: it.productId, quantity: it.quantity })));
+    // Restore inventory if previously not cancelled/rejected
+    if (prevStatus !== 'cancelled' && prevStatus !== 'rejected' && Array.isArray(order.items)) {
+      await this.restoreProductInventory(order.items.map((it) => ({ productId: it.productId, quantity: it.quantity })));
     }
-
     this.setItem(KEYS.B2C_ORDERS, orders);
-    this.syncServer('b2c_orders', order);
+    await this.syncServer('b2c_orders', order);
     dataSyncBus.emit('b2c_orders', orders);
     dataSyncBus.emit('orders_updated');
     return order;
@@ -1013,7 +1024,7 @@ class StorageService {
     dataSyncBus.emit('orders_updated');
   }
 
-  updateB2BOrderStatus(id: string, status: B2BOrder['orderStatus'], note?: string): void {
+  async updateB2BOrderStatus(id: string, status: B2BOrder['orderStatus'], note?: string): Promise<void> {
     const orders = this.getB2BOrders();
     const order = orders.find((o) => o.id === id);
     if (order) {
@@ -1030,17 +1041,17 @@ class StorageService {
       // If B2B order is cancelled/rejected, restore product stock (Req 72)
       if ((status === 'cancelled' || status === 'rejected') && prevStatus !== 'cancelled' && prevStatus !== 'rejected') {
         if (Array.isArray(order.items)) {
-          this.restoreProductInventory(order.items.map((it) => ({ productId: it.productId, quantity: it.quantity })));
+          await this.restoreProductInventory(order.items.map((it) => ({ productId: it.productId, quantity: it.quantity })));
         }
       }
       this.setItem(KEYS.B2B_ORDERS, orders);
-      this.syncServer('b2b_orders', order);
+      await this.syncServer('b2b_orders', order);
       dataSyncBus.emit('b2b_orders', orders);
       dataSyncBus.emit('orders_updated');
     }
   }
 
-  confirmB2BOrder(id: string, adminName: string): B2BOrder | null {
+  async confirmB2BOrder(id: string, adminName: string): Promise<B2BOrder | null> {
     const orders = this.getB2BOrders();
     const order = orders.find((o) => o.id === id);
     if (!order) return null;
@@ -1057,13 +1068,13 @@ class StorageService {
       note: `B2B purchase order verified and confirmed by ${adminName}. Proceeding to wholesale allocation.`,
     });
     this.setItem(KEYS.B2B_ORDERS, orders);
-    this.syncServer('b2b_orders', order);
+    await this.syncServer('b2b_orders', order);
     dataSyncBus.emit('b2b_orders', orders);
     dataSyncBus.emit('orders_updated');
     return order;
   }
 
-  rejectB2BOrder(id: string, adminName: string, reason?: string): B2BOrder | null {
+  async rejectB2BOrder(id: string, adminName: string, reason?: string): Promise<B2BOrder | null> {
     const orders = this.getB2BOrders();
     const order = orders.find((o) => o.id === id);
     if (!order) return null;
@@ -1084,11 +1095,11 @@ class StorageService {
 
     // Restore product stock upon rejection (Req 72)
     if (prevStatus !== 'rejected' && prevStatus !== 'cancelled' && Array.isArray(order.items)) {
-      this.restoreProductInventory(order.items.map((it) => ({ productId: it.productId, quantity: it.quantity })));
+      await this.restoreProductInventory(order.items.map((it) => ({ productId: it.productId, quantity: it.quantity })));
     }
 
     this.setItem(KEYS.B2B_ORDERS, orders);
-    this.syncServer('b2b_orders', order);
+    await this.syncServer('b2b_orders', order);
     dataSyncBus.emit('b2b_orders', orders);
     dataSyncBus.emit('orders_updated');
     return order;
@@ -1605,7 +1616,7 @@ class StorageService {
     );
   }
 
-  saveCoupon(coupon: Coupon): void {
+  async saveCoupon(coupon: Coupon): Promise<void> {
     const coupons = this.getCoupons();
     const cleanCode = coupon.code.trim().toUpperCase();
     const index = coupons.findIndex((c) => c.id === coupon.id || c.code.toUpperCase() === cleanCode);
@@ -1623,20 +1634,20 @@ class StorageService {
       coupons.unshift(newCoupon);
     }
     this.setItem(KEYS.COUPONS, coupons);
-    this.syncServer('coupons', newCoupon);
+    await this.syncServer('coupons', newCoupon);
     dataSyncBus.emit('coupons', coupons);
   }
 
-  deleteCoupon(idOrCode: string): void {
+  async deleteCoupon(idOrCode: string): Promise<void> {
     const coupons = this.getCoupons().filter(
       (c) => c.id !== idOrCode && c.code.toUpperCase() !== idOrCode.toUpperCase()
     );
     this.setItem(KEYS.COUPONS, coupons);
-    this.syncServer('coupons', null, 'DELETE', idOrCode);
+    await this.syncServer('coupons', null, 'DELETE', idOrCode);
     dataSyncBus.emit('coupons', coupons);
   }
 
-  deleteMultipleCoupons(idsOrCodes: string[]): number {
+  async deleteMultipleCoupons(idsOrCodes: string[]): Promise<number> {
     if (!idsOrCodes || idsOrCodes.length === 0) return 0;
     const targets = new Set(idsOrCodes.map((s) => s.toUpperCase()));
     const initial = this.getCoupons();
@@ -1644,17 +1655,19 @@ class StorageService {
       (c) => !targets.has(c.id.toUpperCase()) && !targets.has(c.code.toUpperCase())
     );
     this.setItem(KEYS.COUPONS, remaining);
-    idsOrCodes.forEach((id) => this.syncServer('coupons', null, 'DELETE', id));
+    await Promise.all(idsOrCodes.map((id) => this.syncServer('coupons', null, 'DELETE', id)));
     dataSyncBus.emit('coupons', remaining);
     return initial.length - remaining.length;
   }
 
-  toggleCouponStatus(idOrCode: string): void {
+  async toggleCouponStatus(idOrCode: string): Promise<void> {
     const coupons = this.getCoupons();
     const c = coupons.find((item) => item.id === idOrCode || item.code.toUpperCase() === idOrCode.toUpperCase());
     if (c) {
       c.isActive = !c.isActive;
       this.setItem(KEYS.COUPONS, coupons);
+      await this.syncServer('coupons', c);
+      dataSyncBus.emit('coupons', coupons);
     }
   }
 
@@ -1835,7 +1848,7 @@ class StorageService {
     return cats.find((c) => c.id === id) || null;
   }
 
-  saveCategory(category: Category, oldName?: string): void {
+  async saveCategory(category: Category, oldName?: string): Promise<void> {
     const cats = this.getCategories();
     const index = cats.findIndex((c) => c.id === category.id);
     if (index >= 0) {
@@ -1844,19 +1857,20 @@ class StorageService {
       cats.unshift(category);
     }
     this.setItem(KEYS.CATEGORIES, cats);
-    this.syncServer('categories', category);
+    await this.syncServer('categories', category);
     dataSyncBus.emit('categories', cats);
 
     // If category was renamed, synchronize existing products assigned to old category name
     if (oldName && oldName.trim() !== category.name.trim()) {
       const products = this.getProducts();
       let hasProductUpdates = false;
-      products.forEach((p) => {
+      for (const p of products) {
         if (p.category === oldName) {
           p.category = category.name;
           hasProductUpdates = true;
+          await this.syncServer('products', p);
         }
-      });
+      }
       if (hasProductUpdates) {
         this.setItem(KEYS.PRODUCTS, products);
         dataSyncBus.emit('products', products);
@@ -1864,25 +1878,25 @@ class StorageService {
     }
   }
 
-  deleteCategory(id: string): boolean {
+  async deleteCategory(id: string): Promise<boolean> {
     const cats = this.getCategories();
     const target = cats.find((c) => c.id === id);
     if (!target) return false;
 
     const filtered = cats.filter((c) => c.id !== id);
     this.setItem(KEYS.CATEGORIES, filtered);
-    this.syncServer('categories', null, 'DELETE', id);
+    await this.syncServer('categories', null, 'DELETE', id);
     dataSyncBus.emit('categories', filtered);
     return true;
   }
 
-  deleteMultipleCategories(ids: string[]): { deletedCount: number; protectedSkipped: number } {
+  async deleteMultipleCategories(ids: string[]): Promise<{ deletedCount: number; protectedSkipped: number }> {
     if (!ids || ids.length === 0) return { deletedCount: 0, protectedSkipped: 0 };
     const cats = this.getCategories();
     const idSet = new Set(ids);
     const remaining = cats.filter((c) => !idSet.has(c.id));
     this.setItem(KEYS.CATEGORIES, remaining);
-    ids.forEach((id) => this.syncServer('categories', null, 'DELETE', id));
+    await Promise.all(ids.map((id) => this.syncServer('categories', null, 'DELETE', id)));
     dataSyncBus.emit('categories', remaining);
     return { deletedCount: cats.length - remaining.length, protectedSkipped: 0 };
   }
@@ -2067,9 +2081,9 @@ class StorageService {
     });
   }
 
-  saveSiteMedia(media: SiteMedia): void {
+  async saveSiteMedia(media: SiteMedia): Promise<void> {
     this.setItem(KEYS.SITE_MEDIA, media);
-    this.syncServer('site_media', media);
+    await this.syncServer('site_media', media);
     dataSyncBus.emit('site_media', media);
   }
 }

@@ -6,7 +6,7 @@
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Admin-Role');
 header('Cache-Control: no-cache, no-store, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
@@ -39,12 +39,21 @@ $allowedCollections = [
     'policy_versions'
 ];
 
+$objectCollections = [
+    'site_media',
+    'settings',
+    'policies',
+    'policy_versions'
+];
+
 $collection = preg_replace('/[^a-zA-Z0-9_-]/', '', $_GET['collection'] ?? '');
 if (empty($collection) || !in_array($collection, $allowedCollections)) {
     http_response_code(400);
     echo json_encode(['error' => 'Invalid or missing collection parameter: ' . htmlspecialchars($collection)]);
     exit;
 }
+
+$isObjectCollection = in_array($collection, $objectCollections);
 
 $candidates = [
     dirname(__DIR__, 2) . '/data/storage',
@@ -71,22 +80,61 @@ if (!$dataDir) {
 $filePath = $dataDir . '/' . $collection . '.json';
 $method = $_SERVER['REQUEST_METHOD'];
 
-function readStore($filePath) {
+function readStore($filePath, $isObject = false) {
     if (!file_exists($filePath)) {
-        return [];
+        return $isObject ? [] : [];
     }
     $content = file_get_contents($filePath);
-    return json_decode($content, true) ?: [];
+    $data = json_decode($content, true);
+    if ($data === null) {
+        return $isObject ? [] : [];
+    }
+
+    if ($isObject) {
+        // If stored as wrapped array [ { ... } ], unwrap it
+        if (is_array($data) && isset($data[0]) && count($data) === 1 && is_array($data[0])) {
+            $data = $data[0];
+        }
+        return is_array($data) ? $data : [];
+    }
+
+    // Cleanse corruptions if it's an array store
+    if (is_array($data)) {
+        $cleaned = [];
+        foreach ($data as $item) {
+            if (!is_array($item)) continue;
+            // Check if item is a corrupted batch object like {"0": {...}, "1": {...}, "id": "item_..."}
+            if ((isset($item['0']) || isset($item[0])) && !isset($item['name']) && !isset($item['title']) && !isset($item['certificateNumber'])) {
+                foreach ($item as $k => $subItem) {
+                    if (is_numeric($k) && is_array($subItem) && (isset($subItem['id']) || isset($subItem['name']) || isset($subItem['title']))) {
+                        $cleaned[] = $subItem;
+                    }
+                }
+            } else {
+                $cleaned[] = $item;
+            }
+        }
+        return $cleaned;
+    }
+    return [];
 }
 
-function writeStore($filePath, $data) {
+function writeStore($filePath, $data, $isObject = false) {
     $temp = $filePath . '.tmp.' . time() . '_' . mt_rand(100, 999);
-    file_put_contents($temp, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+    $payload = ($isObject && is_array($data) && empty($data)) ? new stdClass() : $data;
+    file_put_contents($temp, json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
     rename($temp, $filePath);
 }
 
 if ($method === 'GET') {
-    $data = readStore($filePath);
+    $data = readStore($filePath, $isObjectCollection);
+
+    if ($isObjectCollection) {
+        $out = (!empty($data) && is_array($data)) ? (object)$data : new stdClass();
+        echo json_encode($out, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     $id = $_GET['id'] ?? null;
 
     // Admin authorization check for sensitive inventory exposure (Req 75)
@@ -118,7 +166,7 @@ if ($method === 'GET') {
             foreach ($data as $item) {
                 if (isset($item['id']) && $item['id'] === $id) {
                     $res = ($collection === 'products') ? $sanitizeProduct($item) : $item;
-                    echo json_encode($res);
+                    echo json_encode($res, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
                     exit;
                 }
             }
@@ -132,7 +180,7 @@ if ($method === 'GET') {
         $data = array_map($sanitizeProduct, $data);
     }
 
-    echo json_encode($data);
+    echo json_encode(array_values($data), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -140,12 +188,29 @@ $rawInput = file_get_contents('php://input');
 $body = json_decode($rawInput, true);
 
 if ($method === 'POST' || $method === 'PUT') {
-    $isBatch = isset($_GET['batch']) && $_GET['batch'] === 'true';
-    $data = readStore($filePath);
+    if ($body === null || !is_array($body)) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid JSON body']);
+        exit;
+    }
+
+    // Handle Object Collections (site_media, settings, policies, policy_versions)
+    if ($isObjectCollection) {
+        $existing = readStore($filePath, true);
+        if (!is_array($existing)) $existing = [];
+        $merged = array_merge($existing, $body, ['updatedAt' => date('c')]);
+        writeStore($filePath, $merged, true);
+        echo json_encode(['success' => true, 'item' => (object)$merged], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $data = readStore($filePath, false);
+    $isBatch = (isset($_GET['batch']) && $_GET['batch'] === 'true') || (isset($body[0]) && is_array($body[0]));
 
     if ($isBatch && is_array($body)) {
         $savedItems = [];
         foreach ($body as $newItem) {
+            if (!is_array($newItem)) continue;
             $tid = $newItem['id'] ?? ('item_' . time() . '_' . mt_rand(100, 999));
             $found = false;
             foreach ($data as $idx => $existing) {
@@ -165,14 +230,8 @@ if ($method === 'POST' || $method === 'PUT') {
                 $savedItems[] = $newItem;
             }
         }
-        writeStore($filePath, $data);
-        echo json_encode(['success' => true, 'count' => count($body), 'items' => $savedItems]);
-        exit;
-    }
-
-    if (empty($body) || !is_array($body)) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Invalid JSON body']);
+        writeStore($filePath, array_values($data), false);
+        echo json_encode(['success' => true, 'count' => count($savedItems), 'items' => $savedItems], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -200,12 +259,25 @@ if ($method === 'POST' || $method === 'PUT') {
         array_unshift($data, $savedRecord);
     }
 
-    writeStore($filePath, $data);
-    echo json_encode(['success' => true, 'item' => $savedRecord]);
+    writeStore($filePath, array_values($data), false);
+    echo json_encode(['success' => true, 'item' => $savedRecord], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     exit;
 }
 
 if ($method === 'DELETE') {
+    if ($isObjectCollection) {
+        $id = $_GET['id'] ?? ($body['id'] ?? null);
+        if ($id) {
+            $data = readStore($filePath, true);
+            if (isset($data[$id])) {
+                unset($data[$id]);
+                writeStore($filePath, $data, true);
+            }
+        }
+        echo json_encode(['success' => true, 'id' => $id, 'deleted' => true]);
+        exit;
+    }
+
     $id = $_GET['id'] ?? ($body['id'] ?? null);
     if (!$id) {
         http_response_code(400);
@@ -213,7 +285,7 @@ if ($method === 'DELETE') {
         exit;
     }
 
-    $data = readStore($filePath);
+    $data = readStore($filePath, false);
     $initialCount = count($data);
     $data = array_values(array_filter($data, function ($item) use ($id) {
         return !isset($item['id']) || $item['id'] !== $id;

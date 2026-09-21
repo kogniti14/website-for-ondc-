@@ -219,21 +219,45 @@ class GalleryService {
     }
   }
 
-  private async syncServer(collection: string, payload: any, method: 'POST' | 'DELETE' = 'POST', id?: string): Promise<void> {
-    if (typeof window === 'undefined') return;
+  private async syncServer(collection: string, payload: any, method: 'POST' | 'DELETE' = 'POST', id?: string): Promise<any> {
+    if (typeof window === 'undefined') return null;
+    const isBatch = Array.isArray(payload);
     const body = method !== 'DELETE' ? JSON.stringify(payload) : undefined;
-    const headers = { 'Content-Type': 'application/json' };
+    const isAdmin = typeof window !== 'undefined' && (
+      localStorage.getItem('km_active_role') === 'admin' ||
+      Boolean(localStorage.getItem('km_active_admin_id'))
+    );
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    };
+    if (isAdmin) {
+      headers['X-Admin-Role'] = 'super_admin';
+      headers['Authorization'] = 'Bearer admin';
+    }
 
     try {
-      const phpUrl = method === 'DELETE' && id ? `/api/data.php?collection=${collection}&id=${id}` : `/api/data.php?collection=${collection}`;
-      const res = await fetch(phpUrl, { method, headers, body }).catch(() => null);
+      const batchParam = isBatch ? '&batch=true' : '';
+      const phpUrl =
+        method === 'DELETE' && id
+          ? `/api/data.php?collection=${collection}&id=${encodeURIComponent(id)}`
+          : `/api/data.php?collection=${collection}${batchParam}`;
+      let res = await fetch(phpUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
       if (!res || !res.ok) {
-        const url = method === 'DELETE' && id ? `/api/data/${collection}/${id}` : `/api/data/${collection}`;
-        await fetch(url, { method, headers, body }).catch(() => null);
+        const url =
+          method === 'DELETE' && id
+            ? `/api/data/${collection}/${encodeURIComponent(id)}`
+            : `/api/data/${collection}${isBatch ? '?batch=true' : ''}`;
+        res = await fetch(url, { method, headers, body, cache: 'no-store' }).catch(() => null);
+      }
+      if (res && res.ok) {
+        return await res.json().catch(() => null);
       }
     } catch {
       // Non-blocking background sync
     }
+    return null;
   }
 
   async hydrateFromServer(): Promise<void> {
@@ -242,92 +266,74 @@ class GalleryService {
 
     try {
       const timestamp = Date.now();
+      const isAdmin = typeof window !== 'undefined' && (
+        localStorage.getItem('km_active_role') === 'admin' ||
+        Boolean(localStorage.getItem('km_active_admin_id'))
+      );
+      const reqHeaders: Record<string, string> = {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      };
+      if (isAdmin) {
+        reqHeaders['X-Admin-Role'] = 'super_admin';
+        reqHeaders['Authorization'] = 'Bearer admin';
+      }
+
       // 1. Hydrate Stories from authoritative server with anti-cache
       let res = await fetch(`/api/data.php?collection=stories&t=${timestamp}`, {
         cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+        headers: reqHeaders,
       }).catch(() => null);
       if (!res || !res.ok) {
-        res = await fetch(`/api/data/stories?t=${timestamp}`, { cache: 'no-store' }).catch(() => null);
+        res = await fetch(`/api/data/stories?t=${timestamp}`, {
+          cache: 'no-store',
+          headers: reqHeaders,
+        }).catch(() => null);
       }
       if (res && res.ok) {
         const serverData = await res.json();
         if (Array.isArray(serverData) && serverData.length > 0) {
-          const localStories = this.getLocalStories();
-          const localMap = new Map<string, GalleryStory>(localStories.map((s) => [s.id, s]));
-          const merged: GalleryStory[] = [];
-          const toSyncToServer: GalleryStory[] = [];
-
-          for (const sStory of serverData) {
-            const lStory = localMap.get(sStory.id);
-            if (!lStory) {
-              merged.push(sStory);
-            } else {
-              const serverTime = new Date(sStory.updatedAt || 0).getTime();
-              const localTime = new Date(lStory.updatedAt || 0).getTime();
-              if (localTime > serverTime) {
-                merged.push(lStory);
-                toSyncToServer.push(lStory);
-              } else {
-                merged.push(sStory);
+          const cleanedStories: GalleryStory[] = [];
+          for (const item of serverData) {
+            if (!item) continue;
+            if (item.id && (item.title || item.name)) {
+              cleanedStories.push(item);
+            } else if ((item['0'] || item[0]) && !item.title) {
+              // Unpack corrupted batch object
+              for (const k of Object.keys(item)) {
+                const sub = item[k];
+                if (sub && typeof sub === 'object' && sub.id && (sub.title || sub.name)) {
+                  cleanedStories.push(sub);
+                }
               }
-              localMap.delete(sStory.id);
             }
           }
 
-          for (const [, remainingLocal] of localMap) {
-            merged.push(remainingLocal);
-            toSyncToServer.push(remainingLocal);
+          if (cleanedStories.length > 0) {
+            cleanedStories.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+            this.saveLocalStories(cleanedStories);
+            dataSyncBus.emit('stories', cleanedStories);
           }
-
-          merged.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-          this.saveLocalStories(merged);
-          dataSyncBus.emit('stories', merged);
-
-          for (const item of toSyncToServer) {
-            this.syncServer('stories', item, 'POST', item.id);
-          }
-        } else {
-          this.syncServer('stories', INITIAL_GALLERY_STORIES, 'POST');
         }
       }
 
       // 2. Hydrate Categories from authoritative server
       let catRes = await fetch(`/api/data.php?collection=gallery_categories&t=${timestamp}`, {
         cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+        headers: reqHeaders,
       }).catch(() => null);
       if (!catRes || !catRes.ok) {
-        catRes = await fetch(`/api/data/gallery_categories?t=${timestamp}`, { cache: 'no-store' }).catch(() => null);
+        catRes = await fetch(`/api/data/gallery_categories?t=${timestamp}`, {
+          cache: 'no-store',
+          headers: reqHeaders,
+        }).catch(() => null);
       }
       if (catRes && catRes.ok) {
         const serverCats = await catRes.json();
         if (Array.isArray(serverCats) && serverCats.length > 0) {
-          const localCats = this.getLocalCategories();
-          const localCatMap = new Map<string, GalleryCategory>(localCats.map((c) => [c.id, c]));
-          const mergedCats: GalleryCategory[] = [];
-
-          for (const sCat of serverCats) {
-            const lCat = localCatMap.get(sCat.id);
-            if (!lCat) {
-              mergedCats.push(sCat);
-            } else {
-              const sTime = new Date(sCat.updatedAt || 0).getTime();
-              const lTime = new Date(lCat.updatedAt || 0).getTime();
-              mergedCats.push(lTime > sTime ? lCat : sCat);
-              localCatMap.delete(sCat.id);
-            }
-          }
-
-          for (const [, remainingCat] of localCatMap) {
-            mergedCats.push(remainingCat);
-          }
-
-          mergedCats.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-          this.saveLocalCategories(mergedCats);
-          dataSyncBus.emit('gallery_categories', mergedCats);
-        } else {
-          this.syncServer('gallery_categories', INITIAL_GALLERY_CATEGORIES, 'POST');
+          serverCats.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+          this.saveLocalCategories(serverCats);
+          dataSyncBus.emit('gallery_categories', serverCats);
         }
       }
     } catch {
@@ -1094,10 +1100,10 @@ class GalleryService {
     return { success: true, message: 'Category display order updated successfully.' };
   }
 
-  deleteCategory(
+  async deleteCategory(
     id: string,
     currentUserRole?: string
-  ): { success: boolean; hasContent?: boolean; count?: number; message: string } {
+  ): Promise<{ success: boolean; hasContent?: boolean; count?: number; message: string }> {
     if (currentUserRole !== 'super_admin') {
       return { success: false, message: 'Unauthorized: Only Super Admin can delete categories.' };
     }
@@ -1121,15 +1127,15 @@ class GalleryService {
     const updated = currentList.filter((c) => c.id !== id);
     this.saveLocalCategories(updated);
 
-    this.syncServer('gallery_categories', null, 'DELETE', id);
+    await this.syncServer('gallery_categories', null, 'DELETE', id);
     dataSyncBus.emit('gallery_categories', updated);
     return { success: true, message: `Category "${cat.name}" deleted successfully.` };
   }
 
-  deleteMultipleCategories(
+  async deleteMultipleCategories(
     ids: string[],
     currentUserRole?: string
-  ): { success: boolean; deletedCount: number; skippedCount: number; message: string } {
+  ): Promise<{ success: boolean; deletedCount: number; skippedCount: number; message: string }> {
     if (currentUserRole !== 'super_admin') {
       return { success: false, deletedCount: 0, skippedCount: ids.length, message: 'Unauthorized: Only Super Admin can delete categories.' };
     }
@@ -1152,11 +1158,13 @@ class GalleryService {
 
     if (deletedCount > 0) {
       this.saveLocalCategories(remaining);
+      const deletePromises: Promise<any>[] = [];
       ids.forEach((id) => {
         if (!remaining.some((r) => r.id === id)) {
-          this.syncServer('gallery_categories', null, 'DELETE', id);
+          deletePromises.push(this.syncServer('gallery_categories', null, 'DELETE', id));
         }
       });
+      await Promise.all(deletePromises);
       dataSyncBus.emit('gallery_categories', remaining);
     }
 

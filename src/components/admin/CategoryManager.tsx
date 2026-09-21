@@ -91,7 +91,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
     setIsBulkDeleting(true);
     try {
       if (type === 'gallery') {
-        const res = galleryService.deleteMultipleCategories(selectedCategoryIds, currentUserRole);
+        const res = await galleryService.deleteMultipleCategories(selectedCategoryIds, currentUserRole);
         if (res.success) {
           showToast('success', res.message);
           setSelectedCategoryIds([]);
@@ -352,7 +352,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({
       if (deleteContentCount === 0) {
         // Direct Delete
         if (type === 'gallery') {
-          const res = galleryService.deleteCategory(deleteTarget.id, currentUserRole);
+          const res = await galleryService.deleteCategory(deleteTarget.id, currentUserRole);
           if (res.success) {
             showToast('success', res.message);
             setDeleteTarget(null);

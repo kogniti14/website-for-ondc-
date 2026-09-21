@@ -121,7 +121,10 @@ const uploadImageToServer = async (file: File, base64Fallback: string, folder: s
     if (res && res.ok) {
       const data = await res.json();
       if (data.success && (data.url || data.fileUrl)) {
-        return data.url || data.fileUrl;
+        const rawUrl: string = data.url || data.fileUrl;
+        return rawUrl.includes('?v=') || rawUrl.startsWith('data:')
+          ? rawUrl
+          : `${rawUrl}?v=${Date.now()}`;
       }
     }
   } catch (err) {
