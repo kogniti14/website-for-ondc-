@@ -126,6 +126,7 @@ export interface B2BBusiness {
   cin?: string;
   cinNumber?: string;
   createdAt?: string;
+  updatedAt?: string;
   policyAccepted?: boolean;
   policyAcceptedAt?: string;
   policyAcceptedVersion?: string;
@@ -470,6 +471,7 @@ export interface Coupon {
 export interface Category {
   id: string;
   name: string;
+  slug?: string;
   icon?: string;
   count?: number;
   description?: string;

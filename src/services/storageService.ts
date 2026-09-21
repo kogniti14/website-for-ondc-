@@ -252,8 +252,30 @@ class StorageService {
           if (item.isArray && Array.isArray(serverData)) {
             // Server database is authoritative: replace local store without resurrecting deleted items
             if (serverData.length > 0) {
-              this.setItem(item.key, serverData);
-              dataSyncBus.emit(item.collection, serverData);
+              const localItems = this.getItem<any[]>(item.key, []);
+              if (Array.isArray(localItems) && localItems.length > 0) {
+                const mergedList = serverData.map((serverItem: any) => {
+                  const localMatch = localItems.find((loc: any) => loc.id === serverItem.id);
+                  if (localMatch && localMatch.updatedAt && serverItem.updatedAt) {
+                    const localTime = new Date(localMatch.updatedAt).getTime();
+                    const serverTime = new Date(serverItem.updatedAt).getTime();
+                    if (localTime > serverTime) {
+                      return localMatch;
+                    }
+                  }
+                  return serverItem;
+                });
+                for (const loc of localItems) {
+                  if (!mergedList.some((m: any) => m.id === loc.id)) {
+                    mergedList.push(loc);
+                  }
+                }
+                this.setItem(item.key, mergedList);
+                dataSyncBus.emit(item.collection, mergedList);
+              } else {
+                this.setItem(item.key, serverData);
+                dataSyncBus.emit(item.collection, serverData);
+              }
             }
           } else if (!item.isArray) {
             // Object collection: handle both direct object and unwrapped single-item array
@@ -668,11 +690,11 @@ class StorageService {
     }
   }
 
-  updateB2BDocument(
+  async updateB2BDocument(
     businessId: string,
     docType: B2BDocumentType,
     attachment: B2BDocumentAttachment
-  ): boolean {
+  ): Promise<boolean> {
     const list = this.getB2BBusinesses();
     const target = list.find((b) => b.id === businessId);
     if (!target) return false;
@@ -742,13 +764,14 @@ class StorageService {
       target.documents.push(docEntry);
     }
 
+    target.updatedAt = now;
     this.setItem(KEYS.B2B_BUSINESSES, list);
-    this.syncServer('b2b_businesses', target);
     dataSyncBus.emit('b2b_businesses', list);
+    await this.syncServer('b2b_businesses', target);
     return true;
   }
 
-  updateB2BDocumentStatus(
+  async updateB2BDocumentStatus(
     businessId: string,
     docType: B2BDocumentType,
     status: 'verified' | 'rejected' | 'requires_resubmission' | 'under_review' | 'pending',
@@ -758,7 +781,7 @@ class StorageService {
       reviewedBy?: string;
       reviewedAt?: string;
     }
-  ): boolean {
+  ): Promise<boolean> {
     const list = this.getB2BBusinesses();
     const target = list.find((b) => b.id === businessId);
     if (!target) return false;
@@ -782,7 +805,16 @@ class StorageService {
         ? 'request_resubmission'
         : 'replace';
 
-    // 1. Update kycDocuments if array
+    const docLabels: Record<string, string> = {
+      gst_certificate: 'GST Certificate',
+      msme_certificate: 'MSME / Udyam Certificate',
+      moa: 'MOA — Memorandum of Association',
+      aoa: 'AOA — Articles of Association',
+      coi: 'COI — Certificate of Incorporation',
+    };
+    const docLabel = docLabels[docType] || docType;
+
+    // 1. Update or append kycDocuments if array
     if (Array.isArray(target.kycDocuments)) {
       const idx = target.kycDocuments.findIndex(
         (d: any) => d.type === docType || d.documentType === docType
@@ -800,13 +832,41 @@ class StorageService {
           lastAction: actionType,
           lastActionAt: now,
         };
+      } else {
+        target.kycDocuments.push({
+          id: `kyc_${docType}_${Date.now()}`,
+          documentType: docType,
+          type: docType,
+          name: docLabel,
+          originalFilename: `${docType}.pdf`,
+          documentUrl: '',
+          uploadedAt: now,
+          status,
+          verificationStatus: status,
+          updatedAt: now,
+          reviewedAt: metadata?.reviewedAt || now,
+          reviewedBy: metadata?.reviewedBy || 'Super Admin',
+          rejectionReason: metadata?.rejectionReason,
+          resubmissionReason: metadata?.resubmissionReason,
+          lastAction: actionType,
+          lastActionAt: now,
+        } as any);
       }
     }
-    // 2. Update kycDocuments if object
-    else if (target.kycDocuments && typeof target.kycDocuments === 'object' && key) {
-      if ((target.kycDocuments as any)[key]) {
+    // 2. Update or set kycDocuments if object
+    if (!target.kycDocuments || typeof target.kycDocuments !== 'object' || !Array.isArray(target.kycDocuments)) {
+      if (!target.kycDocuments || typeof target.kycDocuments !== 'object') {
+        target.kycDocuments = {};
+      }
+      if (key) {
         (target.kycDocuments as any)[key] = {
-          ...(target.kycDocuments as any)[key],
+          ...((target.kycDocuments as any)[key] || {
+            id: `kyc_${docType}_${Date.now()}`,
+            documentType: docType,
+            type: docType,
+            name: docLabel,
+            uploadedAt: now,
+          }),
           status,
           verificationStatus: status,
           updatedAt: now,
@@ -820,30 +880,73 @@ class StorageService {
       }
     }
 
-    // 3. Update documents array
-    if (Array.isArray(target.documents)) {
-      const docIdx = target.documents.findIndex(
-        (d: any) =>
-          d.documentType === docType ||
-          (d.name && d.name.toLowerCase().includes(docType.replace('_', ' '))) ||
-          (d.type && d.type.toLowerCase().includes(docType.replace('_', ' ')))
-      );
-      if (docIdx >= 0) {
-        target.documents[docIdx] = {
-          ...target.documents[docIdx],
-          status,
-          updatedAt: now,
-          rejectionReason: metadata?.rejectionReason,
-          resubmissionReason: metadata?.resubmissionReason,
-          reviewedBy: metadata?.reviewedBy || 'Super Admin',
-          reviewedAt: metadata?.reviewedAt || now,
-        } as any;
+    // 3. Update or append documents array
+    if (!Array.isArray(target.documents)) {
+      target.documents = [];
+    }
+    const docIdx = target.documents.findIndex(
+      (d: any) =>
+        d.documentType === docType ||
+        (d.name && d.name.toLowerCase().includes(docType.replace('_', ' '))) ||
+        (d.type && d.type.toLowerCase().includes(docType.replace('_', ' '))) ||
+        (d.name && d.name.toLowerCase().includes(docType.split('_')[0]))
+    );
+    if (docIdx >= 0) {
+      target.documents[docIdx] = {
+        ...target.documents[docIdx],
+        documentType: docType,
+        status,
+        updatedAt: now,
+        rejectionReason: metadata?.rejectionReason,
+        resubmissionReason: metadata?.resubmissionReason,
+        reviewedBy: metadata?.reviewedBy || 'Super Admin',
+        reviewedAt: metadata?.reviewedAt || now,
+      } as any;
+    } else {
+      target.documents.push({
+        name: docLabel,
+        documentType: docType,
+        type: 'pdf',
+        status,
+        uploadedAt: now,
+        updatedAt: now,
+        rejectionReason: metadata?.rejectionReason,
+        resubmissionReason: metadata?.resubmissionReason,
+        reviewedBy: metadata?.reviewedBy || 'Super Admin',
+        reviewedAt: metadata?.reviewedAt || now,
+      } as any);
+    }
+
+    target.updatedAt = now;
+
+    // Check independent statutory document statuses to update business verificationStatus
+    const STATUTORY_TYPES: B2BDocumentType[] = ['gst_certificate', 'msme_certificate', 'moa', 'aoa', 'coi'];
+    const statuses = STATUTORY_TYPES.map((t) => {
+      if (Array.isArray(target.kycDocuments)) {
+        const d = target.kycDocuments.find((item: any) => item.type === t || item.documentType === t);
+        return d?.status || 'pending';
       }
+      const k = map[t];
+      if (target.kycDocuments && typeof target.kycDocuments === 'object' && k && (target.kycDocuments as any)[k]) {
+        return (target.kycDocuments as any)[k].status || 'pending';
+      }
+      const foundInDocs = target.documents?.find((d: any) => d.documentType === t);
+      return foundInDocs?.status || 'pending';
+    });
+
+    if (statuses.every((s) => s === 'verified')) {
+      target.verificationStatus = 'verified';
+    } else if (statuses.some((s) => s === 'rejected')) {
+      target.verificationStatus = 'rejected';
+    } else if (statuses.some((s) => s === 'requires_resubmission')) {
+      target.verificationStatus = 'requires_resubmission';
+    } else if (statuses.some((s) => s === 'under_review')) {
+      target.verificationStatus = 'under_review';
     }
 
     this.setItem(KEYS.B2B_BUSINESSES, list);
-    this.syncServer('b2b_businesses', target);
     dataSyncBus.emit('b2b_businesses', list);
+    await this.syncServer('b2b_businesses', target);
     return true;
   }
 

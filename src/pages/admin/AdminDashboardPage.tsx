@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   BarChart3,
   Package,
@@ -216,9 +216,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           mimeType: found.type === 'pdf' ? 'application/pdf' : 'image/jpeg',
           fileType: found.type === 'pdf' ? 'application/pdf' : 'image/jpeg',
           uploadedAt: found.uploadedAt,
+          updatedAt: found.updatedAt,
           fileSize: found.fileSize || 0,
           status: found.status || 'pending',
           version: found.version || 1,
+          rejectionReason: found.rejectionReason,
+          resubmissionReason: found.resubmissionReason,
+          reviewedBy: found.reviewedBy,
+          reviewedAt: found.reviewedAt,
         };
       }
     }
@@ -243,7 +248,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setB2bKycMessage(null);
   };
 
-  const handleSaveKycStatus = () => {
+  const handleSaveKycStatus = async () => {
     if (!selectedBizForKycReview) return;
     storageService.updateB2BVerificationStatus(
       selectedBizForKycReview.id,
@@ -270,7 +275,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setTimeout(() => setB2bKycMessage(null), 5000);
   };
 
-  const handleConfirmDocAction = () => {
+  const handleConfirmDocAction = async () => {
     if (!docActionModal || !selectedBizForKycReview) return;
     const { docType, docLabel, action, reason } = docActionModal;
     const now = new Date().toISOString();
@@ -292,7 +297,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       metadata.resubmissionReason = reason.trim() || 'Please re-upload a clear, valid official copy of this statutory certificate.';
     }
 
-    storageService.updateB2BDocumentStatus(selectedBizForKycReview.id, docType, newStatus, metadata);
+    await storageService.updateB2BDocumentStatus(selectedBizForKycReview.id, docType, newStatus, metadata);
 
     const updatedBusinesses = storageService.getB2BBusinesses();
     const updatedBiz = updatedBusinesses.find((b) => b.id === selectedBizForKycReview.id);
@@ -406,8 +411,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   const handleDownloadDoc = (url: string, filename: string) => {
     if (!url) return;
+    let cleanUrl = url;
+    if (!cleanUrl.startsWith('http') && !cleanUrl.startsWith('/') && !cleanUrl.startsWith('data:') && !cleanUrl.startsWith('blob:')) {
+      cleanUrl = '/' + cleanUrl;
+    }
     const a = document.createElement('a');
-    a.href = url;
+    a.href = cleanUrl;
     a.download = filename || 'b2b-document';
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
@@ -415,6 +424,55 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     a.click();
     document.body.removeChild(a);
   };
+
+  // Safe displayable preview data (converts base64 PDF into blob URL so Chrome/Safari never display blank)
+  const previewData = useMemo(() => {
+    if (!adminPreviewDoc || !adminPreviewDoc.url) return null;
+    const raw = adminPreviewDoc.url;
+    const isPdf = raw.includes('.pdf') || (adminPreviewDoc.fileType && adminPreviewDoc.fileType.includes('pdf')) || raw.startsWith('data:application/pdf');
+
+    if (raw.startsWith('data:application/pdf') || (raw.startsWith('data:') && isPdf)) {
+      try {
+        const parts = raw.split(',');
+        const mime = parts[0].match(/:(.*?);/)?.[1] || 'application/pdf';
+        const binary = atob(parts[1]);
+        const array = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          array[i] = binary.charCodeAt(i);
+        }
+        const blob = new Blob([array], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        return {
+          displayUrl: blobUrl,
+          downloadUrl: blobUrl,
+          isPdf: true,
+          isBlob: true,
+        };
+      } catch (e) {
+        console.error('Error parsing base64 PDF:', e);
+      }
+    }
+
+    let cleanUrl = raw;
+    if (!cleanUrl.startsWith('http') && !cleanUrl.startsWith('/') && !cleanUrl.startsWith('data:')) {
+      cleanUrl = '/' + cleanUrl;
+    }
+
+    return {
+      displayUrl: cleanUrl,
+      downloadUrl: cleanUrl,
+      isPdf,
+      isBlob: false,
+    };
+  }, [adminPreviewDoc]);
+
+  useEffect(() => {
+    return () => {
+      if (previewData && previewData.isBlob && previewData.displayUrl) {
+        URL.revokeObjectURL(previewData.displayUrl);
+      }
+    };
+  }, [previewData]);
 
   // Clear selections when switching tabs
   useEffect(() => {
@@ -11011,21 +11069,23 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <button
                   type="button"
-                  onClick={() => handleDownloadDoc(adminPreviewDoc.url, adminPreviewDoc.name)}
+                  onClick={() => handleDownloadDoc(previewData?.downloadUrl || adminPreviewDoc.url, adminPreviewDoc.name)}
                   className="btn btn-sm btn-outline"
-                  style={{ color: '#FFFFFF', borderColor: '#475569', fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}
+                  style={{ color: '#FFFFFF', borderColor: '#475569', fontSize: '0.75rem', padding: '0.3rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
                 >
                   <Download size={13} /> Download
                 </button>
-                <a
-                  href={adminPreviewDoc.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => {
+                    const targetUrl = previewData?.displayUrl || adminPreviewDoc.url;
+                    window.open(targetUrl, '_blank');
+                  }}
                   className="btn btn-sm btn-outline"
                   style={{ color: '#FFFFFF', borderColor: '#475569', fontSize: '0.75rem', padding: '0.3rem 0.6rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
                 >
                   <ExternalLink size={13} /> Open in New Tab
-                </a>
+                </button>
                 <button
                   type="button"
                   onClick={() => setAdminPreviewDoc(null)}
@@ -11051,15 +11111,40 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 padding: '1rem',
               }}
             >
-              {adminPreviewDoc.url.includes('.pdf') || adminPreviewDoc.fileType?.includes('pdf') ? (
-                <iframe
-                  src={adminPreviewDoc.url}
-                  title={adminPreviewDoc.name}
-                  style={{ width: '100%', height: '70vh', border: 'none', borderRadius: '8px', background: '#FFFFFF' }}
-                />
+              {previewData?.isPdf ? (
+                <div style={{ width: '100%', height: '72vh', display: 'flex', flexDirection: 'column' }}>
+                  <iframe
+                    src={previewData.displayUrl}
+                    title={adminPreviewDoc.name}
+                    style={{ width: '100%', flex: 1, border: 'none', borderRadius: '8px', background: '#FFFFFF' }}
+                  />
+                  <div style={{ padding: '0.6rem 1rem', background: '#1E293B', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '0 0 8px 8px' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
+                      Official Statutory Document • Secure In-Admin Preview
+                    </span>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => window.open(previewData.displayUrl, '_blank')}
+                        className="btn btn-xs btn-primary"
+                        style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem' }}
+                      >
+                        <ExternalLink size={12} /> Full Screen
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadDoc(previewData.downloadUrl, adminPreviewDoc.name)}
+                        className="btn btn-xs btn-outline"
+                        style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem', color: '#FFFFFF', borderColor: '#64748B' }}
+                      >
+                        <Download size={12} /> Save PDF
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <img
-                  src={adminPreviewDoc.url}
+                  src={previewData?.displayUrl || adminPreviewDoc.url}
                   alt={adminPreviewDoc.name}
                   style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px' }}
                 />

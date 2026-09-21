@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Product, UserRole, Category, GalleryStory, CompanyCertification, SiteMedia } from '../../types';
 import { CATEGORIES } from '../../data/mockProducts';
+import { ProductCard } from '../../components/products/ProductCard';
 import { storageService } from '../../services/storageService';
 import { galleryService } from '../../services/galleryService';
 import { certificationService } from '../../services/certificationService';
@@ -49,6 +50,12 @@ export const HomePage: React.FC<HomePageProps> = ({
 }) => {
   const [deliveredUnits, setDeliveredUnits] = useState<number>(() => storageService.getDeliveredUnitsCount());
   const [siteMedia, setSiteMedia] = useState<SiteMedia>(() => storageService.getSiteMedia());
+  const [certificationsList, setCertificationsList] = useState<CompanyCertification[]>(() =>
+    certificationService.getCertificates({ visibility: 'b2c', status: 'published' })
+  );
+  const [storiesList, setStoriesList] = useState<GalleryStory[]>(() =>
+    galleryService.getStories({ visibility: 'b2c', status: 'published' })
+  );
 
   useEffect(() => {
     const updateUnits = () => {
@@ -61,28 +68,35 @@ export const HomePage: React.FC<HomePageProps> = ({
     const unsubMedia = dataSyncBus.subscribe('site_media', (m) => {
       if (m) setSiteMedia(m);
     });
+    const unsubCerts = dataSyncBus.subscribe('certifications', () => {
+      setCertificationsList(certificationService.getCertificates({ visibility: 'b2c', status: 'published' }));
+    });
+    const unsubStories = dataSyncBus.subscribe('stories', () => {
+      setStoriesList(galleryService.getStories({ visibility: 'b2c', status: 'published' }));
+    });
 
     return () => {
       unsubOrders();
       unsubB2C();
       unsubB2B();
       unsubMedia();
+      unsubCerts();
+      unsubStories();
     };
   }, []);
 
-  const featuredStories = galleryService
-    .getStories({ visibility: 'b2c', status: 'published', featuredOnly: true })
-    .slice(0, 3);
+  const newArrivalProducts = products.filter((p) => p.isNewArrival);
+  const displayNewArrivals = newArrivalProducts.length > 0 ? newArrivalProducts.slice(0, 4) : products.slice(0, 4);
+
+  const featuredStories = storiesList.filter((s) => s.featured).slice(0, 3);
   const displayStories = featuredStories.length > 0
     ? featuredStories
-    : galleryService.getStories({ visibility: 'b2c', status: 'published' }).slice(0, 3);
+    : storiesList.slice(0, 3);
 
-  const featuredCertifications = certificationService
-    .getCertificates({ visibility: 'b2c', status: 'published', featuredOnly: true })
-    .slice(0, 3);
+  const featuredCertifications = certificationsList.filter((c) => c.featured).slice(0, 3);
   const displayCertifications = featuredCertifications.length > 0
     ? featuredCertifications
-    : certificationService.getCertificates({ visibility: 'b2c', status: 'published' }).slice(0, 3);
+    : certificationsList.slice(0, 3);
 
   return (
     <div>
@@ -460,7 +474,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 <div
                   key={cat.id}
                   onClick={() => {
-                    onSelectCategory(cat.name);
+                    onSelectCategory(cat.id || cat.name);
                     setActiveTab('products');
                   }}
                   className="card"
@@ -821,6 +835,83 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
+      {/* 5. New Arrivals & Smart Innovations Section */}
+      <section style={{ padding: '4.5rem 0', backgroundColor: '#FFFFFF' }}>
+        <div className="container">
+          <div className="flex items-center justify-between gap-4 flex-wrap" style={{ marginBottom: '2rem' }}>
+            <div>
+              <span
+                className="badge"
+                style={{
+                  background: 'rgba(147, 51, 234, 0.1)',
+                  color: '#7E22CE',
+                  border: '1px solid rgba(147, 51, 234, 0.25)',
+                  marginBottom: '0.4rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                }}
+              >
+                <Sparkles size={13} className="text-purple-600" /> State-of-the-Art Technology
+              </span>
+              <h2 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--slate-900)', letterSpacing: '-0.02em' }}>
+                New Arrivals & Smart Innovations
+              </h2>
+              <p style={{ color: 'var(--slate-500)', fontSize: '0.92rem', marginTop: '0.25rem' }}>
+                Explore our newly launched tree-free paper innovations, premium executive notebooks, and high-opacity circular desk stationery.
+              </p>
+            </div>
+            <button
+              onClick={() => setActiveTab('new-arrivals')}
+              className="btn btn-outline"
+              style={{ borderRadius: 'var(--radius-full)', fontWeight: 700 }}
+            >
+              Explore All New Arrivals <ArrowRight size={16} />
+            </button>
+          </div>
+
+          {displayNewArrivals.length > 0 ? (
+            <div className="product-grid">
+              {displayNewArrivals.map((p) => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  onOpenDetails={onOpenProduct}
+                  onBuyNow={onBuyNow}
+                />
+              ))}
+            </div>
+          ) : (
+            <div
+              className="card"
+              style={{
+                textAlign: 'center',
+                padding: '3.5rem 2rem',
+                borderRadius: 'var(--radius-xl)',
+                background: '#F8FAFC',
+                border: '1px dashed var(--slate-300)',
+              }}
+            >
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>✨</div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--slate-800)', marginBottom: '0.4rem' }}>
+                New Arrivals Launching Soon
+              </h3>
+              <p style={{ color: 'var(--slate-500)', fontSize: '0.9rem', maxWidth: '480px', margin: '0 auto 1.5rem' }}>
+                Our research & development team is constantly manufacturing novel circular paper products from seasonal crop residues.
+              </p>
+              <button
+                onClick={() => setActiveTab('shop')}
+                className="btn btn-primary btn-sm"
+                style={{ borderRadius: 'var(--radius-full)', padding: '0.6rem 1.5rem' }}
+              >
+                Browse Full Product Catalog <ArrowRight size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* 6. Why Choose Kogniti Minds */}
       <section style={{ padding: '4rem 0', backgroundColor: '#F1F5F9' }}>
@@ -1075,41 +1166,41 @@ export const HomePage: React.FC<HomePageProps> = ({
       </section>
 
       {/* 8. Featured Certifications & Recognitions Showcase */}
-      {displayCertifications.length > 0 && (
-        <section style={{ padding: '4.5rem 0', backgroundColor: '#F8FAFC', borderTop: '1px solid var(--border-subtle)' }}>
-          <div className="container">
-            <div className="flex items-center justify-between gap-4 flex-wrap" style={{ marginBottom: '2.5rem' }}>
-              <div>
-                <span
-                  className="badge"
-                  style={{
-                    background: 'rgba(6, 78, 59, 0.1)',
-                    color: '#065F46',
-                    border: '1px solid rgba(6, 78, 59, 0.25)',
-                    marginBottom: '0.4rem',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  <ShieldCheck size={13} className="inline mr-1 text-emerald-600" /> Trust & Compliance
-                </span>
-                <h2 style={{ fontSize: '2.1rem', fontWeight: 900, color: 'var(--slate-900)', letterSpacing: '-0.02em' }}>
-                  Our Certifications & Recognitions
-                </h2>
-                <p style={{ color: 'var(--slate-500)', fontSize: '0.95rem', marginTop: '0.3rem' }}>
-                  Building trust through statutory recognition, ISO quality assurance, and validated environmental standards.
-                </p>
-              </div>
-
-              <button
-                onClick={() => setActiveTab('certifications')}
-                className="btn btn-outline"
-                style={{ borderRadius: '9999px', fontWeight: 700, borderColor: 'var(--slate-300)' }}
+      <section style={{ padding: '4.5rem 0', backgroundColor: '#F8FAFC', borderTop: '1px solid var(--border-subtle)' }}>
+        <div className="container">
+          <div className="flex items-center justify-between gap-4 flex-wrap" style={{ marginBottom: '2.5rem' }}>
+            <div>
+              <span
+                className="badge"
+                style={{
+                  background: 'rgba(6, 78, 59, 0.1)',
+                  color: '#065F46',
+                  border: '1px solid rgba(6, 78, 59, 0.25)',
+                  marginBottom: '0.4rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                }}
               >
-                View All Certifications <ArrowRight size={16} />
-              </button>
+                <ShieldCheck size={13} className="inline mr-1 text-emerald-600" /> Trust & Compliance
+              </span>
+              <h2 style={{ fontSize: '2.1rem', fontWeight: 900, color: 'var(--slate-900)', letterSpacing: '-0.02em' }}>
+                Our Certifications & Recognitions
+              </h2>
+              <p style={{ color: 'var(--slate-500)', fontSize: '0.95rem', marginTop: '0.3rem' }}>
+                Building trust through statutory recognition, ISO quality assurance, and validated environmental standards.
+              </p>
             </div>
 
+            <button
+              onClick={() => setActiveTab('certifications')}
+              className="btn btn-outline"
+              style={{ borderRadius: '9999px', fontWeight: 700, borderColor: 'var(--slate-300)' }}
+            >
+              View All Certifications <ArrowRight size={16} />
+            </button>
+          </div>
+
+          {displayCertifications.length > 0 ? (
             <div
               className="grid"
               style={{
@@ -1251,9 +1342,35 @@ export const HomePage: React.FC<HomePageProps> = ({
                 );
               })}
             </div>
-          </div>
-        </section>
-      )}
+          ) : (
+            <div
+              className="card"
+              style={{
+                textAlign: 'center',
+                padding: '3rem 2rem',
+                borderRadius: '16px',
+                background: '#FFFFFF',
+                border: '1px dashed var(--slate-300)',
+              }}
+            >
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🛡️</div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--slate-800)', marginBottom: '0.4rem' }}>
+                Official Certifications Being Updated
+              </h3>
+              <p style={{ color: 'var(--slate-500)', fontSize: '0.88rem', maxWidth: '480px', margin: '0 auto 1.25rem' }}>
+                Statutory documents and verified environmental compliance filings are undergoing periodic review.
+              </p>
+              <button
+                onClick={() => setActiveTab('certifications')}
+                className="btn btn-primary btn-sm"
+                style={{ borderRadius: 'var(--radius-full)' }}
+              >
+                View Full Compliance Records <ArrowRight size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* 9. Featured Success Stories & Image Gallery Showcase */}
       {displayStories.length > 0 && (

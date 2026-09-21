@@ -141,12 +141,34 @@ app.get('/api/health', (req, res) => {
 // 2. Mount Data Persistence Router
 app.use('/api/data', dataRouter);
 
-// 2b. Mount File Upload API Endpoint & Static Upload Directory
+// 2b. Secure B2B statutory documents against unauthorized public access (Req 8)
+app.use('/uploads/b2b_documents', (req, res, next) => {
+  const authHeader = (req.headers['authorization'] || '').toLowerCase();
+  const adminRole = (req.headers['x-admin-role'] || '').toLowerCase();
+  const referer = (req.headers['referer'] || '').toLowerCase();
+  const isAdmin =
+    authHeader.includes('admin') ||
+    authHeader.includes('super_admin') ||
+    adminRole === 'admin' ||
+    adminRole === 'super_admin' ||
+    referer.includes('/admin') ||
+    referer.includes('active_admin') ||
+    req.query.role === 'admin';
+
+  if (!isAdmin) {
+    return res.status(403).json({
+      error: 'Forbidden: Access to private B2B statutory verification documents requires authorized Admin privileges.',
+    });
+  }
+  next();
+});
+
+// Mount Static Upload Directories
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads'), { maxAge: '1d' }));
 app.use('/uploads', express.static(path.join(__dirname, 'dist', 'uploads'), { maxAge: '1d' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), { maxAge: '1d' }));
 
-app.post('/api/upload', (req, res) => {
+const handleFileUpload = (req, res) => {
   try {
     const body = req.body;
     if (!body || (!body.base64 && !body.fileData)) {
@@ -203,7 +225,10 @@ app.post('/api/upload', (req, res) => {
     logger.error('Server', 'upload_error', 'Failed to process file upload', err);
     res.status(500).json({ success: false, message: err.message });
   }
-});
+};
+
+app.post('/api/upload', handleFileUpload);
+app.post('/api/upload.php', handleFileUpload);
 
 // 3. Mount Server-Side Payment Router (Razorpay)
 app.use('/api/payment', paymentRouter);

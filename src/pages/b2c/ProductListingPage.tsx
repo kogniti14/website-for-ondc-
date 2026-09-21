@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search,
   Filter,
@@ -8,6 +8,8 @@ import {
   X,
   RotateCcw,
   Sparkles,
+  AlertCircle,
+  Tag,
 } from 'lucide-react';
 import { Product, Category } from '../../types';
 import { CATEGORIES } from '../../data/mockProducts';
@@ -19,6 +21,8 @@ interface ProductListingPageProps {
   categories?: Category[];
   initialCategory?: string;
   initialSearch?: string;
+  initialSort?: string;
+  onlyNewArrivals?: boolean;
   onOpenProduct: (product: Product) => void;
   onBuyNow: (product: Product) => void;
   isShopNowView?: boolean;
@@ -29,19 +33,80 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
   categories,
   initialCategory,
   initialSearch = '',
+  initialSort,
+  onlyNewArrivals: onlyNewArrivalsProp = false,
   onOpenProduct,
   onBuyNow,
   isShopNowView = false,
 }) => {
-  const categoryList = categories && categories.length > 0 ? categories : CATEGORIES;
+  const categoryList: (Category & { slug?: string })[] = (categories && categories.length > 0 ? categories : CATEGORIES) as (Category & { slug?: string })[];
   const [search, setSearch] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'All');
   const [priceRange, setPriceRange] = useState<number>(100000);
   const [minRating, setMinRating] = useState<number>(0);
   const [onlyInStock, setOnlyInStock] = useState<boolean>(false);
   const [onlyBestSellers, setOnlyBestSellers] = useState<boolean>(false);
-  const [sortBy, setSortBy] = useState<string>('recommended');
+  const [onlyNewArrivals, setOnlyNewArrivals] = useState<boolean>(Boolean(onlyNewArrivalsProp));
+  const [sortBy, setSortBy] = useState<string>(initialSort || (onlyNewArrivalsProp ? 'newest' : 'recommended'));
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+
+  // Sync category selection whenever initialCategory prop changes
+  useEffect(() => {
+    if (initialCategory) {
+      const clean = initialCategory.trim().toLowerCase();
+      if (clean === 'all') {
+        setSelectedCategory('All');
+      } else {
+        const found = categoryList.find(
+          (c) =>
+            c.name.toLowerCase() === clean ||
+            c.id.toLowerCase() === clean ||
+            (c.slug && c.slug.toLowerCase() === clean)
+        );
+        setSelectedCategory(found ? found.name : initialCategory);
+      }
+    }
+  }, [initialCategory, categoryList]);
+
+  // Sync search query
+  useEffect(() => {
+    if (initialSearch !== undefined) {
+      setSearch(initialSearch);
+    }
+  }, [initialSearch]);
+
+  // Sync new arrivals filter
+  useEffect(() => {
+    if (onlyNewArrivalsProp !== undefined) {
+      setOnlyNewArrivals(onlyNewArrivalsProp);
+      if (onlyNewArrivalsProp) {
+        setSortBy('newest');
+      }
+    }
+  }, [onlyNewArrivalsProp]);
+
+  // Flexible category matcher: works by ID, slug, or display name
+  const isProductInCategory = (productCategory: string, filterCategory: string) => {
+    if (!filterCategory || filterCategory === 'All') return true;
+    const cleanFilter = filterCategory.toLowerCase();
+    const prodCat = (productCategory || '').toLowerCase();
+    if (prodCat === cleanFilter) return true;
+
+    const matchedCat = categoryList.find(
+      (c) =>
+        c.name.toLowerCase() === cleanFilter ||
+        c.id.toLowerCase() === cleanFilter ||
+        (c.slug && c.slug.toLowerCase() === cleanFilter)
+    );
+    if (matchedCat) {
+      return (
+        prodCat === matchedCat.name.toLowerCase() ||
+        prodCat === matchedCat.id.toLowerCase() ||
+        (matchedCat.slug && prodCat === matchedCat.slug.toLowerCase())
+      );
+    }
+    return false;
+  };
 
   // Filter and sort products
   const filteredProducts = useMemo(() => {
@@ -58,9 +123,16 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
           if (!matches) return false;
         }
 
-        // Category
-        if (selectedCategory !== 'All' && p.category !== selectedCategory) {
+        // Category filter using ID/slug/name
+        if (selectedCategory !== 'All' && !isProductInCategory(p.category, selectedCategory)) {
           return false;
+        }
+
+        // New Arrivals only filter
+        if (onlyNewArrivals && !p.isNewArrival) {
+          // If product is not flagged as new arrival, skip unless no products have the flag
+          const anyFlagged = products.some((prod) => prod.isNewArrival);
+          if (anyFlagged) return false;
         }
 
         // Price
@@ -94,7 +166,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
         if (sortBy === 'bestseller') return (b.isBestSeller ? 1 : 0) - (a.isBestSeller ? 1 : 0);
         return 0; // recommended
       });
-  }, [products, search, selectedCategory, priceRange, minRating, onlyInStock, onlyBestSellers, sortBy]);
+  }, [products, search, selectedCategory, priceRange, minRating, onlyInStock, onlyBestSellers, onlyNewArrivals, sortBy]);
 
   const handleResetFilters = () => {
     setSearch('');
@@ -103,14 +175,20 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
     setMinRating(0);
     setOnlyInStock(false);
     setOnlyBestSellers(false);
+    setOnlyNewArrivals(false);
     setSortBy('recommended');
   };
 
-  const currentCategoryObj = categoryList.find((c) => c.name === selectedCategory);
+  const currentCategoryObj = categoryList.find(
+    (c) =>
+      c.name === selectedCategory ||
+      c.id === selectedCategory ||
+      (c.slug && c.slug === selectedCategory)
+  );
   const selectedCategoryTotalProducts =
     selectedCategory === 'All'
       ? products.length
-      : products.filter((p) => p.category === selectedCategory).length;
+      : products.filter((p) => isProductInCategory(p.category, selectedCategory)).length;
 
   const renderFilterBody = () => (
     <>
@@ -217,6 +295,16 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
           />
           <span>Best Sellers Only</span>
         </label>
+        <label className="flex items-center gap-2" style={{ cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={onlyNewArrivals}
+            onChange={(e) => setOnlyNewArrivals(e.target.checked)}
+          />
+          <span className="flex items-center gap-1 text-purple-700 font-semibold">
+            <Sparkles size={13} className="text-purple-600" /> New Arrivals & Innovations
+          </span>
+        </label>
       </div>
     </>
   );
@@ -225,19 +313,32 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
     <div className="container" style={{ padding: '2.5rem 1.25rem 4rem' }}>
       {/* Header Banner */}
       <div style={{ marginBottom: '2rem' }}>
-        {isShopNowView && (
+        {onlyNewArrivals ? (
+          <div className="flex items-center gap-2" style={{ marginBottom: '0.4rem' }}>
+            <span className="badge badge-purple">✨ State-of-the-Art Technology</span>
+            <span style={{ fontSize: '0.82rem', color: 'var(--slate-500)', fontWeight: 500 }}>
+              Newly Added Innovations • 100% Tree-Free Agro Paper
+            </span>
+          </div>
+        ) : isShopNowView ? (
           <div className="flex items-center gap-2" style={{ marginBottom: '0.4rem' }}>
             <span className="badge badge-amber">★ Popular Demands</span>
             <span style={{ fontSize: '0.82rem', color: 'var(--slate-500)', fontWeight: 500 }}>
               Direct Manufacturer Pricing • 100% Tree-Free Agro Paper
             </span>
           </div>
-        )}
+        ) : null}
         <h1 style={{ fontSize: '2.2rem', fontWeight: 800, marginBottom: '0.5rem' }}>
-          {isShopNowView ? 'Featured Products & Top Sellers' : 'Sustainable Paper & Eco-Stationery Catalog'}
+          {onlyNewArrivals
+            ? 'New Arrivals & Smart Innovations'
+            : isShopNowView
+            ? 'Featured Products & Top Sellers'
+            : 'Sustainable Paper & Eco-Stationery Catalog'}
         </h1>
         <p style={{ color: 'var(--slate-500)', fontSize: '0.95rem' }}>
-          {isShopNowView
+          {onlyNewArrivals
+            ? 'Discover the newest launches in upcycled agricultural residue copier paper, tree-free executive notebooks, and smart desk organizers.'
+            : isShopNowView
             ? 'Discover bestsellers, popular paper reams, executive notebooks, and everyday eco-stationery. Direct GST billing with verified Pan-India delivery.'
             : '100% Tree-Free Agro-Waste Copier Paper, Executive Notebooks, Artisan Journals & Office Supplies'}
         </p>
@@ -457,12 +558,33 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
         {/* Product Grid Area */}
         <div>
           {selectedCategory !== 'All' && selectedCategoryTotalProducts === 0 ? (
-            <CategoryComingSoon
-              categoryName={selectedCategory}
-              categoryDescription={currentCategoryObj?.description}
-              categoryIcon={currentCategoryObj?.icon}
-              onResetCategory={handleResetFilters}
-            />
+            <div>
+              <div
+                className="card"
+                style={{
+                  padding: '0.85rem 1.25rem',
+                  marginBottom: '1.25rem',
+                  borderRadius: 'var(--radius-lg)',
+                  background: '#FEF3C7',
+                  border: '1px solid #FDE68A',
+                  color: '#92400E',
+                  fontWeight: 600,
+                  fontSize: '0.92rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.6rem',
+                }}
+              >
+                <AlertCircle size={18} className="text-amber-600 flex-shrink-0" />
+                <span>No products available in this category.</span>
+              </div>
+              <CategoryComingSoon
+                categoryName={selectedCategory}
+                categoryDescription={currentCategoryObj?.description}
+                categoryIcon={currentCategoryObj?.icon}
+                onResetCategory={handleResetFilters}
+              />
+            </div>
           ) : filteredProducts.length === 0 ? (
             <div
               className="card"

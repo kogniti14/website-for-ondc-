@@ -159,7 +159,7 @@ const MainApp: React.FC = () => {
   useEffect(() => {
     const handleHashCheck = () => {
       const hash = window.location.hash.replace('#', '').toLowerCase();
-      if (['terms', 'privacy', 'refund', 'shipping'].includes(hash)) {
+      if (['terms', 'privacy', 'refund', 'shipping', 'new-arrivals', 'certifications', 'stories', 'shop', 'products', 'b2b'].includes(hash)) {
         setActiveTab(hash);
       }
     };
@@ -293,6 +293,20 @@ const MainApp: React.FC = () => {
             categories={categories}
             initialCategory="All"
             initialSearch=""
+            onOpenProduct={handleOpenProduct}
+            onBuyNow={handleBuyNow}
+            isShopNowView={true}
+          />
+        )}
+
+        {activeTab === 'new-arrivals' && (
+          <ProductListingPage
+            products={products}
+            categories={categories}
+            initialCategory="All"
+            initialSearch=""
+            initialSort="newest"
+            onlyNewArrivals={true}
             onOpenProduct={handleOpenProduct}
             onBuyNow={handleBuyNow}
             isShopNowView={true}

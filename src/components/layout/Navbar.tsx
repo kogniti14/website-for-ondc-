@@ -510,8 +510,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => setActiveTab('products')}
               style={{
-                color: activeTab === 'products' ? 'var(--primary)' : 'var(--slate-700)',
-                borderBottom: activeTab === 'products' ? '2px solid var(--primary)' : '2px solid transparent',
+                color: (activeTab === 'products' || activeTab === 'new-arrivals') ? 'var(--primary)' : 'var(--slate-700)',
+                borderBottom: (activeTab === 'products' || activeTab === 'new-arrivals') ? '2px solid var(--primary)' : '2px solid transparent',
                 paddingBottom: '0.3rem',
               }}
             >
