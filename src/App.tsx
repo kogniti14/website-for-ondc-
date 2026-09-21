@@ -155,24 +155,44 @@ const MainApp: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab, b2bTab]);
 
-  // Support direct hash navigation for policies (e.g. #terms, #privacy, #refund, #shipping)
+  // Support direct hash navigation and back button for all sections
   useEffect(() => {
     const handleHashCheck = () => {
       const hash = window.location.hash.replace('#', '').toLowerCase();
       if (['terms', 'privacy', 'refund', 'shipping', 'new-arrivals', 'certifications', 'stories', 'shop', 'products', 'b2b'].includes(hash)) {
         setActiveTab(hash);
+      } else if (!hash || hash === 'home') {
+        setActiveTab('home');
       }
     };
     handleHashCheck();
     window.addEventListener('hashchange', handleHashCheck);
-    return () => window.removeEventListener('hashchange', handleHashCheck);
+    window.addEventListener('popstate', handleHashCheck);
+    return () => {
+      window.removeEventListener('hashchange', handleHashCheck);
+      window.removeEventListener('popstate', handleHashCheck);
+    };
   }, []);
 
   // Handlers
+  const handleSetActiveTab = (tab: string) => {
+    setActiveTab(tab);
+    if (tab === 'home') {
+      if (window.location.hash) {
+        window.history.pushState(null, '', window.location.pathname + window.location.search);
+      }
+    } else {
+      const targetHash = `#${tab}`;
+      if (window.location.hash !== targetHash) {
+        window.history.pushState(null, '', targetHash);
+      }
+    }
+  };
+
   const handleNavigateToShop = () => {
     setSelectedCategory('All');
     setSearchQuery('');
-    setActiveTab('products');
+    handleSetActiveTab('products');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -237,7 +257,7 @@ const MainApp: React.FC = () => {
       ) : (
         <Navbar
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={handleSetActiveTab}
           openAuthModal={handleOpenAuth}
           openAdminAuthModal={() => {
             setAdminAuthMode('login');
@@ -260,11 +280,11 @@ const MainApp: React.FC = () => {
             categories={categories}
             onSelectCategory={(cat) => {
               setSelectedCategory(cat);
-              setActiveTab('products');
+              handleSetActiveTab('products');
             }}
             onOpenProduct={handleOpenProduct}
             onBuyNow={handleBuyNow}
-            setActiveTab={setActiveTab}
+            setActiveTab={handleSetActiveTab}
             openB2BAuthModal={handleOpenB2BAuth}
             onOpenStory={(story) => setSelectedStory(story)}
             onOpenCertificate={(cert) => setSelectedCertificate(cert)}
@@ -540,7 +560,7 @@ const MainApp: React.FC = () => {
       {/* 3. Footer Rendering */}
       {activeTab !== 'admin' && (
         <Footer
-          setActiveTab={setActiveTab}
+          setActiveTab={handleSetActiveTab}
           setB2bTab={setB2bTab}
           openPolicyModal={(type) => setPolicyModalType(type)}
           isB2B={activeTab === 'b2b'}

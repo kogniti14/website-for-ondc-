@@ -17,11 +17,8 @@ import {
   Building2,
 } from 'lucide-react';
 import { Product, UserRole, Category, GalleryStory, CompanyCertification, SiteMedia } from '../../types';
-import { CATEGORIES } from '../../data/mockProducts';
-import { ProductCard } from '../../components/products/ProductCard';
 import { storageService } from '../../services/storageService';
 import { galleryService } from '../../services/galleryService';
-import { certificationService } from '../../services/certificationService';
 import { dataSyncBus } from '../../services/dataSyncBus';
 import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
 
@@ -52,9 +49,6 @@ export const HomePage: React.FC<HomePageProps> = ({
 }) => {
   const [deliveredUnits, setDeliveredUnits] = useState<number>(() => storageService.getDeliveredUnitsCount());
   const [siteMedia, setSiteMedia] = useState<SiteMedia>(() => storageService.getSiteMedia());
-  const [certificationsList, setCertificationsList] = useState<CompanyCertification[]>(() =>
-    certificationService.getCertificates({ visibility: 'b2c', status: 'published' })
-  );
   const [storiesList, setStoriesList] = useState<GalleryStory[]>(() =>
     galleryService.getStories({ visibility: 'b2c', status: 'published' })
   );
@@ -70,9 +64,6 @@ export const HomePage: React.FC<HomePageProps> = ({
     const unsubMedia = dataSyncBus.subscribe('site_media', (m) => {
       if (m) setSiteMedia(m);
     });
-    const unsubCerts = dataSyncBus.subscribe('certifications', () => {
-      setCertificationsList(certificationService.getCertificates({ visibility: 'b2c', status: 'published' }));
-    });
     const unsubStories = dataSyncBus.subscribe('stories', () => {
       setStoriesList(galleryService.getStories({ visibility: 'b2c', status: 'published' }));
     });
@@ -82,23 +73,14 @@ export const HomePage: React.FC<HomePageProps> = ({
       unsubB2C();
       unsubB2B();
       unsubMedia();
-      unsubCerts();
       unsubStories();
     };
   }, []);
-
-  const newArrivalProducts = products.filter((p) => p.isNewArrival);
-  const displayNewArrivals = newArrivalProducts.length > 0 ? newArrivalProducts.slice(0, 4) : products.slice(0, 4);
 
   const featuredStories = storiesList.filter((s) => s.featured).slice(0, 3);
   const displayStories = featuredStories.length > 0
     ? featuredStories
     : storiesList.slice(0, 3);
-
-  const featuredCertifications = certificationsList.filter((c) => c.featured).slice(0, 3);
-  const displayCertifications = featuredCertifications.length > 0
-    ? featuredCertifications
-    : certificationsList.slice(0, 3);
 
   return (
     <div>
@@ -442,107 +424,50 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </div>
 
-      {/* 2. Featured Categories Section */}
-      <section style={{ padding: '4.5rem 0 3.5rem' }}>
+      {/* 2. Explore Curated Categories Entry Section */}
+      <section style={{ padding: '3.5rem 0', backgroundColor: '#F8FAFC', borderTop: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
-          <div className="flex items-center justify-between gap-4" style={{ marginBottom: '2rem' }}>
-            <div>
-              <span className="badge badge-blue" style={{ marginBottom: '0.4rem' }}>
-                Catalog Architecture
-              </span>
-              <h2 style={{ fontSize: '1.9rem', fontWeight: 800 }}>Explore Curated Categories</h2>
-              <p style={{ color: 'var(--slate-500)', fontSize: '0.92rem', marginTop: '0.2rem' }}>
-                Sustainable paper and eco-stationery engineered from agricultural waste for individuals, schools, offices, and institutions.
-              </p>
-            </div>
-            <button
-              onClick={() => setActiveTab('products')}
-              className="btn btn-outline hide-on-mobile"
-              style={{ borderRadius: 'var(--radius-full)' }}
-            >
-              View All Categories <ArrowRight size={16} />
-            </button>
-          </div>
-
           <div
-            className="grid"
+            className="card"
             style={{
-              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))',
-              gap: '1.25rem',
+              background: '#FFFFFF',
+              borderRadius: 'var(--radius-xl)',
+              padding: 'clamp(2.5rem, 5vw, 3.5rem) clamp(1.5rem, 5vw, 3rem)',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              maxWidth: '820px',
+              margin: '0 auto',
             }}
           >
-            {(categories && categories.length > 0 ? categories : CATEGORIES).map((cat) => {
-              const productCount = products.filter((p) => p.category === cat.name).length;
-              const isComingSoon = productCount === 0;
-
-              return (
-                <div
-                  key={cat.id}
-                  onClick={() => {
-                    onSelectCategory(cat.id || cat.name);
-                    setActiveTab('products');
-                  }}
-                  className="card"
-                  style={{
-                    padding: '1.25rem',
-                    borderRadius: 'var(--radius-lg)',
-                    cursor: 'pointer',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    background: '#ffffff',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    height: '240px',
-                  }}
-                >
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      backgroundImage: `linear-gradient(to top, rgba(15, 23, 42, 0.85) 0%, rgba(15, 23, 42, 0.2) 100%), url(${cat.image})`,
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      transition: 'transform 0.4s ease',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                  />
-
-                  <div style={{ position: 'relative', zIndex: 1 }}>
-                    <span
-                      style={{
-                        background: isComingSoon ? 'rgba(217, 119, 6, 0.92)' : 'rgba(255, 255, 255, 0.2)',
-                        backdropFilter: 'blur(8px)',
-                        color: '#FFFFFF',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        padding: '0.25rem 0.65rem',
-                        borderRadius: 'var(--radius-full)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        boxShadow: isComingSoon ? '0 2px 8px rgba(217, 119, 6, 0.4)' : 'none',
-                      }}
-                    >
-                      {isComingSoon ? '✨ Coming Soon' : `${productCount > 0 ? productCount : cat.count}+ Products`}
-                    </span>
-                  </div>
-
-                  <div style={{ position: 'relative', zIndex: 1, color: '#FFFFFF' }}>
-                    <h4 style={{ color: '#FFFFFF', fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.25rem' }}>
-                      {cat.name}
-                    </h4>
-                    <p style={{ fontSize: '0.75rem', color: '#CBD5E1', lineHeight: '1.4' }}>
-                      {cat.description}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+            <span className="badge badge-blue" style={{ marginBottom: '0.75rem' }}>
+              Catalog Architecture
+            </span>
+            <h2 style={{ fontSize: 'clamp(1.75rem, 3.2vw, 2.3rem)', fontWeight: 800, color: 'var(--slate-900)', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>
+              Explore Curated Categories
+            </h2>
+            <p style={{ color: 'var(--slate-500)', fontSize: '1rem', lineHeight: '1.6', maxWidth: '640px', marginBottom: '2rem' }}>
+              Explore our complete range of sustainable paper, printing paper reams, executive notebooks, journals, office stationery, packaging boxes, and institutional eco-supplies.
+            </p>
+            <button
+              onClick={() => {
+                if (onNavigateToShop) onNavigateToShop();
+                else setActiveTab('products');
+              }}
+              className="btn btn-primary btn-lg"
+              style={{
+                borderRadius: 'var(--radius-full)',
+                padding: '0.85rem 2.25rem',
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                boxShadow: '0 8px 24px rgba(37, 99, 235, 0.25)',
+              }}
+            >
+              Explore All Categories <ArrowRight size={18} />
+            </button>
           </div>
         </div>
       </section>
@@ -843,84 +768,63 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* 5. New Arrivals & Smart Innovations Section */}
-      <section style={{ padding: '4.5rem 0', backgroundColor: '#FFFFFF' }}>
+      {/* 5. New Arrivals & Smart Innovations Entry Section */}
+      <section style={{ padding: '3.5rem 0', backgroundColor: '#FFFFFF', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
-          <div className="flex items-center justify-between gap-4 flex-wrap" style={{ marginBottom: '2rem' }}>
-            <div>
-              <span
-                className="badge"
-                style={{
-                  background: 'rgba(147, 51, 234, 0.1)',
-                  color: '#7E22CE',
-                  border: '1px solid rgba(147, 51, 234, 0.25)',
-                  marginBottom: '0.4rem',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                }}
-              >
-                <Sparkles size={13} className="text-purple-600" /> State-of-the-Art Technology
-              </span>
-              <h2 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--slate-900)', letterSpacing: '-0.02em' }}>
-                New Arrivals & Smart Innovations
-              </h2>
-              <p style={{ color: 'var(--slate-500)', fontSize: '0.92rem', marginTop: '0.25rem' }}>
-                Explore our newly launched tree-free paper innovations, premium executive notebooks, and high-opacity circular desk stationery.
-              </p>
-            </div>
-            <button
-              onClick={() => setActiveTab('new-arrivals')}
-              className="btn btn-outline"
-              style={{ borderRadius: 'var(--radius-full)', fontWeight: 700 }}
-            >
-              Explore All New Arrivals <ArrowRight size={16} />
-            </button>
-          </div>
-
-          {displayNewArrivals.length > 0 ? (
-            <div className="product-grid">
-              {displayNewArrivals.map((p) => (
-                <ProductCard
-                  key={p.id}
-                  product={p}
-                  onOpenDetails={onOpenProduct}
-                  onBuyNow={onBuyNow}
-                />
-              ))}
-            </div>
-          ) : (
-            <div
-              className="card"
+          <div
+            className="card"
+            style={{
+              background: 'linear-gradient(135deg, rgba(243, 232, 255, 0.45) 0%, rgba(255, 255, 255, 0.95) 100%)',
+              borderRadius: 'var(--radius-xl)',
+              padding: 'clamp(2.5rem, 5vw, 3.5rem) clamp(1.5rem, 5vw, 3rem)',
+              boxShadow: '0 4px 20px rgba(147, 51, 234, 0.05)',
+              border: '1px solid rgba(147, 51, 234, 0.18)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              maxWidth: '820px',
+              margin: '0 auto',
+            }}
+          >
+            <span
+              className="badge"
               style={{
-                textAlign: 'center',
-                padding: '3.5rem 2rem',
-                borderRadius: 'var(--radius-xl)',
-                background: '#F8FAFC',
-                border: '1px dashed var(--slate-300)',
+                background: 'rgba(147, 51, 234, 0.1)',
+                color: '#7E22CE',
+                border: '1px solid rgba(147, 51, 234, 0.25)',
+                marginBottom: '0.75rem',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
               }}
             >
-              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>✨</div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--slate-800)', marginBottom: '0.4rem' }}>
-                New Arrivals Launching Soon
-              </h3>
-              <p style={{ color: 'var(--slate-500)', fontSize: '0.9rem', maxWidth: '480px', margin: '0 auto 1.5rem' }}>
-                Our research & development team is constantly manufacturing novel circular paper products from seasonal crop residues.
-              </p>
-              <button
-                onClick={() => {
-                  if (onNavigateToShop) onNavigateToShop();
-                  else setActiveTab('products');
-                }}
-                className="btn btn-primary btn-sm"
-                style={{ borderRadius: 'var(--radius-full)', padding: '0.6rem 1.5rem' }}
-              >
-                Browse Full Product Catalog <ArrowRight size={14} />
-              </button>
-            </div>
-          )}
+              <Sparkles size={13} className="text-purple-600" /> State-of-the-Art Technology
+            </span>
+            <h2 style={{ fontSize: 'clamp(1.75rem, 3.2vw, 2.3rem)', fontWeight: 800, color: 'var(--slate-900)', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>
+              New Arrivals & Smart Innovations
+            </h2>
+            <p style={{ color: 'var(--slate-500)', fontSize: '1rem', lineHeight: '1.6', maxWidth: '640px', marginBottom: '2rem' }}>
+              Explore our newly launched tree-free paper innovations, premium executive notebooks, and high-capacity circular desk stationery engineered from seasonal agricultural residues.
+            </p>
+            <button
+              onClick={() => setActiveTab('new-arrivals')}
+              className="btn btn-primary btn-lg"
+              style={{
+                borderRadius: 'var(--radius-full)',
+                padding: '0.85rem 2.25rem',
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                background: 'linear-gradient(135deg, #7E22CE 0%, #6B21A8 100%)',
+                borderColor: '#6B21A8',
+                boxShadow: '0 8px 24px rgba(126, 34, 206, 0.3)',
+              }}
+            >
+              Explore All New Arrivals <ArrowRight size={18} />
+            </button>
+          </div>
         </div>
       </section>
 
@@ -1176,210 +1080,63 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* 8. Featured Certifications & Recognitions Showcase */}
-      <section style={{ padding: '4.5rem 0', backgroundColor: '#F8FAFC', borderTop: '1px solid var(--border-subtle)' }}>
+      {/* 8. Certifications & Recognitions Entry Section */}
+      <section style={{ padding: '3.5rem 0', backgroundColor: '#F8FAFC', borderTop: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)' }}>
         <div className="container">
-          <div className="flex items-center justify-between gap-4 flex-wrap" style={{ marginBottom: '2.5rem' }}>
-            <div>
-              <span
-                className="badge"
-                style={{
-                  background: 'rgba(6, 78, 59, 0.1)',
-                  color: '#065F46',
-                  border: '1px solid rgba(6, 78, 59, 0.25)',
-                  marginBottom: '0.4rem',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                }}
-              >
-                <ShieldCheck size={13} className="inline mr-1 text-emerald-600" /> Trust & Compliance
-              </span>
-              <h2 style={{ fontSize: '2.1rem', fontWeight: 900, color: 'var(--slate-900)', letterSpacing: '-0.02em' }}>
-                Our Certifications & Recognitions
-              </h2>
-              <p style={{ color: 'var(--slate-500)', fontSize: '0.95rem', marginTop: '0.3rem' }}>
-                Building trust through statutory recognition, ISO quality assurance, and validated environmental standards.
-              </p>
-            </div>
-
+          <div
+            className="card"
+            style={{
+              background: 'linear-gradient(135deg, rgba(236, 253, 245, 0.45) 0%, rgba(255, 255, 255, 0.95) 100%)',
+              borderRadius: 'var(--radius-xl)',
+              padding: 'clamp(2.5rem, 5vw, 3.5rem) clamp(1.5rem, 5vw, 3rem)',
+              boxShadow: '0 4px 20px rgba(6, 78, 59, 0.04)',
+              border: '1px solid rgba(6, 78, 59, 0.18)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              maxWidth: '820px',
+              margin: '0 auto',
+            }}
+          >
+            <span
+              className="badge"
+              style={{
+                background: 'rgba(6, 78, 59, 0.1)',
+                color: '#065F46',
+                border: '1px solid rgba(6, 78, 59, 0.25)',
+                marginBottom: '0.75rem',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+              }}
+            >
+              <ShieldCheck size={14} className="text-emerald-600" /> Trust & Compliance
+            </span>
+            <h2 style={{ fontSize: 'clamp(1.75rem, 3.2vw, 2.3rem)', fontWeight: 800, color: 'var(--slate-900)', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>
+              Our Certifications & Recognitions
+            </h2>
+            <p style={{ color: 'var(--slate-500)', fontSize: '1rem', lineHeight: '1.6', maxWidth: '640px', marginBottom: '2rem' }}>
+              Building trust through statutory recognition, ISO quality assurance, DPIIT Startup India credentials, and validated environmental standards for sustainable public and institutional procurement.
+            </p>
             <button
               onClick={() => setActiveTab('certifications')}
-              className="btn btn-outline"
-              style={{ borderRadius: '9999px', fontWeight: 700, borderColor: 'var(--slate-300)' }}
+              className="btn btn-primary btn-lg"
+              style={{
+                borderRadius: 'var(--radius-full)',
+                padding: '0.85rem 2.25rem',
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                borderColor: '#047857',
+                boxShadow: '0 8px 24px rgba(5, 150, 105, 0.3)',
+              }}
             >
-              View All Certifications <ArrowRight size={16} />
+              View All Certifications <ArrowRight size={18} />
             </button>
           </div>
-
-          {displayCertifications.length > 0 ? (
-            <div
-              className="grid"
-              style={{
-                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
-                gap: '2rem',
-              }}
-            >
-              {displayCertifications.map((cert) => {
-                const isPdf = cert.fileType === 'application/pdf';
-
-                return (
-                  <div
-                    key={cert.id}
-                    onClick={() => {
-                      if (onOpenCertificate) onOpenCertificate(cert);
-                      else setActiveTab('certifications');
-                    }}
-                    style={{
-                      background: '#FFFFFF',
-                      borderRadius: '16px',
-                      overflow: 'hidden',
-                      border: '1px solid var(--border-color)',
-                      boxShadow: '0 4px 15px rgba(0, 0, 0, 0.04)',
-                      transition: 'all 0.25s ease',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      flexDirection: 'column',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-4px)';
-                      e.currentTarget.style.boxShadow = '0 12px 24px rgba(0, 0, 0, 0.08)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.04)';
-                    }}
-                  >
-                    <div style={{ position: 'relative', height: '170px', overflow: 'hidden', background: isPdf ? '#FEF2F2' : '#E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {isPdf ? (
-                        <div style={{ textAlign: 'center', padding: '1rem' }}>
-                          <div
-                            style={{
-                              width: '52px',
-                              height: '52px',
-                              borderRadius: '12px',
-                              backgroundColor: '#FEE2E2',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              margin: '0 auto 0.4rem',
-                            }}
-                          >
-                            <FileText size={28} style={{ color: '#DC2626' }} />
-                          </div>
-                          <div style={{ fontWeight: 800, fontSize: '0.82rem', color: '#991B1B' }}>
-                            Official Document (PDF)
-                          </div>
-                        </div>
-                      ) : (
-                        <img
-                          src={cert.fileUrl}
-                          alt={cert.name}
-                          loading="lazy"
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      )}
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: '12px',
-                          left: '12px',
-                          background: 'rgba(15, 23, 42, 0.85)',
-                          backdropFilter: 'blur(4px)',
-                          color: '#A7F3D0',
-                          padding: '0.2rem 0.65rem',
-                          borderRadius: '6px',
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                        }}
-                      >
-                        {cert.category}
-                      </div>
-                    </div>
-
-                    <div style={{ padding: '1.25rem', flex: '1 0 auto', display: 'flex', flexDirection: 'column' }}>
-                      <div style={{ fontSize: '0.76rem', color: 'var(--slate-500)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        <Building2 size={13} className="text-emerald-600" />
-                        <span style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {cert.issuingAuthority}
-                        </span>
-                      </div>
-
-                      <h3
-                        style={{
-                          fontSize: '1.08rem',
-                          fontWeight: 800,
-                          color: 'var(--slate-900)',
-                          lineHeight: 1.35,
-                          marginBottom: '0.45rem',
-                        }}
-                      >
-                        {cert.name}
-                      </h3>
-
-                      <p
-                        style={{
-                          fontSize: '0.84rem',
-                          color: 'var(--slate-600)',
-                          lineHeight: 1.5,
-                          marginBottom: '1rem',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                        }}
-                      >
-                        {cert.shortDescription}
-                      </p>
-
-                      <div
-                        style={{
-                          borderTop: '1px solid var(--border-subtle)',
-                          paddingTop: '0.85rem',
-                          marginTop: 'auto',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          View Details <ArrowRight size={13} />
-                        </span>
-                        <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 700 }}>
-                          {cert.noExpiry ? 'Permanent' : `Valid: ${cert.expiryDate}`}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div
-              className="card"
-              style={{
-                textAlign: 'center',
-                padding: '3rem 2rem',
-                borderRadius: '16px',
-                background: '#FFFFFF',
-                border: '1px dashed var(--slate-300)',
-              }}
-            >
-              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🛡️</div>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--slate-800)', marginBottom: '0.4rem' }}>
-                Official Certifications Being Updated
-              </h3>
-              <p style={{ color: 'var(--slate-500)', fontSize: '0.88rem', maxWidth: '480px', margin: '0 auto 1.25rem' }}>
-                Statutory documents and verified environmental compliance filings are undergoing periodic review.
-              </p>
-              <button
-                onClick={() => setActiveTab('certifications')}
-                className="btn btn-primary btn-sm"
-                style={{ borderRadius: 'var(--radius-full)' }}
-              >
-                View Full Compliance Records <ArrowRight size={14} />
-              </button>
-            </div>
-          )}
         </div>
       </section>
 
