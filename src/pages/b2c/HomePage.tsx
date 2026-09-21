@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { Product, UserRole, Category, GalleryStory, CompanyCertification, SiteMedia } from '../../types';
 import { CATEGORIES } from '../../data/mockProducts';
-import { ProductCard } from '../../components/products/ProductCard';
 import { storageService } from '../../services/storageService';
 import { galleryService } from '../../services/galleryService';
 import { certificationService } from '../../services/certificationService';
@@ -71,8 +70,6 @@ export const HomePage: React.FC<HomePageProps> = ({
     };
   }, []);
 
-  const featuredProducts = products.filter((p) => p.isFeatured || p.isBestSeller).slice(0, 4);
-  const newArrivals = products.filter((p) => p.isNewArrival || p.stock > 100).slice(0, 4);
   const featuredStories = galleryService
     .getStories({ visibility: 'b2c', status: 'published', featuredOnly: true })
     .slice(0, 3);
@@ -531,35 +528,51 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* 3. Featured Products Grid */}
-      <section style={{ padding: '1rem 0 4rem', backgroundColor: '#F8FAFC' }}>
+      {/* 3. Shop Now Direct Shopping Callout */}
+      <section style={{ padding: '0 0 4rem' }}>
         <div className="container">
-          <div className="flex items-center justify-between gap-4" style={{ marginBottom: '2rem' }}>
-            <div>
-              <div className="flex items-center gap-2" style={{ marginBottom: '0.3rem' }}>
+          <div
+            className="card"
+            style={{
+              background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+              color: '#FFFFFF',
+              borderRadius: 'var(--radius-xl)',
+              padding: '2.5rem 2rem',
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1.5rem',
+              boxShadow: '0 12px 32px rgba(15, 23, 42, 0.12)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+            }}
+          >
+            <div style={{ maxWidth: '640px' }}>
+              <div className="flex items-center gap-2" style={{ marginBottom: '0.5rem' }}>
                 <span className="badge badge-amber">★ Popular Demands</span>
-                <span style={{ fontSize: '0.8rem', color: 'var(--slate-500)' }}>Direct Manufacturer Pricing</span>
+                <span style={{ fontSize: '0.82rem', color: '#94A3B8' }}>Direct Manufacturer Pricing • 100% Tree-Free</span>
               </div>
-              <h2 style={{ fontSize: '1.9rem', fontWeight: 800 }}>Featured Products & Top Sellers</h2>
+              <h3 style={{ fontSize: 'clamp(1.4rem, 2.5vw, 1.85rem)', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.5rem' }}>
+                Ready to Experience Agro-Waste Paper?
+              </h3>
+              <p style={{ color: '#CBD5E1', fontSize: '0.94rem', lineHeight: '1.6', margin: 0 }}>
+                Browse our complete catalog of tree-free copier paper, notebooks, journals and desk essentials. High opacity, jam-free performance, and direct GST billing.
+              </p>
             </div>
             <button
               onClick={() => setActiveTab('shop')}
-              className="btn btn-outline"
-              style={{ borderRadius: 'var(--radius-full)' }}
+              className="btn btn-primary btn-lg"
+              style={{
+                borderRadius: 'var(--radius-full)',
+                padding: '0.85rem 2.25rem',
+                fontSize: '0.95rem',
+                fontWeight: 700,
+                boxShadow: '0 8px 24px rgba(37, 99, 235, 0.4)',
+                whiteSpace: 'nowrap',
+              }}
             >
-              Browse All Products <ArrowRight size={16} />
+              Shop Now <ArrowRight size={18} />
             </button>
-          </div>
-
-          <div className="product-grid">
-            {featuredProducts.map((p) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                onOpenDetails={onOpenProduct}
-                onBuyNow={onBuyNow}
-              />
-            ))}
           </div>
         </div>
       </section>
@@ -808,37 +821,6 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* 5. New Launches Section */}
-      <section style={{ padding: '4.5rem 0' }}>
-        <div className="container">
-          <div className="flex items-center justify-between gap-4" style={{ marginBottom: '2rem' }}>
-            <div>
-              <span className="badge badge-purple" style={{ marginBottom: '0.3rem' }}>
-                State-of-the-Art Technology
-              </span>
-              <h2 style={{ fontSize: '1.9rem', fontWeight: 800 }}>New Arrivals & Smart Innovations</h2>
-            </div>
-            <button
-              onClick={() => setActiveTab('products')}
-              className="btn btn-outline"
-              style={{ borderRadius: 'var(--radius-full)' }}
-            >
-              Explore All <ArrowRight size={16} />
-            </button>
-          </div>
-
-          <div className="product-grid">
-            {newArrivals.map((p) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                onOpenDetails={onOpenProduct}
-                onBuyNow={onBuyNow}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* 6. Why Choose Kogniti Minds */}
       <section style={{ padding: '4rem 0', backgroundColor: '#F1F5F9' }}>

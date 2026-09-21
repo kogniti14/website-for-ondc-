@@ -225,11 +225,21 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
     <div className="container" style={{ padding: '2.5rem 1.25rem 4rem' }}>
       {/* Header Banner */}
       <div style={{ marginBottom: '2rem' }}>
+        {isShopNowView && (
+          <div className="flex items-center gap-2" style={{ marginBottom: '0.4rem' }}>
+            <span className="badge badge-amber">★ Popular Demands</span>
+            <span style={{ fontSize: '0.82rem', color: 'var(--slate-500)', fontWeight: 500 }}>
+              Direct Manufacturer Pricing • 100% Tree-Free Agro Paper
+            </span>
+          </div>
+        )}
         <h1 style={{ fontSize: '2.2rem', fontWeight: 800, marginBottom: '0.5rem' }}>
-          Sustainable Paper & Eco-Stationery Catalog
+          {isShopNowView ? 'Featured Products & Top Sellers' : 'Sustainable Paper & Eco-Stationery Catalog'}
         </h1>
         <p style={{ color: 'var(--slate-500)', fontSize: '0.95rem' }}>
-          100% Tree-Free Agro-Waste Copier Paper, Executive Notebooks, Artisan Journals & Office Supplies
+          {isShopNowView
+            ? 'Discover bestsellers, popular paper reams, executive notebooks, and everyday eco-stationery. Direct GST billing with verified Pan-India delivery.'
+            : '100% Tree-Free Agro-Waste Copier Paper, Executive Notebooks, Artisan Journals & Office Supplies'}
         </p>
       </div>
 
