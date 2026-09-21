@@ -4,7 +4,6 @@ import {
   Briefcase,
   ShieldCheck,
   Truck,
-  Star,
   CheckCircle2,
   Building,
   Sparkles,
@@ -19,6 +18,7 @@ import { Product, Category, GalleryStory, CompanyCertification, SiteMedia } from
 import { storageService } from '../../services/storageService';
 import { dataSyncBus } from '../../services/dataSyncBus';
 import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
+import { TestimonialCarousel } from '../../components/home/TestimonialCarousel';
 
 interface HomePageProps {
   products?: Product[];
@@ -820,136 +820,8 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* 5. Testimonials */}
-      <section style={{ padding: '4.5rem 0' }}>
-        <div className="container">
-          <div style={{ textAlign: 'center', maxWidth: '600px', margin: '0 auto 3rem' }}>
-            <span className="badge badge-amber" style={{ marginBottom: '0.4rem' }}>
-              Client Trust
-            </span>
-            <h2 style={{ fontSize: '2rem', fontWeight: 800 }}>Trusted by Learners, Professionals & Leaders</h2>
-          </div>
-
-          <div
-            className="grid"
-            style={{
-              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
-              gap: '1.5rem',
-            }}
-          >
-            <div className="card" style={{ padding: '1.5rem' }}>
-              <div className="flex items-center gap-1 text-amber-500" style={{ marginBottom: '0.75rem' }}>
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={15} fill="#D97706" />
-                ))}
-              </div>
-              <p style={{ fontSize: '0.88rem', color: 'var(--slate-700)', lineHeight: '1.6', marginBottom: '1.25rem' }}>
-                "We transitioned all 5 campuses of our university to Kogniti 75 GSM agro-waste copier paper. Jam-free high-speed printing during semester exams, prompt GST billing, and real carbon reduction for our annual sustainability report."
-              </p>
-              <div className="flex items-center gap-3">
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    background: 'var(--primary-light)',
-                    color: 'var(--primary)',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.9rem',
-                  }}
-                >
-                  VM
-                </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--slate-900)' }}>
-                    Vikram Malhotra
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
-                    Head of Procurement, EduTech Solutions Pvt Ltd
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card" style={{ padding: '1.5rem' }}>
-              <div className="flex items-center gap-1 text-amber-500" style={{ marginBottom: '0.75rem' }}>
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={15} fill="#D97706" />
-                ))}
-              </div>
-              <p style={{ fontSize: '0.88rem', color: 'var(--slate-700)', lineHeight: '1.6', marginBottom: '1.25rem' }}>
-                "The AgroLeaf executive notebooks and plantable seed pens are phenomenal. The 80 GSM tree-free paper has an incredible natural texture with zero bleed from fountain pens. Quick delivery to our Bengaluru office."
-              </p>
-              <div className="flex items-center gap-3">
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    background: 'var(--emerald-50)',
-                    color: 'var(--emerald-600)',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.9rem',
-                  }}
-                >
-                  AK
-                </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--slate-900)' }}>
-                    Ananya Kulkarni
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
-                    Lead Software Architect, Indiranagar
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="card" style={{ padding: '1.5rem' }}>
-              <div className="flex items-center gap-1 text-amber-500" style={{ marginBottom: '0.75rem' }}>
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={15} fill="#D97706" />
-                ))}
-              </div>
-              <p style={{ fontSize: '0.88rem', color: 'var(--slate-700)', lineHeight: '1.6', marginBottom: '1.25rem' }}>
-                "We ordered 500 custom-embossed Agro-Paper employee onboarding hampers for our corporate annual meet. Our team loved the plantable seed pencils and handcrafted journals. Outstanding B2B support!"
-              </p>
-              <div className="flex items-center gap-3">
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    background: 'var(--amber-50)',
-                    color: 'var(--amber-600)',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.9rem',
-                  }}
-                >
-                  PV
-                </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--slate-900)' }}>
-                    Pooja Verma
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
-                    Director of Workplace Experience, Innovate Hub
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* 5. Client Trust Testimonial Carousel */}
+      <TestimonialCarousel />
 
     </div>
   );

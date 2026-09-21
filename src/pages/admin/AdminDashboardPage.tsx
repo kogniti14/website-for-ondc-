@@ -64,6 +64,7 @@ import { PolicyManagement } from '../../components/admin/PolicyManagement';
 import { BulkActionBar } from '../../components/admin/BulkActionBar';
 import { WHATSAPP_NUMBER } from '../../config/whatsappConfig';
 import { OndcManagement } from '../../components/admin/OndcManagement';
+import { TestimonialManagement } from '../../components/admin/TestimonialManagement';
 
 interface AdminDashboardPageProps {
   products: Product[];
@@ -93,7 +94,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const { currentAdminUser, isSuperAdmin, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery' | 'gallery_categories' | 'certifications' | 'cert_categories' | 'policies' | 'ondc'
+    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery' | 'gallery_categories' | 'certifications' | 'cert_categories' | 'policies' | 'ondc' | 'testimonials'
   >('overview');
 
   // Razorpay Gateway State
@@ -2571,6 +2572,43 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 }}
               >
                 {isSuperAdmin ? '👑 Super Admin' : 'Admin'}
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('testimonials')}
+              data-tab="testimonials"
+              data-active={activeTab === 'testimonials'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'testimonials' ? '#D97706' : 'var(--slate-600)',
+                borderBottom: activeTab === 'testimonials' ? '2px solid #D97706' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'testimonials' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'testimonials' ? '#D97706' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <MessageSquare size={16} style={{ color: '#D97706' }} /> Client Testimonials
+              <span
+                style={{
+                  backgroundColor: '#FEF3C7',
+                  color: '#92400E',
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  padding: '0.1rem 0.4rem',
+                  borderRadius: '4px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Carousel
               </span>
             </button>
             <button
@@ -7163,6 +7201,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         {/* ONDC:RETeB2B Network Management Console */}
         {activeTab === 'ondc' && (
           <OndcManagement />
+        )}
+
+        {/* Client Trust Testimonial Carousel Management */}
+        {activeTab === 'testimonials' && (
+          <TestimonialManagement />
         )}
       </div>
 

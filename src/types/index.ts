@@ -631,3 +631,24 @@ export interface PolicyUpdateRecord {
   error?: string;
 }
 
+// --- Client Trust Testimonial Types ---
+export type TestimonialStatus = 'published' | 'draft' | 'archived';
+
+export interface Testimonial {
+  id: string;
+  name: string;
+  role?: string;
+  designation?: string;
+  company?: string;
+  organization?: string;
+  text: string;
+  rating?: number; // 1 to 5
+  avatarUrl?: string;
+  imageUrl?: string;
+  status: TestimonialStatus;
+  isFeatured?: boolean;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+

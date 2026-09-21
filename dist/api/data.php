@@ -36,7 +36,8 @@ $allowedCollections = [
     'site_media',
     'policies',
     'policy_records',
-    'policy_versions'
+    'policy_versions',
+    'testimonials'
 ];
 
 $objectCollections = [
