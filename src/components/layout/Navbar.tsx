@@ -31,6 +31,7 @@ interface NavbarProps {
   openAuthModal: (mode?: 'login' | 'register') => void;
   openAdminAuthModal?: () => void;
   onSearchQuery?: (q: string) => void;
+  onNavigateToShop?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -39,6 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   openAuthModal,
   openAdminAuthModal,
   onSearchQuery,
+  onNavigateToShop,
 }) => {
   const { role, b2cUser, isAdmin, logout } = useAuth();
   const { b2cCount, getB2CCalculations } = useCart();
@@ -508,7 +510,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               Home
             </button>
             <button
-              onClick={() => setActiveTab('products')}
+              onClick={() => {
+                if (onNavigateToShop) onNavigateToShop();
+                else setActiveTab('products');
+              }}
               style={{
                 color: (activeTab === 'products' || activeTab === 'new-arrivals') ? 'var(--primary)' : 'var(--slate-700)',
                 borderBottom: (activeTab === 'products' || activeTab === 'new-arrivals') ? '2px solid var(--primary)' : '2px solid transparent',
@@ -518,7 +523,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               All Products
             </button>
             <button
-              onClick={() => setActiveTab('shop')}
+              onClick={() => {
+                if (onNavigateToShop) onNavigateToShop();
+                else setActiveTab('products');
+              }}
               style={{
                 color: activeTab === 'shop' ? 'var(--primary)' : 'var(--slate-700)',
                 borderBottom: activeTab === 'shop' ? '2px solid var(--primary)' : '2px solid transparent',
@@ -641,7 +649,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
           <button
             onClick={() => {
-              setActiveTab('products');
+              if (onNavigateToShop) onNavigateToShop();
+              else setActiveTab('products');
               setMobileMenuOpen(false);
             }}
             className="btn btn-secondary"
@@ -651,7 +660,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
           <button
             onClick={() => {
-              setActiveTab('shop');
+              if (onNavigateToShop) onNavigateToShop();
+              else setActiveTab('products');
               setMobileMenuOpen(false);
             }}
             className="btn btn-secondary"

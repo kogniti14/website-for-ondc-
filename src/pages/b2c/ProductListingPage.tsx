@@ -320,27 +320,25 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
               Newly Added Innovations • 100% Tree-Free Agro Paper
             </span>
           </div>
-        ) : isShopNowView ? (
+        ) : (
           <div className="flex items-center gap-2" style={{ marginBottom: '0.4rem' }}>
-            <span className="badge badge-amber">★ Popular Demands</span>
+            <span className="badge badge-blue">🌱 100% Tree-Free Agro Paper</span>
             <span style={{ fontSize: '0.82rem', color: 'var(--slate-500)', fontWeight: 500 }}>
-              Direct Manufacturer Pricing • 100% Tree-Free Agro Paper
+              Direct Manufacturer Pricing • Verified Pan-India Delivery • GST Billing
             </span>
           </div>
-        ) : null}
+        )}
         <h1 style={{ fontSize: '2.2rem', fontWeight: 800, marginBottom: '0.5rem' }}>
           {onlyNewArrivals
             ? 'New Arrivals & Smart Innovations'
-            : isShopNowView
-            ? 'Featured Products & Top Sellers'
+            : selectedCategory !== 'All'
+            ? `${selectedCategory} — Sustainable Catalog`
             : 'Sustainable Paper & Eco-Stationery Catalog'}
         </h1>
         <p style={{ color: 'var(--slate-500)', fontSize: '0.95rem' }}>
           {onlyNewArrivals
             ? 'Discover the newest launches in upcycled agricultural residue copier paper, tree-free executive notebooks, and smart desk organizers.'
-            : isShopNowView
-            ? 'Discover bestsellers, popular paper reams, executive notebooks, and everyday eco-stationery. Direct GST billing with verified Pan-India delivery.'
-            : '100% Tree-Free Agro-Waste Copier Paper, Executive Notebooks, Artisan Journals & Office Supplies'}
+            : 'Explore our complete catalog of 100% tree-free agricultural residue paper, printing paper reams, executive notebooks, journals, and eco-stationery supplies.'}
         </p>
       </div>
 

@@ -169,6 +169,13 @@ const MainApp: React.FC = () => {
   }, []);
 
   // Handlers
+  const handleNavigateToShop = () => {
+    setSelectedCategory('All');
+    setSearchQuery('');
+    setActiveTab('products');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleOpenProduct = (p: Product) => {
     setSelectedProduct(p);
   };
@@ -240,6 +247,7 @@ const MainApp: React.FC = () => {
             setSearchQuery(q);
             if (q.trim()) setActiveTab('products');
           }}
+          onNavigateToShop={handleNavigateToShop}
         />
       )}
 
@@ -260,6 +268,7 @@ const MainApp: React.FC = () => {
             openB2BAuthModal={handleOpenB2BAuth}
             onOpenStory={(story) => setSelectedStory(story)}
             onOpenCertificate={(cert) => setSelectedCertificate(cert)}
+            onNavigateToShop={handleNavigateToShop}
           />
         )}
 
@@ -275,27 +284,15 @@ const MainApp: React.FC = () => {
           />
         )}
 
-        {activeTab === 'products' && (
+        {(activeTab === 'products' || activeTab === 'shop') && (
           <ProductListingPage
             products={products}
             categories={categories}
-            initialCategory={selectedCategory}
-            initialSearch={searchQuery}
+            initialCategory={activeTab === 'shop' ? 'All' : selectedCategory}
+            initialSearch={activeTab === 'shop' ? '' : searchQuery}
             onOpenProduct={handleOpenProduct}
             onBuyNow={handleBuyNow}
             isShopNowView={false}
-          />
-        )}
-
-        {activeTab === 'shop' && (
-          <ProductListingPage
-            products={products}
-            categories={categories}
-            initialCategory="All"
-            initialSearch=""
-            onOpenProduct={handleOpenProduct}
-            onBuyNow={handleBuyNow}
-            isShopNowView={true}
           />
         )}
 
@@ -547,6 +544,7 @@ const MainApp: React.FC = () => {
           setB2bTab={setB2bTab}
           openPolicyModal={(type) => setPolicyModalType(type)}
           isB2B={activeTab === 'b2b'}
+          onNavigateToShop={handleNavigateToShop}
         />
       )}
 

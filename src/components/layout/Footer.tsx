@@ -22,9 +22,10 @@ interface FooterProps {
   setB2bTab?: (tab: string) => void;
   openPolicyModal: (type: 'privacy' | 'terms' | 'shipping' | 'refund') => void;
   isB2B?: boolean;
+  onNavigateToShop?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPolicyModal, isB2B = false }) => {
+export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPolicyModal, isB2B = false, onNavigateToShop }) => {
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
   const [siteMedia, setSiteMedia] = useState<SiteMedia>(() => storageService.getSiteMedia());
@@ -287,12 +288,24 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
             </div>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem' }}>
               <li>
-                <button onClick={() => setActiveTab('products')} style={{ color: '#94A3B8' }}>
+                <button
+                  onClick={() => {
+                    if (onNavigateToShop) onNavigateToShop();
+                    else setActiveTab('products');
+                  }}
+                  style={{ color: '#94A3B8' }}
+                >
                   All Products
                 </button>
               </li>
               <li>
-                <button onClick={() => setActiveTab('shop')} style={{ color: '#94A3B8' }}>
+                <button
+                  onClick={() => {
+                    if (onNavigateToShop) onNavigateToShop();
+                    else setActiveTab('products');
+                  }}
+                  style={{ color: '#94A3B8' }}
+                >
                   Shop Deals & Offers
                 </button>
               </li>

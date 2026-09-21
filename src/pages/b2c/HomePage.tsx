@@ -35,6 +35,7 @@ interface HomePageProps {
   openB2BAuthModal: () => void;
   onOpenStory?: (story: GalleryStory) => void;
   onOpenCertificate?: (cert: CompanyCertification) => void;
+  onNavigateToShop?: () => void;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
@@ -47,6 +48,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   openB2BAuthModal,
   onOpenStory,
   onOpenCertificate,
+  onNavigateToShop,
 }) => {
   const [deliveredUnits, setDeliveredUnits] = useState<number>(() => storageService.getDeliveredUnitsCount());
   const [siteMedia, setSiteMedia] = useState<SiteMedia>(() => storageService.getSiteMedia());
@@ -213,7 +215,10 @@ export const HomePage: React.FC<HomePageProps> = ({
               {/* CTA Buttons */}
               <div className="flex items-center gap-4 flex-wrap" style={{ marginBottom: '2.5rem' }}>
                 <button
-                  onClick={() => setActiveTab('shop')}
+                  onClick={() => {
+                    if (onNavigateToShop) onNavigateToShop();
+                    else setActiveTab('products');
+                  }}
                   className="btn btn-primary btn-lg"
                   style={{
                     borderRadius: 'var(--radius-full)',
@@ -574,7 +579,10 @@ export const HomePage: React.FC<HomePageProps> = ({
               </p>
             </div>
             <button
-              onClick={() => setActiveTab('shop')}
+              onClick={() => {
+                if (onNavigateToShop) onNavigateToShop();
+                else setActiveTab('products');
+              }}
               className="btn btn-primary btn-lg"
               style={{
                 borderRadius: 'var(--radius-full)',
@@ -902,7 +910,10 @@ export const HomePage: React.FC<HomePageProps> = ({
                 Our research & development team is constantly manufacturing novel circular paper products from seasonal crop residues.
               </p>
               <button
-                onClick={() => setActiveTab('shop')}
+                onClick={() => {
+                  if (onNavigateToShop) onNavigateToShop();
+                  else setActiveTab('products');
+                }}
                 className="btn btn-primary btn-sm"
                 style={{ borderRadius: 'var(--radius-full)', padding: '0.6rem 1.5rem' }}
               >
