@@ -4,7 +4,6 @@ import {
   Briefcase,
   ShieldCheck,
   Truck,
-  RotateCcw,
   Star,
   CheckCircle2,
   Building,
@@ -16,18 +15,17 @@ import {
   FileText,
   Building2,
 } from 'lucide-react';
-import { Product, UserRole, Category, GalleryStory, CompanyCertification, SiteMedia } from '../../types';
+import { Product, Category, GalleryStory, CompanyCertification, SiteMedia } from '../../types';
 import { storageService } from '../../services/storageService';
-import { galleryService } from '../../services/galleryService';
 import { dataSyncBus } from '../../services/dataSyncBus';
 import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
 
 interface HomePageProps {
-  products: Product[];
+  products?: Product[];
   categories?: Category[];
-  onSelectCategory: (cat: string) => void;
-  onOpenProduct: (product: Product) => void;
-  onBuyNow: (product: Product) => void;
+  onSelectCategory?: (cat: string) => void;
+  onOpenProduct?: (product: Product) => void;
+  onBuyNow?: (product: Product) => void;
   setActiveTab: (tab: string) => void;
   openB2BAuthModal: () => void;
   onOpenStory?: (story: GalleryStory) => void;
@@ -36,22 +34,12 @@ interface HomePageProps {
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
-  products,
-  categories,
-  onSelectCategory,
-  onOpenProduct,
-  onBuyNow,
   setActiveTab,
   openB2BAuthModal,
-  onOpenStory,
-  onOpenCertificate,
   onNavigateToShop,
 }) => {
   const [deliveredUnits, setDeliveredUnits] = useState<number>(() => storageService.getDeliveredUnitsCount());
   const [siteMedia, setSiteMedia] = useState<SiteMedia>(() => storageService.getSiteMedia());
-  const [storiesList, setStoriesList] = useState<GalleryStory[]>(() =>
-    galleryService.getStories({ visibility: 'b2c', status: 'published' })
-  );
 
   useEffect(() => {
     const updateUnits = () => {
@@ -64,23 +52,14 @@ export const HomePage: React.FC<HomePageProps> = ({
     const unsubMedia = dataSyncBus.subscribe('site_media', (m) => {
       if (m) setSiteMedia(m);
     });
-    const unsubStories = dataSyncBus.subscribe('stories', () => {
-      setStoriesList(galleryService.getStories({ visibility: 'b2c', status: 'published' }));
-    });
 
     return () => {
       unsubOrders();
       unsubB2C();
       unsubB2B();
       unsubMedia();
-      unsubStories();
     };
   }, []);
-
-  const featuredStories = storiesList.filter((s) => s.featured).slice(0, 3);
-  const displayStories = featuredStories.length > 0
-    ? featuredStories
-    : storiesList.slice(0, 3);
 
   return (
     <div>
@@ -424,56 +403,8 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </div>
 
-      {/* 2. Explore Curated Categories Entry Section */}
-      <section style={{ padding: '3.5rem 0', backgroundColor: '#F8FAFC', borderTop: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)' }}>
-        <div className="container">
-          <div
-            className="card"
-            style={{
-              background: '#FFFFFF',
-              borderRadius: 'var(--radius-xl)',
-              padding: 'clamp(2.5rem, 5vw, 3.5rem) clamp(1.5rem, 5vw, 3rem)',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
-              border: '1px solid var(--border-color)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
-              maxWidth: '820px',
-              margin: '0 auto',
-            }}
-          >
-            <span className="badge badge-blue" style={{ marginBottom: '0.75rem' }}>
-              Catalog Architecture
-            </span>
-            <h2 style={{ fontSize: 'clamp(1.75rem, 3.2vw, 2.3rem)', fontWeight: 800, color: 'var(--slate-900)', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>
-              Explore Curated Categories
-            </h2>
-            <p style={{ color: 'var(--slate-500)', fontSize: '1rem', lineHeight: '1.6', maxWidth: '640px', marginBottom: '2rem' }}>
-              Explore our complete range of sustainable paper, printing paper reams, executive notebooks, journals, office stationery, packaging boxes, and institutional eco-supplies.
-            </p>
-            <button
-              onClick={() => {
-                if (onNavigateToShop) onNavigateToShop();
-                else setActiveTab('products');
-              }}
-              className="btn btn-primary btn-lg"
-              style={{
-                borderRadius: 'var(--radius-full)',
-                padding: '0.85rem 2.25rem',
-                fontWeight: 700,
-                fontSize: '0.95rem',
-                boxShadow: '0 8px 24px rgba(37, 99, 235, 0.25)',
-              }}
-            >
-              Explore All Categories <ArrowRight size={18} />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Shop Now Direct Shopping Callout */}
-      <section style={{ padding: '0 0 4rem' }}>
+      {/* 2. Shop Now Direct Shopping Callout */}
+      <section style={{ padding: '3rem 0 4rem' }}>
         <div className="container">
           <div
             className="card"
@@ -524,7 +455,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* 4. Dedicated B2B Promotional Bridge Section */}
+      {/* 3. Dedicated B2B Promotional Bridge Section */}
       <section
         style={{
           background: 'linear-gradient(135deg, #0A0F1D 0%, #1E293B 100%)',
@@ -768,67 +699,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* 5. New Arrivals & Smart Innovations Entry Section */}
-      <section style={{ padding: '3.5rem 0', backgroundColor: '#FFFFFF', borderBottom: '1px solid var(--border-subtle)' }}>
-        <div className="container">
-          <div
-            className="card"
-            style={{
-              background: 'linear-gradient(135deg, rgba(243, 232, 255, 0.45) 0%, rgba(255, 255, 255, 0.95) 100%)',
-              borderRadius: 'var(--radius-xl)',
-              padding: 'clamp(2.5rem, 5vw, 3.5rem) clamp(1.5rem, 5vw, 3rem)',
-              boxShadow: '0 4px 20px rgba(147, 51, 234, 0.05)',
-              border: '1px solid rgba(147, 51, 234, 0.18)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
-              maxWidth: '820px',
-              margin: '0 auto',
-            }}
-          >
-            <span
-              className="badge"
-              style={{
-                background: 'rgba(147, 51, 234, 0.1)',
-                color: '#7E22CE',
-                border: '1px solid rgba(147, 51, 234, 0.25)',
-                marginBottom: '0.75rem',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-              }}
-            >
-              <Sparkles size={13} className="text-purple-600" /> State-of-the-Art Technology
-            </span>
-            <h2 style={{ fontSize: 'clamp(1.75rem, 3.2vw, 2.3rem)', fontWeight: 800, color: 'var(--slate-900)', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>
-              New Arrivals & Smart Innovations
-            </h2>
-            <p style={{ color: 'var(--slate-500)', fontSize: '1rem', lineHeight: '1.6', maxWidth: '640px', marginBottom: '2rem' }}>
-              Explore our newly launched tree-free paper innovations, premium executive notebooks, and high-capacity circular desk stationery engineered from seasonal agricultural residues.
-            </p>
-            <button
-              onClick={() => setActiveTab('new-arrivals')}
-              className="btn btn-primary btn-lg"
-              style={{
-                borderRadius: 'var(--radius-full)',
-                padding: '0.85rem 2.25rem',
-                fontWeight: 700,
-                fontSize: '0.95rem',
-                background: 'linear-gradient(135deg, #7E22CE 0%, #6B21A8 100%)',
-                borderColor: '#6B21A8',
-                boxShadow: '0 8px 24px rgba(126, 34, 206, 0.3)',
-              }}
-            >
-              Explore All New Arrivals <ArrowRight size={18} />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* 6. Why Choose Kogniti Minds */}
+      {/* 4. Why Choose Kogniti Minds */}
       <section style={{ padding: '4rem 0', backgroundColor: '#F1F5F9' }}>
         <div className="container">
           <div style={{ textAlign: 'center', maxWidth: '650px', margin: '0 auto 3rem' }}>
@@ -949,7 +820,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* 7. Testimonials */}
+      {/* 5. Testimonials */}
       <section style={{ padding: '4.5rem 0' }}>
         <div className="container">
           <div style={{ textAlign: 'center', maxWidth: '600px', margin: '0 auto 3rem' }}>
@@ -1080,216 +951,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* 8. Certifications & Recognitions Entry Section */}
-      <section style={{ padding: '3.5rem 0', backgroundColor: '#F8FAFC', borderTop: '1px solid var(--border-subtle)', borderBottom: '1px solid var(--border-subtle)' }}>
-        <div className="container">
-          <div
-            className="card"
-            style={{
-              background: 'linear-gradient(135deg, rgba(236, 253, 245, 0.45) 0%, rgba(255, 255, 255, 0.95) 100%)',
-              borderRadius: 'var(--radius-xl)',
-              padding: 'clamp(2.5rem, 5vw, 3.5rem) clamp(1.5rem, 5vw, 3rem)',
-              boxShadow: '0 4px 20px rgba(6, 78, 59, 0.04)',
-              border: '1px solid rgba(6, 78, 59, 0.18)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
-              maxWidth: '820px',
-              margin: '0 auto',
-            }}
-          >
-            <span
-              className="badge"
-              style={{
-                background: 'rgba(6, 78, 59, 0.1)',
-                color: '#065F46',
-                border: '1px solid rgba(6, 78, 59, 0.25)',
-                marginBottom: '0.75rem',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-              }}
-            >
-              <ShieldCheck size={14} className="text-emerald-600" /> Trust & Compliance
-            </span>
-            <h2 style={{ fontSize: 'clamp(1.75rem, 3.2vw, 2.3rem)', fontWeight: 800, color: 'var(--slate-900)', marginBottom: '0.75rem', letterSpacing: '-0.02em' }}>
-              Our Certifications & Recognitions
-            </h2>
-            <p style={{ color: 'var(--slate-500)', fontSize: '1rem', lineHeight: '1.6', maxWidth: '640px', marginBottom: '2rem' }}>
-              Building trust through statutory recognition, ISO quality assurance, DPIIT Startup India credentials, and validated environmental standards for sustainable public and institutional procurement.
-            </p>
-            <button
-              onClick={() => setActiveTab('certifications')}
-              className="btn btn-primary btn-lg"
-              style={{
-                borderRadius: 'var(--radius-full)',
-                padding: '0.85rem 2.25rem',
-                fontWeight: 700,
-                fontSize: '0.95rem',
-                background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                borderColor: '#047857',
-                boxShadow: '0 8px 24px rgba(5, 150, 105, 0.3)',
-              }}
-            >
-              View All Certifications <ArrowRight size={18} />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* 9. Featured Success Stories & Image Gallery Showcase */}
-      {displayStories.length > 0 && (
-        <section style={{ padding: '4.5rem 0', backgroundColor: '#FFFFFF', borderTop: '1px solid var(--border-subtle)' }}>
-          <div className="container">
-            <div className="flex items-center justify-between gap-4 flex-wrap" style={{ marginBottom: '2.5rem' }}>
-              <div>
-                <span
-                  className="badge"
-                  style={{
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    color: '#059669',
-                    border: '1px solid rgba(16, 185, 129, 0.25)',
-                    marginBottom: '0.4rem',
-                    fontSize: '0.75rem',
-                    fontWeight: 700,
-                  }}
-                >
-                  <Sparkles size={13} className="inline mr-1" /> Real Impact Milestones
-                </span>
-                <h2 style={{ fontSize: '2.1rem', fontWeight: 900, color: 'var(--slate-900)', letterSpacing: '-0.02em' }}>
-                  Stories Behind Our Journey
-                </h2>
-                <p style={{ color: 'var(--slate-500)', fontSize: '0.95rem', marginTop: '0.3rem' }}>
-                  Witness how our circular tree-free packaging technology transforms stubble waste into national pride.
-                </p>
-              </div>
-
-              <button
-                onClick={() => setActiveTab('stories')}
-                className="btn btn-outline"
-                style={{ borderRadius: '9999px', fontWeight: 700, borderColor: 'var(--slate-300)' }}
-              >
-                Explore All Stories & Gallery <ArrowRight size={16} />
-              </button>
-            </div>
-
-            <div
-              className="grid"
-              style={{
-                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
-                gap: '2rem',
-              }}
-            >
-              {displayStories.map((story) => (
-                <article
-                  key={story.id}
-                  onClick={() => {
-                    if (onOpenStory) onOpenStory(story);
-                    else setActiveTab('stories');
-                  }}
-                  style={{
-                    background: '#FFFFFF',
-                    borderRadius: '16px',
-                    overflow: 'hidden',
-                    border: '1px solid var(--border-color)',
-                    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.04)',
-                    transition: 'all 0.25s ease',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.boxShadow = '0 12px 24px rgba(0, 0, 0, 0.08)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.04)';
-                  }}
-                >
-                  <div style={{ position: 'relative', height: '210px', overflow: 'hidden', background: '#E2E8F0' }}>
-                    <img
-                      src={story.imageUrl}
-                      alt={story.imageAlt || story.title}
-                      loading="lazy"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '12px',
-                        left: '12px',
-                        background: 'rgba(15, 23, 42, 0.85)',
-                        backdropFilter: 'blur(4px)',
-                        color: '#6EE7B7',
-                        padding: '0.2rem 0.65rem',
-                        borderRadius: '6px',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                      }}
-                    >
-                      {story.category}
-                    </div>
-                  </div>
-
-                  <div style={{ padding: '1.5rem', flex: '1 0 auto', display: 'flex', flexDirection: 'column' }}>
-                    <h3
-                      style={{
-                        fontSize: '1.12rem',
-                        fontWeight: 800,
-                        color: 'var(--slate-900)',
-                        lineHeight: 1.35,
-                        marginBottom: '0.5rem',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {story.title}
-                    </h3>
-                    <p
-                      style={{
-                        fontSize: '0.86rem',
-                        color: 'var(--slate-600)',
-                        lineHeight: 1.55,
-                        marginBottom: '1.25rem',
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        flex: '1 0 auto',
-                      }}
-                    >
-                      {story.shortDescription}
-                    </p>
-                    <div
-                      style={{
-                        borderTop: '1px solid var(--border-subtle)',
-                        paddingTop: '0.85rem',
-                        marginTop: 'auto',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <span style={{ fontSize: '0.84rem', fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                        Read Story <ArrowRight size={14} />
-                      </span>
-                      <span style={{ fontSize: '0.72rem', color: 'var(--slate-400)' }}>
-                        {new Date(story.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
-                      </span>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
     </div>
   );
 };
+

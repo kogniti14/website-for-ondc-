@@ -588,7 +588,24 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           <div className="flex items-center gap-4 text-slate-500" style={{ fontSize: '0.8rem' }}>
-            <span>GST Input Credit for Businesses</span>
+            <button
+              onClick={() => setActiveTab('b2b')}
+              className="text-slate-500 hover:text-blue-600"
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
+                font: 'inherit',
+                fontSize: '0.8rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+              }}
+              title="Claim GST Input Tax Credit on B2B Orders"
+            >
+              GST Input Credit for Businesses
+            </button>
             <span style={{ color: 'var(--slate-300)' }}>|</span>
             <button
               onClick={() => {
@@ -697,7 +714,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="btn btn-b2b"
             style={{ justifyContent: 'flex-start' }}
           >
-            <Briefcase size={16} className="text-amber-400" /> B2B Business Portal
+            <Briefcase size={16} className="text-amber-400" /> B2B Deals & Wholesale
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('b2b');
+              setMobileMenuOpen(false);
+            }}
+            className="btn btn-secondary"
+            style={{ justifyContent: 'flex-start' }}
+          >
+            <Building2 size={16} className="text-blue-600" /> GST Input Credit for Businesses
           </button>
           <button
             onClick={() => {
