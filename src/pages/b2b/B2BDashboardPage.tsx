@@ -23,6 +23,7 @@ import { useAuth } from '../../context/AuthContext';
 import { B2BOrder, B2BQuotation } from '../../types';
 import { storageService } from '../../services/storageService';
 import { OrderInvoiceModal } from '../../components/common/OrderInvoiceModal';
+import { QuotationModal } from '../../components/b2b/QuotationModal';
 import { WHATSAPP_NUMBER } from '../../config/whatsappConfig';
 import { ImageUpload } from '../../components/common/ImageUpload';
 import { RazorpayCheckoutModal } from '../../components/payment/RazorpayCheckoutModal';
@@ -43,6 +44,7 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
   const { b2bBusiness, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'quotations' | 'orders' | 'invoices'>('quotations');
   const [selectedB2bInvoice, setSelectedB2bInvoice] = useState<B2BOrder | null>(null);
+  const [selectedFormalQuotation, setSelectedFormalQuotation] = useState<B2BQuotation | null>(null);
   const [orderToPay, setOrderToPay] = useState<B2BOrder | null>(null);
   const [orderCreatedMsg, setOrderCreatedMsg] = useState<string | null>(null);
   const [logoSuccess, setLogoSuccess] = useState(false);
@@ -551,9 +553,27 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                                 : q.status.toUpperCase()}
                             </span>
                           </div>
-                          <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>
-                            Submitted on {new Date(q.submittedAt || q.createdAt || Date.now()).toLocaleDateString('en-IN')}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setSelectedFormalQuotation(q)}
+                              className="btn btn-outline-b2b btn-sm"
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                fontSize: '0.75rem',
+                                borderColor: 'rgba(56, 189, 248, 0.4)',
+                                color: '#38BDF8',
+                                padding: '0.25rem 0.6rem',
+                              }}
+                              title="View & Print Official Corporate Quotation (PDF)"
+                            >
+                              <FileText size={13} /> View Quotation (PDF)
+                            </button>
+                            <span style={{ fontSize: '0.78rem', color: '#94A3B8' }}>
+                              Submitted on {new Date(q.submittedAt || q.createdAt || Date.now()).toLocaleDateString('en-IN')}
+                            </span>
+                          </div>
                         </div>
 
                         <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem', fontSize: '0.85rem' }}>
@@ -755,6 +775,21 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                             {(q.status === 'revised_quoted' || q.status === 'quoted') && (
                               <div className="flex items-center gap-3 flex-wrap" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '0.85rem' }}>
                                 <button
+                                  onClick={() => setSelectedFormalQuotation(q)}
+                                  className="btn btn-sm"
+                                  style={{
+                                    background: '#0284C7',
+                                    color: '#FFFFFF',
+                                    fontWeight: 700,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.4rem',
+                                  }}
+                                  title="View and print official corporate quotation PDF"
+                                >
+                                  <FileText size={14} /> View Quotation (PDF)
+                                </button>
+                                <button
                                   onClick={() => handleAcceptQuotation(q)}
                                   className="btn btn-amber btn-sm"
                                   style={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}
@@ -887,6 +922,21 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
 
                             {q.status === 'quoted' && (
                               <div className="flex gap-3 flex-wrap">
+                                <button
+                                  onClick={() => setSelectedFormalQuotation(q)}
+                                  className="btn btn-sm"
+                                  style={{
+                                    background: '#0284C7',
+                                    color: '#FFFFFF',
+                                    fontWeight: 700,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.35rem',
+                                  }}
+                                  title="View and print official corporate quotation PDF"
+                                >
+                                  <FileText size={14} /> View Quotation (PDF)
+                                </button>
                                 <button
                                   onClick={() => handleAcceptQuotation(q)}
                                   className="btn btn-amber btn-sm"
@@ -1512,6 +1562,19 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
           order={selectedB2bInvoice}
           isB2B={true}
           onClose={() => setSelectedB2bInvoice(null)}
+        />
+      )}
+
+      {/* Official Corporate Quotation Modal */}
+      {selectedFormalQuotation && (
+        <QuotationModal
+          quotation={selectedFormalQuotation}
+          isClientView={true}
+          onClose={() => setSelectedFormalQuotation(null)}
+          onAcceptAndConvert={(q) => {
+            handleAcceptQuotation(q);
+            setSelectedFormalQuotation(null);
+          }}
         />
       )}
 

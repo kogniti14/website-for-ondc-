@@ -51,6 +51,7 @@ import { storageService } from '../../services/storageService';
 import { dataSyncBus } from '../../services/dataSyncBus';
 import { useAuth } from '../../context/AuthContext';
 import { OrderInvoiceModal } from '../../components/common/OrderInvoiceModal';
+import { QuotationModal } from '../../components/b2b/QuotationModal';
 import { isFirebaseConfigured } from '../../services/firebase';
 import { ImageUpload } from '../../components/common/ImageUpload';
 import { razorpayService, RazorpayConfig, RazorpayTransactionRecord } from '../../services/razorpayService';
@@ -669,6 +670,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   // Product Edit / Add State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [selectedAdminQuotation, setSelectedAdminQuotation] = useState<B2BQuotation | null>(null);
 
   // Category Management State
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -2764,7 +2766,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     b2bMoq: 10,
                     b2bDiscountSlabs: [{ minQty: 10, maxQty: 49, discountPercent: 0, label: 'Base' }],
                     gstRate: 18,
-                    stock: 500,
+                    stock: 2400,
+                    stockQuantity: 2400,
+                    stockStatus: 'in_stock',
+                    stockStatusMode: 'manual',
+                    lowStockThreshold: 50,
                     rating: 4.8,
                     reviewCount: 1,
                     images: ['https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=800&q=80'],
@@ -2868,9 +2874,27 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: 'var(--primary)' }}>₹{p.b2bWholesalePrice.toLocaleString('en-IN')}</td>
                       <td style={{ padding: '0.75rem 1rem' }}>{p.b2bMoq} Units</td>
                       <td style={{ padding: '0.75rem 1rem' }}>
-                        <span className={`badge ${p.stock > 20 ? 'badge-green' : 'badge-amber'}`}>
-                          {p.stock} Units
-                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <span
+                            className={`badge ${
+                              (p.stockStatus || 'in_stock') === 'in_stock'
+                                ? 'badge-green'
+                                : (p.stockStatus || 'in_stock') === 'limited_stock'
+                                ? 'badge-amber'
+                                : 'badge-red'
+                            }`}
+                            style={{ fontWeight: 700, fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                          >
+                            {(p.stockStatus || 'in_stock') === 'in_stock'
+                              ? `In Stock (${p.stock} units ready)`
+                              : (p.stockStatus || 'in_stock') === 'limited_stock'
+                              ? `Limited Stock (${p.stock} units)`
+                              : `Out of Stock (${p.stock} units)`}
+                          </span>
+                          <span style={{ fontSize: '0.68rem', color: 'var(--slate-500)' }}>
+                            Mode: {(p.stockStatusMode || 'manual').toUpperCase()}
+                          </span>
+                        </div>
                       </td>
                       <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
                         <div className="flex justify-end gap-2">
@@ -4612,6 +4636,23 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {/* View Quotation (PDF) Corporate Document */}
+                        <button
+                          onClick={() => setSelectedAdminQuotation(q)}
+                          className="btn btn-sm"
+                          style={{
+                            background: '#0284C7',
+                            color: '#FFFFFF',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            fontWeight: 700,
+                          }}
+                          title="View, Print or Download Official Corporate Quotation (PDF)"
+                        >
+                          <FileText size={13} /> View Quotation (PDF)
+                        </button>
+
                         {/* Revise Quotation Button */}
                         {q.status !== 'converted_to_order' && (
                           <button
@@ -7218,6 +7259,115 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     required
                   />
                 </div>
+
+                {/* Stock Status & Inventory Management (Req 65-71, 79) */}
+                <div style={{ gridColumn: '1 / -1', background: '#F8FAFC', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '1rem', marginTop: '0.25rem' }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#0F172A', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>📦 Product Stock Visibility & Inventory Management</span>
+                    <span style={{ fontSize: '0.72rem', background: '#E0F2FE', color: '#0369A1', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
+                      🔒 Internal Admin Data Protected
+                    </span>
+                  </div>
+
+                  <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontWeight: 700 }}>Stock Status Mode</label>
+                      <div className="flex items-center gap-4" style={{ marginTop: '0.35rem' }}>
+                        <label className="flex items-center gap-1.5" style={{ fontSize: '0.85rem', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="stockStatusMode"
+                            value="manual"
+                            checked={(editingProduct.stockStatusMode || 'manual') === 'manual'}
+                            onChange={() => setEditingProduct({ ...editingProduct, stockStatusMode: 'manual' })}
+                          />
+                          <span>Manual Selection</span>
+                        </label>
+                        <label className="flex items-center gap-1.5" style={{ fontSize: '0.85rem', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="stockStatusMode"
+                            value="automatic"
+                            checked={editingProduct.stockStatusMode === 'automatic'}
+                            onChange={() => setEditingProduct({ ...editingProduct, stockStatusMode: 'automatic' })}
+                          />
+                          <span>Automatic by Inventory</span>
+                        </label>
+                      </div>
+                      <span style={{ fontSize: '0.7rem', color: '#64748B', display: 'block', marginTop: '0.25rem' }}>
+                        {editingProduct.stockStatusMode === 'automatic'
+                          ? 'System automatically assigns status based on units (>50: In Stock, 1-50: Limited, 0: Out of Stock)'
+                          : 'Admin directly controls the customer-facing status regardless of internal quantity'}
+                      </span>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontWeight: 700 }}>
+                        Customer-Facing Stock Status *
+                      </label>
+                      <select
+                        value={editingProduct.stockStatus || 'in_stock'}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, stockStatus: e.target.value as any })}
+                        className="form-select"
+                        disabled={editingProduct.stockStatusMode === 'automatic'}
+                      >
+                        <option value="in_stock">In Stock (✓ Customer sees "In Stock")</option>
+                        <option value="limited_stock">Limited Stock (⚠ Customer sees "Limited Stock")</option>
+                        <option value="out_of_stock">Out of Stock (Customer sees "Out of Stock" & ordering disabled)</option>
+                      </select>
+                      <span style={{ fontSize: '0.7rem', color: '#64748B', display: 'block', marginTop: '0.25rem' }}>
+                        Customers & B2B clients will ONLY see this status — exact numbers are never exposed.
+                      </span>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="form-label" style={{ fontWeight: 700 }}>
+                        Available Inventory Quantity (Units) *
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={editingProduct.stock ?? 2400}
+                        onChange={(e) => {
+                          const val = Math.max(0, parseInt(e.target.value, 10) || 0);
+                          setEditingProduct({
+                            ...editingProduct,
+                            stock: val,
+                            stockQuantity: val,
+                          });
+                        }}
+                        className="form-input"
+                        required
+                      />
+                      <span style={{ fontSize: '0.7rem', color: '#0284C7', display: 'block', marginTop: '0.25rem' }}>
+                        🔒 Internal Admin Data: Displayed ONLY to Super Admin & Admin in internal portals.
+                      </span>
+                    </div>
+
+                    {editingProduct.stockStatusMode === 'automatic' && (
+                      <div className="form-group">
+                        <label className="form-label" style={{ fontWeight: 700 }}>
+                          Low Stock Urgency Threshold (Units)
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={editingProduct.lowStockThreshold ?? 50}
+                          onChange={(e) =>
+                            setEditingProduct({
+                              ...editingProduct,
+                              lowStockThreshold: Math.max(1, parseInt(e.target.value, 10) || 50),
+                            })
+                          }
+                          className="form-input"
+                        />
+                        <span style={{ fontSize: '0.7rem', color: '#64748B', display: 'block', marginTop: '0.25rem' }}>
+                          Inventory at or below this triggers "Limited Stock" status automatically.
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="form-group">
@@ -7373,6 +7523,18 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           order={selectedOrderForInvoice.order}
           isB2B={selectedOrderForInvoice.isB2B}
           onClose={() => setSelectedOrderForInvoice(null)}
+        />
+      )}
+
+      {/* Official Corporate Quotation Modal */}
+      {selectedAdminQuotation && (
+        <QuotationModal
+          quotation={selectedAdminQuotation}
+          onClose={() => setSelectedAdminQuotation(null)}
+          onAcceptAndConvert={(q) => {
+            handleConvertQuotationToOrder(q.id);
+            setSelectedAdminQuotation(null);
+          }}
         />
       )}
 

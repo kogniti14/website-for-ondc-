@@ -27,12 +27,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const isFavorited = isInWishlist(product.id);
   const isB2BApproved = role === 'b2b' && b2bBusiness?.status === 'approved';
 
+  const stockStatus = product.stockStatus || (typeof product.stock === 'number' && product.stock > 0 ? 'in_stock' : 'in_stock');
+  const isOutOfStock = stockStatus === 'out_of_stock';
+  const isLimitedStock = stockStatus === 'limited_stock';
+
   const discountPercent = Math.round(
     ((product.b2cMrp - product.b2cPrice) / product.b2cMrp) * 100
   );
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isOutOfStock) return;
     if (isB2BMode) {
       addToB2BCart(product.id, product.b2bMoq);
     } else {
@@ -42,6 +47,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   const handleBuyNow = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isOutOfStock) return;
     if (isB2BMode) {
       addToB2BCart(product.id, product.b2bMoq);
     } else {
@@ -72,6 +78,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         position: 'relative',
         background: '#ffffff',
         overflow: 'hidden',
+        opacity: isOutOfStock ? 0.88 : 1,
       }}
     >
       {/* Top Badges & Wishlist */}
@@ -112,6 +119,48 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             zIndex: 2,
           }}
         >
+          {/* Customer-Facing Stock Status Badge (Req 65, 68, 69) */}
+          {isOutOfStock ? (
+            <span
+              className="badge"
+              style={{
+                backgroundColor: '#FEE2E2',
+                color: '#B91C1C',
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                border: '1px solid #FCA5A5',
+              }}
+            >
+              Out of Stock
+            </span>
+          ) : isLimitedStock ? (
+            <span
+              className="badge"
+              style={{
+                backgroundColor: '#FEF3C7',
+                color: '#B45309',
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                border: '1px solid #FCD34D',
+              }}
+            >
+              ⚠ Limited Stock
+            </span>
+          ) : (
+            <span
+              className="badge"
+              style={{
+                backgroundColor: '#DCFCE7',
+                color: '#15803D',
+                fontSize: '0.68rem',
+                fontWeight: 800,
+                border: '1px solid #86EFAC',
+              }}
+            >
+              ✓ In Stock
+            </span>
+          )}
+
           {product.isBestSeller && (
             <span className="badge badge-amber" style={{ fontSize: '0.65rem', fontWeight: 800 }}>
               ★ Best Seller
@@ -259,7 +308,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-1.5" style={{ marginTop: '0.75rem' }}>
-            {isB2BMode ? (
+            {isOutOfStock ? (
+              <button
+                disabled
+                className="btn btn-sm"
+                style={{
+                  background: '#F1F5F9',
+                  color: '#94A3B8',
+                  border: '1px solid #E2E8F0',
+                  cursor: 'not-allowed',
+                  fontSize: '0.82rem',
+                  padding: '0.5rem 0.75rem',
+                  fontWeight: 700,
+                }}
+              >
+                Out of Stock
+              </button>
+            ) : isB2BMode ? (
               <>
                 <div className="flex items-center gap-1.5">
                   <button

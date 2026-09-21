@@ -74,8 +74,9 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
         }
 
         // Stock
-        if (onlyInStock && p.stock <= 0) {
-          return false;
+        if (onlyInStock) {
+          const isOos = p.stockStatus === 'out_of_stock' || (p.stock !== undefined && p.stock <= 0);
+          if (isOos) return false;
         }
 
         // Best Sellers

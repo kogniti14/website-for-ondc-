@@ -8,6 +8,8 @@ import {
   Heart,
   ShoppingCart,
   CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
   MapPin,
   FileText,
   Briefcase,
@@ -44,7 +46,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const { addToB2CCart, addToB2BCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
-  const { role, b2bBusiness } = useAuth();
+  const { role, b2bBusiness, isAdmin } = useAuth();
+
+  const stockStatus = product.stockStatus || (typeof product.stock === 'number' && product.stock > 0 ? 'in_stock' : 'in_stock');
+  const isOutOfStock = stockStatus === 'out_of_stock';
+  const isLimitedStock = stockStatus === 'limited_stock';
+  const showAdminStock = Boolean(isAdmin || role === 'admin' || (role as any) === 'super_admin');
 
   const isFavorited = isInWishlist(product.id);
   const isB2BApproved = role === 'b2b' && b2bBusiness?.status === 'approved';
@@ -198,9 +205,35 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               </div>
               <span style={{ color: 'var(--slate-400)', fontSize: '0.8rem' }}>({product.reviewCount} customer reviews)</span>
               <span style={{ color: 'var(--slate-300)' }}>|</span>
-              <span className="flex items-center gap-1" style={{ color: 'var(--emerald-600)', fontSize: '0.8rem', fontWeight: 600 }}>
-                <CheckCircle2 size={14} /> In Stock ({product.stock} units ready)
-              </span>
+              {showAdminStock ? (
+                <span
+                  className="flex items-center gap-1"
+                  style={{
+                    color: isOutOfStock ? '#DC2626' : isLimitedStock ? '#D97706' : 'var(--emerald-600)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  {isOutOfStock ? <AlertCircle size={14} /> : isLimitedStock ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
+                  {isOutOfStock
+                    ? `Out of Stock (${product.stock ?? 0} units)`
+                    : isLimitedStock
+                    ? `Limited Stock (${product.stock ?? 0} units)`
+                    : `In Stock (${product.stock ?? 0} units ready)`}
+                </span>
+              ) : (
+                <span
+                  className="flex items-center gap-1"
+                  style={{
+                    color: isOutOfStock ? '#DC2626' : isLimitedStock ? '#D97706' : 'var(--emerald-600)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  {isOutOfStock ? <AlertCircle size={14} /> : isLimitedStock ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
+                  {isOutOfStock ? 'Out of Stock' : isLimitedStock ? '⚠ Limited Stock' : '✓ In Stock'}
+                </span>
+              )}
             </div>
 
             {/* Price Box */}
@@ -309,12 +342,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 }}
               >
                 <button
+                  disabled={isOutOfStock}
                   onClick={() => setQuantity((q) => Math.max(isB2BMode ? product.b2bMoq : 1, q - 1))}
                   style={{
                     padding: '0.6rem 0.9rem',
                     background: 'var(--slate-50)',
                     fontSize: '1rem',
                     fontWeight: 700,
+                    cursor: isOutOfStock ? 'not-allowed' : 'pointer',
                   }}
                 >
                   -
@@ -326,17 +361,20 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     minWidth: '45px',
                     textAlign: 'center',
                     fontSize: '0.95rem',
+                    color: isOutOfStock ? 'var(--slate-400)' : undefined,
                   }}
                 >
-                  {quantity}
+                  {isOutOfStock ? 0 : quantity}
                 </div>
                 <button
+                  disabled={isOutOfStock}
                   onClick={() => setQuantity((q) => q + 1)}
                   style={{
                     padding: '0.6rem 0.9rem',
                     background: 'var(--slate-50)',
                     fontSize: '1rem',
                     fontWeight: 700,
+                    cursor: isOutOfStock ? 'not-allowed' : 'pointer',
                   }}
                 >
                   +
@@ -344,23 +382,36 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               </div>
 
               <button
+                disabled={isOutOfStock}
                 onClick={handleAddToCart}
                 className={`btn ${isB2BMode ? 'btn-outline-b2b' : 'btn-outline'} flex-1`}
-                style={{ padding: '0.75rem 1rem', fontWeight: 700 }}
+                style={{
+                  padding: '0.75rem 1rem',
+                  fontWeight: 700,
+                  opacity: isOutOfStock ? 0.6 : 1,
+                  cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                }}
               >
-                <ShoppingCart size={17} /> Add to {isB2BMode ? 'B2B Cart' : 'Cart'}
+                <ShoppingCart size={17} /> {isOutOfStock ? 'Out of Stock' : `Add to ${isB2BMode ? 'B2B Cart' : 'Cart'}`}
               </button>
 
               <button
+                disabled={isOutOfStock}
                 onClick={() => {
+                  if (isOutOfStock) return;
                   handleAddToCart();
                   if (onBuyNow) onBuyNow(product);
                   onClose();
                 }}
                 className={`btn ${isB2BMode ? 'btn-amber' : 'btn-primary'} flex-1`}
-                style={{ padding: '0.75rem 1rem', fontWeight: 800 }}
+                style={{
+                  padding: '0.75rem 1rem',
+                  fontWeight: 800,
+                  opacity: isOutOfStock ? 0.6 : 1,
+                  cursor: isOutOfStock ? 'not-allowed' : 'pointer',
+                }}
               >
-                ⚡ Buy Now
+                {isOutOfStock ? 'Unavailable' : '⚡ Buy Now'}
               </button>
 
               <button

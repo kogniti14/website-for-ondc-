@@ -43,10 +43,38 @@ function validateCollection(req, res, next) {
   next();
 }
 
+function isAuthorizedAdmin(req) {
+  const authHeader = (req.headers['authorization'] || '').toLowerCase();
+  const adminRole = (req.headers['x-admin-role'] || '').toLowerCase();
+  return (
+    authHeader.includes('admin') ||
+    authHeader.includes('super_admin') ||
+    adminRole === 'admin' ||
+    adminRole === 'super_admin'
+  );
+}
+
+function sanitizeProductItem(item, isAdmin) {
+  if (isAdmin) return item;
+  const copy = { ...item };
+  const stock = typeof copy.stock === 'number' ? copy.stock : 0;
+  if (!copy.stockStatus) {
+    copy.stockStatus = stock > 50 ? 'in_stock' : (stock > 0 ? 'limited_stock' : 'out_of_stock');
+  }
+  delete copy.stock;
+  delete copy.stockQuantity;
+  return copy;
+}
+
 // GET all items in collection
 dataRouter.get('/:collection', validateCollection, (req, res) => {
   try {
     const data = persistentStore.getAll(req.params.collection);
+    const isAdmin = isAuthorizedAdmin(req);
+    if (req.params.collection === 'products' && !isAdmin && Array.isArray(data)) {
+      const sanitized = data.map((p) => sanitizeProductItem(p, false));
+      return res.json(sanitized);
+    }
     res.json(data);
   } catch (err) {
     logger.error('DataRouter', 'get_all', `Error retrieving ${req.params.collection}`, err);
@@ -60,6 +88,10 @@ dataRouter.get('/:collection/:id', validateCollection, (req, res) => {
     const item = persistentStore.getById(req.params.collection, req.params.id);
     if (!item) {
       return res.status(404).json({ error: 'Item not found' });
+    }
+    const isAdmin = isAuthorizedAdmin(req);
+    if (req.params.collection === 'products' && !isAdmin) {
+      return res.json(sanitizeProductItem(item, false));
     }
     res.json(item);
   } catch (err) {

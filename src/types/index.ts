@@ -1,3 +1,6 @@
+export type StockStatus = 'in_stock' | 'limited_stock' | 'out_of_stock';
+export type StockStatusMode = 'manual' | 'automatic';
+
 export interface Product {
   id: string;
   name: string;
@@ -17,7 +20,11 @@ export interface Product {
     label: string;
   }[];
   gstRate: number; // e.g. 18
-  stock: number;
+  stock: number; // Internal inventory quantity (visible only to Admin / Super Admin)
+  stockQuantity?: number; // Alias for stock
+  stockStatus?: StockStatus; // Customer-facing stock status ('in_stock' | 'limited_stock' | 'out_of_stock')
+  stockStatusMode?: StockStatusMode; // 'manual' | 'automatic'
+  lowStockThreshold?: number; // Threshold for automatic limited stock calculation (e.g. 50)
   rating: number;
   reviewCount: number;
   isFeatured?: boolean;
@@ -32,6 +39,8 @@ export interface Product {
   weight: string;
   warranty: string;
   leadTimeDays: number;
+  updatedAt?: string;
+  createdAt?: string;
 }
 
 export interface B2CAddress {

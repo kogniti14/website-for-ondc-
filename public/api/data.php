@@ -88,11 +88,37 @@ function writeStore($filePath, $data) {
 if ($method === 'GET') {
     $data = readStore($filePath);
     $id = $_GET['id'] ?? null;
+
+    // Admin authorization check for sensitive inventory exposure (Req 75)
+    $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    $adminRoleHeader = strtolower($_SERVER['HTTP_X_ADMIN_ROLE'] ?? '');
+    $isAdmin = (
+        strpos($authHeader, 'admin') !== false ||
+        strpos($authHeader, 'super_admin') !== false ||
+        $adminRoleHeader === 'admin' ||
+        $adminRoleHeader === 'super_admin'
+    );
+
+    $sanitizeProduct = function($item) use ($isAdmin) {
+        if ($isAdmin) {
+            return $item;
+        }
+        $copy = $item;
+        $stock = isset($copy['stock']) ? (int)$copy['stock'] : 0;
+        if (empty($copy['stockStatus'])) {
+            $copy['stockStatus'] = ($stock > 50) ? 'in_stock' : (($stock > 0) ? 'limited_stock' : 'out_of_stock');
+        }
+        unset($copy['stock']);
+        unset($copy['stockQuantity']);
+        return $copy;
+    };
+
     if ($id !== null && $id !== '') {
         if (is_array($data)) {
             foreach ($data as $item) {
                 if (isset($item['id']) && $item['id'] === $id) {
-                    echo json_encode($item);
+                    $res = ($collection === 'products') ? $sanitizeProduct($item) : $item;
+                    echo json_encode($res);
                     exit;
                 }
             }
@@ -101,6 +127,11 @@ if ($method === 'GET') {
         echo json_encode(['error' => 'Item not found']);
         exit;
     }
+
+    if ($collection === 'products' && !$isAdmin && is_array($data)) {
+        $data = array_map($sanitizeProduct, $data);
+    }
+
     echo json_encode($data);
     exit;
 }

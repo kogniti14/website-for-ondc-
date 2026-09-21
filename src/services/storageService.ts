@@ -348,7 +348,41 @@ class StorageService {
       return updatedProducts;
     }
 
-    return products;
+    // Normalize stock, stockStatus, and stockStatusMode for all catalog products (Req 65-71)
+    let needsNormalization = false;
+    const normalized = updatedProducts.map((p) => {
+      const stock = typeof p.stock === 'number' ? Math.max(0, p.stock) : 0;
+      const status = p.stockStatus || (stock > 50 ? 'in_stock' : stock > 0 ? 'limited_stock' : 'out_of_stock');
+      const mode = p.stockStatusMode || 'manual';
+      if (p.stock !== stock || p.stockStatus !== status || p.stockStatusMode !== mode || p.stockQuantity !== stock) {
+        needsNormalization = true;
+        return {
+          ...p,
+          stock,
+          stockQuantity: stock,
+          stockStatus: status,
+          stockStatusMode: mode,
+        };
+      }
+      return p;
+    });
+
+    if (needsNormalization) {
+      this.setItem(KEYS.PRODUCTS, normalized);
+      return normalized;
+    }
+
+    return updatedProducts;
+  }
+
+  getPublicProducts(): Product[] {
+    const products = this.getProducts();
+    return products.map((p) => {
+      const copy = { ...p };
+      delete (copy as any).stock;
+      delete (copy as any).stockQuantity;
+      return copy;
+    });
   }
 
   getProductById(id: string): Product | undefined {
@@ -357,6 +391,20 @@ class StorageService {
 
   saveProduct(product: Product): void {
     const products = this.getProducts();
+    // Validate non-negative inventory (Req 79)
+    const validStock = Math.max(0, Math.round(Number(product.stock) || 0));
+    product.stock = validStock;
+    product.stockQuantity = validStock;
+
+    // Automatic vs Manual stock status determination (Req 71)
+    if (product.stockStatusMode === 'automatic') {
+      const threshold = product.lowStockThreshold || 50;
+      product.stockStatus = validStock > threshold ? 'in_stock' : validStock > 0 ? 'limited_stock' : 'out_of_stock';
+    } else {
+      product.stockStatus = product.stockStatus || (validStock > 0 ? 'in_stock' : 'out_of_stock');
+    }
+    product.updatedAt = new Date().toISOString();
+
     const index = products.findIndex((p) => p.id === product.id);
     if (index >= 0) {
       products[index] = product;
@@ -366,6 +414,68 @@ class StorageService {
     this.setItem(KEYS.PRODUCTS, products);
     this.syncServer('products', product);
     dataSyncBus.emit('products', products);
+  }
+
+  /**
+   * Decrements actual inventory for purchased items upon successful order (Req 72)
+   */
+  decrementProductInventory(items: { productId?: string; quantity: number }[]): void {
+    if (!items || items.length === 0) return;
+    const products = this.getProducts();
+    let modified = false;
+
+    for (const item of items) {
+      if (!item.productId || !item.quantity || item.quantity <= 0) continue;
+      const target = products.find((p) => p.id === item.productId);
+      if (target) {
+        const prev = typeof target.stock === 'number' ? target.stock : 0;
+        target.stock = Math.max(0, prev - item.quantity);
+        target.stockQuantity = target.stock;
+        if (target.stockStatusMode === 'automatic') {
+          const threshold = target.lowStockThreshold || 50;
+          target.stockStatus = target.stock > threshold ? 'in_stock' : target.stock > 0 ? 'limited_stock' : 'out_of_stock';
+        }
+        target.updatedAt = new Date().toISOString();
+        modified = true;
+        this.syncServer('products', target);
+      }
+    }
+
+    if (modified) {
+      this.setItem(KEYS.PRODUCTS, products);
+      dataSyncBus.emit('products', products);
+    }
+  }
+
+  /**
+   * Restores inventory when an order is cancelled or rejected (Req 72)
+   */
+  restoreProductInventory(items: { productId?: string; quantity: number }[]): void {
+    if (!items || items.length === 0) return;
+    const products = this.getProducts();
+    let modified = false;
+
+    for (const item of items) {
+      if (!item.productId || !item.quantity || item.quantity <= 0) continue;
+      const target = products.find((p) => p.id === item.productId);
+      if (target) {
+        const prev = typeof target.stock === 'number' ? target.stock : 0;
+        target.stock = prev + item.quantity;
+        target.stockQuantity = target.stock;
+        if (target.stockStatusMode === 'automatic') {
+          const threshold = target.lowStockThreshold || 50;
+          target.stockStatus = target.stock > threshold ? 'in_stock' : target.stock > 0 ? 'limited_stock' : 'out_of_stock';
+        }
+        target.updatedAt = new Date().toISOString();
+        modified = true;
+        this.syncServer('products', target);
+      }
+    }
+
+    if (modified) {
+      this.setItem(KEYS.PRODUCTS, products);
+      dataSyncBus.emit('products', products);
+    }
   }
 
   deleteProduct(id: string): void {
@@ -761,6 +871,10 @@ class StorageService {
       orders[existingIndex] = order;
     } else {
       orders.unshift(order);
+      // Deduct actual product inventory upon successful order placement (Req 72)
+      if (Array.isArray(order.items)) {
+        this.decrementProductInventory(order.items.map((it) => ({ productId: it.productId, quantity: it.quantity })));
+      }
     }
     this.setItem(KEYS.B2C_ORDERS, orders);
     this.syncServer('b2c_orders', order);
@@ -772,6 +886,7 @@ class StorageService {
     const orders = this.getB2COrders();
     const order = orders.find((o) => o.id === id);
     if (order) {
+      const prevStatus = order.orderStatus;
       order.orderStatus = status;
       if (!Array.isArray(order.statusTimeline)) {
         order.statusTimeline = [];
@@ -781,6 +896,12 @@ class StorageService {
         timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
         note: note || `Status updated to ${status.replace('_', ' ').toUpperCase()}`,
       });
+      // If order is cancelled/rejected, restore product stock (Req 72)
+      if ((status === 'cancelled' || status === 'rejected') && prevStatus !== 'cancelled' && prevStatus !== 'rejected') {
+        if (Array.isArray(order.items)) {
+          this.restoreProductInventory(order.items.map((it) => ({ productId: it.productId, quantity: it.quantity })));
+        }
+      }
       this.setItem(KEYS.B2C_ORDERS, orders);
       this.syncServer('b2c_orders', order);
       dataSyncBus.emit('b2c_orders', orders);
@@ -816,6 +937,7 @@ class StorageService {
     const order = orders.find((o) => o.id === id);
     if (!order) return null;
 
+    const prevStatus = order.orderStatus;
     order.orderStatus = 'rejected';
     order.rejectionReason = reason || 'Order rejected during admin verification';
     order.rejectedAt = new Date().toISOString();
@@ -828,6 +950,12 @@ class StorageService {
       timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
       note: `Order rejected by ${adminName}. Reason: ${reason || 'Not specified'}`,
     });
+
+    // Restore product stock upon rejection (Req 72)
+    if (prevStatus !== 'rejected' && prevStatus !== 'cancelled' && Array.isArray(order.items)) {
+      this.restoreProductInventory(order.items.map((it) => ({ productId: it.productId, quantity: it.quantity })));
+    }
+
     this.setItem(KEYS.B2C_ORDERS, orders);
     this.syncServer('b2c_orders', order);
     dataSyncBus.emit('b2c_orders', orders);
@@ -874,6 +1002,10 @@ class StorageService {
       orders[existingIndex] = order;
     } else {
       orders.unshift(order);
+      // Deduct actual product inventory upon successful B2B order placement (Req 72)
+      if (Array.isArray(order.items)) {
+        this.decrementProductInventory(order.items.map((it) => ({ productId: it.productId, quantity: it.quantity })));
+      }
     }
     this.setItem(KEYS.B2B_ORDERS, orders);
     this.syncServer('b2b_orders', order);
@@ -885,6 +1017,7 @@ class StorageService {
     const orders = this.getB2BOrders();
     const order = orders.find((o) => o.id === id);
     if (order) {
+      const prevStatus = order.orderStatus;
       order.orderStatus = status;
       if (!Array.isArray(order.statusTimeline)) {
         order.statusTimeline = [];
@@ -894,6 +1027,12 @@ class StorageService {
         timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
         note: note || `Status updated to ${status.replace('_', ' ').toUpperCase()}`,
       });
+      // If B2B order is cancelled/rejected, restore product stock (Req 72)
+      if ((status === 'cancelled' || status === 'rejected') && prevStatus !== 'cancelled' && prevStatus !== 'rejected') {
+        if (Array.isArray(order.items)) {
+          this.restoreProductInventory(order.items.map((it) => ({ productId: it.productId, quantity: it.quantity })));
+        }
+      }
       this.setItem(KEYS.B2B_ORDERS, orders);
       this.syncServer('b2b_orders', order);
       dataSyncBus.emit('b2b_orders', orders);
@@ -929,6 +1068,7 @@ class StorageService {
     const order = orders.find((o) => o.id === id);
     if (!order) return null;
 
+    const prevStatus = order.orderStatus;
     order.orderStatus = 'rejected';
     order.rejectionReason = reason || 'PO rejected by administration';
     order.rejectedAt = new Date().toISOString();
@@ -941,6 +1081,12 @@ class StorageService {
       timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
       note: `B2B Order rejected by ${adminName}. Reason: ${reason || 'Not specified'}`,
     });
+
+    // Restore product stock upon rejection (Req 72)
+    if (prevStatus !== 'rejected' && prevStatus !== 'cancelled' && Array.isArray(order.items)) {
+      this.restoreProductInventory(order.items.map((it) => ({ productId: it.productId, quantity: it.quantity })));
+    }
+
     this.setItem(KEYS.B2B_ORDERS, orders);
     this.syncServer('b2b_orders', order);
     dataSyncBus.emit('b2b_orders', orders);
