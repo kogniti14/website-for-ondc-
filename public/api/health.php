@@ -216,6 +216,7 @@ echo json_encode([
             'parent_dir' => dirname(__DIR__),
             'parent_files' => array_values(@scandir(dirname(__DIR__)) ?: []),
             'domain_files' => array_values(@scandir(dirname(dirname(__DIR__))) ?: []),
+            'hbuilds_files' => is_dir(dirname(dirname(__DIR__)) . '/hbuilds') ? array_values(@scandir(dirname(dirname(__DIR__)) . '/hbuilds') ?: []) : null,
             'user_files' => array_values(@scandir('/home/u455093035') ?: []),
             'git_locations' => array_values(array_filter([
                 file_exists('/home/u455093035/.git') ? '/home/u455093035/.git' : null,
