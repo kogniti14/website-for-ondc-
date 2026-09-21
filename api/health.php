@@ -220,6 +220,10 @@ echo json_encode([
             'exec_git_log' => (function() { $out = []; @exec('git log -n 1 2>&1', $out); return $out; })(),
             'exec_which_git' => (function() { $out = []; @exec('which git 2>&1', $out); return $out; })(),
             'hbuilds_files' => is_dir(dirname(dirname(__DIR__)) . '/hbuilds') ? array_values(@scandir(dirname(dirname(__DIR__)) . '/hbuilds') ?: []) : null,
+            'hbuilds_logs' => is_dir(dirname(dirname(__DIR__)) . '/hbuilds/logs') ? array_values(@scandir(dirname(dirname(__DIR__)) . '/hbuilds/logs') ?: []) : null,
+            'hbuilds_source' => is_dir(dirname(dirname(__DIR__)) . '/hbuilds/source') ? array_values(@scandir(dirname(dirname(__DIR__)) . '/hbuilds/source') ?: []) : null,
+            'hbuilds_current' => is_dir(dirname(dirname(__DIR__)) . '/hbuilds/current') ? array_values(@scandir(dirname(dirname(__DIR__)) . '/hbuilds/current') ?: []) : null,
+            'hbuilds_config' => @file_get_contents(dirname(dirname(__DIR__)) . '/hbuilds/config'),
             'user_files' => array_values(@scandir('/home/u455093035') ?: []),
             'git_locations' => array_values(array_filter([
                 file_exists('/home/u455093035/.git') ? '/home/u455093035/.git' : null,
