@@ -87,6 +87,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         }}
       >
         <img
+          key={product.images[0]}
           src={product.images[0]}
           alt={product.name}
           style={{

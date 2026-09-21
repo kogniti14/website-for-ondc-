@@ -121,6 +121,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               }}
             >
               <img
+                key={product.images[selectedImage] || product.images[0]}
                 src={product.images[selectedImage] || product.images[0]}
                 alt={product.name}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -132,7 +133,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               <div className="flex items-center gap-2">
                 {product.images.map((img, idx) => (
                   <button
-                    key={idx}
+                    key={`${img}_${idx}`}
                     onClick={() => setSelectedImage(idx)}
                     style={{
                       width: '65px',

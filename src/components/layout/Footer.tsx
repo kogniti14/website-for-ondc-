@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   Truck,
@@ -13,6 +13,8 @@ import {
   Tag,
 } from 'lucide-react';
 import { storageService } from '../../services/storageService';
+import { dataSyncBus } from '../../services/dataSyncBus';
+import { SiteMedia } from '../../types';
 import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
 
 interface FooterProps {
@@ -25,6 +27,14 @@ interface FooterProps {
 export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPolicyModal, isB2B = false }) => {
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
+  const [siteMedia, setSiteMedia] = useState<SiteMedia>(() => storageService.getSiteMedia());
+
+  useEffect(() => {
+    const unsub = dataSyncBus.subscribe('site_media', (m) => {
+      if (m) setSiteMedia(m);
+    });
+    return unsub;
+  }, []);
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,7 +227,8 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
                 }}
               >
                 <img
-                  src={storageService.getSiteMedia()?.logo || '/logo.png'}
+                  key={siteMedia?.logo || '/logo.png'}
+                  src={siteMedia?.logo || '/logo.png'}
                   alt="Kogniti Minds"
                   className="kogniti-brand-logo"
                   style={{ height: '36px', width: 'auto' }}

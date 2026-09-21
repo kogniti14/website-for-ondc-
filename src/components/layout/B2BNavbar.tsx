@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Building2,
   FileText,
@@ -19,6 +19,8 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { storageService } from '../../services/storageService';
+import { dataSyncBus } from '../../services/dataSyncBus';
+import { SiteMedia } from '../../types';
 import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
 
 interface B2BNavbarProps {
@@ -37,6 +39,15 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
   const { role, b2bBusiness, logout } = useAuth();
   const { b2bCount, getB2BCalculations } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [siteMedia, setSiteMedia] = useState<SiteMedia>(() => storageService.getSiteMedia());
+
+  useEffect(() => {
+    const unsub = dataSyncBus.subscribe('site_media', (m) => {
+      if (m) setSiteMedia(m);
+    });
+    return unsub;
+  }, []);
+
   const b2bCalculations = getB2BCalculations();
 
   return (
@@ -120,7 +131,8 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
               }}
             >
               <img
-                src={storageService.getSiteMedia()?.logo || '/logo.png'}
+                key={siteMedia?.logo || '/logo.png'}
+                src={siteMedia?.logo || '/logo.png'}
                 alt="Kogniti Minds"
                 className="kogniti-brand-logo"
                 style={{ height: '36px', width: 'auto' }}

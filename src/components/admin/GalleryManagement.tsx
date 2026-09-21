@@ -948,6 +948,7 @@ export const GalleryManagement: React.FC<GalleryManagementProps> = ({ onPreviewS
                     ) : (
                       <div style={{ maxHeight: '240px', overflow: 'hidden', position: 'relative' }}>
                         <img
+                          key={formImageUrl}
                           src={formImageUrl}
                           alt="Preview"
                           style={{ width: '100%', height: '220px', objectFit: 'cover' }}

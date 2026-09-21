@@ -1490,6 +1490,7 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                     helperText="Select or drag-and-drop corporate logo from device."
                     variant="dark"
                     aspectRatio="square"
+                    folder="b2b_documents"
                     value={b2bBusiness?.avatarUrl || ''}
                     onChange={handleLogoUpload}
                   />

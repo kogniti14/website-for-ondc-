@@ -6,6 +6,20 @@
   PassEnv EMAIL_FROM
 </IfModule>
 
+<IfModule mod_mime.c>
+  AddType application/pdf .pdf
+  AddType image/webp .webp
+  AddType image/png .png
+  AddType image/jpeg .jpg .jpeg
+</IfModule>
+
+<IfModule mod_headers.c>
+  <FilesMatch "\.(pdf|png|jpe?g|webp)$">
+    Header set Access-Control-Allow-Origin "*"
+    Header set Cache-Control "public, max-age=31536000, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
@@ -17,7 +31,18 @@
   RewriteRule ^api/upload/?$ public/api/upload.php [QSA,L]
   RewriteRule ^api/data/([a-zA-Z0-9_-]+)/?([a-zA-Z0-9_-]*)?$ public/api/data.php?collection=$1&id=$2 [QSA,L]
 
-  # 2. Never proxy PHP files to Node.js (executes via Hostinger LiteSpeed/Apache PHP engine)
+  # 2. Direct Static Upload Serving (Certificates, Gallery, Products, B2B KYC)
+  # Crucial: Serve uploaded files directly from storage; NEVER allow SPA fallback to return HTML index.html
+  RewriteCond %{DOCUMENT_ROOT}/public/uploads/$1 -f
+  RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
+
+  RewriteCond %{DOCUMENT_ROOT}/dist/uploads/$1 -f
+  RewriteRule ^uploads/(.*)$ dist/uploads/$1 [L]
+
+  RewriteCond %{DOCUMENT_ROOT}/uploads/$1 -f
+  RewriteRule ^uploads/(.*)$ uploads/$1 [L]
+
+  # 3. Never proxy PHP files to Node.js (executes via Hostinger LiteSpeed/Apache PHP engine)
   RewriteCond %{REQUEST_URI} \.php$ [NC]
   RewriteCond %{DOCUMENT_ROOT}/api/$1 -f
   RewriteRule ^api/(.*\.php)$ api/$1 [L]
@@ -30,24 +55,24 @@
   RewriteCond %{DOCUMENT_ROOT}/dist/api/$1 -f
   RewriteRule ^api/(.*\.php)$ dist/api/$1 [L]
 
-  # 3. Dedicated ONDC Protocol routes to Node.js backend (Port 3000) ONLY
+  # 4. Dedicated ONDC Protocol routes to Node.js backend (Port 3000) ONLY
   <IfModule mod_proxy.c>
     RewriteCond %{REQUEST_URI} !\.php$ [NC]
     RewriteCond %{REQUEST_URI} ^/(search|select|init|confirm|status|cancel|update|rating|track|support|ondc) [NC]
     RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
   </IfModule>
 
-  # 4. Serve from dist/ if root is deployed
+  # 5. Serve from dist/ if root is deployed
   RewriteCond %{DOCUMENT_ROOT}/dist/$1 -f
   RewriteRule ^(.*)$ dist/$1 [L]
 
-  # 5. Serve static files directly if they exist
+  # 6. Serve static files directly if they exist
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteCond %{REQUEST_FILENAME} !-l
 
-  # 6. Client-side SPA route fallback
+  # 7. Client-side SPA route fallback
   RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
   RewriteRule . /dist/index.html [L]
 

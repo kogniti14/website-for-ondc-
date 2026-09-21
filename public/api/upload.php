@@ -123,13 +123,14 @@ if (empty($folder)) {
     $folder = 'certificates';
 }
 
-// Target directory under public/uploads/{folder}
-$baseDir = dirname(__DIR__); // /public
-$uploadDir = $baseDir . '/uploads/' . $folder;
-
-if (!file_exists($uploadDir)) {
-    @mkdir($uploadDir, 0755, true);
-}
+// Ensure target directories under public/uploads, dist/uploads, and root uploads
+$publicDir = dirname(__DIR__); // /public
+$projectRoot = dirname($publicDir); // root
+$targetDirs = [
+    $publicDir . '/uploads/' . $folder,
+    $projectRoot . '/dist/uploads/' . $folder,
+    $projectRoot . '/uploads/' . $folder,
+];
 
 // Generate collision-safe filename with timestamp and random token
 $timestamp = time();
@@ -137,11 +138,21 @@ $randomToken = bin2hex(random_bytes(4));
 $cleanPrefix = preg_replace('/[^a-zA-Z0-9_-]/', '_', pathinfo($originalName, PATHINFO_FILENAME));
 $cleanPrefix = substr($cleanPrefix, 0, 30);
 $safeFileName = "{$folder}_{$cleanPrefix}_{$timestamp}_{$randomToken}.{$extension}";
-$destination = $uploadDir . '/' . $safeFileName;
 
-if (file_put_contents($destination, $fileBinary, LOCK_EX) === false) {
+$successfulWrites = 0;
+foreach ($targetDirs as $dir) {
+    if (!file_exists($dir)) {
+        @mkdir($dir, 0775, true);
+    }
+    $destination = $dir . '/' . $safeFileName;
+    if (@file_put_contents($destination, $fileBinary, LOCK_EX) !== false) {
+        $successfulWrites++;
+    }
+}
+
+if ($successfulWrites === 0) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Failed to write uploaded file to persistent storage.']);
+    echo json_encode(['success' => false, 'message' => 'Failed to write uploaded file to persistent storage directories.']);
     exit;
 }
 
@@ -150,7 +161,7 @@ $publicUrl = "/uploads/{$folder}/{$safeFileName}?v={$timestamp}";
 
 echo json_encode([
     'success' => true,
-    'message' => 'File saved and registered successfully',
+    'message' => 'File saved and registered successfully across storage mirrors',
     'url' => $publicUrl,
     'fileUrl' => $publicUrl,
     'path' => "uploads/{$folder}/{$safeFileName}",

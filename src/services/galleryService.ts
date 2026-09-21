@@ -241,31 +241,91 @@ class GalleryService {
     this.isHydrated = true;
 
     try {
-      // 1. Hydrate Stories from authoritative server
-      let res = await fetch('/api/data.php?collection=stories').catch(() => null);
+      const timestamp = Date.now();
+      // 1. Hydrate Stories from authoritative server with anti-cache
+      let res = await fetch(`/api/data.php?collection=stories&t=${timestamp}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+      }).catch(() => null);
       if (!res || !res.ok) {
-        res = await fetch('/api/data/stories').catch(() => null);
+        res = await fetch(`/api/data/stories?t=${timestamp}`, { cache: 'no-store' }).catch(() => null);
       }
       if (res && res.ok) {
         const serverData = await res.json();
         if (Array.isArray(serverData) && serverData.length > 0) {
-          this.saveLocalStories(serverData);
-          dataSyncBus.emit('stories', serverData);
+          const localStories = this.getLocalStories();
+          const localMap = new Map<string, GalleryStory>(localStories.map((s) => [s.id, s]));
+          const merged: GalleryStory[] = [];
+          const toSyncToServer: GalleryStory[] = [];
+
+          for (const sStory of serverData) {
+            const lStory = localMap.get(sStory.id);
+            if (!lStory) {
+              merged.push(sStory);
+            } else {
+              const serverTime = new Date(sStory.updatedAt || 0).getTime();
+              const localTime = new Date(lStory.updatedAt || 0).getTime();
+              if (localTime > serverTime) {
+                merged.push(lStory);
+                toSyncToServer.push(lStory);
+              } else {
+                merged.push(sStory);
+              }
+              localMap.delete(sStory.id);
+            }
+          }
+
+          for (const [, remainingLocal] of localMap) {
+            merged.push(remainingLocal);
+            toSyncToServer.push(remainingLocal);
+          }
+
+          merged.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+          this.saveLocalStories(merged);
+          dataSyncBus.emit('stories', merged);
+
+          for (const item of toSyncToServer) {
+            this.syncServer('stories', item, 'POST', item.id);
+          }
         } else {
           this.syncServer('stories', INITIAL_GALLERY_STORIES, 'POST');
         }
       }
 
       // 2. Hydrate Categories from authoritative server
-      let catRes = await fetch('/api/data.php?collection=gallery_categories').catch(() => null);
+      let catRes = await fetch(`/api/data.php?collection=gallery_categories&t=${timestamp}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+      }).catch(() => null);
       if (!catRes || !catRes.ok) {
-        catRes = await fetch('/api/data/gallery_categories').catch(() => null);
+        catRes = await fetch(`/api/data/gallery_categories?t=${timestamp}`, { cache: 'no-store' }).catch(() => null);
       }
       if (catRes && catRes.ok) {
         const serverCats = await catRes.json();
         if (Array.isArray(serverCats) && serverCats.length > 0) {
-          this.saveLocalCategories(serverCats);
-          dataSyncBus.emit('gallery_categories', serverCats);
+          const localCats = this.getLocalCategories();
+          const localCatMap = new Map<string, GalleryCategory>(localCats.map((c) => [c.id, c]));
+          const mergedCats: GalleryCategory[] = [];
+
+          for (const sCat of serverCats) {
+            const lCat = localCatMap.get(sCat.id);
+            if (!lCat) {
+              mergedCats.push(sCat);
+            } else {
+              const sTime = new Date(sCat.updatedAt || 0).getTime();
+              const lTime = new Date(lCat.updatedAt || 0).getTime();
+              mergedCats.push(lTime > sTime ? lCat : sCat);
+              localCatMap.delete(sCat.id);
+            }
+          }
+
+          for (const [, remainingCat] of localCatMap) {
+            mergedCats.push(remainingCat);
+          }
+
+          mergedCats.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+          this.saveLocalCategories(mergedCats);
+          dataSyncBus.emit('gallery_categories', mergedCats);
         } else {
           this.syncServer('gallery_categories', INITIAL_GALLERY_CATEGORIES, 'POST');
         }

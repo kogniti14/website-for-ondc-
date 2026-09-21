@@ -196,22 +196,64 @@ class StorageService {
       { collection: 'site_media', key: KEYS.SITE_MEDIA, defaultVal: {}, isArray: false },
     ];
 
+    const timestamp = Date.now();
     for (const item of mappings) {
       try {
-        let res = await fetch(`/api/data.php?collection=${item.collection}`).catch(() => null);
+        let res = await fetch(`/api/data.php?collection=${item.collection}&t=${timestamp}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+        }).catch(() => null);
         if (!res || !res.ok) {
-          res = await fetch(`/api/data/${item.collection}`).catch(() => null);
+          res = await fetch(`/api/data/${item.collection}?t=${timestamp}`, { cache: 'no-store' }).catch(() => null);
         }
         if (res && res.ok) {
           const serverData = await res.json();
           if (item.isArray && Array.isArray(serverData)) {
             if (serverData.length > 0) {
-              this.setItem(item.key, serverData);
-              dataSyncBus.emit(item.collection, serverData);
+              const localItems = this.getItem<any[]>(item.key, item.defaultVal);
+              if (Array.isArray(localItems) && localItems.length > 0) {
+                const localMap = new Map<string, any>(localItems.map((i: any) => [i.id, i]));
+                const merged: any[] = [];
+                const toSyncToServer: any[] = [];
+
+                for (const sItem of serverData) {
+                  const lItem = sItem.id ? localMap.get(sItem.id) : null;
+                  if (!lItem) {
+                    merged.push(sItem);
+                  } else {
+                    const sTime = new Date(sItem.updatedAt || 0).getTime();
+                    const lTime = new Date(lItem.updatedAt || 0).getTime();
+                    if (lTime > sTime) {
+                      merged.push(lItem);
+                      toSyncToServer.push(lItem);
+                    } else {
+                      merged.push(sItem);
+                    }
+                    localMap.delete(sItem.id);
+                  }
+                }
+
+                for (const [, remainingLocal] of localMap) {
+                  merged.push(remainingLocal);
+                  toSyncToServer.push(remainingLocal);
+                }
+
+                this.setItem(item.key, merged);
+                dataSyncBus.emit(item.collection, merged);
+
+                for (const toSync of toSyncToServer) {
+                  this.syncServer(item.collection, toSync, 'POST', toSync.id);
+                }
+              } else {
+                this.setItem(item.key, serverData);
+                dataSyncBus.emit(item.collection, serverData);
+              }
             }
           } else if (!item.isArray && serverData && typeof serverData === 'object') {
-            this.setItem(item.key, serverData);
-            dataSyncBus.emit(item.collection, serverData);
+            const localObj = this.getItem<any>(item.key, item.defaultVal) || {};
+            const merged = { ...localObj, ...serverData };
+            this.setItem(item.key, merged);
+            dataSyncBus.emit(item.collection, merged);
           }
         }
       } catch {

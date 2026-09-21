@@ -16,7 +16,7 @@ import {
   FileText,
   Building2,
 } from 'lucide-react';
-import { Product, UserRole, Category, GalleryStory, CompanyCertification } from '../../types';
+import { Product, UserRole, Category, GalleryStory, CompanyCertification, SiteMedia } from '../../types';
 import { CATEGORIES } from '../../data/mockProducts';
 import { ProductCard } from '../../components/products/ProductCard';
 import { storageService } from '../../services/storageService';
@@ -49,6 +49,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   onOpenCertificate,
 }) => {
   const [deliveredUnits, setDeliveredUnits] = useState<number>(() => storageService.getDeliveredUnitsCount());
+  const [siteMedia, setSiteMedia] = useState<SiteMedia>(() => storageService.getSiteMedia());
 
   useEffect(() => {
     const updateUnits = () => {
@@ -58,10 +59,15 @@ export const HomePage: React.FC<HomePageProps> = ({
     const unsubOrders = dataSyncBus.subscribe('orders_updated', updateUnits);
     const unsubB2C = dataSyncBus.subscribe('b2c_orders', updateUnits);
     const unsubB2B = dataSyncBus.subscribe('b2b_orders', updateUnits);
+    const unsubMedia = dataSyncBus.subscribe('site_media', (m) => {
+      if (m) setSiteMedia(m);
+    });
+
     return () => {
       unsubOrders();
       unsubB2C();
       unsubB2B();
+      unsubMedia();
     };
   }, []);
 
@@ -263,8 +269,9 @@ export const HomePage: React.FC<HomePageProps> = ({
                 }}
               >
                 <img
+                  key={siteMedia?.heroBanner || 'default_hero_banner'}
                   src={
-                    storageService.getSiteMedia()?.heroBanner ||
+                    siteMedia?.heroBanner ||
                     'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1200&q=80'
                   }
                   alt="Kogniti Minds Flagship Sustainable Agro-Waste Paper"
@@ -367,6 +374,16 @@ export const HomePage: React.FC<HomePageProps> = ({
         }}
       >
         <div className="container">
+          {siteMedia?.assuranceBanner && (
+            <div style={{ marginBottom: '1.25rem', borderRadius: '10px', overflow: 'hidden', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <img
+                key={siteMedia.assuranceBanner}
+                src={siteMedia.assuranceBanner}
+                alt="Brand Value Assurance Banner"
+                style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', display: 'block' }}
+              />
+            </div>
+          )}
           <div
             style={{
               display: 'flex',

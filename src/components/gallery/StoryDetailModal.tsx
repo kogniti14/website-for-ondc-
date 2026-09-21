@@ -166,6 +166,7 @@ export const StoryDetailModal: React.FC<StoryDetailModalProps> = ({
         {/* Hero Image */}
         <div style={{ position: 'relative', width: '100%', maxHeight: '420px', overflow: 'hidden', background: '#0F172A' }}>
           <img
+            key={story.imageUrl}
             src={story.imageUrl}
             alt={story.imageAlt || story.title}
             style={{ width: '100%', height: 'auto', maxHeight: '420px', objectFit: 'cover' }}

@@ -119,6 +119,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   const handleSaveSiteMedia = () => {
     storageService.saveSiteMedia(siteMedia);
+    onRefresh();
     setMediaSavedMsg(true);
     setTimeout(() => setMediaSavedMsg(false), 3000);
   };
@@ -6460,6 +6461,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   label="Hero Banner Image"
                   helperText="Recommended 1200x800px. JPG, PNG, or WebP."
                   aspectRatio="banner"
+                  folder="media"
                   value={siteMedia.heroBanner || ''}
                   onChange={(val) => {
                     const img = typeof val === 'string' ? val : val[0] || '';
@@ -6480,6 +6482,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   label="Assurance Banner Image"
                   helperText="Recommended 1200x320px. JPG, PNG, or WebP."
                   aspectRatio="banner"
+                  folder="media"
                   value={siteMedia.assuranceBanner || ''}
                   onChange={(val) => {
                     const img = typeof val === 'string' ? val : val[0] || '';
@@ -6500,6 +6503,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                   label="Brand Logo"
                   helperText="Recommended transparent PNG or WebP. Square or 4:3 proportion."
                   aspectRatio="square"
+                  folder="media"
                   value={siteMedia.logo || ''}
                   onChange={(val) => {
                     const img = typeof val === 'string' ? val : val[0] || '';
@@ -6521,6 +6525,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     label="GeM Logo"
                     helperText="GeM emblem"
                     aspectRatio="square"
+                    folder="media"
                     value={siteMedia.gemLogo || ''}
                     onChange={(val) => {
                       const img = typeof val === 'string' ? val : val[0] || '';
@@ -6531,6 +6536,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     label="ONDC Logo"
                     helperText="ONDC emblem"
                     aspectRatio="square"
+                    folder="media"
                     value={siteMedia.ondcLogo || ''}
                     onChange={(val) => {
                       const img = typeof val === 'string' ? val : val[0] || '';
@@ -7218,6 +7224,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <ImageUpload
                   label="Product Images (Upload Directly from Device)"
                   helperText="Upload product photos from device (JPG, PNG, WebP). The first image serves as the main catalog cover photo."
+                  folder="products"
                   value={editingProduct.images}
                   multiple={true}
                   maxFiles={5}
@@ -7337,6 +7344,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 <ImageUpload
                   label="Category Cover Banner Image (Upload Directly from Device)"
                   helperText="Upload category card banner or cover photo directly from your device (JPG, PNG, WebP)."
+                  folder="categories"
                   value={categoryForm.image}
                   aspectRatio="banner"
                   onChange={(val) => {

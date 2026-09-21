@@ -260,12 +260,26 @@ export const CertificateDetailModal: React.FC<CertificateDetailModalProps> = ({
                 style={{
                   fontSize: '0.82rem',
                   color: isDark ? '#94A3B8' : '#64748B',
-                  margin: '0.4rem 0 1.25rem',
+                  margin: '0.4rem 0 1rem',
                   lineHeight: '1.5',
                 }}
               >
                 The authentic compliance certification is preserved in high-resolution vector PDF format for verification and procurement audit.
               </p>
+              <div style={{ width: '100%', marginBottom: '1rem' }}>
+                <iframe
+                  src={cert.fileUrl}
+                  title={cert.name}
+                  style={{
+                    width: '100%',
+                    height: '48vh',
+                    minHeight: '340px',
+                    border: 'none',
+                    borderRadius: '8px',
+                    background: '#FFFFFF',
+                  }}
+                />
+              </div>
               <div className="flex justify-center gap-3 flex-wrap">
                 <button
                   onClick={() => window.open(cert.fileUrl, '_blank')}
@@ -295,6 +309,7 @@ export const CertificateDetailModal: React.FC<CertificateDetailModalProps> = ({
           ) : (
             <div style={{ textAlign: 'center' }}>
               <img
+                key={cert.fileUrl}
                 src={cert.fileUrl}
                 alt={cert.name}
                 style={{

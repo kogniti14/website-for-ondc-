@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider, useCart } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { storageService } from './services/storageService';
+import { dataSyncBus } from './services/dataSyncBus';
 import { Product, B2COrder, B2BOrder, Category, B2CUser } from './types';
 import { ShieldCheck, Lock } from 'lucide-react';
 
@@ -93,6 +94,48 @@ const MainApp: React.FC = () => {
     setQuotations(storageService.getB2BQuotations());
     setCoupons(storageService.getCoupons());
   };
+
+  useEffect(() => {
+    const unsubProd = dataSyncBus.subscribe('products', (data) => {
+      if (Array.isArray(data)) setProducts(data);
+    });
+    const unsubCats = dataSyncBus.subscribe('categories', (data) => {
+      if (Array.isArray(data)) setCategories(data);
+    });
+    const unsubUsers = dataSyncBus.subscribe('b2c_users', (data) => {
+      if (Array.isArray(data)) setB2cUsers(data);
+    });
+    const unsubB2COrders = dataSyncBus.subscribe('b2c_orders', (data) => {
+      if (Array.isArray(data)) setB2cOrders(data);
+    });
+    const unsubB2BOrders = dataSyncBus.subscribe('b2b_orders', (data) => {
+      if (Array.isArray(data)) setB2bOrders(data);
+    });
+    const unsubBiz = dataSyncBus.subscribe('b2b_businesses', (data) => {
+      if (Array.isArray(data)) setBusinesses(data);
+    });
+    const unsubQuotes = dataSyncBus.subscribe('b2b_quotations', (data) => {
+      if (Array.isArray(data)) setQuotations(data);
+    });
+    const unsubCoupons = dataSyncBus.subscribe('coupons', (data) => {
+      if (Array.isArray(data)) setCoupons(data);
+    });
+    const unsubMedia = dataSyncBus.subscribe('site_media', () => {
+      refreshData();
+    });
+
+    return () => {
+      unsubProd();
+      unsubCats();
+      unsubUsers();
+      unsubB2COrders();
+      unsubB2BOrders();
+      unsubBiz();
+      unsubQuotes();
+      unsubCoupons();
+      unsubMedia();
+    };
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });

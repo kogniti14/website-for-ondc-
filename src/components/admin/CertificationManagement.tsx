@@ -998,6 +998,7 @@ export const CertificationManagement: React.FC = () => {
                             </>
                           ) : (
                             <img
+                              key={cert.fileUrl}
                               src={cert.fileUrl}
                               alt={cert.name}
                               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -2486,53 +2487,53 @@ export const CertificationManagement: React.FC = () => {
             {/* Document Viewer Preview Container */}
             <div
               style={{
+                background: '#0F172A',
                 borderRadius: '12px',
-                overflow: 'hidden',
-                border: '1px solid var(--border-color)',
-                backgroundColor: '#F8FAFC',
-                marginBottom: '1.25rem',
-                minHeight: '260px',
+                padding: '1rem',
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                padding: '1rem',
+                minHeight: '380px',
+                marginBottom: '1.25rem',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                position: 'relative',
               }}
             >
-              {previewCertTarget.fileType === 'application/pdf' ? (
-                <div style={{ textAlign: 'center' }}>
-                  <div
+              {previewCertTarget.fileType === 'application/pdf' || previewCertTarget.fileUrl.includes('.pdf') ? (
+                <div style={{ width: '100%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', padding: '0 0.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#F8FAFC', fontSize: '0.85rem', fontWeight: 700 }}>
+                      <FileText size={16} style={{ color: '#EF4444' }} />
+                      <span>Original Document (PDF Viewer)</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => window.open(previewCertTarget.fileUrl, '_blank')}
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                    >
+                      <ExternalLink size={13} /> Full Window
+                    </button>
+                  </div>
+                  <iframe
+                    src={previewCertTarget.fileUrl}
+                    title={previewCertTarget.name}
                     style={{
-                      width: '70px',
-                      height: '70px',
-                      borderRadius: '16px',
-                      backgroundColor: '#FEE2E2',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: '0 auto 1rem',
+                      width: '100%',
+                      height: '52vh',
+                      minHeight: '380px',
+                      border: 'none',
+                      borderRadius: '8px',
+                      background: '#FFFFFF',
                     }}
-                  >
-                    <FileText size={38} style={{ color: '#DC2626' }} />
-                  </div>
-                  <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--slate-900)' }}>
-                    Original Document (PDF)
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--slate-500)', margin: '0.3rem 0 1rem' }}>
-                    Authentic vector document available for full-resolution view.
-                  </div>
-                  <button
-                    onClick={() => window.open(previewCertTarget.fileUrl, '_blank')}
-                    className="btn btn-primary btn-sm"
-                  >
-                    <ExternalLink size={14} /> Open Original PDF in New Window
-                  </button>
+                  />
                 </div>
               ) : (
                 <img
+                  key={previewCertTarget.fileUrl}
                   src={previewCertTarget.fileUrl}
                   alt={previewCertTarget.name}
-                  style={{ maxWidth: '100%', maxHeight: '350px', objectFit: 'contain', borderRadius: '8px' }}
+                  style={{ maxWidth: '100%', maxHeight: '420px', objectFit: 'contain', borderRadius: '8px' }}
                 />
               )}
             </div>

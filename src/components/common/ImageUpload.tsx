@@ -11,6 +11,7 @@ interface ImageUploadProps {
   variant?: 'light' | 'dark';
   aspectRatio?: 'square' | 'banner' | 'auto';
   className?: string;
+  folder?: string;
 }
 
 /**
@@ -87,6 +88,48 @@ const compressImageFile = (file: File): Promise<string> => {
   });
 };
 
+/**
+ * Uploads an image to the persistent backend storage (/api/upload.php or /api/upload)
+ * Returns the versioned public URL (e.g. /uploads/{folder}/{filename}?v={timestamp}).
+ * Falls back to base64 data URL only if the backend is completely unreachable.
+ */
+const uploadImageToServer = async (file: File, base64Fallback: string, folder: string): Promise<string> => {
+  if (typeof window === 'undefined') return base64Fallback;
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', folder);
+
+    let res = await fetch('/api/upload.php', {
+      method: 'POST',
+      body: formData,
+    }).catch(() => null);
+
+    if (!res || !res.ok) {
+      res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          base64: base64Fallback,
+          folder: folder,
+          fileName: file.name,
+          fileType: file.type,
+        }),
+      }).catch(() => null);
+    }
+
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data.success && (data.url || data.fileUrl)) {
+        return data.url || data.fileUrl;
+      }
+    }
+  } catch (err) {
+    console.warn('Image server upload notice, fallback to local optimized image:', err);
+  }
+  return base64Fallback;
+};
+
 export const ImageUpload: React.FC<ImageUploadProps> = ({
   value,
   onChange,
@@ -97,6 +140,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   variant = 'light',
   aspectRatio = 'auto',
   className = '',
+  folder = 'media',
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -130,21 +174,22 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         return;
       }
 
-      const compressedImages: string[] = [];
+      const uploadedImages: string[] = [];
       for (const file of filesToProcess) {
         // Limit max file size to 15MB before client compression
         if (file.size > 15 * 1024 * 1024) {
           throw new Error(`File "${file.name}" exceeds maximum allowed size (15MB).`);
         }
         const compressed = await compressImageFile(file);
-        compressedImages.push(compressed);
+        const serverUrl = await uploadImageToServer(file, compressed, folder);
+        uploadedImages.push(serverUrl);
       }
 
       if (multiple) {
-        const updated = [...imagesList, ...compressedImages];
+        const updated = [...imagesList, ...uploadedImages];
         onChange(updated);
       } else {
-        onChange(compressedImages[0]);
+        onChange(uploadedImages[0]);
       }
 
       setUploadSuccess(true);
@@ -261,6 +306,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
           }}
         >
           <img
+            key={imagesList[0]}
             src={imagesList[0]}
             alt="Uploaded preview"
             style={{
