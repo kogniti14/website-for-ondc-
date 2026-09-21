@@ -216,6 +216,9 @@ echo json_encode([
             'parent_dir' => dirname(__DIR__),
             'parent_files' => array_values(@scandir(dirname(__DIR__)) ?: []),
             'domain_files' => array_values(@scandir(dirname(dirname(__DIR__))) ?: []),
+            'exec_git_status' => (function() { $out = []; @exec('git status 2>&1', $out); return $out; })(),
+            'exec_git_log' => (function() { $out = []; @exec('git log -n 1 2>&1', $out); return $out; })(),
+            'exec_which_git' => (function() { $out = []; @exec('which git 2>&1', $out); return $out; })(),
             'hbuilds_files' => is_dir(dirname(dirname(__DIR__)) . '/hbuilds') ? array_values(@scandir(dirname(dirname(__DIR__)) . '/hbuilds') ?: []) : null,
             'user_files' => array_values(@scandir('/home/u455093035') ?: []),
             'git_locations' => array_values(array_filter([
