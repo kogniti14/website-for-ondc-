@@ -8,7 +8,6 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
 dist-ssr
 *.local
 .env
@@ -31,5 +30,6 @@ data/storage/
 persistent/
 uploads/
 public/uploads/
+dist/uploads/
 *.sqlite
 *.db

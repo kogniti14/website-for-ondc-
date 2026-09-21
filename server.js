@@ -257,8 +257,9 @@ const distPath = path.join(__dirname, 'dist');
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
 
-  // SPA Route Fallback: Any unknown route serves index.html for React Router
-  app.get('*', (req, res, next) => {
+  // SPA Route Fallback: Any unknown GET route serves index.html for React Router
+  app.use((req, res, next) => {
+    if (req.method !== 'GET') return next();
     // Skip API, ONDC, and PHP paths
     if (
       req.path.startsWith('/api') ||

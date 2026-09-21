@@ -1,3 +1,5 @@
+DirectoryIndex dist/index.html index.html
+
 <IfModule mod_env.c>
   PassEnv RESEND_API_KEY
   PassEnv VITE_RESEND_API_KEY
@@ -62,7 +64,16 @@
     RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
   </IfModule>
 
-  # 5. Serve from dist/ if root is deployed
+  # 5. Dist priority routing for frontend assets and root page
+  RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
+  RewriteRule ^$ dist/index.html [L]
+
+  RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
+  RewriteRule ^index\.html$ dist/index.html [L]
+
+  RewriteCond %{DOCUMENT_ROOT}/dist/assets/$1 -f
+  RewriteRule ^assets/(.*)$ dist/assets/$1 [L]
+
   RewriteCond %{DOCUMENT_ROOT}/dist/$1 -f
   RewriteRule ^(.*)$ dist/$1 [L]
 
