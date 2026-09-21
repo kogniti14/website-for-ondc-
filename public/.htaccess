@@ -1,6 +1,24 @@
+<IfModule mod_headers.c>
+  # Production SSL/TLS & Security Headers
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+
+  # 0. Canonical Domain Enforcement & HTTPS Normalization
+  # Redirect www.kognitiminds.com to canonical https://kognitiminds.com
+  RewriteCond %{HTTP_HOST} ^www\.kognitiminds\.com$ [NC]
+  RewriteRule ^(.*)$ https://kognitiminds.com/$1 [R=301,L]
+
+  # Enforce HTTPS if not already handled by CDN/Proxy
+  RewriteCond %{HTTPS} off
+  RewriteCond %{HTTP:X-Forwarded-Proto} !https
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
   # 1. Direct Native Handlers for Production APIs (Zero proxy overhead, zero 503 errors)
   RewriteRule ^api/auth/send-otp/?$ api/send-email.php [QSA,L]

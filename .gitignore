@@ -9,9 +9,10 @@ lerna-debug.log*
 
 node_modules
 dist-ssr
-*.local
+# Environment & Secrets (Never commit credentials)
 .env
-.env.local
+.env.*
+!.env.example
 
 # Editor directories and files
 .vscode/*
