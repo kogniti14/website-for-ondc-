@@ -4,7 +4,7 @@ import {
   GoogleAuthProvider,
   Auth,
 } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getDatabase, Database } from 'firebase/database';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getAnalytics, isSupported, Analytics } from 'firebase/analytics';
 
@@ -29,21 +29,22 @@ const envStorageBucket = getEnvVar('VITE_FIREBASE_STORAGE_BUCKET');
 const envMessagingSenderId = getEnvVar('VITE_FIREBASE_MESSAGING_SENDER_ID');
 const envAppId = getEnvVar('VITE_FIREBASE_APP_ID');
 const envMeasurementId = getEnvVar('VITE_FIREBASE_MEASUREMENT_ID');
+const envDatabaseUrl = getEnvVar('VITE_FIREBASE_DATABASE_URL');
 
-// Safe Firebase config with user production keys as defaults
+// Production Firebase Configuration for Kogniti Minds Private Limited
 export const firebaseConfig = {
-  apiKey: envApiKey || 'AIzaSyAOVn0vnb7ZMmyW7D5XOqBEDskPMNnuY5I',
-  authDomain: envAuthDomain || 'kognitiminds-ondc.firebaseapp.com',
-  projectId: envProjectId || 'kognitiminds-ondc',
-  storageBucket: envStorageBucket || 'kognitiminds-ondc.firebasestorage.app',
-  messagingSenderId: envMessagingSenderId || '585231773951',
-  appId: envAppId || '1:585231773951:web:1a71e21a858b5db71adcca',
-  measurementId: envMeasurementId || 'G-LHW5GZQCCS',
+  apiKey: envApiKey || 'AIzaSyBJQo-jLW2J9RFKwW1Wyo_xwcu-44KhGlY',
+  authDomain: envAuthDomain || 'kogniti-minds-website.firebaseapp.com',
+  projectId: envProjectId || 'kogniti-minds-website',
+  storageBucket: envStorageBucket || 'kogniti-minds-website.firebasestorage.app',
+  messagingSenderId: envMessagingSenderId || '1093420559460',
+  appId: envAppId || '1:1093420559460:web:6a4b8ff611b27dbb05c371',
+  measurementId: envMeasurementId || 'G-KJS6M3VWKX',
+  databaseURL: envDatabaseUrl || 'https://kogniti-minds-website-default-rtdb.firebaseio.com',
 };
 
 /**
  * Checks if actual live Firebase configuration has been provided
- * (i.e. not default dummy placeholder keys)
  */
 export const isFirebaseConfigured = (): boolean => {
   const activeKey = firebaseConfig.apiKey;
@@ -58,8 +59,8 @@ export const isFirebaseConfigured = (): boolean => {
 
 let app: FirebaseApp;
 let auth: Auth;
-let db: Firestore | undefined;
-let storage: FirebaseStorage | undefined;
+let db: Database;
+let storage: FirebaseStorage;
 let analytics: Analytics | undefined;
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
@@ -71,16 +72,9 @@ try {
     app = getApp();
   }
   auth = getAuth(app);
-  try {
-    db = getFirestore(app);
-  } catch (dbErr) {
-    console.warn('Firestore initialization notice:', dbErr);
-  }
-  try {
-    storage = getStorage(app);
-  } catch (storageErr) {
-    console.warn('Firebase Storage initialization notice:', storageErr);
-  }
+  db = getDatabase(app);
+  storage = getStorage(app);
+
   if (typeof window !== 'undefined') {
     isSupported()
       .then((supported) => {
@@ -89,16 +83,15 @@ try {
         }
       })
       .catch((err) => {
-        console.warn('Firebase Analytics not supported in this environment:', err);
+        // Analytics failure must never break the application
       });
   }
 } catch (error) {
   console.warn('Firebase initialization notice: Running in integrated fallback mode.', error);
-  // Re-attempt with minimum safe app
   app = getApps().length ? getApp() : initializeApp(firebaseConfig, 'kogniti-minds-app');
   auth = getAuth(app);
   try {
-    db = getFirestore(app);
+    db = getDatabase(app);
   } catch {}
   try {
     storage = getStorage(app);
@@ -106,4 +99,4 @@ try {
 }
 
 export { app, auth, db, storage, googleProvider, analytics };
-
+export default app;

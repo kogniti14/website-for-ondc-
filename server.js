@@ -128,6 +128,12 @@ app.get('/api/health', (req, res) => {
         provider: 'Razorpay Official Gateway',
         mode: (process.env.RAZORPAY_KEY_ID || '').startsWith('rzp_test_') ? 'test' : 'live',
       },
+      firebase: {
+        projectId: process.env.VITE_FIREBASE_PROJECT_ID || 'kogniti-minds-website',
+        realtimeDatabase: true,
+        authentication: true,
+        storage: true,
+      },
       ondc: {
         status: 'active',
         domain: ondcConfig.domain,

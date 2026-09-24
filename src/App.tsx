@@ -4,6 +4,7 @@ import { CartProvider, useCart } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { storageService } from './services/storageService';
 import { dataSyncBus } from './services/dataSyncBus';
+import { realtimeSyncService } from './services/realtimeSyncService';
 import { Product, B2COrder, B2BOrder, Category, B2CUser } from './types';
 import { ShieldCheck, Lock } from 'lucide-react';
 
@@ -148,6 +149,14 @@ const MainApp: React.FC = () => {
       unsubQuotes();
       unsubCoupons();
       unsubMedia();
+    };
+  }, []);
+
+  // Initialize live bidirectional Firebase Realtime Database subscriptions
+  useEffect(() => {
+    realtimeSyncService.initRealtimeListeners();
+    return () => {
+      realtimeSyncService.destroyRealtimeListeners();
     };
   }, []);
 

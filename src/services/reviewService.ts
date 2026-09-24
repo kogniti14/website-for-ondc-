@@ -12,8 +12,8 @@ import {
 } from '../types';
 import { storageService } from './storageService';
 import { dataSyncBus } from './dataSyncBus';
-import { app, isFirebaseConfigured } from './firebase';
-import { getFirestore, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { db, isFirebaseConfigured } from './firebase';
+import { ref, set, remove } from 'firebase/database';
 
 const STORAGE_KEY_REVIEWS = 'km_product_reviews_v1';
 const STORAGE_KEY_AUDIT = 'km_review_audit_logs_v1';
@@ -224,13 +224,12 @@ class ReviewService {
   }
 
   private async syncReviewToServer(review: ProductReview): Promise<void> {
-    // 1. PRIMARY CLOUD STORE: Asynchronously replicate to Cloud Firestore
-    if (isFirebaseConfigured() && app) {
+    // 1. PRIMARY CLOUD STORE: Asynchronously replicate to Firebase Realtime Database
+    if (isFirebaseConfigured() && db) {
       try {
-        const db = getFirestore(app);
-        setDoc(doc(db, 'reviews', review.id), review, { merge: true }).catch(() => {});
+        set(ref(db, `reviews/${review.id}`), review).catch(() => {});
       } catch {
-        // Non-blocking firestore sync
+        // Non-blocking realtime database sync
       }
     }
 
@@ -254,13 +253,12 @@ class ReviewService {
   }
 
   private async deleteReviewFromServer(reviewId: string): Promise<void> {
-    // 1. PRIMARY CLOUD STORE: Asynchronously delete from Cloud Firestore
-    if (isFirebaseConfigured() && app) {
+    // 1. PRIMARY CLOUD STORE: Asynchronously delete from Firebase Realtime Database
+    if (isFirebaseConfigured() && db) {
       try {
-        const db = getFirestore(app);
-        deleteDoc(doc(db, 'reviews', reviewId)).catch(() => {});
+        remove(ref(db, `reviews/${reviewId}`)).catch(() => {});
       } catch {
-        // Non-blocking firestore delete
+        // Non-blocking realtime database delete
       }
     }
 

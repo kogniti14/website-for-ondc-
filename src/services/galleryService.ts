@@ -1,16 +1,11 @@
 import { GalleryStory, GalleryCategory, GalleryVisibility, GalleryStatus } from '../types';
 import { db, storage, isFirebaseConfigured } from './firebase';
 import {
-  collection,
-  doc,
-  getDocs,
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  orderBy,
-} from 'firebase/firestore';
+  ref as dbRef,
+  set as dbSet,
+  update as dbUpdate,
+  remove as dbRemove,
+} from 'firebase/database';
 import {
   ref,
   uploadBytes,
@@ -556,12 +551,12 @@ class GalleryService {
     this.syncServer('stories', newStory, 'POST');
     dataSyncBus.emit('stories', currentList);
 
-    // Save to Firestore if live Firebase is active
+    // Save to Realtime Database if live Firebase is active
     if (isFirebaseConfigured() && db) {
       try {
-        await setDoc(doc(db, 'gallery', id), newStory);
+        await dbSet(dbRef(db, `gallery/${id}`), newStory);
       } catch (fbErr) {
-        console.warn('Firestore story save fallback notice:', fbErr);
+        console.warn('Realtime Database story save fallback notice:', fbErr);
       }
     }
 
@@ -622,13 +617,13 @@ class GalleryService {
 
     if (isFirebaseConfigured() && db) {
       try {
-        await updateDoc(doc(db, 'gallery', id), {
+        await dbUpdate(dbRef(db, `gallery/${id}`), {
           ...updates,
           slug: updatedSlug,
           updatedAt: now,
         });
       } catch (fbErr) {
-        console.warn('Firestore story update fallback notice:', fbErr);
+        console.warn('Realtime Database story update fallback notice:', fbErr);
       }
     }
 
@@ -670,9 +665,9 @@ class GalleryService {
     if (isFirebaseConfigured()) {
       if (db) {
         try {
-          await deleteDoc(doc(db, 'gallery', id));
+          await dbRemove(dbRef(db, `gallery/${id}`));
         } catch (err) {
-          console.warn('Firestore doc delete notice:', err);
+          console.warn('Realtime Database doc delete notice:', err);
         }
       }
       if (storage && target.storagePath) {
@@ -724,7 +719,7 @@ class GalleryService {
     if (isFirebaseConfigured()) {
       for (const target of targets) {
         if (db) {
-          deleteDoc(doc(db, 'gallery', target.id)).catch(() => {});
+          dbRemove(dbRef(db, `gallery/${target.id}`)).catch(() => {});
         }
         if (storage && target.storagePath) {
           deleteObject(ref(storage, target.storagePath)).catch(() => {});

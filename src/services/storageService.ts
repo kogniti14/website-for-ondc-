@@ -51,8 +51,8 @@ import {
   isSuperAdminIdentifier,
   adminDbService,
 } from './adminDbService';
-import { app, isFirebaseConfigured } from './firebase';
-import { getFirestore, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { db, isFirebaseConfigured } from './firebase';
+import { ref, set, remove, get } from 'firebase/database';
 
 const KEYS = {
   PRODUCTS: 'km_products_v2',
@@ -178,20 +178,20 @@ class StorageService {
     }
 
     try {
-      // 1. PRIMARY CLOUD STORE: Asynchronously replicate to Cloud Firestore if configured
-      if (isFirebaseConfigured() && app) {
+      // 1. PRIMARY CLOUD STORE: Asynchronously replicate to Firebase Realtime Database
+      if (isFirebaseConfigured() && db) {
         try {
-          const db = getFirestore(app);
-          if (method === 'DELETE' && id) {
-            deleteDoc(doc(db, collection, id)).catch(() => {});
-          } else if (payload && typeof payload === 'object') {
-            const docId = id || payload.id;
-            if (docId) {
-              setDoc(doc(db, collection, String(docId)), payload, { merge: true }).catch(() => {});
+          const docId = id || (payload && payload.id);
+          if (docId) {
+            const itemRef = ref(db, `${collection}/${docId}`);
+            if (method === 'DELETE') {
+              remove(itemRef).catch(() => {});
+            } else if (payload && typeof payload === 'object') {
+              set(itemRef, payload).catch(() => {});
             }
           }
         } catch {
-          // Non-blocking firestore sync
+          // Non-blocking Realtime Database sync
         }
       }
 

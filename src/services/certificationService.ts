@@ -7,10 +7,10 @@ import {
 } from '../types';
 import { db, storage, isFirebaseConfigured } from './firebase';
 import {
-  doc,
-  setDoc,
-  deleteDoc,
-} from 'firebase/firestore';
+  ref as dbRef,
+  set as dbSet,
+  remove as dbRemove,
+} from 'firebase/database';
 import {
   ref,
   uploadBytes,
@@ -739,15 +739,15 @@ class CertificationService {
     }
     dataSyncBus.emit('certifications', currentList);
 
-    // Save to Firestore if live Firebase is active (with non-blocking timeout)
+    // Save to Realtime Database if live Firebase is active (with non-blocking timeout)
     if (isFirebaseConfigured() && db) {
       try {
         await Promise.race([
-          setDoc(doc(db, 'certifications', id), newCert),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 1000)),
+          dbSet(dbRef(db, `certifications/${id}`), newCert),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Realtime Database timeout')), 1000)),
         ]);
       } catch (fbErr) {
-        console.warn('Firestore certificate save fallback notice:', fbErr);
+        console.warn('Realtime Database certificate save fallback notice:', fbErr);
       }
     }
 
@@ -811,11 +811,11 @@ class CertificationService {
     if (isFirebaseConfigured() && db) {
       try {
         await Promise.race([
-          setDoc(doc(db, 'certifications', id), updatedCert, { merge: true }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 1000)),
+          dbSet(dbRef(db, `certifications/${id}`), updatedCert),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Realtime Database timeout')), 1000)),
         ]);
       } catch (fbErr) {
-        console.warn('Firestore certificate update fallback notice:', fbErr);
+        console.warn('Realtime Database certificate update fallback notice:', fbErr);
       }
     }
 
@@ -854,15 +854,15 @@ class CertificationService {
     await this.syncServer('certifications', null, 'DELETE', id);
     dataSyncBus.emit('certifications', filtered);
 
-    // Remove from Firestore
+    // Remove from Realtime Database
     if (isFirebaseConfigured() && db) {
       try {
         await Promise.race([
-          deleteDoc(doc(db, 'certifications', id)),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 1000)),
+          dbRemove(dbRef(db, `certifications/${id}`)),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Realtime Database timeout')), 1000)),
         ]);
       } catch (fbErr) {
-        console.warn('Firestore certificate delete fallback notice:', fbErr);
+        console.warn('Realtime Database certificate delete fallback notice:', fbErr);
       }
     }
 
@@ -911,11 +911,11 @@ class CertificationService {
     await Promise.all(ids.map((id) => this.syncServer('certifications', null, 'DELETE', id)));
     dataSyncBus.emit('certifications', filtered);
 
-    // Asynchronously remove from Firestore & Firebase Storage
+    // Asynchronously remove from Realtime Database & Firebase Storage
     if (isFirebaseConfigured()) {
       for (const target of targets) {
         if (db) {
-          deleteDoc(doc(db, 'certifications', target.id)).catch(() => {});
+          dbRemove(dbRef(db, `certifications/${target.id}`)).catch(() => {});
         }
         if (storage && target.storagePath) {
           deleteObject(ref(storage, target.storagePath)).catch(() => {});
@@ -1194,9 +1194,9 @@ class CertificationService {
 
     if (isFirebaseConfigured() && db) {
       try {
-        await setDoc(doc(db, 'certification_categories', newCat.id), newCat);
+        await dbSet(dbRef(db, `certification_categories/${newCat.id}`), newCat);
       } catch (err) {
-        console.warn('Firestore category sync notice:', err);
+        console.warn('Realtime Database category sync notice:', err);
       }
     }
 
@@ -1262,9 +1262,9 @@ class CertificationService {
 
     if (isFirebaseConfigured() && db) {
       try {
-        await setDoc(doc(db, 'certification_categories', updatedCat.id), updatedCat);
+        await dbSet(dbRef(db, `certification_categories/${updatedCat.id}`), updatedCat);
       } catch (err) {
-        console.warn('Firestore category sync notice:', err);
+        console.warn('Realtime Database category sync notice:', err);
       }
     }
 
@@ -1294,9 +1294,9 @@ class CertificationService {
 
     if (isFirebaseConfigured() && db) {
       try {
-        await setDoc(doc(db, 'certification_categories', cat.id), cat);
+        await dbSet(dbRef(db, `certification_categories/${cat.id}`), cat);
       } catch (err) {
-        console.warn('Firestore category sync notice:', err);
+        console.warn('Realtime Database category sync notice:', err);
       }
     }
 
@@ -1482,9 +1482,9 @@ class CertificationService {
 
     if (isFirebaseConfigured() && db) {
       try {
-        await setDoc(doc(db, 'certification_categories', cat.id), cat);
+        await dbSet(dbRef(db, `certification_categories/${cat.id}`), cat);
       } catch (fbErr) {
-        console.warn('Firestore category save fallback notice:', fbErr);
+        console.warn('Realtime Database category save fallback notice:', fbErr);
       }
     }
 

@@ -1,16 +1,7 @@
 import { AdminUser } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-} from 'firebase/firestore';
-import { app, isFirebaseConfigured } from './firebase';
+import { ref, get, set } from 'firebase/database';
+import { db, isFirebaseConfigured } from './firebase';
 import { firebaseAuthService } from './firebaseAuthService';
 
 /**
@@ -69,30 +60,25 @@ export const adminDbService = {
 
   /**
    * Ensure Super Admin account exists in the live production database
-   * PRIMARY: Cloud Firestore
+   * PRIMARY: Firebase Realtime Database
    * LEGACY FALLBACK: Supabase (read/sync only)
    */
   async ensureSuperAdminInDatabase(): Promise<void> {
-    // 1. PRIMARY: Firestore Cloud Database Sync
-    if (isFirebaseConfigured() && app) {
+    // 1. PRIMARY: Firebase Realtime Database Sync
+    if (isFirebaseConfigured() && db) {
       try {
-        const db = getFirestore(app);
-        const adminDocRef = doc(db, 'admin_users', MASTER_SUPER_ADMIN.id);
-        const snapshot = await getDoc(adminDocRef);
+        const adminRef = ref(db, `admin_users/${MASTER_SUPER_ADMIN.id}`);
+        const snapshot = await get(adminRef);
 
         if (!snapshot.exists()) {
-          console.log('[Firestore Primary] Provisioning Super Admin profile...');
-          await setDoc(
-            adminDocRef,
-            {
-              ...MASTER_SUPER_ADMIN,
-              syncedAt: new Date().toISOString(),
-            },
-            { merge: true }
-          );
+          console.log('[Realtime DB Primary] Provisioning Super Admin profile...');
+          await set(adminRef, {
+            ...MASTER_SUPER_ADMIN,
+            syncedAt: new Date().toISOString(),
+          });
         }
       } catch (err) {
-        console.warn('[Firestore Primary] Admin check notice:', err);
+        console.warn('[Realtime DB Primary] Admin check notice:', err);
       }
     }
 
@@ -123,13 +109,11 @@ export const adminDbService = {
     if (!isFirebaseConfigured()) return;
 
     try {
-      // First attempt to sign in to see if user exists
       const testRes = await firebaseAuthService.loginWithEmail(
         MASTER_SUPER_ADMIN.email,
         MASTER_SUPER_ADMIN.password!
       );
 
-      // If user not found, auto-create in Firebase Auth
       if (testRes.error && testRes.error.toLowerCase().includes('no registered account')) {
         console.log('[Firebase Auth] Auto-provisioning Super Admin in Firebase Cloud Auth...');
         await firebaseAuthService.registerWithEmail(
@@ -146,7 +130,7 @@ export const adminDbService = {
   /**
    * Look up an admin user from live database or memory/localStorage
    * 1. Super Admin alias check (instant zero-latency response)
-   * 2. PRIMARY: Cloud Firestore admin_users collection
+   * 2. PRIMARY: Firebase Realtime Database admin_users
    * 3. LEGACY FALLBACK: Supabase admin_users table
    */
   async findAdminUser(rawIdentifier: string): Promise<AdminUser | null> {
@@ -158,31 +142,27 @@ export const adminDbService = {
       return { ...MASTER_SUPER_ADMIN };
     }
 
-    // 2. PRIMARY: Cloud Firestore Lookup
-    if (isFirebaseConfigured() && app) {
+    // 2. PRIMARY: Firebase Realtime Database Lookup
+    if (isFirebaseConfigured() && db) {
       try {
-        const db = getFirestore(app);
-        // Direct ID lookup if clean matches standard format
-        const directDoc = await getDoc(doc(db, 'admin_users', clean));
-        if (directDoc.exists()) {
-          return directDoc.data() as AdminUser;
-        }
-
-        // Query by userId or email
-        const adminCol = collection(db, 'admin_users');
-        const qUser = query(adminCol, where('userId', '==', clean));
-        const snapUser = await getDocs(qUser);
-        if (!snapUser.empty) {
-          return snapUser.docs[0].data() as AdminUser;
-        }
-
-        const qEmail = query(adminCol, where('email', '==', clean));
-        const snapEmail = await getDocs(qEmail);
-        if (!snapEmail.empty) {
-          return snapEmail.docs[0].data() as AdminUser;
+        const adminRef = ref(db, 'admin_users');
+        const snap = await get(adminRef);
+        if (snap.exists()) {
+          const val = snap.val();
+          for (const key of Object.keys(val)) {
+            const admin = val[key];
+            if (
+              admin &&
+              (admin.userId?.toLowerCase() === clean ||
+                admin.email?.toLowerCase() === clean ||
+                admin.id?.toLowerCase() === clean)
+            ) {
+              return admin as AdminUser;
+            }
+          }
         }
       } catch (err) {
-        console.warn('[Firestore Primary] Admin lookup notice:', err);
+        console.warn('[Realtime DB Primary] Admin lookup notice:', err);
       }
     }
 

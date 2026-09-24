@@ -1,0 +1,113 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "admin_users": {
+      ".indexOn": ["userId", "email", "role"],
+      ".read": "auth != null",
+      ".write": "auth != null && (auth.token.role === 'super_admin' || auth.token.email === 'kogniti14@kognitiminds.com')"
+    },
+
+    "products": {
+      ".indexOn": ["category", "stockStatus", "updatedAt"],
+      ".read": true,
+      ".write": "auth != null && (auth.token.role === 'admin' || auth.token.role === 'super_admin' || auth.token.email === 'kogniti14@kognitiminds.com')"
+    },
+
+    "categories": {
+      ".indexOn": ["slug", "displayOrder"],
+      ".read": true,
+      ".write": "auth != null && (auth.token.role === 'admin' || auth.token.role === 'super_admin')"
+    },
+
+    "reviews": {
+      ".indexOn": ["productId", "status", "customerId", "createdAt"],
+      ".read": true,
+      "$reviewId": {
+        ".write": "auth != null && (!data.exists() || data.child('customerId').val() === auth.uid || auth.token.role === 'admin' || auth.token.role === 'super_admin')"
+      }
+    },
+
+    "review_audit_logs": {
+      ".indexOn": ["reviewId", "action", "timestamp"],
+      ".read": "auth != null && (auth.token.role === 'admin' || auth.token.role === 'super_admin')",
+      ".write": "auth != null && (auth.token.role === 'admin' || auth.token.role === 'super_admin')"
+    },
+
+    "b2c_users": {
+      "$userId": {
+        ".read": "auth != null && (auth.uid === $userId || auth.token.role === 'admin' || auth.token.role === 'super_admin')",
+        ".write": "auth != null && (auth.uid === $userId || auth.token.role === 'admin' || auth.token.role === 'super_admin')"
+      }
+    },
+
+    "b2b_businesses": {
+      "$businessId": {
+        ".read": "auth != null && (auth.uid === $businessId || auth.token.role === 'admin' || auth.token.role === 'super_admin')",
+        ".write": "auth != null && (auth.uid === $businessId || auth.token.role === 'admin' || auth.token.role === 'super_admin')"
+      }
+    },
+
+    "b2c_orders": {
+      ".indexOn": ["customerId", "orderStatus", "createdAt"],
+      ".read": "auth != null",
+      "$orderId": {
+        ".read": "auth != null && (data.child('customerId').val() === auth.uid || auth.token.role === 'admin' || auth.token.role === 'super_admin')",
+        ".write": "auth != null"
+      }
+    },
+
+    "b2b_orders": {
+      ".indexOn": ["businessId", "orderStatus", "createdAt"],
+      ".read": "auth != null",
+      "$orderId": {
+        ".read": "auth != null && (data.child('businessId').val() === auth.uid || auth.token.role === 'admin' || auth.token.role === 'super_admin')",
+        ".write": "auth != null"
+      }
+    },
+
+    "b2b_quotations": {
+      ".indexOn": ["businessId", "status", "createdAt"],
+      ".read": "auth != null",
+      "$rfqId": {
+        ".read": "auth != null && (data.child('businessId').val() === auth.uid || auth.token.role === 'admin' || auth.token.role === 'super_admin')",
+        ".write": "auth != null"
+      }
+    },
+
+    "certifications": {
+      ".indexOn": ["category", "status", "displayOrder"],
+      ".read": true,
+      ".write": "auth != null && (auth.token.role === 'admin' || auth.token.role === 'super_admin')"
+    },
+
+    "certification_categories": {
+      ".indexOn": ["slug", "displayOrder"],
+      ".read": true,
+      ".write": "auth != null && (auth.token.role === 'admin' || auth.token.role === 'super_admin')"
+    },
+
+    "stories": {
+      ".indexOn": ["status", "featured"],
+      ".read": true,
+      ".write": "auth != null && (auth.token.role === 'admin' || auth.token.role === 'super_admin')"
+    },
+
+    "testimonials": {
+      ".indexOn": ["rating", "status"],
+      ".read": true,
+      ".write": "auth != null && (auth.token.role === 'admin' || auth.token.role === 'super_admin')"
+    },
+
+    "settings": {
+      ".read": true,
+      ".write": "auth != null && (auth.token.role === 'admin' || auth.token.role === 'super_admin')"
+    },
+
+    "site_media": {
+      ".read": true,
+      ".write": "auth != null && (auth.token.role === 'admin' || auth.token.role === 'super_admin')"
+    }
+  }
+}
