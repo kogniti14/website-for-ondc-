@@ -1,21 +1,27 @@
+# Firebase Security Rules Specification (Firestore & Storage)
+# Kogniti Minds Private Limited
+
+## 1. Cloud Firestore Security Rules (`firestore.rules`)
+
+```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper functions
     function isAuthenticated() {
       return request.auth != null;
     }
 
     function isOwner(userId) {
-      return isAuthenticated() && (request.auth.uid == userId || request.auth.token.email == userId);
+      return isAuthenticated() && request.auth.uid == userId;
     }
 
     function isAdmin() {
       return isAuthenticated() && 
         (request.auth.token.role == 'super_admin' || 
          request.auth.token.role == 'admin' || 
-         request.auth.token.admin == true ||
-         request.auth.token.email == 'kogniti14@kognitiminds.com');
+         request.auth.token.admin == true);
     }
 
     function isSuperAdmin() {
@@ -48,7 +54,7 @@ service cloud.firestore {
     // 4. B2C Orders (Owner read/write, Admin full manage)
     match /b2c_orders/{orderId} {
       allow read: if isOwner(resource.data.customerId) || isOwner(resource.data.customerEmail) || isAdmin();
-      allow create: if true;
+      allow create: if isAuthenticated() || request.resource.data.customerEmail != null;
       allow update, delete: if isAdmin();
     }
 
@@ -94,7 +100,7 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // 9. Customer Reviews (Approved public, submission authenticated, moderation Admin)
+    // 9. Verified Customer Reviews (Approved public, submission authenticated, moderation Admin)
     match /reviews/{reviewId} {
       allow read: if resource.data.status == 'approved' || isAdmin();
       allow create: if isAuthenticated() && request.resource.data.status == 'pending';
@@ -134,3 +140,69 @@ service cloud.firestore {
     }
   }
 }
+```
+
+---
+
+## 2. Firebase Storage Security Rules (`storage.rules`)
+
+```javascript
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.role == 'super_admin' || 
+         request.auth.token.role == 'admin');
+    }
+
+    // 1. SENSITIVE B2B KYC Documents (Owner Business & Admin ONLY)
+    match /b2b_documents/{businessId}/{fileName} {
+      allow read: if isAuthenticated() && (request.auth.uid == businessId || isAdmin());
+      allow write: if isAuthenticated() && (request.auth.uid == businessId || isAdmin()) &&
+                     request.resource.size < 25 * 1024 * 1024 &&
+                     (request.resource.contentType.matches('application/pdf') ||
+                      request.resource.contentType.matches('image/.*'));
+    }
+
+    // 2. Company Certifications (Public read if downloadable, Admin write)
+    match /certifications/{certId}/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin() && request.resource.size < 25 * 1024 * 1024;
+    }
+
+    // 3. Success Stories & Gallery (Public read, Admin write)
+    match /gallery/{storyId}/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin() && request.resource.size < 20 * 1024 * 1024;
+    }
+
+    // 4. Product Catalog Images (Public read, Admin write)
+    match /products/{productId}/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin() && request.resource.size < 15 * 1024 * 1024;
+    }
+
+    // 5. Customer Review Media (Photos max 5MB, Videos max 25MB)
+    match /reviews/{reviewId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuthenticated() && 
+                     (request.resource.size < 25 * 1024 * 1024) &&
+                     (request.resource.contentType.matches('image/.*') || 
+                      request.resource.contentType.matches('video/mp4') || 
+                      request.resource.contentType.matches('video/webm'));
+    }
+
+    // 6. Site Media & Branding
+    match /site_media/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
+```

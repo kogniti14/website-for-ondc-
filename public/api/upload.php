@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$maxSize = 15 * 1024 * 1024; // 15 MB
+$maxSize = 25 * 1024 * 1024; // 25 MB (supports photo and review video uploads)
 $allowedMimes = [
     'application/pdf',
     'image/jpeg',
@@ -35,8 +35,10 @@ $allowedMimes = [
     'image/webp',
     'image/jpg',
     'image/svg+xml',
+    'video/mp4',
+    'video/webm',
 ];
-$allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'svg'];
+$allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'svg', 'mp4', 'webm'];
 
 $folder = 'certificates';
 $originalName = 'upload_' . time();
@@ -106,6 +108,8 @@ if (!$extension) {
     if ($mimeType === 'application/pdf') $extension = 'pdf';
     elseif (strpos($mimeType, 'png') !== false) $extension = 'png';
     elseif (strpos($mimeType, 'webp') !== false) $extension = 'webp';
+    elseif (strpos($mimeType, 'mp4') !== false) $extension = 'mp4';
+    elseif (strpos($mimeType, 'webm') !== false) $extension = 'webm';
     else $extension = 'jpg';
 }
 
@@ -113,7 +117,7 @@ if (!in_array(strtolower($mimeType), $allowedMimes) || !in_array($extension, $al
     http_response_code(400);
     echo json_encode([
         'success' => false,
-        'message' => 'Invalid file format. Supported: PDF, JPG, JPEG, PNG, WEBP.',
+        'message' => 'Invalid file format. Supported: PDF, JPG, JPEG, PNG, WEBP, MP4, WEBM.',
         'detectedMime' => $mimeType,
         'detectedExt' => $extension,
     ]);

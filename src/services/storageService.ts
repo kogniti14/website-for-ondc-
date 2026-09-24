@@ -51,6 +51,8 @@ import {
   isSuperAdminIdentifier,
   adminDbService,
 } from './adminDbService';
+import { app, isFirebaseConfigured } from './firebase';
+import { getFirestore, doc, setDoc, deleteDoc } from 'firebase/firestore';
 
 const KEYS = {
   PRODUCTS: 'km_products_v2',
@@ -176,7 +178,24 @@ class StorageService {
     }
 
     try {
-      // Direct native PHP dispatcher (guaranteed active on Hostinger LiteSpeed/Apache)
+      // 1. PRIMARY CLOUD STORE: Asynchronously replicate to Cloud Firestore if configured
+      if (isFirebaseConfigured() && app) {
+        try {
+          const db = getFirestore(app);
+          if (method === 'DELETE' && id) {
+            deleteDoc(doc(db, collection, id)).catch(() => {});
+          } else if (payload && typeof payload === 'object') {
+            const docId = id || payload.id;
+            if (docId) {
+              setDoc(doc(db, collection, String(docId)), payload, { merge: true }).catch(() => {});
+            }
+          }
+        } catch {
+          // Non-blocking firestore sync
+        }
+      }
+
+      // 2. FAILOVER & HOSTINGER STORE: Direct native PHP dispatcher (guaranteed active on Hostinger LiteSpeed/Apache)
       const phpUrl = method === 'DELETE' && id
         ? `/api/data.php?collection=${collection}&id=${encodeURIComponent(id)}`
         : `/api/data.php?collection=${collection}`;

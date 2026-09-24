@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Building2,
   Package,
@@ -18,15 +18,19 @@ import {
   Tag,
   CreditCard,
   RefreshCw,
+  Star,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { B2BOrder, B2BQuotation } from '../../types';
+import { B2BOrder, B2BQuotation, B2BOrderItemSummary, ProductReview } from '../../types';
 import { storageService } from '../../services/storageService';
 import { OrderInvoiceModal } from '../../components/common/OrderInvoiceModal';
 import { QuotationModal } from '../../components/b2b/QuotationModal';
 import { WHATSAPP_NUMBER } from '../../config/whatsappConfig';
 import { ImageUpload } from '../../components/common/ImageUpload';
 import { RazorpayCheckoutModal } from '../../components/payment/RazorpayCheckoutModal';
+import { ReviewSubmissionModal } from '../../components/reviews/ReviewSubmissionModal';
+import { reviewService } from '../../services/reviewService';
+import { dataSyncBus } from '../../services/dataSyncBus';
 
 interface B2BDashboardPageProps {
   b2bOrders: B2BOrder[];
@@ -43,6 +47,15 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
 }) => {
   const { b2bBusiness, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'quotations' | 'orders' | 'invoices'>('quotations');
+  const [reviewTarget, setReviewTarget] = useState<{ order: B2BOrder; item: B2BOrderItemSummary } | null>(null);
+  const [allReviews, setAllReviews] = useState<ProductReview[]>(() => reviewService.getAllReviewsForAdmin());
+
+  useEffect(() => {
+    const unsub = dataSyncBus.subscribe('reviews', (data) => {
+      if (Array.isArray(data)) setAllReviews(data);
+    });
+    return () => unsub();
+  }, []);
   const [selectedB2bInvoice, setSelectedB2bInvoice] = useState<B2BOrder | null>(null);
   const [selectedFormalQuotation, setSelectedFormalQuotation] = useState<B2BQuotation | null>(null);
   const [orderToPay, setOrderToPay] = useState<B2BOrder | null>(null);
@@ -1133,8 +1146,41 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                                   Qty: {item.quantity} Units × ₹{item.effectiveUnitPrice.toLocaleString('en-IN')} | HSN: {item.hsn}
                                 </div>
                               </div>
-                              <div style={{ fontWeight: 800, color: '#38BDF8' }}>
-                                ₹{item.total.toLocaleString('en-IN')}
+                              <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2rem' }}>
+                                <div style={{ fontWeight: 800, color: '#38BDF8' }}>
+                                  ₹{item.total.toLocaleString('en-IN')}
+                                </div>
+
+                                {ord.orderStatus === 'delivered' && (
+                                  <div>
+                                    {allReviews.some((r) => r.orderId === ord.id && r.productId === item.productId) ? (
+                                      <span
+                                        className="flex items-center gap-1 text-emerald-400"
+                                        style={{ fontSize: '0.72rem', fontWeight: 700 }}
+                                      >
+                                        <CheckCircle2 size={12} />
+                                        Reviewed
+                                      </span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => setReviewTarget({ order: ord, item })}
+                                        className="btn btn-secondary flex items-center gap-1"
+                                        style={{
+                                          padding: '0.2rem 0.55rem',
+                                          fontSize: '0.72rem',
+                                          fontWeight: 700,
+                                          borderRadius: '6px',
+                                          backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                                          color: '#FBBF24',
+                                          border: '1px solid rgba(245, 158, 11, 0.35)',
+                                        }}
+                                      >
+                                        <Star size={11} fill="#FBBF24" /> Write a Review
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -1703,6 +1749,27 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Verified B2B Customer Review Modal */}
+      {reviewTarget && (
+        <ReviewSubmissionModal
+          isOpen={!!reviewTarget}
+          onClose={() => setReviewTarget(null)}
+          productId={reviewTarget.item.productId}
+          productName={reviewTarget.item.productName}
+          productImage={reviewTarget.item.image}
+          productSku={reviewTarget.item.sku}
+          orderId={reviewTarget.order.id}
+          orderNumber={reviewTarget.order.orderNumber}
+          customerType="b2b"
+          customerId={b2bBusiness?.id || reviewTarget.order.businessId}
+          customerName={b2bBusiness?.contactPerson || b2bBusiness?.companyName || reviewTarget.order.businessName}
+          companyName={b2bBusiness?.companyName || reviewTarget.order.businessName}
+          onSuccess={() => {
+            setAllReviews(reviewService.getAllReviewsForAdmin());
+          }}
+        />
       )}
     </div>
   );

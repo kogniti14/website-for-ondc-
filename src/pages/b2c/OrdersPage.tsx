@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Package,
   Clock,
@@ -12,12 +12,17 @@ import {
   MapPin,
   CreditCard,
   ShieldCheck,
+  Star,
 } from 'lucide-react';
-import { B2COrder } from '../../types';
+import { B2COrder, OrderItemSummary, ProductReview } from '../../types';
 import { storageService } from '../../services/storageService';
 import { RazorpayCheckoutModal } from '../../components/payment/RazorpayCheckoutModal';
 import { razorpayService } from '../../services/razorpayService';
 import { OrderInvoiceModal } from '../../components/common/OrderInvoiceModal';
+import { ReviewSubmissionModal } from '../../components/reviews/ReviewSubmissionModal';
+import { reviewService } from '../../services/reviewService';
+import { useAuth } from '../../context/AuthContext';
+import { dataSyncBus } from '../../services/dataSyncBus';
 
 interface OrdersPageProps {
   orders: B2COrder[];
@@ -25,9 +30,19 @@ interface OrdersPageProps {
 }
 
 export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) => {
+  const { b2cUser } = useAuth();
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<B2COrder | null>(null);
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<B2COrder | null>(null);
   const [orderToPay, setOrderToPay] = useState<B2COrder | null>(null);
+  const [reviewTarget, setReviewTarget] = useState<{ order: B2COrder; item: OrderItemSummary } | null>(null);
+  const [allReviews, setAllReviews] = useState<ProductReview[]>(() => reviewService.getAllReviewsForAdmin());
+
+  useEffect(() => {
+    const unsub = dataSyncBus.subscribe('reviews', (data) => {
+      if (Array.isArray(data)) setAllReviews(data);
+    });
+    return () => unsub();
+  }, []);
 
   const handlePaymentSuccess = (response: any) => {
     if (!orderToPay) return;
@@ -338,11 +353,42 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                         </div>
                       </div>
 
-                      <div style={{ textAlign: 'right' }}>
+                      <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
                         <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--slate-900)' }}>
                           ₹{item.total.toLocaleString('en-IN')}
                         </div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--slate-400)' }}>Total (Incl. Tax)</div>
+
+                        {order.orderStatus === 'delivered' && (
+                          <div style={{ marginTop: '0.25rem' }}>
+                            {allReviews.some((r) => r.orderId === order.id && r.productId === item.productId) ? (
+                              <span
+                                className="flex items-center gap-1 text-emerald-600"
+                                style={{ fontSize: '0.75rem', fontWeight: 700 }}
+                              >
+                                <CheckCircle2 size={13} />
+                                Reviewed
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setReviewTarget({ order, item })}
+                                className="btn btn-secondary flex items-center gap-1"
+                                style={{
+                                  padding: '0.25rem 0.65rem',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  borderRadius: '6px',
+                                  backgroundColor: '#FEF3C7',
+                                  color: '#B45309',
+                                  borderColor: '#FDE68A',
+                                }}
+                              >
+                                <Star size={12} fill="#B45309" /> Write a Review
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -490,6 +536,26 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
           description={`Payment settlement for Order #${orderToPay.orderNumber}`}
           isB2B={false}
           onSuccess={handlePaymentSuccess}
+        />
+      )}
+
+      {/* 3. Verified Customer Review Modal */}
+      {reviewTarget && (
+        <ReviewSubmissionModal
+          isOpen={!!reviewTarget}
+          onClose={() => setReviewTarget(null)}
+          productId={reviewTarget.item.productId}
+          productName={reviewTarget.item.productName}
+          productImage={reviewTarget.item.image}
+          productSku={reviewTarget.item.sku}
+          orderId={reviewTarget.order.id}
+          orderNumber={reviewTarget.order.orderNumber}
+          customerType="b2c"
+          customerId={b2cUser?.id || reviewTarget.order.customerEmail}
+          customerName={b2cUser?.name || reviewTarget.order.customerName}
+          onSuccess={() => {
+            setAllReviews(reviewService.getAllReviewsForAdmin());
+          }}
         />
       )}
     </div>

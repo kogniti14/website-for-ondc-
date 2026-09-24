@@ -1,6 +1,15 @@
 import { AdminUser } from '../types';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+} from 'firebase/firestore';
 import { app, isFirebaseConfigured } from './firebase';
 import { firebaseAuthService } from './firebaseAuthService';
 
@@ -60,10 +69,34 @@ export const adminDbService = {
 
   /**
    * Ensure Super Admin account exists in the live production database
-   * (Supabase and/or Firebase Firestore) without creating duplicates.
+   * PRIMARY: Cloud Firestore
+   * LEGACY FALLBACK: Supabase (read/sync only)
    */
   async ensureSuperAdminInDatabase(): Promise<void> {
-    // 1. Supabase Database Sync (Hostinger environment)
+    // 1. PRIMARY: Firestore Cloud Database Sync
+    if (isFirebaseConfigured() && app) {
+      try {
+        const db = getFirestore(app);
+        const adminDocRef = doc(db, 'admin_users', MASTER_SUPER_ADMIN.id);
+        const snapshot = await getDoc(adminDocRef);
+
+        if (!snapshot.exists()) {
+          console.log('[Firestore Primary] Provisioning Super Admin profile...');
+          await setDoc(
+            adminDocRef,
+            {
+              ...MASTER_SUPER_ADMIN,
+              syncedAt: new Date().toISOString(),
+            },
+            { merge: true }
+          );
+        }
+      } catch (err) {
+        console.warn('[Firestore Primary] Admin check notice:', err);
+      }
+    }
+
+    // 2. LEGACY FALLBACK: Supabase Database Sync (Hostinger auxiliary)
     if (isSupabaseConfigured()) {
       try {
         const { data, error } = await supabase
@@ -73,30 +106,11 @@ export const adminDbService = {
           .limit(1);
 
         if (!error && (!data || data.length === 0)) {
-          console.log('[Supabase] Seeding Super Admin record...');
+          console.log('[Supabase Legacy] Seeding Super Admin record...');
           await supabase.from('admin_users').upsert(MASTER_SUPER_ADMIN, { onConflict: 'userId' });
         }
       } catch (err) {
-        console.warn('[Supabase] Admin check notice:', err);
-      }
-    }
-
-    // 2. Firestore Cloud Database Sync
-    if (isFirebaseConfigured() && app) {
-      try {
-        const db = getFirestore(app);
-        const adminDocRef = doc(db, 'admin_users', MASTER_SUPER_ADMIN.id);
-        const snapshot = await getDoc(adminDocRef);
-
-        if (!snapshot.exists()) {
-          console.log('[Firestore] Syncing Super Admin profile...');
-          await setDoc(adminDocRef, {
-            ...MASTER_SUPER_ADMIN,
-            syncedAt: new Date().toISOString(),
-          }, { merge: true });
-        }
-      } catch (err) {
-        console.warn('[Firestore] Admin check notice:', err);
+        console.warn('[Supabase Legacy] Admin check notice:', err);
       }
     }
   },
@@ -116,7 +130,7 @@ export const adminDbService = {
       );
 
       // If user not found, auto-create in Firebase Auth
-      if (!testRes.success && testRes.error && testRes.error.toLowerCase().includes('no registered account')) {
+      if (testRes.error && testRes.error.toLowerCase().includes('no registered account')) {
         console.log('[Firebase Auth] Auto-provisioning Super Admin in Firebase Cloud Auth...');
         await firebaseAuthService.registerWithEmail(
           MASTER_SUPER_ADMIN.email,
@@ -131,17 +145,48 @@ export const adminDbService = {
 
   /**
    * Look up an admin user from live database or memory/localStorage
+   * 1. Super Admin alias check (instant zero-latency response)
+   * 2. PRIMARY: Cloud Firestore admin_users collection
+   * 3. LEGACY FALLBACK: Supabase admin_users table
    */
   async findAdminUser(rawIdentifier: string): Promise<AdminUser | null> {
     const clean = normalizeAdminIdentifier(rawIdentifier);
     if (!clean) return null;
 
-    // Direct check for Super Admin alias
+    // 1. Direct check for Super Admin alias
     if (isSuperAdminIdentifier(clean)) {
       return { ...MASTER_SUPER_ADMIN };
     }
 
-    // Try live Supabase lookup if configured
+    // 2. PRIMARY: Cloud Firestore Lookup
+    if (isFirebaseConfigured() && app) {
+      try {
+        const db = getFirestore(app);
+        // Direct ID lookup if clean matches standard format
+        const directDoc = await getDoc(doc(db, 'admin_users', clean));
+        if (directDoc.exists()) {
+          return directDoc.data() as AdminUser;
+        }
+
+        // Query by userId or email
+        const adminCol = collection(db, 'admin_users');
+        const qUser = query(adminCol, where('userId', '==', clean));
+        const snapUser = await getDocs(qUser);
+        if (!snapUser.empty) {
+          return snapUser.docs[0].data() as AdminUser;
+        }
+
+        const qEmail = query(adminCol, where('email', '==', clean));
+        const snapEmail = await getDocs(qEmail);
+        if (!snapEmail.empty) {
+          return snapEmail.docs[0].data() as AdminUser;
+        }
+      } catch (err) {
+        console.warn('[Firestore Primary] Admin lookup notice:', err);
+      }
+    }
+
+    // 3. LEGACY FALLBACK: Supabase lookup if configured
     if (isSupabaseConfigured()) {
       try {
         const { data, error } = await supabase
@@ -154,7 +199,7 @@ export const adminDbService = {
           return data[0] as AdminUser;
         }
       } catch (err) {
-        console.warn('[Supabase] Lookup notice:', err);
+        console.warn('[Supabase Legacy] Lookup notice:', err);
       }
     }
 

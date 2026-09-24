@@ -22,6 +22,9 @@ import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useAuth } from '../../context/AuthContext';
 import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
+import { ProductReviewsSection } from '../reviews/ProductReviewsSection';
+import { reviewService } from '../../services/reviewService';
+import { dataSyncBus } from '../../services/dataSyncBus';
 
 interface ProductDetailModalProps {
   product: Product;
@@ -59,6 +62,22 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const discountPercent = Math.round(
     ((product.b2cMrp - product.b2cPrice) / product.b2cMrp) * 100
   );
+
+  const [approvedReviewStats, setApprovedReviewStats] = useState(() => {
+    return reviewService.calculateProductRating(product.id);
+  });
+
+  React.useEffect(() => {
+    const updateStats = () => {
+      setApprovedReviewStats(reviewService.calculateProductRating(product.id));
+    };
+    updateStats();
+    const unsub = dataSyncBus.subscribe('reviews', updateStats);
+    return () => unsub();
+  }, [product.id]);
+
+  const displayRating = approvedReviewStats.totalReviews > 0 ? approvedReviewStats.averageRating : (product.rating || 5.0);
+  const displayReviewCount = approvedReviewStats.totalReviews > 0 ? approvedReviewStats.totalReviews : product.reviewCount;
 
   const handleCheckPincode = (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,9 +220,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <div className="flex items-center gap-3" style={{ marginBottom: '1rem' }}>
               <div className="flex items-center gap-1" style={{ color: '#D97706', fontWeight: 700, fontSize: '0.85rem' }}>
                 <Star size={15} fill="#D97706" />
-                <span>{product.rating.toFixed(1)}</span>
+                <span>{displayRating.toFixed(1)}</span>
               </div>
-              <span style={{ color: 'var(--slate-400)', fontSize: '0.8rem' }}>({product.reviewCount} customer reviews)</span>
+              <span style={{ color: 'var(--slate-400)', fontSize: '0.8rem' }}>({displayReviewCount} customer reviews)</span>
               <span style={{ color: 'var(--slate-300)' }}>|</span>
               {showAdminStock ? (
                 <span
@@ -592,11 +611,19 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   borderBottom: activeTab === 'reviews' ? '2px solid var(--primary)' : '2px solid transparent',
                 }}
               >
-                Reviews ({product.reviewCount})
+                Reviews ({displayReviewCount})
               </button>
             </div>
 
-            <div style={{ paddingTop: '0.85rem', fontSize: '0.82rem', maxHeight: '180px', overflowY: 'auto' }}>
+            <div
+              style={{
+                paddingTop: '0.85rem',
+                fontSize: '0.82rem',
+                maxHeight: activeTab === 'reviews' ? '460px' : '180px',
+                overflowY: 'auto',
+                transition: 'max-height 0.2s ease',
+              }}
+            >
               {activeTab === 'specs' && (
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                   <tbody>
@@ -631,26 +658,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               )}
 
               {activeTab === 'reviews' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                  <div style={{ padding: '0.5rem', background: 'var(--slate-50)', borderRadius: '6px' }}>
-                    <div className="flex items-center justify-between">
-                      <span style={{ fontWeight: 700 }}>Aakash R. (Verified Buyer - Bengaluru)</span>
-                      <span className="flex items-center text-amber-500"><Star size={12} fill="#D97706" /> 5.0</span>
-                    </div>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--slate-600)', marginTop: '0.2rem' }}>
-                      "Exceptional build quality and finish. Received delivery in 2 days in mint condition with proper GST tax invoice."
-                    </p>
-                  </div>
-                  <div style={{ padding: '0.5rem', background: 'var(--slate-50)', borderRadius: '6px' }}>
-                    <div className="flex items-center justify-between">
-                      <span style={{ fontWeight: 700 }}>Pooja M. (Operations Manager - Gurugram)</span>
-                      <span className="flex items-center text-amber-500"><Star size={12} fill="#D97706" /> 5.0</span>
-                    </div>
-                    <p style={{ fontSize: '0.78rem', color: 'var(--slate-600)', marginTop: '0.2rem' }}>
-                      "Excellent texture and ink absorption. High quality sustainable supplies with fast dispatch and GST tax invoice."
-                    </p>
-                  </div>
-                </div>
+                <ProductReviewsSection product={product} />
               )}
             </div>
           </div>

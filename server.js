@@ -85,13 +85,13 @@ app.use((req, res, next) => {
 // Global Body Parsers (with rawBody capture for cryptographic signature verification)
 app.use(
   express.json({
-    limit: '10mb',
+    limit: '50mb',
     verify: (req, res, buf) => {
       req.rawBody = buf.toString('utf8');
     },
   })
 );
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // 1. Production Health Check Endpoint
 app.get('/api/health', (req, res) => {
@@ -189,7 +189,12 @@ const handleFileUpload = (req, res) => {
 
     let ext = path.extname(body.fileName || '').replace('.', '').toLowerCase();
     if (!ext) {
-      ext = mimeType.includes('pdf') ? 'pdf' : mimeType.includes('png') ? 'png' : 'jpg';
+      if (mimeType.includes('pdf')) ext = 'pdf';
+      else if (mimeType.includes('png')) ext = 'png';
+      else if (mimeType.includes('webp')) ext = 'webp';
+      else if (mimeType.includes('mp4')) ext = 'mp4';
+      else if (mimeType.includes('webm')) ext = 'webm';
+      else ext = 'jpg';
     }
 
     const timestamp = Math.floor(Date.now() / 1000);

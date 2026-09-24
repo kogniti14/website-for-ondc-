@@ -37,7 +37,9 @@ $allowedCollections = [
     'policies',
     'policy_records',
     'policy_versions',
-    'testimonials'
+    'testimonials',
+    'reviews',
+    'review_audit_logs'
 ];
 
 $objectCollections = [
@@ -179,6 +181,27 @@ if ($method === 'GET') {
 
     if ($collection === 'products' && !$isAdmin && is_array($data)) {
         $data = array_map($sanitizeProduct, $data);
+    }
+
+    // Customer Product Reviews Security & Sanitization (Enforce approved-only for public, redact private fields)
+    if ($collection === 'reviews' && is_array($data)) {
+        $filterProductId = $_GET['productId'] ?? null;
+        if (!empty($filterProductId)) {
+            $data = array_filter($data, function($r) use ($filterProductId) {
+                return isset($r['productId']) && $r['productId'] === $filterProductId;
+            });
+        }
+        if (!$isAdmin) {
+            $filtered = [];
+            foreach ($data as $r) {
+                if (isset($r['status']) && $r['status'] === 'approved') {
+                    $clean = $r;
+                    unset($clean['orderId'], $clean['customerId'], $clean['moderationNotes'], $clean['moderatedBy'], $clean['moderatedAt']);
+                    $filtered[] = $clean;
+                }
+            }
+            $data = $filtered;
+        }
     }
 
     echo json_encode(array_values($data), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);

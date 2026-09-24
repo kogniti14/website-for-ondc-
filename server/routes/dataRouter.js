@@ -29,6 +29,9 @@ const ALLOWED_COLLECTIONS = new Set([
   'policies',
   'policy_records',
   'policy_versions',
+  'testimonials',
+  'reviews',
+  'review_audit_logs',
 ]);
 
 function validateCollection(req, res, next) {
@@ -69,11 +72,31 @@ function sanitizeProductItem(item, isAdmin) {
 // GET all items in collection
 dataRouter.get('/:collection', validateCollection, (req, res) => {
   try {
-    const data = persistentStore.getAll(req.params.collection);
+    let data = persistentStore.getAll(req.params.collection);
     const isAdmin = isAuthorizedAdmin(req);
     if (req.params.collection === 'products' && !isAdmin && Array.isArray(data)) {
       const sanitized = data.map((p) => sanitizeProductItem(p, false));
       return res.json(sanitized);
+    }
+    if (req.params.collection === 'reviews' && Array.isArray(data)) {
+      const { productId } = req.query;
+      if (productId) {
+        data = data.filter((r) => r.productId === productId);
+      }
+      if (!isAdmin) {
+        data = data
+          .filter((r) => r.status === 'approved')
+          .map((r) => {
+            const clean = { ...r };
+            delete clean.orderId;
+            delete clean.customerId;
+            delete clean.moderationNotes;
+            delete clean.moderatedBy;
+            delete clean.moderatedAt;
+            return clean;
+          });
+      }
+      return res.json(data);
     }
     res.json(data);
   } catch (err) {

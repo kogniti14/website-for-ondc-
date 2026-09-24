@@ -652,3 +652,77 @@ export interface Testimonial {
   updatedAt?: string;
 }
 
+// --- Verified Customer Product Review System Types ---
+export type ReviewStatus = 'pending' | 'approved' | 'rejected';
+
+export interface ReviewMedia {
+  id: string;
+  mediaType: 'image' | 'video';
+  url: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  thumbnailUrl?: string;
+}
+
+export interface ProductReview {
+  id: string;
+  productId: string;
+  productName: string;
+  productImage?: string;
+  productSku?: string;
+  orderId: string;
+  orderNumber: string;
+  customerType: 'b2c' | 'b2b';
+  customerId: string;
+  customerName: string;
+  companyName?: string;
+  rating: number; // 1 to 5
+  title?: string;
+  text: string;
+  media: ReviewMedia[];
+  status: ReviewStatus;
+  isVerifiedPurchase: boolean;
+  createdAt: string;
+  moderatedAt?: string;
+  moderatedBy?: string;
+  moderationNotes?: string;
+}
+
+export interface ReviewAuditLog {
+  id: string;
+  reviewId: string;
+  adminId: string;
+  adminName: string;
+  action: 'approve' | 'reject' | 'delete' | 'edit';
+  previousStatus?: ReviewStatus;
+  newStatus?: ReviewStatus;
+  reason?: string;
+  timestamp: string;
+}
+
+export interface ReviewEligibilityResult {
+  eligible: boolean;
+  reason?: string;
+  orderId?: string;
+  orderNumber?: string;
+  alreadyReviewed?: boolean;
+}
+
+export interface CreateReviewInput {
+  productId: string;
+  productName: string;
+  productImage?: string;
+  productSku?: string;
+  orderId: string;
+  orderNumber: string;
+  customerType: 'b2c' | 'b2b';
+  customerId: string;
+  customerName: string;
+  companyName?: string;
+  rating: number;
+  title?: string;
+  text: string;
+  media?: ReviewMedia[];
+}
+

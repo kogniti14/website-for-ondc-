@@ -2,86 +2,58 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Helper functions
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    function isSuperAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.role == 'super_admin' ||
-        firestore.get(/databases/(default)/documents/admin_users/$(request.auth.uid)).data.role == 'super_admin' ||
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'super_admin'
-      );
-    }
-
     function isAdmin() {
-      return isAuthenticated() && (
-        isSuperAdmin() ||
-        request.auth.token.role in ['admin', 'operations_admin', 'catalog_manager'] ||
-        firestore.get(/databases/(default)/documents/admin_users/$(request.auth.uid)).data.role in ['admin', 'operations_admin', 'catalog_manager'] ||
-        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in ['admin', 'operations_admin']
-      );
+      return isAuthenticated() && 
+        (request.auth.token.role == 'super_admin' || 
+         request.auth.token.role == 'admin' ||
+         request.auth.token.email == 'kogniti14@kognitiminds.com');
     }
 
-    function isValidStoryMedia() {
-      return (
-        request.resource.contentType in [
-          'application/pdf',
-          'image/jpeg',
-          'image/png',
-          'image/webp',
-          'image/jpg'
-        ]
-      ) && request.resource.size <= 10 * 1024 * 1024; // Max 10 MB
+    // 1. SENSITIVE B2B KYC Documents (Owner Business & Admin ONLY)
+    match /b2b_documents/{businessId}/{fileName} {
+      allow read: if isAuthenticated() && (request.auth.uid == businessId || isAdmin());
+      allow write: if isAuthenticated() && (request.auth.uid == businessId || isAdmin()) &&
+                     request.resource.size < 25 * 1024 * 1024 &&
+                     (request.resource.contentType.matches('application/pdf') ||
+                      request.resource.contentType.matches('image/.*'));
     }
 
-    function isValidCertificateFile() {
-      return (
-        request.resource.contentType in [
-          'application/pdf',
-          'image/jpeg',
-          'image/png',
-          'image/webp',
-          'image/jpg'
-        ]
-      ) && request.resource.size <= 10 * 1024 * 1024; // Max 10 MB (Section 8 & 34)
-    }
-
-    // =========================================================================
-    // Company Gallery & Success Stories Storage Bucket
-    // Path: /company-gallery/{category}/{filename}
-    // =========================================================================
-    match /company-gallery/{allPaths=**} {
-      // Public read access so visitors can view company images
+    // 2. Company Certifications (Public read, Admin write)
+    match /certifications/{certId}/{fileName} {
       allow read: if true;
-
-      // Admin write access with image/PDF <= 10MB validation
-      allow write: if isAdmin() && isValidStoryMedia();
-
-      // Admin delete access
-      allow delete: if isAdmin();
+      allow write: if isAdmin() && request.resource.size < 25 * 1024 * 1024;
     }
 
-    // =========================================================================
-    // Company Certifications & Official Documents Storage Bucket
-    // Path: /company-certifications/{category}/{filename}
-    // =========================================================================
-    match /company-certifications/{allPaths=**} {
-      // Public read access for published official documents
+    // 3. Success Stories & Gallery (Public read, Admin write)
+    match /gallery/{storyId}/{fileName} {
       allow read: if true;
-
-      // Admin write access: PDF/Image <= 10MB validation
-      allow write: if isAdmin() && isValidCertificateFile();
-
-      // Admin delete access
-      allow delete: if isAdmin();
+      allow write: if isAdmin() && request.resource.size < 20 * 1024 * 1024;
     }
 
-    // Default deny for unmapped storage paths
-    match /{allPaths=**} {
-      allow read: if isAuthenticated();
-      allow write: if false;
+    // 4. Product Catalog Images (Public read, Admin write)
+    match /products/{productId}/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin() && request.resource.size < 15 * 1024 * 1024;
+    }
+
+    // 5. Customer Review Media (Photos max 5MB, Videos max 25MB)
+    match /reviews/{reviewId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuthenticated() && 
+                     (request.resource.size < 25 * 1024 * 1024) &&
+                     (request.resource.contentType.matches('image/.*') || 
+                      request.resource.contentType.matches('video/mp4') || 
+                      request.resource.contentType.matches('video/webm'));
+    }
+
+    // 6. Site Media & Branding
+    match /site_media/{fileName} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }
