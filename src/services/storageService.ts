@@ -250,6 +250,8 @@ class StorageService {
       { collection: 'b2b_quotations', key: KEYS.B2B_QUOTATIONS, defaultVal: SEED_B2B_QUOTATIONS, isArray: true },
       { collection: 'coupons', key: KEYS.COUPONS, defaultVal: MOCK_COUPONS, isArray: true },
       { collection: 'admin_users', key: KEYS.ADMIN_USERS, defaultVal: SEED_ADMIN_USERS, isArray: true },
+      { collection: 'testimonials', key: 'km_testimonials_v1', defaultVal: [], isArray: true },
+      { collection: 'settings', key: 'km_settings_v1', defaultVal: {}, isArray: false },
       { collection: 'site_media', key: KEYS.SITE_MEDIA, defaultVal: {}, isArray: false },
     ];
 

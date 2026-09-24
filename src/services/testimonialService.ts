@@ -1,5 +1,7 @@
 import { Testimonial } from '../types';
 import { dataSyncBus } from './dataSyncBus';
+import { db, isFirebaseConfigured } from './firebase';
+import { ref, set, remove } from 'firebase/database';
 
 const LOCAL_STORAGE_KEY = 'km_testimonials_v1';
 
@@ -102,6 +104,27 @@ class TestimonialService {
     };
 
     try {
+      // 1. PRIMARY: Replicate to Firebase Realtime Database
+      if (isFirebaseConfigured() && db) {
+        try {
+          if (isBatch && Array.isArray(payload)) {
+            const listRef = ref(db, 'testimonials');
+            set(listRef, payload).catch(() => {});
+          } else {
+            const docId = id || ((payload as any)?.id);
+            if (docId) {
+              const itemRef = ref(db, `testimonials/${docId}`);
+              if (method === 'DELETE') {
+                remove(itemRef).catch(() => {});
+              } else if (payload && typeof payload === 'object') {
+                set(itemRef, payload).catch(() => {});
+              }
+            }
+          }
+        } catch {}
+      }
+
+      // 2. FAILOVER & HOSTINGER PERSISTENCE
       const phpUrl =
         method === 'DELETE' && id
           ? `/api/data.php?collection=testimonials&id=${encodeURIComponent(id)}`
