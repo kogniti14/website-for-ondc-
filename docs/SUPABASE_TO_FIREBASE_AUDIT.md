@@ -14,7 +14,7 @@
 Kogniti Minds Private Limited operates a live commercial e-commerce platform serving retail B2C consumers, enterprise B2B institutions, and active participants on India's ONDC (Open Network for Digital Commerce) network.
 
 This audit evaluates the current architecture, identifies all Supabase dependencies, maps the existing persistence layer, and provides the blueprint for migrating the PRIMARY database to **Firebase Realtime Database** under the designated production project:
-- **Project ID:** `kogniti-minds-website`
+- **Project ID:** `kognitiminds-ondc`
 - **Primary Database Service:** Firebase Realtime Database (`firebase/database`)
 - **Primary Object Store:** Firebase Storage (`firebase/storage`)
 - **Primary Auth Engine:** Firebase Authentication (`firebase/auth`)

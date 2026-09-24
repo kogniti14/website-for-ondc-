@@ -1,11 +1,11 @@
 # KOGNITI MINDS PRIVATE LIMITED
 # Production Firebase Realtime Database Migration & Validation Report
 
-**Execution Timestamp:** 2026-09-24T19:23:50.809Z  
-**Completion Timestamp:** 2026-09-24T19:24:03.067Z  
+**Execution Timestamp:** 2026-09-24T19:50:30.051Z  
+**Completion Timestamp:** 2026-09-24T19:50:31.395Z  
 **Primary Database:** Firebase Realtime Database  
-**Firebase Project:** `kogniti-minds-website`  
-**Database URL:** `https://kogniti-minds-website-default-rtdb.firebaseio.com`  
+**Firebase Project:** `kognitiminds-ondc`  
+**Database URL:** `https://kognitiminds-ondc-default-rtdb.firebaseio.com`  
 **Execution Environment:** Hostinger Cloud / Local Migration Engine  
 **Author:** Senior Firebase Architect & Database Migration Engineer  
 
@@ -34,9 +34,9 @@
 ---
 
 ## 2. Firebase Realtime Database Rules Deployment Note
-The database endpoint `https://kogniti-minds-website-default-rtdb.firebaseio.com` is active.
+The database endpoint `https://kognitiminds-ondc-default-rtdb.firebaseio.com` is active.
 To enable complete cloud synchronization via client SDK:
-1. Open the [Firebase Console - Realtime Database Rules](https://console.firebase.google.com/project/kogniti-minds-website/database/rules)
+1. Open the [Firebase Console - Realtime Database Rules](https://console.firebase.google.com/project/kognitiminds-ondc/database/rules)
 2. Paste the contents of `database.rules.json` (which includes all Role-Based Access Controls and `.indexOn` rules).
 3. Click **Publish**.
 4. Run: `node scripts/migrate-supabase-to-firebase/migrate.js` to execute cloud synchronization.

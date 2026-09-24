@@ -2,8 +2,8 @@
  * KOGNITI MINDS PRIVATE LIMITED
  * SUPABASE & HOSTINGER STORE → FIREBASE REALTIME DATABASE MIGRATION ENGINE
  *
- * Target: Firebase Realtime Database (kogniti-minds-website)
- * Database URL: https://kogniti-minds-website-default-rtdb.firebaseio.com
+ * Target: Firebase Realtime Database (kognitiminds-ondc)
+ * Database URL: https://kognitiminds-ondc-default-rtdb.firebaseio.com
  *
  * Responsibilities:
  * 1. Safe connection & inspection of legacy Supabase instance
@@ -56,14 +56,14 @@ function loadEnv() {
 loadEnv();
 
 const FIREBASE_CONFIG = {
-  apiKey: process.env.VITE_FIREBASE_API_KEY || 'AIzaSyBJQo-jLW2J9RFKwW1Wyo_xwcu-44KhGlY',
-  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || 'kogniti-minds-website.firebaseapp.com',
-  projectId: process.env.VITE_FIREBASE_PROJECT_ID || 'kogniti-minds-website',
-  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || 'kogniti-minds-website.firebasestorage.app',
-  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '1093420559460',
-  appId: process.env.VITE_FIREBASE_APP_ID || '1:1093420559460:web:6a4b8ff611b27dbb05c371',
-  measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID || 'G-KJS6M3VWKX',
-  databaseURL: process.env.VITE_FIREBASE_DATABASE_URL || 'https://kogniti-minds-website-default-rtdb.firebaseio.com',
+  apiKey: process.env.VITE_FIREBASE_API_KEY || 'AIzaSyAOVn0vnb7ZMmyW7D5XOqBEDskPMNnuY5I',
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || 'kognitiminds-ondc.firebaseapp.com',
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID || 'kognitiminds-ondc',
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || 'kognitiminds-ondc.firebasestorage.app',
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '585231773951',
+  appId: process.env.VITE_FIREBASE_APP_ID || '1:585231773951:web:1a71e21a858b5db71adcca',
+  measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID || 'G-LHW5GZQCCS',
+  databaseURL: process.env.VITE_FIREBASE_DATABASE_URL || 'https://kognitiminds-ondc-default-rtdb.firebaseio.com',
 };
 
 console.log('=================================================================');

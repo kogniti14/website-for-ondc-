@@ -129,7 +129,7 @@ app.get('/api/health', (req, res) => {
         mode: (process.env.RAZORPAY_KEY_ID || '').startsWith('rzp_test_') ? 'test' : 'live',
       },
       firebase: {
-        projectId: process.env.VITE_FIREBASE_PROJECT_ID || 'kogniti-minds-website',
+        projectId: process.env.VITE_FIREBASE_PROJECT_ID || 'kognitiminds-ondc',
         realtimeDatabase: true,
         authentication: true,
         storage: true,

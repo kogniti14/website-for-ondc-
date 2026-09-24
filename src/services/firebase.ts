@@ -33,14 +33,14 @@ const envDatabaseUrl = getEnvVar('VITE_FIREBASE_DATABASE_URL');
 
 // Production Firebase Configuration for Kogniti Minds Private Limited
 export const firebaseConfig = {
-  apiKey: envApiKey || 'AIzaSyBJQo-jLW2J9RFKwW1Wyo_xwcu-44KhGlY',
-  authDomain: envAuthDomain || 'kogniti-minds-website.firebaseapp.com',
-  projectId: envProjectId || 'kogniti-minds-website',
-  storageBucket: envStorageBucket || 'kogniti-minds-website.firebasestorage.app',
-  messagingSenderId: envMessagingSenderId || '1093420559460',
-  appId: envAppId || '1:1093420559460:web:6a4b8ff611b27dbb05c371',
-  measurementId: envMeasurementId || 'G-KJS6M3VWKX',
-  databaseURL: envDatabaseUrl || 'https://kogniti-minds-website-default-rtdb.firebaseio.com',
+  apiKey: envApiKey || 'AIzaSyAOVn0vnb7ZMmyW7D5XOqBEDskPMNnuY5I',
+  authDomain: envAuthDomain || 'kognitiminds-ondc.firebaseapp.com',
+  projectId: envProjectId || 'kognitiminds-ondc',
+  storageBucket: envStorageBucket || 'kognitiminds-ondc.firebasestorage.app',
+  messagingSenderId: envMessagingSenderId || '585231773951',
+  appId: envAppId || '1:585231773951:web:1a71e21a858b5db71adcca',
+  measurementId: envMeasurementId || 'G-LHW5GZQCCS',
+  databaseURL: envDatabaseUrl || 'https://kognitiminds-ondc-default-rtdb.firebaseio.com',
 };
 
 /**

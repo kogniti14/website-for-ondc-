@@ -1,14 +1,14 @@
 # Firebase Storage Architecture & Document Security
 # Kogniti Minds Private Limited
 
-**Bucket Identifier:** `kogniti-minds-website.firebasestorage.app`  
+**Bucket Identifier:** `kognitiminds-ondc.firebasestorage.app`  
 
 ---
 
 ## 1. Directory Structure
 
 ```
-kogniti-minds-website.firebasestorage.app
+kognitiminds-ondc.firebasestorage.app
 ├── products/               # [PUBLIC] Product photography & spec sheets
 ├── categories/             # [PUBLIC] Taxonomy icons & banners
 ├── certificates/           # [PUBLIC] Government recognitions (ISO, MSME, GeM)

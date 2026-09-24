@@ -23,7 +23,7 @@ Firebase Services (Auth, Realtime Database, Storage)
 
 ```bash
 # Set active project
-firebase use kogniti-minds-website
+firebase use kognitiminds-ondc
 
 # Deploy Realtime Database rules and Storage rules
 firebase deploy --only database,storage

@@ -1,7 +1,7 @@
 # Firebase Realtime Database Architecture Specification
 # Kogniti Minds Private Limited
 
-**Target Project ID:** `kogniti-minds-website`  
+**Target Project ID:** `kognitiminds-ondc`  
 **Primary Database Service:** Firebase Realtime Database (`firebase/database`)  
 **Object Store:** Firebase Storage (`firebase/storage`)  
 **Authentication:** Firebase Authentication (`firebase/auth`)  
@@ -46,6 +46,6 @@ Firebase Realtime Database provides bidirectional websocket synchronization usin
 
 ## 3. High Availability & Failover Protocol
 
-1. **Primary Store:** Firebase Realtime Database (`kogniti-minds-website`).
+1. **Primary Store:** Firebase Realtime Database (`kognitiminds-ondc`).
 2. **Local Caching:** In-memory state and `localStorage` keys (`km_products_v2`, `km_b2c_orders_v2`).
 3. **Failover Store:** Hostinger LiteSpeed Web Server (`/api/data.php`) managing atomic file-backed JSON under `data/storage/`.

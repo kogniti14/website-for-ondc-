@@ -2,7 +2,7 @@
 # Kogniti Minds Private Limited
 
 ## 1. Migration Overview
-This document specifies the migration of all historical and active data records from Supabase / Hostinger persistence to **Firebase Realtime Database** under project `kogniti-minds-website`.
+This document specifies the migration of all historical and active data records from Supabase / Hostinger persistence to **Firebase Realtime Database** under project `kognitiminds-ondc`.
 
 ---
 

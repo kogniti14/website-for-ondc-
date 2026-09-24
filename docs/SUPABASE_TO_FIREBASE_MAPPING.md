@@ -2,7 +2,7 @@
 # Database Schema & Entity Mapping Specification
 ## Supabase / SQL Tables → Firebase Realtime Database JSON Paths
 
-**Target Project:** `kogniti-minds-website`  
+**Target Project:** `kognitiminds-ondc`  
 **Primary Database Service:** Firebase Realtime Database  
 **Author:** Senior Firebase Architect & Database Migration Engineer  
 
