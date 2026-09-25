@@ -86,62 +86,40 @@ DirectoryIndex dist/index.html index.html
   RewriteRule ^api/upload/?$ public/api/upload.php [QSA,L]
   RewriteRule ^api/data/([a-zA-Z0-9_-]+)/?([a-zA-Z0-9_-]*)?$ public/api/data.php?collection=$1&id=$2 [QSA,L]
 
-  # 2. Direct Static Upload Serving (Certificates, Gallery, Products, B2B KYC)
-  RewriteCond %{DOCUMENT_ROOT}/public/uploads/$1 -f
+  # 2. Uploads resolution (public/uploads or uploads)
   RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
 
-  RewriteCond %{DOCUMENT_ROOT}/dist/uploads/$1 -f
-  RewriteRule ^uploads/(.*)$ dist/uploads/$1 [L]
-
-  RewriteCond %{DOCUMENT_ROOT}/uploads/$1 -f
-  RewriteRule ^uploads/(.*)$ uploads/$1 [L]
-
-  # 3. Never proxy PHP files to Node.js (executes via Hostinger LiteSpeed/Apache PHP engine)
-  RewriteCond %{REQUEST_URI} \.php$ [NC]
-  RewriteCond %{DOCUMENT_ROOT}/api/$1 -f
-  RewriteRule ^api/(.*\.php)$ api/$1 [L]
-
-  RewriteCond %{REQUEST_URI} \.php$ [NC]
-  RewriteCond %{DOCUMENT_ROOT}/public/api/$1 -f
-  RewriteRule ^api/(.*\.php)$ public/api/$1 [L]
-
-  RewriteCond %{REQUEST_URI} \.php$ [NC]
-  RewriteCond %{DOCUMENT_ROOT}/dist/api/$1 -f
-  RewriteRule ^api/(.*\.php)$ dist/api/$1 [L]
-
-  # 4. Dedicated ONDC Protocol routes to Node.js backend (Port 3000) ONLY
+  # 3. Dedicated ONDC Protocol routes to Node.js backend (Port 3000) ONLY
   <IfModule mod_proxy.c>
     RewriteCond %{REQUEST_URI} !\.php$ [NC]
     RewriteCond %{REQUEST_URI} ^/(search|select|init|confirm|status|cancel|update|rating|track|support|ondc) [NC]
     RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
   </IfModule>
 
-  # 5. Dist priority routing for frontend assets and root page
-  RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
+  # 4. Root index route -> always serve dist/index.html
   RewriteRule ^$ dist/index.html [L]
-
-  RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
   RewriteRule ^index\.html$ dist/index.html [L]
 
-  RewriteCond %{DOCUMENT_ROOT}/dist/assets/$1 -f
+  # 5. Direct /assets/* resolution (works whether assets is in ./assets or ./dist/assets)
+  RewriteCond %{REQUEST_URI} ^/assets/ [NC]
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+
   RewriteRule ^assets/(.*)$ dist/assets/$1 [L]
 
-  RewriteCond %{DOCUMENT_ROOT}/dist/$1 -f
-  RewriteRule ^(.*)$ dist/$1 [L]
+  # 6. Physical files and directories served directly if present
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
 
-  # 6. Guard: Missing static assets return clean 404 (NEVER rewrite .js/.css to index.html)
-  RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot|pdf)$ [NC]
+  # 7. Fallback to dist/ for root-level static files (e.g. logo-icon.png, favicon.ico)
+  RewriteCond %{REQUEST_URI} !^/dist/
+  RewriteRule ^([a-zA-Z0-9_-]+\.(png|jpe?g|gif|ico|svg|webp|woff2?|ttf|eot|pdf))$ dist/$1 [L]
+
+  # 8. Missing static assets guard (clean 404, never fallback to index.html for assets)
+  RewriteCond %{REQUEST_URI} \.(js|css|png|jpe?g|gif|ico|svg|webp|woff2?|ttf|eot|pdf)$ [NC]
   RewriteRule ^ - [R=404,L]
 
-  # 7. Serve existing physical files directly
-  RewriteRule ^index\.html$ - [L]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteCond %{REQUEST_FILENAME} !-l
-
-  # 8. Client-side SPA route fallback
-  RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
-  RewriteRule . /dist/index.html [L]
-
-  RewriteRule . /index.html [L]
+  # 9. Client-side SPA route fallback (All navigation routes like /shop, /products, /admin go to dist/index.html)
+  RewriteRule . dist/index.html [L]
 </IfModule>

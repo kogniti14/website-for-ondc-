@@ -85,11 +85,7 @@
   RewriteRule ^api/data/([a-zA-Z0-9_-]+)/?([a-zA-Z0-9_-]*)?$ api/data.php?collection=$1&id=$2 [QSA,L]
 
   # 2. Direct Static Upload Serving
-  RewriteCond %{DOCUMENT_ROOT}/public/uploads/$1 -f
-  RewriteRule ^uploads/(.*)$ /public/uploads/$1 [L]
-
-  RewriteCond %{DOCUMENT_ROOT}/uploads/$1 -f
-  RewriteRule ^uploads/(.*)$ /uploads/$1 [L]
+  RewriteRule ^uploads/(.*)$ uploads/$1 [L]
 
   # 3. Dedicated ONDC Protocol routes to Node.js backend (Port 3000) ONLY
   <IfModule mod_proxy.c>
@@ -98,15 +94,14 @@
     RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
   </IfModule>
 
-  # 4. Guard: Missing static assets return clean 404 (NEVER rewrite .js/.css to index.html)
+  # 4. Serve physical static files and directories directly if they exist
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # 5. Guard: Missing static assets return clean 404 (NEVER rewrite .js/.css to index.html)
   RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot|pdf)$ [NC]
   RewriteRule ^ - [R=404,L]
-
-  # 5. Serve static files directly if they exist
-  RewriteRule ^index\.html$ - [L]
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteCond %{REQUEST_FILENAME} !-l
 
   # 6. Client-side SPA route fallback
   RewriteRule . /index.html [L]
