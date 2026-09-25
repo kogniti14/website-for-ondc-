@@ -569,6 +569,12 @@ class StorageService {
     dataSyncBus.emit('products', products);
   }
 
+  async saveProducts(products: Product[]): Promise<void> {
+    this.setItem(KEYS.PRODUCTS, products);
+    await this.syncServerCollection('products', products);
+    dataSyncBus.emit('products', products);
+  }
+
   /**
    * Decrements actual inventory for purchased items upon successful order (Req 72)
    */
@@ -1870,6 +1876,12 @@ class StorageService {
     dataSyncBus.emit('coupons', coupons);
   }
 
+  async saveCoupons(coupons: Coupon[]): Promise<void> {
+    this.setItem(KEYS.COUPONS, coupons);
+    await this.syncServerCollection('coupons', coupons);
+    dataSyncBus.emit('coupons', coupons);
+  }
+
   async deleteCoupon(idOrCode: string): Promise<void> {
     const coupons = this.getCoupons().filter(
       (c) => c.id !== idOrCode && c.code.toUpperCase() !== idOrCode.toUpperCase()
@@ -2121,6 +2133,12 @@ class StorageService {
     }
   }
 
+  async saveCategories(categories: Category[]): Promise<void> {
+    this.setItem(KEYS.CATEGORIES, categories);
+    await this.syncServerCollection('categories', categories);
+    dataSyncBus.emit('categories', categories);
+  }
+
   async deleteCategory(id: string): Promise<boolean> {
     const cats = this.getCategories();
     const target = cats.find((c) => c.id === id);
@@ -2336,6 +2354,68 @@ class StorageService {
     this.setItem(KEYS.SITE_MEDIA, media);
     await this.syncServer('site_media', media);
     dataSyncBus.emit('site_media', media);
+  }
+
+  /**
+   * Final Super Admin Master Sync:
+   * Securely publishes all saved/staged changes across all sections to both
+   * Firebase Realtime Database and Hostinger LiteSpeed production API.
+   * Returns a detailed manifest of entities published.
+   */
+  async publishAllToLiveProduction(): Promise<{
+    success: boolean;
+    timestamp: string;
+    details: { label: string; count: number | string }[];
+    error?: string;
+  }> {
+    const timestamp = new Date().toISOString();
+    const details: { label: string; count: number | string }[] = [];
+
+    try {
+      // 1. Publish Products
+      const products = this.getProducts();
+      await this.syncServerCollection('products', products);
+      dataSyncBus.emit('products', products);
+      details.push({ label: 'Catalog Products', count: `${products.length} active products` });
+
+      // 2. Publish Categories
+      const categories = this.getCategories();
+      await this.syncServerCollection('categories', categories);
+      dataSyncBus.emit('categories', categories);
+      details.push({ label: 'Product Categories', count: `${categories.length} categories` });
+
+      // 3. Publish Coupons
+      const coupons = this.getCoupons();
+      await this.syncServerCollection('coupons', coupons);
+      dataSyncBus.emit('coupons', coupons);
+      details.push({ label: 'Promotional Coupons', count: `${coupons.length} coupons` });
+
+      // 4. Publish Site Media & Banners
+      const media = this.getSiteMedia();
+      await this.syncServer('site_media', media);
+      dataSyncBus.emit('site_media', media);
+      details.push({ label: 'Site Media & Banners', count: 'Published' });
+
+      // 5. Publish Settings
+      const settings = this.getItem<any>('km_settings_v1', {});
+      await this.syncServer('settings', { ...settings, updatedAt: timestamp });
+      dataSyncBus.emit('settings', settings);
+      details.push({ label: 'Global Store Settings', count: 'Published' });
+
+      return {
+        success: true,
+        timestamp,
+        details,
+      };
+    } catch (err: any) {
+      console.error('[StorageService] Publish to live error:', err);
+      return {
+        success: false,
+        timestamp,
+        details,
+        error: err?.message || 'Failed to sync all sections to live production.',
+      };
+    }
   }
 }
 

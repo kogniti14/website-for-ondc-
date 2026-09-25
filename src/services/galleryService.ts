@@ -233,7 +233,37 @@ class GalleryService {
     }
 
     try {
-      const batchParam = isBatch ? '&batch=true' : '';
+      // 1. PRIMARY CLOUD STORE: Asynchronously replicate to Firebase Realtime Database
+      if (isFirebaseConfigured() && db) {
+        try {
+          if (isBatch && Array.isArray(payload)) {
+            const listRef = dbRef(db, collection);
+            if (payload.length === 0) {
+              dbSet(listRef, null).catch(() => {});
+            } else {
+              const obj: Record<string, any> = {};
+              for (const it of payload) {
+                const docId = it?.id || it?.slug;
+                if (docId) obj[docId] = it;
+              }
+              dbSet(listRef, obj).catch(() => {});
+            }
+          } else {
+            const docId = id || (payload && payload.id);
+            if (docId) {
+              const itemRef = dbRef(db, `${collection}/${docId}`);
+              if (method === 'DELETE') {
+                dbRemove(itemRef).catch(() => {});
+              } else if (payload && typeof payload === 'object') {
+                dbSet(itemRef, payload).catch(() => {});
+              }
+            }
+          }
+        } catch {}
+      }
+
+      // 2. FAILOVER & HOSTINGER PERSISTENCE
+      const batchParam = isBatch ? '&replace=true' : '';
       const phpUrl =
         method === 'DELETE' && id
           ? `/api/data.php?collection=${collection}&id=${encodeURIComponent(id)}`
@@ -243,7 +273,7 @@ class GalleryService {
         const url =
           method === 'DELETE' && id
             ? `/api/data/${collection}/${encodeURIComponent(id)}`
-            : `/api/data/${collection}${isBatch ? '?batch=true' : ''}`;
+            : `/api/data/${collection}${isBatch ? '?replace=true' : ''}`;
         res = await fetch(url, { method, headers, body, cache: 'no-store' }).catch(() => null);
       }
       if (res && res.ok) {
@@ -1226,6 +1256,16 @@ class GalleryService {
     currentUserRole?: string
   ): { success: boolean; category?: GalleryCategory; message: string } {
     return this.createCategory({ name }, currentUserRole);
+  }
+
+  public async publishAllToLive(): Promise<{ storiesCount: number; categoriesCount: number }> {
+    const stories = this.getLocalStories();
+    const categories = this.getCategories();
+    await this.syncServer('stories', stories, 'POST');
+    await this.syncServer('gallery_categories', categories, 'POST');
+    dataSyncBus.emit('stories', stories);
+    dataSyncBus.emit('gallery_categories', categories);
+    return { storiesCount: stories.length, categoriesCount: categories.length };
   }
 }
 

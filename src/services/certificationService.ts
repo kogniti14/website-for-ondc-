@@ -1520,6 +1520,16 @@ class CertificationService {
 
     return { success: true, message: 'Category saved successfully.' };
   }
+
+  public async publishAllToLive(): Promise<{ certsCount: number; catsCount: number }> {
+    const certs = this.getLocalCertificates();
+    const cats = this.getLocalCategories();
+    await this.syncServer('certifications', certs, 'POST', undefined, true);
+    await this.syncServer('certification_categories', cats, 'POST', undefined, true);
+    dataSyncBus.emit('certifications', certs);
+    dataSyncBus.emit('certification_categories', cats);
+    return { certsCount: certs.length, catsCount: cats.length };
+  }
 }
 
 export const certificationService = new CertificationService();

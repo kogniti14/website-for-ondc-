@@ -320,6 +320,13 @@ class TestimonialService {
     await this.syncServer(updated, 'POST');
     return true;
   }
+
+  public async publishAllToLive(): Promise<{ count: number }> {
+    const list = this.getAllTestimonials();
+    await this.syncServer(list, 'POST');
+    dataSyncBus.emit('testimonials', list);
+    return { count: list.length };
+  }
 }
 
 export const testimonialService = new TestimonialService();

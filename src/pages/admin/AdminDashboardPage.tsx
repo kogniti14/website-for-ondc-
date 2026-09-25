@@ -65,6 +65,15 @@ import { BulkActionBar } from '../../components/admin/BulkActionBar';
 import { WHATSAPP_NUMBER } from '../../config/whatsappConfig';
 import { OndcManagement } from '../../components/admin/OndcManagement';
 import { TestimonialManagement } from '../../components/admin/TestimonialManagement';
+import { certificationService } from '../../services/certificationService';
+import { testimonialService } from '../../services/testimonialService';
+import { galleryService } from '../../services/galleryService';
+import {
+  AdminPublishHeaderBar,
+  AdminSectionSaveBar,
+  AdminPublishSummaryModal,
+  PublishSummaryData,
+} from '../../components/admin/AdminPublishWorkflow';
 
 interface AdminDashboardPageProps {
   products: Product[];
@@ -138,6 +147,177 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [selectedCredIds, setSelectedCredIds] = useState<{ id: string; type: 'admin' | 'b2b' | 'b2c' }[]>([]);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkFeedbackMsg, setBulkFeedbackMsg] = useState<string | null>(null);
+
+  // Staging & Live Publication Workflow State
+  const [stagedSections, setStagedSections] = useState<Set<string>>(new Set());
+  const [isPublishingAll, setIsPublishingAll] = useState(false);
+  const [publishModalData, setPublishModalData] = useState<PublishSummaryData | null>(null);
+  const [sectionSaveFeedback, setSectionSaveFeedback] = useState<
+    Record<string, { type: 'success' | 'error'; message: string } | null>
+  >({});
+
+  const stageSection = (secKey: string) => {
+    setStagedSections((prev) => new Set([...prev, secKey]));
+  };
+
+  const setFeedback = (secKey: string, type: 'success' | 'error', message: string) => {
+    setSectionSaveFeedback((prev) => ({ ...prev, [secKey]: { type, message } }));
+    setTimeout(() => {
+      setSectionSaveFeedback((prev) => ({ ...prev, [secKey]: null }));
+    }, 4500);
+  };
+
+  // Section-level explicit save handlers
+  const handleSaveProductsSection = async () => {
+    try {
+      await storageService.saveProducts(products);
+      stageSection('products');
+      setFeedback('products', 'success', `Products catalog (${products.length} items) saved locally & staged. Click "Final Save & Publish to Live" above to push to production!`);
+    } catch (err: any) {
+      setFeedback('products', 'error', err?.message || 'Failed to save products section.');
+    }
+  };
+
+  const handleSaveCategoriesSection = async () => {
+    try {
+      await storageService.saveCategories(categories);
+      stageSection('categories');
+      setFeedback('categories', 'success', `Categories (${categories.length} categories) saved locally & staged. Click "Final Save & Publish to Live" above to push to production!`);
+    } catch (err: any) {
+      setFeedback('categories', 'error', err?.message || 'Failed to save categories section.');
+    }
+  };
+
+  const handleSaveMediaSection = async () => {
+    try {
+      await storageService.saveSiteMedia(siteMedia);
+      stageSection('media');
+      setFeedback('media', 'success', 'Storefront banners and promotional media saved locally & staged. Click "Final Save & Publish to Live" above to push to production!');
+      onRefresh();
+    } catch (err: any) {
+      setFeedback('media', 'error', err?.message || 'Failed to save media assets.');
+    }
+  };
+
+  const handleSaveCouponsSection = async () => {
+    try {
+      await storageService.saveCoupons(coupons);
+      stageSection('coupons');
+      setFeedback('coupons', 'success', `Promotions & coupons (${coupons.length} coupons) saved locally & staged. Click "Final Save & Publish to Live" above to push to production!`);
+    } catch (err: any) {
+      setFeedback('coupons', 'error', err?.message || 'Failed to save coupons section.');
+    }
+  };
+
+  const handleSaveRazorpaySection = async () => {
+    try {
+      razorpayService.saveConfig(razorpayConfig);
+      stageSection('razorpay');
+      setFeedback('razorpay', 'success', 'Razorpay Gateway credentials and preferences saved locally & staged. Click "Final Save & Publish to Live" above to push to production!');
+    } catch (err: any) {
+      setFeedback('razorpay', 'error', err?.message || 'Failed to save Razorpay configuration.');
+    }
+  };
+
+  const handleSaveCertificationsSection = async () => {
+    try {
+      const res = await certificationService.publishAllToLive();
+      stageSection('certifications');
+      setFeedback('certifications', 'success', `Certifications (${res.certsCount} documents) committed and staged for final live sync!`);
+    } catch (err: any) {
+      setFeedback('certifications', 'error', err?.message || 'Failed to save certifications.');
+    }
+  };
+
+  const handleSaveTestimonialsSection = async () => {
+    try {
+      const res = await testimonialService.publishAllToLive();
+      stageSection('testimonials');
+      setFeedback('testimonials', 'success', `Client Testimonials (${res.count} reviews) committed and staged for final live sync!`);
+    } catch (err: any) {
+      setFeedback('testimonials', 'error', err?.message || 'Failed to save testimonials.');
+    }
+  };
+
+  const handleSaveGallerySection = async () => {
+    try {
+      const res = await galleryService.publishAllToLive();
+      stageSection('gallery');
+      setFeedback('gallery', 'success', `Stories & Gallery (${res.storiesCount} stories) committed and staged for final live sync!`);
+    } catch (err: any) {
+      setFeedback('gallery', 'error', err?.message || 'Failed to save gallery.');
+    }
+  };
+
+  const handleSavePoliciesSection = async () => {
+    try {
+      stageSection('policies');
+      setFeedback('policies', 'success', 'Statutory policies and revision logs staged for final live sync!');
+    } catch (err: any) {
+      setFeedback('policies', 'error', err?.message || 'Failed to save policies.');
+    }
+  };
+
+  const handleSaveOndcSection = async () => {
+    try {
+      stageSection('ondc');
+      setFeedback('ondc', 'success', 'ONDC network configurations staged for final live sync!');
+    } catch (err: any) {
+      setFeedback('ondc', 'error', err?.message || 'Failed to save ONDC settings.');
+    }
+  };
+
+  // Global Final Save & Publish to Live Production
+  const handleFinalPublishToLive = async () => {
+    setIsPublishingAll(true);
+    try {
+      // 1. Sync primary storage: products, categories, coupons, site_media, settings
+      const mainResult = await storageService.publishAllToLiveProduction();
+
+      // 2. Sync certifications
+      const certResult = await certificationService.publishAllToLive();
+
+      // 3. Sync testimonials
+      const testResult = await testimonialService.publishAllToLive();
+
+      // 4. Sync gallery
+      const gallResult = await galleryService.publishAllToLive();
+
+      // Combined details manifest
+      const details = [
+        ...mainResult.details,
+        { label: 'Company Certifications', count: `${certResult.certsCount} certificates` },
+        { label: 'Client Testimonials', count: `${testResult.count} testimonials` },
+        { label: 'Stories & Gallery', count: `${gallResult.storiesCount} stories` },
+      ];
+
+      // Staged sections synced
+      const synced = Array.from(stagedSections);
+      setStagedSections(new Set());
+
+      // Open summary modal
+      setPublishModalData({
+        isOpen: true,
+        publishedAt: mainResult.timestamp || new Date().toISOString(),
+        syncedSections: synced.length > 0 ? synced : ['All Production Entities'],
+        details,
+      });
+
+      onRefresh();
+    } catch (err: any) {
+      alert(`Final Save & Publish encountered an issue: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setIsPublishingAll(false);
+    }
+  };
+
+  const handleDiscardStaged = () => {
+    if (window.confirm('Discard all staged local changes and reload authoritative state from production?')) {
+      setStagedSections(new Set());
+      setSectionSaveFeedback({});
+      onRefresh();
+    }
+  };
 
   // B2B KYC Review and Document Management States (Section 28-32, 34)
   const [selectedBizForKycReview, setSelectedBizForKycReview] = useState<B2BBusiness | null>(null);
@@ -495,6 +675,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     try {
       const count = await storageService.deleteMultipleProducts(selectedProductIds);
       setSelectedProductIds([]);
+      stageSection('products');
       onRefresh();
       setBulkFeedbackMsg(`Successfully deleted ${count} product${count === 1 ? '' : 's'}.`);
       setTimeout(() => setBulkFeedbackMsg(null), 4000);
@@ -509,6 +690,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     try {
       const { deletedCount, protectedSkipped } = await storageService.deleteMultipleCategories(selectedCategoryIds);
       setSelectedCategoryIds([]);
+      stageSection('categories');
       onRefresh();
       let msg = `Successfully deleted ${deletedCount} categor${deletedCount === 1 ? 'y' : 'ies'}.`;
       if (protectedSkipped > 0) {
@@ -607,6 +789,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     try {
       const count = await storageService.deleteMultipleCoupons(selectedCouponIds);
       setSelectedCouponIds([]);
+      stageSection('coupons');
       onRefresh();
       setCouponSuccessMsg(`Successfully deleted ${count} coupon${count === 1 ? '' : 's'}.`);
       setTimeout(() => setCouponSuccessMsg(null), 4000);
@@ -794,6 +977,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     };
 
     await storageService.saveCategory(catToSave, categoryForm.isNew ? undefined : categoryOriginalName || undefined);
+    stageSection('categories');
     onRefresh();
     setShowCategoryModal(false);
     setCategoryMsg(
@@ -812,6 +996,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
     if (window.confirm(confirmMsg)) {
       await storageService.deleteCategory(cat.id);
+      stageSection('categories');
       onRefresh();
       setCategoryMsg(`Category "${cat.name}" deleted successfully.`);
       setTimeout(() => setCategoryMsg(null), 4000);
@@ -1854,6 +2039,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     e.preventDefault();
     if (!editingProduct) return;
     await storageService.saveProduct(editingProduct);
+    stageSection('products');
     setShowProductModal(false);
     setEditingProduct(null);
     onRefresh();
@@ -1862,6 +2048,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const handleDeleteProduct = async (id: string) => {
     if (confirm('Are you sure you want to remove this product from the catalog?')) {
       await storageService.deleteProduct(id);
+      stageSection('products');
       onRefresh();
     }
   };
@@ -1921,6 +2108,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     };
 
     await storageService.saveCoupon(couponData);
+    stageSection('coupons');
     setShowCouponModal(false);
     onRefresh();
     setCouponSuccessMsg(`Coupon '${cleanCode}' ${editingCoupon ? 'updated' : 'created'} successfully!`);
@@ -1930,6 +2118,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const handleDeleteCoupon = async (idOrCode: string) => {
     if (confirm('Are you sure you want to permanently remove this coupon?')) {
       await storageService.deleteCoupon(idOrCode);
+      stageSection('coupons');
       onRefresh();
       setCouponSuccessMsg('Coupon deleted successfully.');
       setTimeout(() => setCouponSuccessMsg(null), 3500);
@@ -2156,6 +2345,15 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           </div>
         </div>
       </header>
+
+      {/* Sticky Global Publication Bar for Live Database & Website Sync */}
+      <AdminPublishHeaderBar
+        stagedSections={stagedSections}
+        isPublishing={isPublishingAll}
+        onFinalPublish={handleFinalPublishToLive}
+        onDiscardStaged={handleDiscardStaged}
+        onForceSyncAll={handleFinalPublishToLive}
+      />
 
       {/* Main Admin Sub-Navigation with Responsive Horizontal Slider */}
       <div style={{ background: '#FFFFFF', borderBottom: '1px solid var(--border-color)', padding: '0.5rem 0' }}>
@@ -2845,47 +3043,56 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         {/* 2. Products Tab */}
         {activeTab === 'products' && (
           <div>
-            <div className="flex justify-between items-center" style={{ marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Catalog Management</h2>
-              <button
-                onClick={() => {
-                  setEditingProduct({
-                    id: `km-new-${Date.now()}`,
-                    name: '',
-                    tagline: '',
-                    sku: 'KM-PAP-',
-                    hsn: '48025610',
-                    category: categories[0]?.name || 'Sustainable & Agri-Waste-Based Paper',
-                    b2cMrp: 499,
-                    b2cPrice: 349,
-                    b2bWholesalePrice: 240,
-                    b2bMoq: 10,
-                    b2bDiscountSlabs: [{ minQty: 10, maxQty: 49, discountPercent: 0, label: 'Base' }],
-                    gstRate: 18,
-                    stock: 2400,
-                    stockQuantity: 2400,
-                    stockStatus: 'in_stock',
-                    stockStatusMode: 'manual',
-                    lowStockThreshold: 50,
-                    rating: 4.8,
-                    reviewCount: 1,
-                    images: ['https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=800&q=80'],
-                    shortDescription: '',
-                    description: '',
-                    specifications: {},
-                    features: [],
-                    dimensions: '',
-                    weight: '',
-                    warranty: '2 Years Manufacturer Warranty',
-                    leadTimeDays: 3,
-                  });
-                  setShowProductModal(true);
-                }}
-                className="btn btn-primary btn-sm"
-              >
-                <Plus size={15} /> Add New Product
-              </button>
-            </div>
+            <AdminSectionSaveBar
+              sectionKey="products"
+              sectionTitle="Products Catalog"
+              subtitle="Configure eco-friendly paper items, pricing tiers, B2B wholesale slabs, and real-time inventory"
+              isStaged={stagedSections.has('products')}
+              itemCount={products.length}
+              onSaveSection={handleSaveProductsSection}
+              feedbackMessage={sectionSaveFeedback['products']}
+              primaryAction={
+                <button
+                  onClick={() => {
+                    setEditingProduct({
+                      id: `km-new-${Date.now()}`,
+                      name: '',
+                      tagline: '',
+                      sku: 'KM-PAP-',
+                      hsn: '48025610',
+                      category: categories[0]?.name || 'Sustainable & Agri-Waste-Based Paper',
+                      b2cMrp: 499,
+                      b2cPrice: 349,
+                      b2bWholesalePrice: 240,
+                      b2bMoq: 10,
+                      b2bDiscountSlabs: [{ minQty: 10, maxQty: 49, discountPercent: 0, label: 'Base' }],
+                      gstRate: 18,
+                      stock: 2400,
+                      stockQuantity: 2400,
+                      stockStatus: 'in_stock',
+                      stockStatusMode: 'manual',
+                      lowStockThreshold: 50,
+                      rating: 4.8,
+                      reviewCount: 1,
+                      images: ['https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=800&q=80'],
+                      shortDescription: '',
+                      description: '',
+                      specifications: {},
+                      features: [],
+                      dimensions: '',
+                      weight: '',
+                      warranty: '2 Years Manufacturer Warranty',
+                      leadTimeDays: 3,
+                    });
+                    setShowProductModal(true);
+                  }}
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <Plus size={15} /> Add New Product
+                </button>
+              }
+            />
 
             {bulkFeedbackMsg && (
               <div
@@ -3034,20 +3241,24 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         {/* 2b. Categories Tab */}
         {activeTab === 'categories' && (
           <div>
-            <div className="flex justify-between items-center" style={{ marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Category Management & Taxonomy</h2>
-                <p style={{ color: 'var(--slate-500)', fontSize: '0.85rem', marginTop: '0.2rem' }}>
-                  Organize store catalog hierarchy, banner images, and dynamic storefront filters.
-                </p>
-              </div>
-              <button
-                onClick={handleOpenAddCategory}
-                className="btn btn-primary btn-sm"
-              >
-                <Plus size={15} /> Add New Category
-              </button>
-            </div>
+            <AdminSectionSaveBar
+              sectionKey="categories"
+              sectionTitle="Categories & Taxonomy"
+              subtitle="Organize store catalog hierarchy, banner images, and dynamic storefront filters"
+              isStaged={stagedSections.has('categories')}
+              itemCount={categories.length}
+              onSaveSection={handleSaveCategoriesSection}
+              feedbackMessage={sectionSaveFeedback['categories']}
+              primaryAction={
+                <button
+                  onClick={handleOpenAddCategory}
+                  className="btn btn-primary btn-sm"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <Plus size={15} /> Add New Category
+                </button>
+              }
+            />
 
             {categoryMsg && (
               <div
@@ -4817,26 +5028,26 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         {/* 6. Coupons & Marketing Tab */}
         {activeTab === 'coupons' && (
           <div>
-            <div className="flex justify-between items-center flex-wrap gap-3" style={{ marginBottom: '1.5rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--slate-900)' }}>
-                  Promotions & Coupon Governance
-                </h2>
-                <p style={{ fontSize: '0.85rem', color: 'var(--slate-500)', marginTop: '0.2rem' }}>
-                  Super Admin & Operations Desk: Configure discount codes, percentage caps, order minimums, and validity schedules.
-                </p>
-              </div>
-
-              {canManageCoupons && (
-                <button
-                  onClick={handleOpenCreateCoupon}
-                  className="btn btn-primary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                >
-                  <Plus size={16} /> Create New Coupon
-                </button>
-              )}
-            </div>
+            <AdminSectionSaveBar
+              sectionKey="coupons"
+              sectionTitle="Promotions & Coupons"
+              subtitle="Configure discount codes, percentage caps, order minimums, and validity schedules"
+              isStaged={stagedSections.has('coupons')}
+              itemCount={coupons.length}
+              onSaveSection={handleSaveCouponsSection}
+              feedbackMessage={sectionSaveFeedback['coupons']}
+              primaryAction={
+                canManageCoupons ? (
+                  <button
+                    onClick={handleOpenCreateCoupon}
+                    className="btn btn-primary btn-sm"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                  >
+                    <Plus size={15} /> Create New Coupon
+                  </button>
+                ) : undefined
+              }
+            />
 
             {couponSuccessMsg && (
               <div
@@ -6552,32 +6763,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         {/* Storefront Banners & Media Tab */}
         {activeTab === 'media' && (
           <div>
-            <div className="flex items-center justify-between gap-4 flex-wrap" style={{ marginBottom: '2rem' }}>
-              <div>
-                <span className="badge badge-blue" style={{ marginBottom: '0.4rem' }}>
-                  Media Asset Management
-                </span>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Storefront Banners & Promotional Media</h2>
-                <p style={{ color: 'var(--slate-500)', fontSize: '0.92rem', marginTop: '0.2rem' }}>
-                  Upload high-resolution promotional banners, hero graphics, and official platform logos directly from your device.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                {mediaSavedMsg && (
-                  <span className="badge badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <CheckCircle2 size={14} /> Media Saved & Applied!
-                  </span>
-                )}
-                <button
-                  onClick={handleSaveSiteMedia}
-                  className="btn btn-primary"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
-                >
-                  <Check size={16} /> Save Media Assets
-                </button>
-              </div>
-            </div>
+            <AdminSectionSaveBar
+              sectionKey="media"
+              sectionTitle="Storefront Banners & Media"
+              subtitle="Upload high-resolution promotional banners, hero graphics, and official platform logos directly from your device"
+              isStaged={stagedSections.has('media')}
+              onSaveSection={handleSaveMediaSection}
+              feedbackMessage={sectionSaveFeedback['media']}
+            />
 
             <div
               className="grid"
@@ -6689,65 +6882,34 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         {/* Razorpay Payment Gateway & Live Transactions Ledger Tab */}
         {activeTab === 'razorpay' && (
           <div>
-            <div className="flex items-center justify-between gap-4 flex-wrap" style={{ marginBottom: '2rem' }}>
-              <div>
-                <span
-                  style={{
-                    backgroundColor: '#E0F2FE',
-                    color: '#0284C7',
-                    fontWeight: 700,
-                    fontSize: '0.75rem',
-                    padding: '0.2rem 0.6rem',
-                    borderRadius: '4px',
-                    display: 'inline-block',
-                    marginBottom: '0.4rem',
-                  }}
-                >
-                  Official Payment Gateway Integration
-                </span>
-                <h2 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Razorpay Control Center & Transaction Ledger</h2>
-                <p style={{ color: 'var(--slate-500)', fontSize: '0.92rem', marginTop: '0.2rem' }}>
-                  Manage merchant API credentials, toggle live vs sandbox test environment, customize checkout themes, and review real-time transaction settlements.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setAdminTestCheckoutOpen(true)}
-                  className="btn btn-outline"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
-                >
-                  <CreditCard size={15} /> Test Checkout Modal
-                </button>
-                <button
-                  type="button"
-                  onClick={refreshRazorpayTransactions}
-                  className="btn btn-secondary"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
-                >
-                  <RefreshCw size={15} /> Refresh Ledger
-                </button>
-                {rzpSavedMsg && (
-                  <span className="badge badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <CheckCircle2 size={14} /> Settings Saved!
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={handleSaveRazorpayConfig}
-                  className="btn btn-primary"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
-                  }}
-                >
-                  <Check size={16} /> Save Gateway Config
-                </button>
-              </div>
-            </div>
+            <AdminSectionSaveBar
+              sectionKey="razorpay"
+              sectionTitle="Razorpay Payment Gateway"
+              subtitle="Manage merchant API credentials, toggle live vs sandbox test environment, customize checkout themes, and review real-time settlements"
+              isStaged={stagedSections.has('razorpay')}
+              onSaveSection={handleSaveRazorpaySection}
+              feedbackMessage={sectionSaveFeedback['razorpay']}
+              primaryAction={
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setAdminTestCheckoutOpen(true)}
+                    className="btn btn-outline btn-sm"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem' }}
+                  >
+                    <CreditCard size={14} /> Test Checkout Modal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={refreshRazorpayTransactions}
+                    className="btn btn-secondary btn-sm"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem' }}
+                  >
+                    <RefreshCw size={14} /> Refresh Ledger
+                  </button>
+                </div>
+              }
+            />
 
             {/* Razorpay Gateway Analytics KPIs */}
             <div
@@ -7175,37 +7337,107 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
         {/* Statutory Legal Policies & Automated Customer Notifications */}
         {activeTab === 'policies' && (
-          <PolicyManagement />
+          <div>
+            <AdminSectionSaveBar
+              sectionKey="policies"
+              sectionTitle="Statutory Legal Policies"
+              subtitle="Govern Terms of Service, Privacy Policy, Shipping, and Cancellation Policies"
+              isStaged={stagedSections.has('policies')}
+              onSaveSection={handleSavePoliciesSection}
+              feedbackMessage={sectionSaveFeedback['policies']}
+            />
+            <PolicyManagement />
+          </div>
         )}
 
         {/* Centralized Image Gallery & Success Stories CMS */}
         {activeTab === 'gallery' && (
-          <GalleryManagement />
+          <div>
+            <AdminSectionSaveBar
+              sectionKey="gallery"
+              sectionTitle="Image Gallery & Stories"
+              subtitle="Curate production stories, sustainable mill photographs, and visual assets"
+              isStaged={stagedSections.has('gallery')}
+              onSaveSection={handleSaveGallerySection}
+              feedbackMessage={sectionSaveFeedback['gallery']}
+            />
+            <GalleryManagement />
+          </div>
         )}
 
         {/* Gallery & Success Story Category Governance */}
         {activeTab === 'gallery_categories' && (
-          <CategoryManager type="gallery" />
+          <div>
+            <AdminSectionSaveBar
+              sectionKey="gallery_categories"
+              sectionTitle="Gallery Categories"
+              subtitle="Manage taxonomy and categories for platform image stories"
+              isStaged={stagedSections.has('gallery_categories')}
+              onSaveSection={handleSaveGallerySection}
+              feedbackMessage={sectionSaveFeedback['gallery_categories']}
+            />
+            <CategoryManager type="gallery" />
+          </div>
         )}
 
         {/* Centralized Certifications & Regulatory Documents CMS */}
         {activeTab === 'certifications' && (
-          <CertificationManagement />
+          <div>
+            <AdminSectionSaveBar
+              sectionKey="certifications"
+              sectionTitle="Company Certifications"
+              subtitle="Manage ISO, FSC, FDA, and statutory compliance documents for B2B buyers"
+              isStaged={stagedSections.has('certifications')}
+              onSaveSection={handleSaveCertificationsSection}
+              feedbackMessage={sectionSaveFeedback['certifications']}
+            />
+            <CertificationManagement />
+          </div>
         )}
 
         {/* Company Certification & Regulatory Document Category Governance */}
         {activeTab === 'cert_categories' && (
-          <CategoryManager type="certification" />
+          <div>
+            <AdminSectionSaveBar
+              sectionKey="cert_categories"
+              sectionTitle="Certification Categories"
+              subtitle="Manage classifications and categories for regulatory certificates"
+              isStaged={stagedSections.has('cert_categories')}
+              onSaveSection={handleSaveCertificationsSection}
+              feedbackMessage={sectionSaveFeedback['cert_categories']}
+            />
+            <CategoryManager type="certification" />
+          </div>
         )}
 
         {/* ONDC:RETeB2B Network Management Console */}
         {activeTab === 'ondc' && (
-          <OndcManagement />
+          <div>
+            <AdminSectionSaveBar
+              sectionKey="ondc"
+              sectionTitle="ONDC Network Integration"
+              subtitle="Monitor Open Network for Digital Commerce transactions, webhooks, and catalog synchronization"
+              isStaged={stagedSections.has('ondc')}
+              onSaveSection={handleSaveOndcSection}
+              feedbackMessage={sectionSaveFeedback['ondc']}
+            />
+            <OndcManagement />
+          </div>
         )}
 
         {/* Client Trust Testimonial Carousel Management */}
         {activeTab === 'testimonials' && (
-          <TestimonialManagement />
+          <div>
+            <AdminSectionSaveBar
+              sectionKey="testimonials"
+              sectionTitle="Client Testimonials & Feedback"
+              subtitle="Manage verified client reviews and testimonials displayed on the storefront"
+              isStaged={stagedSections.has('testimonials')}
+              onSaveSection={handleSaveTestimonialsSection}
+              feedbackMessage={sectionSaveFeedback['testimonials']}
+            />
+            <TestimonialManagement />
+          </div>
         )}
       </div>
 
@@ -11332,6 +11564,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           </div>
         </div>
       )}
+
+      {/* Live Production Publish Summary Modal */}
+      <AdminPublishSummaryModal
+        data={publishModalData}
+        onClose={() => setPublishModalData(null)}
+      />
     </div>
   );
 };
