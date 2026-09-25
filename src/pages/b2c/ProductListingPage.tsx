@@ -109,39 +109,44 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
   };
 
   // Filter and sort products
+  const safeProducts = useMemo(() => Array.isArray(products) ? products : [], [products]);
+
   const filteredProducts = useMemo(() => {
-    return products
+    return safeProducts
       .filter((p) => {
         // Search
         if (search.trim()) {
           const q = search.toLowerCase();
           const matches =
-            p.name.toLowerCase().includes(q) ||
-            p.category.toLowerCase().includes(q) ||
-            p.shortDescription.toLowerCase().includes(q) ||
-            p.sku.toLowerCase().includes(q);
+            (p.name || '').toLowerCase().includes(q) ||
+            (p.category || '').toLowerCase().includes(q) ||
+            (p.shortDescription || '').toLowerCase().includes(q) ||
+            (p.sku || '').toLowerCase().includes(q) ||
+            (p.tagline || '').toLowerCase().includes(q);
           if (!matches) return false;
         }
 
         // Category filter using ID/slug/name
-        if (selectedCategory !== 'All' && !isProductInCategory(p.category, selectedCategory)) {
+        if (selectedCategory !== 'All' && !isProductInCategory(p.category || '', selectedCategory)) {
           return false;
         }
 
         // New Arrivals only filter
         if (onlyNewArrivals && !p.isNewArrival) {
           // If product is not flagged as new arrival, skip unless no products have the flag
-          const anyFlagged = products.some((prod) => prod.isNewArrival);
+          const anyFlagged = safeProducts.some((prod) => prod.isNewArrival);
           if (anyFlagged) return false;
         }
 
         // Price
-        if (p.b2cPrice > priceRange) {
+        const pPrice = Number(p.b2cPrice || 0);
+        if (pPrice > priceRange) {
           return false;
         }
 
         // Rating
-        if (minRating > 0 && p.rating < minRating) {
+        const pRating = typeof p.rating === 'number' && !isNaN(p.rating) ? p.rating : 4.9;
+        if (minRating > 0 && pRating < minRating) {
           return false;
         }
 
@@ -159,14 +164,18 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
         return true;
       })
       .sort((a, b) => {
-        if (sortBy === 'price-asc') return a.b2cPrice - b.b2cPrice;
-        if (sortBy === 'price-desc') return b.b2cPrice - a.b2cPrice;
-        if (sortBy === 'rating-desc') return b.rating - a.rating;
+        const aPrice = Number(a.b2cPrice || 0);
+        const bPrice = Number(b.b2cPrice || 0);
+        const aRating = typeof a.rating === 'number' && !isNaN(a.rating) ? a.rating : 4.9;
+        const bRating = typeof b.rating === 'number' && !isNaN(b.rating) ? b.rating : 4.9;
+        if (sortBy === 'price-asc') return aPrice - bPrice;
+        if (sortBy === 'price-desc') return bPrice - aPrice;
+        if (sortBy === 'rating-desc') return bRating - aRating;
         if (sortBy === 'newest') return (b.isNewArrival ? 1 : 0) - (a.isNewArrival ? 1 : 0);
         if (sortBy === 'bestseller') return (b.isBestSeller ? 1 : 0) - (a.isBestSeller ? 1 : 0);
         return 0; // recommended
       });
-  }, [products, search, selectedCategory, priceRange, minRating, onlyInStock, onlyBestSellers, onlyNewArrivals, sortBy]);
+  }, [safeProducts, search, selectedCategory, priceRange, minRating, onlyInStock, onlyBestSellers, onlyNewArrivals, sortBy]);
 
   const handleResetFilters = () => {
     setSearch('');
@@ -187,8 +196,8 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
   );
   const selectedCategoryTotalProducts =
     selectedCategory === 'All'
-      ? products.length
-      : products.filter((p) => isProductInCategory(p.category, selectedCategory)).length;
+      ? safeProducts.length
+      : safeProducts.filter((p) => isProductInCategory(p.category || '', selectedCategory)).length;
 
   const renderFilterBody = () => (
     <>
@@ -206,10 +215,10 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
               />
               <span>All Categories</span>
             </div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>({products.length})</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)' }}>({safeProducts.length})</span>
           </label>
           {categoryList.map((c) => {
-            const catCount = products.filter((p) => p.category === c.name).length;
+            const catCount = safeProducts.filter((p) => isProductInCategory(p.category || '', c.name)).length;
             return (
               <label key={c.id} className="flex items-center justify-between gap-2" style={{ cursor: 'pointer' }}>
                 <div className="flex items-center gap-2">

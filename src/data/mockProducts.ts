@@ -39,7 +39,7 @@ export const MOCK_PRODUCTS: Product[] = [
       'Raw Material': '100% Agricultural Crop Waste (Tree-Free Residue Pulp)',
       'Sheet Size': 'A4 (210mm x 297mm)',
       'Sheets Per Ream': '500 Precision Cut Sheets',
-      'Brightness / Whiteness': '94% ISO Brightness (Elemental Chlorine Free)',
+      'Brightness - Whiteness': '94% ISO Brightness (Elemental Chlorine Free)',
       'Opacity': '92% (High Opacity for Double-Sided Duplex Printing)',
       'Printer Compatibility': 'Laserjet, Inkjet, Digital Photocopiers & High-Speed Multi-Function Printers',
       'Environmental Certifications': 'ISO 14001, ISO 9001 & Zero-Deforestation Verified',

@@ -14,6 +14,7 @@ import { B2BNavbar } from './components/layout/B2BNavbar';
 import { Footer } from './components/layout/Footer';
 import { PolicyModal } from './components/common/PolicyModal';
 import { WhatsAppFloatingButton } from './components/common/WhatsAppFloatingButton';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 // Modals
 import { ProductDetailModal } from './components/products/ProductDetailModal';
@@ -112,7 +113,7 @@ const MainApp: React.FC = () => {
 
   useEffect(() => {
     const unsubProd = dataSyncBus.subscribe('products', (data) => {
-      if (Array.isArray(data)) setProducts(data);
+      if (Array.isArray(data)) setProducts(storageService.normalizeProducts(data));
     });
     const unsubCats = dataSyncBus.subscribe('categories', (data) => {
       if (Array.isArray(data)) setCategories(data);
@@ -282,7 +283,8 @@ const MainApp: React.FC = () => {
 
       {/* 2. Main Page Content View */}
       <main style={{ flex: '1 0 auto' }}>
-        {/* --- B2C Views --- */}
+        <ErrorBoundary key={activeTab}>
+          {/* --- B2C Views --- */}
         {activeTab === 'home' && (
           <HomePage
             products={products}
@@ -564,6 +566,7 @@ const MainApp: React.FC = () => {
             </div>
           )
         )}
+        </ErrorBoundary>
       </main>
 
       {/* 3. Footer Rendering */}

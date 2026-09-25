@@ -291,11 +291,13 @@ class StorageService {
                     mergedList.push(loc);
                   }
                 }
-                this.setItem(item.key, mergedList);
-                dataSyncBus.emit(item.collection, mergedList);
+                const finalMerged = item.collection === 'products' ? this.normalizeProducts(mergedList) : mergedList;
+                this.setItem(item.key, finalMerged);
+                dataSyncBus.emit(item.collection, finalMerged);
               } else {
-                this.setItem(item.key, serverData);
-                dataSyncBus.emit(item.collection, serverData);
+                const finalData = item.collection === 'products' ? this.normalizeProducts(serverData) : serverData;
+                this.setItem(item.key, finalData);
+                dataSyncBus.emit(item.collection, finalData);
               }
             }
           } else if (!item.isArray) {
@@ -369,9 +371,75 @@ class StorageService {
   }
 
   // --- Products ---
+  public normalizeProducts(rawProducts: Product[]): Product[] {
+    if (!Array.isArray(rawProducts)) return [];
+    return rawProducts.map((p) => {
+      const mock = MOCK_PRODUCTS.find((m) => m.id === p.id);
+      const stock = typeof p.stock === 'number' ? Math.max(0, p.stock) : (typeof mock?.stock === 'number' ? mock.stock : 100);
+      const status = p.stockStatus || (stock > 50 ? 'in_stock' : stock > 0 ? 'limited_stock' : 'out_of_stock');
+      const mode = p.stockStatusMode || 'manual';
+      const rating = typeof p.rating === 'number' && !isNaN(p.rating) ? p.rating : (mock?.rating ?? 4.9);
+      const reviewCount = typeof p.reviewCount === 'number' && !isNaN(p.reviewCount) ? p.reviewCount : (mock?.reviewCount ?? 128);
+      const category = p.category || (p as any).categoryName || mock?.category || 'Sustainable & Agri-Waste-Based Paper';
+      const images = Array.isArray(p.images) && p.images.length > 0 ? p.images : (mock?.images || ['https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80']);
+      const b2cPrice = Number(p.b2cPrice || mock?.b2cPrice || 289);
+      const b2cMrp = Number(p.b2cMrp || mock?.b2cMrp || Math.round(b2cPrice * 1.35));
+      const b2bWholesalePrice = Number(p.b2bWholesalePrice || mock?.b2bWholesalePrice || Math.round(b2cPrice * 0.7));
+      const b2bMoq = Number(p.b2bMoq || mock?.b2bMoq || 10);
+      const b2bDiscountSlabs = Array.isArray(p.b2bDiscountSlabs) && p.b2bDiscountSlabs.length > 0 ? p.b2bDiscountSlabs : (mock?.b2bDiscountSlabs || []);
+      const shortDescription = p.shortDescription || mock?.shortDescription || '';
+      const description = p.description || mock?.description || '';
+      const tagline = p.tagline || mock?.tagline || '';
+      const sku = p.sku || mock?.sku || 'KM-PAP-GEN';
+      const hsn = p.hsn || mock?.hsn || '48025610';
+      const specifications = p.specifications || mock?.specifications || {};
+      const features = Array.isArray(p.features) && p.features.length > 0 ? p.features : (mock?.features || []);
+      const dimensions = p.dimensions || mock?.dimensions || '21.0cm x 29.7cm x 5.2cm';
+      const weight = p.weight || mock?.weight || '2.35 kg';
+      const warranty = p.warranty || mock?.warranty || '100% Quality & Performance Guarantee';
+      const leadTimeDays = typeof p.leadTimeDays === 'number' ? p.leadTimeDays : (mock?.leadTimeDays ?? 2);
+      const isFeatured = p.isFeatured !== undefined ? p.isFeatured : Boolean(mock?.isFeatured);
+      const isBestSeller = p.isBestSeller !== undefined ? p.isBestSeller : Boolean(mock?.isBestSeller);
+      const isNewArrival = p.isNewArrival !== undefined ? p.isNewArrival : Boolean(mock?.isNewArrival);
+
+      return {
+        ...p,
+        name: p.name || mock?.name || 'Sustainable Paper Product',
+        tagline,
+        sku,
+        hsn,
+        category,
+        b2cPrice,
+        b2cMrp,
+        b2bWholesalePrice,
+        b2bMoq,
+        b2bDiscountSlabs,
+        rating,
+        reviewCount,
+        images,
+        shortDescription,
+        description,
+        specifications,
+        features,
+        dimensions,
+        weight,
+        warranty,
+        leadTimeDays,
+        isFeatured,
+        isBestSeller,
+        isNewArrival,
+        stock,
+        stockQuantity: stock,
+        stockStatus: status,
+        stockStatusMode: mode,
+      };
+    });
+  }
+
   getProducts(): Product[] {
     let products = this.getItem<Product[]>(KEYS.PRODUCTS, MOCK_PRODUCTS);
-    // Non-destructive: filter out individual deprecated IDs if found, never wipe catalog
+
+    // Auto-migrate: Remove deprecated Furniture and IFP categories from stored data
     const hasDeprecated = products.some(
       (p) =>
         p.id === 'km-ergo-01' ||
@@ -401,34 +469,15 @@ class StorageService {
     });
     if (hasGst12) {
       this.setItem(KEYS.PRODUCTS, updatedProducts);
-      return updatedProducts;
     }
 
-    // Normalize stock, stockStatus, and stockStatusMode for all catalog products (Req 65-71)
-    let needsNormalization = false;
-    const normalized = updatedProducts.map((p) => {
-      const stock = typeof p.stock === 'number' ? Math.max(0, p.stock) : 0;
-      const status = p.stockStatus || (stock > 50 ? 'in_stock' : stock > 0 ? 'limited_stock' : 'out_of_stock');
-      const mode = p.stockStatusMode || 'manual';
-      if (p.stock !== stock || p.stockStatus !== status || p.stockStatusMode !== mode || p.stockQuantity !== stock) {
-        needsNormalization = true;
-        return {
-          ...p,
-          stock,
-          stockQuantity: stock,
-          stockStatus: status,
-          stockStatusMode: mode,
-        };
-      }
-      return p;
-    });
-
-    if (needsNormalization) {
+    // Always return fully normalized products
+    const normalized = this.normalizeProducts(updatedProducts);
+    const needsSave = JSON.stringify(normalized) !== JSON.stringify(products);
+    if (needsSave) {
       this.setItem(KEYS.PRODUCTS, normalized);
-      return normalized;
     }
-
-    return updatedProducts;
+    return normalized;
   }
 
   getPublicProducts(): Product[] {

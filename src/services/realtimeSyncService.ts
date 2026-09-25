@@ -15,6 +15,7 @@
 import { ref, onValue, off, Unsubscribe } from 'firebase/database';
 import { db, isFirebaseConfigured } from './firebase';
 import { dataSyncBus } from './dataSyncBus';
+import { storageService } from './storageService';
 
 class RealtimeSyncService {
   private unsubscribers: Map<string, Unsubscribe> = new Map();
@@ -39,10 +40,11 @@ class RealtimeSyncService {
             const raw = snapshot.val();
             const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
             if (list.length > 0) {
+              const normalized = storageService.normalizeProducts(list as any);
               try {
-                localStorage.setItem('km_products_v2', JSON.stringify(list));
+                localStorage.setItem('km_products_v2', JSON.stringify(normalized));
               } catch {}
-              dataSyncBus.emit('products', list);
+              dataSyncBus.emit('products', normalized);
             }
           }
         },

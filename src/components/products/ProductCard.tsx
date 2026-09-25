@@ -31,15 +31,26 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const isOutOfStock = stockStatus === 'out_of_stock';
   const isLimitedStock = stockStatus === 'limited_stock';
 
-  const discountPercent = Math.round(
-    ((product.b2cMrp - product.b2cPrice) / product.b2cMrp) * 100
-  );
+  const b2cMrp = Number(product.b2cMrp || 0);
+  const b2cPrice = Number(product.b2cPrice || 0);
+  const b2bWholesalePrice = Number(product.b2bWholesalePrice || 0);
+  const b2bMoq = Number(product.b2bMoq || 10);
+  const rating = typeof product.rating === 'number' && !isNaN(product.rating) ? product.rating : 4.9;
+  const reviewCount = typeof product.reviewCount === 'number' && !isNaN(product.reviewCount) ? product.reviewCount : 128;
+  const displayImage = Array.isArray(product.images) && product.images.length > 0 && product.images[0]
+    ? product.images[0]
+    : 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80';
+
+  const discountPercent = b2cMrp > b2cPrice ? Math.round(((b2cMrp - b2cPrice) / b2cMrp) * 100) : 0;
+  const maxSlabDiscount = (Array.isArray(product.b2bDiscountSlabs) && product.b2bDiscountSlabs.length > 0)
+    ? (product.b2bDiscountSlabs[product.b2bDiscountSlabs.length - 1]?.discountPercent ?? 25)
+    : 25;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isOutOfStock) return;
     if (isB2BMode) {
-      addToB2BCart(product.id, product.b2bMoq);
+      addToB2BCart(product.id, b2bMoq);
     } else {
       addToB2CCart(product.id, 1);
     }
@@ -49,7 +60,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     e.stopPropagation();
     if (isOutOfStock) return;
     if (isB2BMode) {
-      addToB2BCart(product.id, product.b2bMoq);
+      addToB2BCart(product.id, b2bMoq);
     } else {
       addToB2CCart(product.id, 1);
     }
@@ -94,9 +105,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         }}
       >
         <img
-          key={product.images[0]}
-          src={product.images[0]}
-          alt={product.name}
+          key={displayImage}
+          src={displayImage}
+          alt={product.name || 'Product'}
           style={{
             width: '100%',
             height: '100%',
@@ -206,12 +217,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Category & Rating */}
         <div className="flex items-center justify-between gap-2" style={{ marginBottom: '0.35rem' }}>
           <span style={{ fontSize: '0.72rem', color: 'var(--slate-500)', fontWeight: 600 }}>
-            {product.category}
+            {product.category || 'Sustainable Paper'}
           </span>
           <div className="flex items-center gap-1" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#D97706' }}>
             <Star size={13} fill="#D97706" />
-            <span>{product.rating.toFixed(1)}</span>
-            <span style={{ color: 'var(--slate-400)', fontWeight: 400 }}>({product.reviewCount})</span>
+            <span>{rating.toFixed(1)}</span>
+            <span style={{ color: 'var(--slate-400)', fontWeight: 400 }}>({reviewCount})</span>
           </div>
         </div>
 
@@ -257,16 +268,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <div>
                   <div className="flex items-baseline gap-2">
                     <span style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--slate-900)' }}>
-                      ₹{product.b2bWholesalePrice.toLocaleString('en-IN')}
+                      ₹{b2bWholesalePrice.toLocaleString('en-IN')}
                     </span>
                     <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>/ unit (excl. GST)</span>
                   </div>
                   <div className="flex items-center gap-2" style={{ marginTop: '0.2rem' }}>
                     <span className="badge badge-amber" style={{ fontSize: '0.68rem' }}>
-                      MOQ: {product.b2bMoq} Units
+                      MOQ: {b2bMoq} Units
                     </span>
                     <span style={{ fontSize: '0.72rem', color: 'var(--emerald-600)', fontWeight: 600 }}>
-                      Bulk tiers up to {product.b2bDiscountSlabs[product.b2bDiscountSlabs.length - 1]?.discountPercent}% off
+                      Bulk tiers up to {maxSlabDiscount}% off
                     </span>
                   </div>
                 </div>
@@ -294,14 +305,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <div>
               <div className="flex items-baseline gap-2">
                 <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)' }}>
-                  ₹{product.b2cPrice.toLocaleString('en-IN')}
+                  ₹{b2cPrice.toLocaleString('en-IN')}
                 </span>
                 <span style={{ fontSize: '0.82rem', color: 'var(--slate-400)', textDecoration: 'line-through' }}>
-                  ₹{product.b2cMrp.toLocaleString('en-IN')}
+                  ₹{b2cMrp.toLocaleString('en-IN')}
                 </span>
               </div>
               <div style={{ fontSize: '0.68rem', color: 'var(--slate-500)', marginTop: '0.1rem' }}>
-                Inclusive of 18% GST (HSN: {product.hsn})
+                Inclusive of 18% GST (HSN: {product.hsn || '48025610'})
               </div>
             </div>
           )}
@@ -331,9 +342,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     onClick={handleAddToCart}
                     className="btn btn-outline-b2b btn-sm flex-1"
                     style={{ fontSize: '0.78rem', padding: '0.45rem 0.5rem', fontWeight: 700 }}
-                    title={`Add minimum order quantity (${product.b2bMoq}) to B2B cart`}
+                    title={`Add minimum order quantity (${b2bMoq}) to B2B cart`}
                   >
-                    <ShoppingCart size={13} /> Add MOQ ({product.b2bMoq})
+                    <ShoppingCart size={13} /> Add MOQ ({b2bMoq})
                   </button>
                   <button
                     onClick={handleBuyNow}

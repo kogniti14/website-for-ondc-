@@ -47,19 +47,21 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const currentCategoryObj = categoryList.find((c) => c.name === selectedCategory);
+  const safeProducts = Array.isArray(products) ? products : [];
   const selectedCategoryTotalProducts =
     selectedCategory === 'All'
-      ? products.length
-      : products.filter((p) => p.category === selectedCategory).length;
+      ? safeProducts.length
+      : safeProducts.filter((p) => (p.category || '') === selectedCategory).length;
 
-  const filtered = products.filter((p) => {
-    if (selectedCategory !== 'All' && p.category !== selectedCategory) return false;
+  const filtered = safeProducts.filter((p) => {
+    if (selectedCategory !== 'All' && (p.category || '') !== selectedCategory) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
       return (
-        p.name.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        p.sku.toLowerCase().includes(q)
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.category || '').toLowerCase().includes(q) ||
+        (p.sku || '').toLowerCase().includes(q) ||
+        (p.shortDescription || '').toLowerCase().includes(q)
       );
     }
     return true;
@@ -305,17 +307,21 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
                 }}
                 onClick={() => onOpenProduct(product)}
               >
-                <img src={product.images[0]} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img
+                  src={(Array.isArray(product.images) && product.images.length > 0 && product.images[0]) ? product.images[0] : 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80'}
+                  alt={product.name || 'Product'}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
               </div>
 
               {/* Middle Info */}
               <div>
                 <div className="flex items-center gap-2" style={{ marginBottom: '0.35rem' }}>
                   <span className="badge badge-dark" style={{ border: '1px solid rgba(255, 255, 255, 0.2)' }}>
-                    {product.category}
+                    {product.category || 'Sustainable Paper'}
                   </span>
-                  <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>SKU: {product.sku}</span>
-                  <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>HSN: {product.hsn}</span>
+                  <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>SKU: {product.sku || 'KM-PAP-GEN'}</span>
+                  <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>HSN: {product.hsn || '48025610'}</span>
                 </div>
 
                 <h3
@@ -332,13 +338,13 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
                 </h3>
 
                 <p style={{ fontSize: '0.82rem', color: '#94A3B8', lineHeight: '1.5', maxWidth: '650px', marginBottom: '0.75rem' }}>
-                  {product.shortDescription}
+                  {product.shortDescription || product.tagline || ''}
                 </p>
 
                 {/* Tier Discount Slabs Pill Row */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <span style={{ fontSize: '0.75rem', color: '#CBD5E1', fontWeight: 600 }}>Volume Discount Slabs:</span>
-                  {product.b2bDiscountSlabs.map((slab, sIdx) => (
+                  {(Array.isArray(product.b2bDiscountSlabs) ? product.b2bDiscountSlabs : []).map((slab, sIdx) => (
                     <span
                       key={sIdx}
                       style={{
@@ -374,12 +380,12 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
                     </div>
                     <div className="flex items-baseline gap-1">
                       <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#38BDF8' }}>
-                        ₹{product.b2bWholesalePrice.toLocaleString('en-IN')}
+                        ₹{Number(product.b2bWholesalePrice || 0).toLocaleString('en-IN')}
                       </span>
                       <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>/ unit</span>
                     </div>
                     <div className="flex items-center gap-1 text-amber-400" style={{ fontSize: '0.75rem', fontWeight: 700, marginTop: '0.2rem' }}>
-                      MOQ: {product.b2bMoq} Units
+                      MOQ: {product.b2bMoq || 10} Units
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#34D399', marginTop: '0.1rem' }}>
                       +18% GST (100% ITC Eligible)
@@ -391,9 +397,9 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
                           onClick={() => handleAddToCart(product)}
                           className="btn btn-outline-b2b btn-sm flex-1"
                           style={{ fontSize: '0.78rem', padding: '0.45rem 0.5rem', fontWeight: 700 }}
-                          title={`Add MOQ (${product.b2bMoq}) to B2B Cart`}
+                          title={`Add MOQ (${product.b2bMoq || 10}) to B2B Cart`}
                         >
-                          <ShoppingCart size={14} /> Add MOQ ({product.b2bMoq})
+                          <ShoppingCart size={14} /> Add MOQ ({product.b2bMoq || 10})
                         </button>
                         <button
                           onClick={() => {
