@@ -35,5 +35,31 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    build: {
+      target: 'es2020',
+      cssCodeSplit: true,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler')) {
+                return 'vendor-react';
+              }
+              if (id.includes('firebase')) {
+                return 'vendor-firebase';
+              }
+              if (id.includes('lucide-react')) {
+                return 'vendor-icons';
+              }
+              if (id.includes('jspdf') || id.includes('canvas-confetti') || id.includes('qrcode')) {
+                return 'vendor-utils';
+              }
+              return 'vendor-core';
+            }
+          },
+        },
+      },
+      chunkSizeWarningLimit: 800,
+    },
   };
 })

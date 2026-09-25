@@ -13,19 +13,46 @@ DirectoryIndex dist/index.html index.html
   AddType image/webp .webp
   AddType image/png .png
   AddType image/jpeg .jpg .jpeg
+  AddType application/javascript .js
+  AddType text/css .css
+  AddType font/woff2 .woff2
+  AddType font/woff .woff
+</IfModule>
+
+# Enable Gzip / Deflate Compression for Speed and TTFB
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/x-javascript application/json application/xml application/rss+xml image/svg+xml font/woff font/woff2
 </IfModule>
 
 <IfModule mod_headers.c>
-  # Production SSL/TLS & Security Headers
-  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+  # Production SSL/TLS & Security Headers (Strictly scoped without wildcard subdomains to avoid ERR_CERT_COMMON_NAME_INVALID)
+  Header always set Strict-Transport-Security "max-age=31536000"
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "SAMEORIGIN"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
 
-  <FilesMatch "\.(pdf|png|jpe?g|webp)$">
-    Header set Access-Control-Allow-Origin "*"
-    Header set Cache-Control "public, max-age=31536000, must-revalidate"
+  # HTML documents - Never cache index.html so users always receive current asset bundles immediately
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
   </FilesMatch>
+
+  # Immutable hashed frontend bundles (Vite outputs hashed filenames)
+  <FilesMatch "\.(js|css|woff2|woff)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # Media and image assets
+  <FilesMatch "\.(pdf|png|jpe?g|webp|svg|ico)$">
+    Header set Access-Control-Allow-Origin "*"
+    Header set Cache-Control "public, max-age=2592000, stale-while-revalidate=86400"
+  </FilesMatch>
+</IfModule>
+
+<IfModule LiteSpeed>
+  CacheEngine on
+  CacheLookup on
 </IfModule>
 
 <IfModule mod_rewrite.c>
@@ -33,14 +60,20 @@ DirectoryIndex dist/index.html index.html
   RewriteBase /
 
   # 0. Canonical Domain Enforcement & HTTPS Normalization
-  # Redirect www.kognitiminds.com to canonical https://kognitiminds.com
+  # Prevent ERR_CERT_COMMON_NAME_INVALID by strictly redirecting all non-canonical hostnames directly to https://kognitiminds.com
   RewriteCond %{HTTP_HOST} ^www\.kognitiminds\.com$ [NC]
   RewriteRule ^(.*)$ https://kognitiminds.com/$1 [R=301,L]
 
-  # Enforce HTTPS if not already handled by CDN/Proxy
+  # Redirect any IP address, alternate hostname or unmapped Hostinger alias to canonical https://kognitiminds.com
+  RewriteCond %{HTTP_HOST} !^(www\.)?kognitiminds\.com$ [NC]
+  RewriteCond %{HTTP_HOST} !^localhost [NC]
+  RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
+  RewriteRule ^(.*)$ https://kognitiminds.com/$1 [R=301,L]
+
+  # Strictly enforce HTTPS to canonical domain (prevents %{HTTP_HOST} mismatch)
   RewriteCond %{HTTPS} off
   RewriteCond %{HTTP:X-Forwarded-Proto} !https
-  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+  RewriteRule ^(.*)$ https://kognitiminds.com/$1 [R=301,L]
 
   # Strip tracking query parameters (e.g. srsltid from Google Search/Merchant)
   RewriteCond %{QUERY_STRING} (?:^|&)srsltid=[^&]* [NC]
@@ -54,7 +87,6 @@ DirectoryIndex dist/index.html index.html
   RewriteRule ^api/data/([a-zA-Z0-9_-]+)/?([a-zA-Z0-9_-]*)?$ public/api/data.php?collection=$1&id=$2 [QSA,L]
 
   # 2. Direct Static Upload Serving (Certificates, Gallery, Products, B2B KYC)
-  # Crucial: Serve uploaded files directly from storage; NEVER allow SPA fallback to return HTML index.html
   RewriteCond %{DOCUMENT_ROOT}/public/uploads/$1 -f
   RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
 
@@ -97,13 +129,17 @@ DirectoryIndex dist/index.html index.html
   RewriteCond %{DOCUMENT_ROOT}/dist/$1 -f
   RewriteRule ^(.*)$ dist/$1 [L]
 
-  # 6. Serve static files directly if they exist
+  # 6. Guard: Missing static assets return clean 404 (NEVER rewrite .js/.css to index.html)
+  RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot|pdf)$ [NC]
+  RewriteRule ^ - [R=404,L]
+
+  # 7. Serve existing physical files directly
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteCond %{REQUEST_FILENAME} !-l
 
-  # 7. Client-side SPA route fallback
+  # 8. Client-side SPA route fallback
   RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
   RewriteRule . /dist/index.html [L]
 

@@ -11,10 +11,13 @@
     <meta name="keywords" content="Kogniti Minds, sustainable paper India, agricultural waste paper, tree-free copy paper, A4 printing paper, notebooks, journals, eco-friendly stationery, B2B wholesale paper, GST invoice India" />
     <meta name="author" content="Kogniti Minds Private Limited" />
     <link rel="canonical" href="https://kognitiminds.com/" />
-    <!-- Clean Google tracking query parameters (?srsltid=...) from address bar immediately -->
+    <!-- Canonical Domain & HTTPS Normalization (Guards against ERR_CERT_COMMON_NAME_INVALID) -->
     <script>
       (function() {
         try {
+          if (window.location.hostname === 'www.kognitiminds.com' || (window.location.protocol === 'http:' && window.location.hostname.indexOf('kognitiminds.com') !== -1)) {
+            window.location.replace('https://kognitiminds.com' + window.location.pathname + window.location.search + window.location.hash);
+          }
           if (window.location.search && window.location.search.indexOf('srsltid') !== -1) {
             var url = new URL(window.location.href);
             url.searchParams.delete('srsltid');
@@ -28,8 +31,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-ClrPAliT.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-C9J8hdLE.css">
+    <script type="module" crossorigin src="/assets/index-kpGJqKwe.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-B-MAttza.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-core-DCH8jpO3.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-firebase-BJRjY3XX.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-utils-B5JVzsfH.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-BatABCBr.css">
   </head>
   <body>
     <div id="root"></div>

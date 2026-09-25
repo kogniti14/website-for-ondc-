@@ -1,9 +1,56 @@
+<IfModule mod_env.c>
+  PassEnv RESEND_API_KEY
+  PassEnv VITE_RESEND_API_KEY
+  PassEnv RAZORPAY_KEY_ID
+  PassEnv RAZORPAY_KEY_SECRET
+  PassEnv EMAIL_FROM
+</IfModule>
+
+<IfModule mod_mime.c>
+  AddType application/pdf .pdf
+  AddType image/webp .webp
+  AddType image/png .png
+  AddType image/jpeg .jpg .jpeg
+  AddType application/javascript .js
+  AddType text/css .css
+  AddType font/woff2 .woff2
+  AddType font/woff .woff
+</IfModule>
+
+# Enable Gzip / Deflate Compression
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/x-javascript application/json application/xml application/rss+xml image/svg+xml font/woff font/woff2
+</IfModule>
+
 <IfModule mod_headers.c>
-  # Production SSL/TLS & Security Headers
-  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+  # Production SSL/TLS & Security Headers (Scoped without wildcard subdomains to prevent ERR_CERT_COMMON_NAME_INVALID)
+  Header always set Strict-Transport-Security "max-age=31536000"
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "SAMEORIGIN"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # HTML documents - Never cache index.html
+  <FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+
+  # Immutable hashed frontend bundles
+  <FilesMatch "\.(js|css|woff2|woff)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # Media and image assets
+  <FilesMatch "\.(pdf|png|jpe?g|webp|svg|ico)$">
+    Header set Access-Control-Allow-Origin "*"
+    Header set Cache-Control "public, max-age=2592000, stale-while-revalidate=86400"
+  </FilesMatch>
+</IfModule>
+
+<IfModule LiteSpeed>
+  CacheEngine on
+  CacheLookup on
 </IfModule>
 
 <IfModule mod_rewrite.c>
@@ -11,14 +58,20 @@
   RewriteBase /
 
   # 0. Canonical Domain Enforcement & HTTPS Normalization
-  # Redirect www.kognitiminds.com to canonical https://kognitiminds.com
+  # Prevent ERR_CERT_COMMON_NAME_INVALID by strictly redirecting www and all non-canonical hosts to https://kognitiminds.com
   RewriteCond %{HTTP_HOST} ^www\.kognitiminds\.com$ [NC]
   RewriteRule ^(.*)$ https://kognitiminds.com/$1 [R=301,L]
 
-  # Enforce HTTPS if not already handled by CDN/Proxy
+  # Redirect any IP address, alternate hostname or unmapped Hostinger alias to canonical https://kognitiminds.com
+  RewriteCond %{HTTP_HOST} !^(www\.)?kognitiminds\.com$ [NC]
+  RewriteCond %{HTTP_HOST} !^localhost [NC]
+  RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
+  RewriteRule ^(.*)$ https://kognitiminds.com/$1 [R=301,L]
+
+  # Strictly enforce HTTPS to canonical domain (prevents %{HTTP_HOST} mismatch)
   RewriteCond %{HTTPS} off
   RewriteCond %{HTTP:X-Forwarded-Proto} !https
-  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+  RewriteRule ^(.*)$ https://kognitiminds.com/$1 [R=301,L]
 
   # Strip tracking query parameters (e.g. srsltid from Google Search/Merchant)
   RewriteCond %{QUERY_STRING} (?:^|&)srsltid=[^&]* [NC]
@@ -38,11 +91,6 @@
   RewriteCond %{DOCUMENT_ROOT}/uploads/$1 -f
   RewriteRule ^uploads/(.*)$ /uploads/$1 [L]
 
-  # 3. Do not rewrite existing physical files or PHP scripts
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
-  RewriteCond %{REQUEST_FILENAME} -d
-  RewriteRule ^ - [L]
-
   # 3. Dedicated ONDC Protocol routes to Node.js backend (Port 3000) ONLY
   <IfModule mod_proxy.c>
     RewriteCond %{REQUEST_URI} !\.php$ [NC]
@@ -50,12 +98,16 @@
     RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
   </IfModule>
 
-  # 4. Serve static files directly if they exist
+  # 4. Guard: Missing static assets return clean 404 (NEVER rewrite .js/.css to index.html)
+  RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot|pdf)$ [NC]
+  RewriteRule ^ - [R=404,L]
+
+  # 5. Serve static files directly if they exist
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteCond %{REQUEST_FILENAME} !-l
 
-  # 5. Client-side SPA route fallback
+  # 6. Client-side SPA route fallback
   RewriteRule . /index.html [L]
 </IfModule>

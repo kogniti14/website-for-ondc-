@@ -108,6 +108,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           key={displayImage}
           src={displayImage}
           alt={product.name || 'Product'}
+          loading="lazy"
+          decoding="async"
           style={{
             width: '100%',
             height: '100%',
