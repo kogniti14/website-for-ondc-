@@ -216,6 +216,78 @@ class StorageService {
   }
 
   /**
+   * Synchronizes an entire collection atomically to both Firebase Realtime Database and Hostinger LiteSpeed.
+   * Completely eliminates race conditions and ensures deleted items are never revived.
+   */
+  public async syncServerCollection(collection: string, fullList: any[]): Promise<any> {
+    if (typeof window === 'undefined') return null;
+
+    const isAdmin = typeof window !== 'undefined' && (
+      localStorage.getItem('km_active_role') === 'admin' ||
+      Boolean(localStorage.getItem('km_active_admin_id'))
+    );
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    };
+    if (isAdmin) {
+      headers['X-Admin-Role'] = 'super_admin';
+      headers['Authorization'] = 'Bearer admin';
+    }
+
+    try {
+      // 1. PRIMARY CLOUD STORE: Asynchronously replicate full collection map to Firebase Realtime Database
+      if (isFirebaseConfigured() && db) {
+        try {
+          const colRef = ref(db, collection);
+          if (!fullList || fullList.length === 0) {
+            set(colRef, null).catch(() => {});
+          } else {
+            const obj: Record<string, any> = {};
+            for (const item of fullList) {
+              const docId = item?.id || item?.code;
+              if (docId) {
+                obj[docId] = item;
+              }
+            }
+            set(colRef, obj).catch(() => {});
+          }
+        } catch {
+          // Non-blocking Realtime Database sync
+        }
+      }
+
+      // 2. FAILOVER & HOSTINGER STORE: Direct native PHP dispatcher with atomic replace
+      const phpUrl = `/api/data.php?collection=${collection}&replace=true`;
+      let res = await fetch(phpUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(fullList),
+        cache: 'no-store',
+      }).catch(() => null);
+
+      if (!res || !res.ok) {
+        const url = `/api/data/${collection}?replace=true`;
+        res = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(fullList),
+          cache: 'no-store',
+        }).catch(() => null);
+      }
+
+      if (res && res.ok) {
+        return await res.json().catch(() => null);
+      }
+    } catch {
+      // Non-blocking background sync
+    }
+    return null;
+  }
+
+  /**
    * Hydrates local cache with live persistent data from server on startup.
    * Server database is the canonical source of truth:
    * - Never resurrect deleted records into local cache or back to server
@@ -272,34 +344,9 @@ class StorageService {
           const serverData = await res.json();
           if (item.isArray && Array.isArray(serverData)) {
             // Server database is authoritative: replace local store without resurrecting deleted items
-            if (serverData.length > 0) {
-              const localItems = this.getItem<any[]>(item.key, []);
-              if (Array.isArray(localItems) && localItems.length > 0) {
-                const mergedList = serverData.map((serverItem: any) => {
-                  const localMatch = localItems.find((loc: any) => loc.id === serverItem.id);
-                  if (localMatch && localMatch.updatedAt && serverItem.updatedAt) {
-                    const localTime = new Date(localMatch.updatedAt).getTime();
-                    const serverTime = new Date(serverItem.updatedAt).getTime();
-                    if (localTime > serverTime) {
-                      return localMatch;
-                    }
-                  }
-                  return serverItem;
-                });
-                for (const loc of localItems) {
-                  if (!mergedList.some((m: any) => m.id === loc.id)) {
-                    mergedList.push(loc);
-                  }
-                }
-                const finalMerged = item.collection === 'products' ? this.normalizeProducts(mergedList) : mergedList;
-                this.setItem(item.key, finalMerged);
-                dataSyncBus.emit(item.collection, finalMerged);
-              } else {
-                const finalData = item.collection === 'products' ? this.normalizeProducts(serverData) : serverData;
-                this.setItem(item.key, finalData);
-                dataSyncBus.emit(item.collection, finalData);
-              }
-            }
+            const finalData = item.collection === 'products' ? this.normalizeProducts(serverData) : serverData;
+            this.setItem(item.key, finalData);
+            dataSyncBus.emit(item.collection, finalData);
           } else if (!item.isArray) {
             // Object collection: handle both direct object and unwrapped single-item array
             let serverObj = serverData;
@@ -518,6 +565,7 @@ class StorageService {
     }
     this.setItem(KEYS.PRODUCTS, products);
     await this.syncServer('products', product);
+    await this.syncServerCollection('products', products);
     dataSyncBus.emit('products', products);
   }
 
@@ -548,6 +596,7 @@ class StorageService {
 
     if (modified) {
       this.setItem(KEYS.PRODUCTS, products);
+      await this.syncServerCollection('products', products);
       dataSyncBus.emit('products', products);
     }
   }
@@ -579,6 +628,7 @@ class StorageService {
 
     if (modified) {
       this.setItem(KEYS.PRODUCTS, products);
+      await this.syncServerCollection('products', products);
       dataSyncBus.emit('products', products);
     }
   }
@@ -587,6 +637,7 @@ class StorageService {
     const products = this.getProducts().filter((p) => p.id !== id);
     this.setItem(KEYS.PRODUCTS, products);
     await this.syncServer('products', null, 'DELETE', id);
+    await this.syncServerCollection('products', products);
     dataSyncBus.emit('products', products);
   }
 
@@ -596,7 +647,14 @@ class StorageService {
     const initial = this.getProducts();
     const remaining = initial.filter((p) => !idSet.has(p.id));
     this.setItem(KEYS.PRODUCTS, remaining);
-    await Promise.all(ids.map((id) => this.syncServer('products', null, 'DELETE', id)));
+    await this.syncServerCollection('products', remaining);
+    if (isFirebaseConfigured() && db) {
+      for (const id of ids) {
+        try {
+          remove(ref(db, `products/${id}`)).catch(() => {});
+        } catch {}
+      }
+    }
     dataSyncBus.emit('products', remaining);
     return initial.length - remaining.length;
   }
@@ -1808,6 +1866,7 @@ class StorageService {
     }
     this.setItem(KEYS.COUPONS, coupons);
     await this.syncServer('coupons', newCoupon);
+    await this.syncServerCollection('coupons', coupons);
     dataSyncBus.emit('coupons', coupons);
   }
 
@@ -1817,6 +1876,7 @@ class StorageService {
     );
     this.setItem(KEYS.COUPONS, coupons);
     await this.syncServer('coupons', null, 'DELETE', idOrCode);
+    await this.syncServerCollection('coupons', coupons);
     dataSyncBus.emit('coupons', coupons);
   }
 
@@ -1828,7 +1888,14 @@ class StorageService {
       (c) => !targets.has(c.id.toUpperCase()) && !targets.has(c.code.toUpperCase())
     );
     this.setItem(KEYS.COUPONS, remaining);
-    await Promise.all(idsOrCodes.map((id) => this.syncServer('coupons', null, 'DELETE', id)));
+    await this.syncServerCollection('coupons', remaining);
+    if (isFirebaseConfigured() && db) {
+      for (const id of idsOrCodes) {
+        try {
+          remove(ref(db, `coupons/${id}`)).catch(() => {});
+        } catch {}
+      }
+    }
     dataSyncBus.emit('coupons', remaining);
     return initial.length - remaining.length;
   }
@@ -1840,6 +1907,7 @@ class StorageService {
       c.isActive = !c.isActive;
       this.setItem(KEYS.COUPONS, coupons);
       await this.syncServer('coupons', c);
+      await this.syncServerCollection('coupons', coupons);
       dataSyncBus.emit('coupons', coupons);
     }
   }
@@ -2031,6 +2099,7 @@ class StorageService {
     }
     this.setItem(KEYS.CATEGORIES, cats);
     await this.syncServer('categories', category);
+    await this.syncServerCollection('categories', cats);
     dataSyncBus.emit('categories', cats);
 
     // If category was renamed, synchronize existing products assigned to old category name
@@ -2046,6 +2115,7 @@ class StorageService {
       }
       if (hasProductUpdates) {
         this.setItem(KEYS.PRODUCTS, products);
+        await this.syncServerCollection('products', products);
         dataSyncBus.emit('products', products);
       }
     }
@@ -2059,6 +2129,7 @@ class StorageService {
     const filtered = cats.filter((c) => c.id !== id);
     this.setItem(KEYS.CATEGORIES, filtered);
     await this.syncServer('categories', null, 'DELETE', id);
+    await this.syncServerCollection('categories', filtered);
     dataSyncBus.emit('categories', filtered);
     return true;
   }
@@ -2069,7 +2140,14 @@ class StorageService {
     const idSet = new Set(ids);
     const remaining = cats.filter((c) => !idSet.has(c.id));
     this.setItem(KEYS.CATEGORIES, remaining);
-    await Promise.all(ids.map((id) => this.syncServer('categories', null, 'DELETE', id)));
+    await this.syncServerCollection('categories', remaining);
+    if (isFirebaseConfigured() && db) {
+      for (const id of ids) {
+        try {
+          remove(ref(db, `categories/${id}`)).catch(() => {});
+        } catch {}
+      }
+    }
     dataSyncBus.emit('categories', remaining);
     return { deletedCount: cats.length - remaining.length, protectedSkipped: 0 };
   }

@@ -349,7 +349,37 @@ class CertificationService {
     }
 
     try {
-      const batchParam = isBatch ? '&batch=true' : '';
+      // 1. PRIMARY CLOUD STORE: Asynchronously replicate to Firebase Realtime Database
+      if (isFirebaseConfigured() && db) {
+        try {
+          if (isBatch && Array.isArray(payload)) {
+            const listRef = dbRef(db, collection);
+            if (payload.length === 0) {
+              dbSet(listRef, null).catch(() => {});
+            } else {
+              const obj: Record<string, any> = {};
+              for (const it of payload) {
+                const docId = it?.id || it?.slug;
+                if (docId) obj[docId] = it;
+              }
+              dbSet(listRef, obj).catch(() => {});
+            }
+          } else {
+            const docId = id || (payload && payload.id);
+            if (docId) {
+              const itemRef = dbRef(db, `${collection}/${docId}`);
+              if (method === 'DELETE') {
+                dbRemove(itemRef).catch(() => {});
+              } else if (payload && typeof payload === 'object') {
+                dbSet(itemRef, payload).catch(() => {});
+              }
+            }
+          }
+        } catch {}
+      }
+
+      // 2. FAILOVER & HOSTINGER PERSISTENCE
+      const batchParam = isBatch ? '&replace=true' : '';
       const phpUrl =
         method === 'DELETE' && id
           ? `/api/data.php?collection=${collection}&id=${encodeURIComponent(id)}`
@@ -359,7 +389,7 @@ class CertificationService {
         const url =
           method === 'DELETE' && id
             ? `/api/data/${collection}/${encodeURIComponent(id)}`
-            : `/api/data/${collection}${isBatch ? '?batch=true' : ''}`;
+            : `/api/data/${collection}${isBatch ? '?replace=true' : ''}`;
         res = await fetch(url, { method, headers, body, cache: 'no-store' }).catch(() => null);
       }
       if (res && res.ok) {

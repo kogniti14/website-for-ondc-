@@ -230,6 +230,14 @@ if ($method === 'POST' || $method === 'PUT') {
 
     $data = readStore($filePath, false);
     $isBatch = (isset($_GET['batch']) && $_GET['batch'] === 'true') || (isset($body[0]) && is_array($body[0]));
+    $isReplace = (isset($_GET['replace']) && $_GET['replace'] === 'true') || (isset($_GET['action']) && $_GET['action'] === 'replace');
+
+    // Atomic collection replacement (Super Admin catalog overwrite & clean sync)
+    if ($isReplace && is_array($body)) {
+        writeStore($filePath, array_values($body), false);
+        echo json_encode(['success' => true, 'count' => count($body), 'items' => $body], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 
     if ($isBatch && is_array($body)) {
         $savedItems = [];
@@ -315,13 +323,13 @@ if ($method === 'DELETE') {
         return !isset($item['id']) || $item['id'] !== $id;
     }));
 
-    if (count($data) < $initialCount) {
-        writeStore($filePath, $data);
-        echo json_encode(['success' => true, 'id' => $id, 'deleted' => true]);
-    } else {
-        http_response_code(404);
-        echo json_encode(['error' => 'Item not found']);
-    }
+    writeStore($filePath, $data);
+    echo json_encode([
+        'success' => true,
+        'id' => $id,
+        'deleted' => true,
+        'remaining' => count($data)
+    ]);
     exit;
 }
 

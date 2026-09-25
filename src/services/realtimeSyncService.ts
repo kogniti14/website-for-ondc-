@@ -39,13 +39,16 @@ class RealtimeSyncService {
           if (snapshot.exists()) {
             const raw = snapshot.val();
             const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
-            if (list.length > 0) {
-              const normalized = storageService.normalizeProducts(list as any);
-              try {
-                localStorage.setItem('km_products_v2', JSON.stringify(normalized));
-              } catch {}
-              dataSyncBus.emit('products', normalized);
-            }
+            const normalized = storageService.normalizeProducts(list as any);
+            try {
+              localStorage.setItem('km_products_v2', JSON.stringify(normalized));
+            } catch {}
+            dataSyncBus.emit('products', normalized);
+          } else {
+            try {
+              localStorage.setItem('km_products_v2', JSON.stringify([]));
+            } catch {}
+            dataSyncBus.emit('products', []);
           }
         },
         (error) => {
@@ -62,12 +65,15 @@ class RealtimeSyncService {
           if (snapshot.exists()) {
             const raw = snapshot.val();
             const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
-            if (list.length > 0) {
-              try {
-                localStorage.setItem('km_product_reviews_v1', JSON.stringify(list));
-              } catch {}
-              dataSyncBus.emit('reviews', list);
-            }
+            try {
+              localStorage.setItem('km_product_reviews_v1', JSON.stringify(list));
+            } catch {}
+            dataSyncBus.emit('reviews', list);
+          } else {
+            try {
+              localStorage.setItem('km_product_reviews_v1', JSON.stringify([]));
+            } catch {}
+            dataSyncBus.emit('reviews', []);
           }
         },
         (error) => {
@@ -103,12 +109,15 @@ class RealtimeSyncService {
           if (snapshot.exists()) {
             const raw = snapshot.val();
             const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
-            if (list.length > 0) {
-              try {
-                localStorage.setItem('km_categories_v2', JSON.stringify(list));
-              } catch {}
-              dataSyncBus.emit('categories', list);
-            }
+            try {
+              localStorage.setItem('km_categories_v2', JSON.stringify(list));
+            } catch {}
+            dataSyncBus.emit('categories', list);
+          } else {
+            try {
+              localStorage.setItem('km_categories_v2', JSON.stringify([]));
+            } catch {}
+            dataSyncBus.emit('categories', []);
           }
         },
         (error) => {
@@ -125,12 +134,15 @@ class RealtimeSyncService {
           if (snapshot.exists()) {
             const raw = snapshot.val();
             const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
-            if (list.length > 0) {
-              try {
-                localStorage.setItem('km_testimonials_v1', JSON.stringify(list));
-              } catch {}
-              dataSyncBus.emit('testimonials', list);
-            }
+            try {
+              localStorage.setItem('km_testimonials_v1', JSON.stringify(list));
+            } catch {}
+            dataSyncBus.emit('testimonials', list);
+          } else {
+            try {
+              localStorage.setItem('km_testimonials_v1', JSON.stringify([]));
+            } catch {}
+            dataSyncBus.emit('testimonials', []);
           }
         },
         (error) => {
@@ -147,12 +159,15 @@ class RealtimeSyncService {
           if (snapshot.exists()) {
             const raw = snapshot.val();
             const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
-            if (list.length > 0) {
-              try {
-                localStorage.setItem('kogniti_company_certifications', JSON.stringify(list));
-              } catch {}
-              dataSyncBus.emit('certifications', list);
-            }
+            try {
+              localStorage.setItem('kogniti_company_certifications', JSON.stringify(list));
+            } catch {}
+            dataSyncBus.emit('certifications', list);
+          } else {
+            try {
+              localStorage.setItem('kogniti_company_certifications', JSON.stringify([]));
+            } catch {}
+            dataSyncBus.emit('certifications', []);
           }
         },
         (error) => {
@@ -169,12 +184,15 @@ class RealtimeSyncService {
           if (snapshot.exists()) {
             const raw = snapshot.val();
             const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
-            if (list.length > 0) {
-              try {
-                localStorage.setItem('km_b2b_quotations_v2', JSON.stringify(list));
-              } catch {}
-              dataSyncBus.emit('b2b_quotations', list);
-            }
+            try {
+              localStorage.setItem('km_b2b_quotations_v2', JSON.stringify(list));
+            } catch {}
+            dataSyncBus.emit('b2b_quotations', list);
+          } else {
+            try {
+              localStorage.setItem('km_b2b_quotations_v2', JSON.stringify([]));
+            } catch {}
+            dataSyncBus.emit('b2b_quotations', []);
           }
         },
         (error) => {
@@ -183,7 +201,51 @@ class RealtimeSyncService {
       );
       this.unsubscribers.set('b2b_quotations', unsubsRfqs);
 
-      console.log('[RealtimeSync] Realtime Database listeners active across products, categories, reviews, testimonials, certifications, settings, and RFQs.');
+      // 8. Live Coupons & Promotional Offers Listener
+      const couponsRef = ref(db, 'coupons');
+      const unsubsCoupons = onValue(
+        couponsRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const raw = snapshot.val();
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
+            try {
+              localStorage.setItem('km_coupons_v2', JSON.stringify(list));
+            } catch {}
+            dataSyncBus.emit('coupons', list);
+          } else {
+            try {
+              localStorage.setItem('km_coupons_v2', JSON.stringify([]));
+            } catch {}
+            dataSyncBus.emit('coupons', []);
+          }
+        },
+        (error) => {
+          console.warn('[RealtimeSync] Coupons listener notice:', error.message);
+        }
+      );
+      this.unsubscribers.set('coupons', unsubsCoupons);
+
+      // 9. Live Site Media (Banners, Logo, Hero Media) Listener
+      const mediaRef = ref(db, 'site_media');
+      const unsubsMedia = onValue(
+        mediaRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const media = snapshot.val();
+            try {
+              localStorage.setItem('km_site_media_v2', JSON.stringify(media));
+            } catch {}
+            dataSyncBus.emit('site_media', media);
+          }
+        },
+        (error) => {
+          console.warn('[RealtimeSync] Site Media listener notice:', error.message);
+        }
+      );
+      this.unsubscribers.set('site_media', unsubsMedia);
+
+      console.log('[RealtimeSync] Realtime Database listeners active across products, categories, reviews, testimonials, certifications, settings, coupons, site_media, and RFQs.');
     } catch (err) {
       console.warn('[RealtimeSync] Initialization fallback notice:', err);
     }

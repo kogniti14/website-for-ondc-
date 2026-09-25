@@ -109,7 +109,15 @@ class TestimonialService {
         try {
           if (isBatch && Array.isArray(payload)) {
             const listRef = ref(db, 'testimonials');
-            set(listRef, payload).catch(() => {});
+            if (payload.length === 0) {
+              set(listRef, null).catch(() => {});
+            } else {
+              const obj: Record<string, any> = {};
+              for (const it of (payload as any[])) {
+                if (it && it.id) obj[it.id] = it;
+              }
+              set(listRef, obj).catch(() => {});
+            }
           } else {
             const docId = id || ((payload as any)?.id);
             if (docId) {
@@ -128,13 +136,13 @@ class TestimonialService {
       const phpUrl =
         method === 'DELETE' && id
           ? `/api/data.php?collection=testimonials&id=${encodeURIComponent(id)}`
-          : `/api/data.php?collection=testimonials${isBatch ? '&batch=true' : ''}`;
+          : `/api/data.php?collection=testimonials${isBatch ? '&replace=true' : ''}`;
       let res = await fetch(phpUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
       if (!res || !res.ok) {
         const url =
           method === 'DELETE' && id
             ? `/api/data/testimonials/${encodeURIComponent(id)}`
-            : `/api/data/testimonials${isBatch ? '?batch=true' : ''}`;
+            : `/api/data/testimonials${isBatch ? '?replace=true' : ''}`;
         res = await fetch(url, { method, headers, body, cache: 'no-store' }).catch(() => null);
       }
       if (res && res.ok) {
