@@ -108,12 +108,13 @@ DirectoryIndex dist/index.html index.html
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # 7. Fallback to dist/ for root-level static files (e.g. logo-icon.png, favicon.ico)
+  # 7. Fallback to dist/ for root-level static files (e.g. logo-icon.png, favicon.ico, ondc-workbench-kit.zip)
   RewriteCond %{REQUEST_URI} !^/dist/
-  RewriteRule ^([a-zA-Z0-9_-]+\.(png|jpe?g|gif|ico|svg|webp|woff2?|ttf|eot|pdf))$ dist/$1 [L]
+  RewriteRule ^([a-zA-Z0-9_-]+\.(png|jpe?g|gif|ico|svg|webp|woff2?|ttf|eot|pdf|zip|json))$ dist/$1 [L]
+  RewriteRule ^ondc-workbench/(.*)$ dist/ondc-workbench/$1 [L]
 
   # 8. Missing static assets guard (clean 404, never fallback to index.html for assets)
-  RewriteCond %{REQUEST_URI} \.(js|css|png|jpe?g|gif|ico|svg|webp|woff2?|ttf|eot|pdf)$ [NC]
+  RewriteCond %{REQUEST_URI} \.(js|css|png|jpe?g|gif|ico|svg|webp|woff2?|ttf|eot|pdf|zip|json)$ [NC]
   RewriteRule ^ - [R=404,L]
 
   # 9. Client-side SPA route fallback (All navigation routes like /shop, /products, /admin go to dist/index.html)

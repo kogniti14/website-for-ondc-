@@ -1,0 +1,205 @@
+{
+  "context": {
+    "domain": "ONDC:RETeB2B",
+    "country": "IND",
+    "city": "std:080",
+    "action": "on_update",
+    "core_version": "1.2.5",
+    "bap_id": "workbench.ondc.tech",
+    "bap_uri": "https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer",
+    "bpp_id": "kognitiminds.com",
+    "bpp_uri": "https://kognitiminds.com",
+    "transaction_id": "54e3d489-0be3-455b-9d41-3da39d520377",
+    "message_id": "cc0e557b-7b56-4c4f-9e7c-86cf330de225",
+    "timestamp": "2026-09-26T20:00:21.277Z",
+    "ttl": "PT30S"
+  },
+  "message": {
+    "order": {
+      "id": "KM_ONDC_ORD_881290",
+      "state": "Completed",
+      "provider": {
+        "id": "kogniti-minds-bpp",
+        "locations": [
+          {
+            "id": "L1"
+          }
+        ]
+      },
+      "items": [
+        {
+          "id": "km-agri-a4-75",
+          "fulfillment_id": "R_1790452821283",
+          "quantity": {
+            "count": 50
+          },
+          "tags": [
+            {
+              "code": "return_status",
+              "list": [
+                {
+                  "code": "return_quantity",
+                  "value": "50"
+                },
+                {
+                  "code": "status",
+                  "value": "Return_Approved"
+                },
+                {
+                  "code": "refund_value",
+                  "value": "10747.44"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "billing": {
+        "street": "Knowledge Park II",
+        "city": "Greater Noida",
+        "state": "Uttar Pradesh",
+        "area_code": "201310"
+      },
+      "fulfillments": [
+        {
+          "id": "F1",
+          "type": "Delivery",
+          "state": {
+            "descriptor": {
+              "code": "Order-delivered"
+            }
+          },
+          "tracking": false
+        },
+        {
+          "id": "R_1790452821283",
+          "type": "Return",
+          "state": {
+            "descriptor": {
+              "code": "Return_Approved",
+              "name": "Return Request Approved by Kogniti Minds"
+            }
+          },
+          "start": {
+            "time": {
+              "range": {
+                "start": "2026-09-27T08:00:21.283Z",
+                "end": "2026-09-28T08:00:21.283Z"
+              }
+            },
+            "instructions": {
+              "name": "Reverse Quality Inspection and Mill Return Pickup",
+              "short_desc": "Ensure paper boxes remain shrink-wrapped with batch barcodes intact.",
+              "images": [
+                "https://kognitiminds.com/logo-icon.png"
+              ]
+            },
+            "contact": {
+              "phone": "+91 98111 22334",
+              "email": "support@kognitiminds.com"
+            }
+          },
+          "tracking": true,
+          "tags": [
+            {
+              "code": "return_request",
+              "list": [
+                {
+                  "code": "return_type",
+                  "value": "Full_Order_Return"
+                },
+                {
+                  "code": "approval_status",
+                  "value": "approved"
+                },
+                {
+                  "code": "refund_amount",
+                  "value": "10747.44"
+                },
+                {
+                  "code": "ttl_reverseqc",
+                  "value": "P3D"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "quote": {
+        "price": {
+          "currency": "INR",
+          "value": "1234.00"
+        },
+        "breakup": [
+          {
+            "@ondc/org/item_id": "km-agri-a4-75",
+            "@ondc/org/item_quantity": {
+              "count": 50
+            },
+            "title": "Kogniti AgroPrint 75 GSM A4 Sustainable Copier Paper (500 Sheets)",
+            "@ondc/org/title_type": "item",
+            "price": {
+              "currency": "INR",
+              "value": "9108.00"
+            }
+          },
+          {
+            "@ondc/org/item_id": "km-agri-a4-75",
+            "title": "GST (18%)",
+            "@ondc/org/title_type": "tax",
+            "price": {
+              "currency": "INR",
+              "value": "1639.44"
+            }
+          },
+          {
+            "@ondc/org/item_id": "km-agri-a4-75",
+            "title": "Reverse Logistics Refund (Full Order_Return)",
+            "@ondc/org/title_type": "refund",
+            "price": {
+              "currency": "INR",
+              "value": "-10747.44"
+            }
+          }
+        ],
+        "ttl": "P1D"
+      },
+      "payment": {
+        "type": "ON-FULFILLMENT",
+        "status": "PAID",
+        "params": {
+          "amount": "10747.44",
+          "currency": "INR"
+        },
+        "tags": [
+          {
+            "code": "settlement_details",
+            "list": [
+              {
+                "code": "settlement_phase",
+                "value": "refund"
+              },
+              {
+                "code": "settlement_type",
+                "value": "neft"
+              },
+              {
+                "code": "settlement_status",
+                "value": "INITIATED"
+              },
+              {
+                "code": "beneficiary_name",
+                "value": "Apex Educational Trust"
+              },
+              {
+                "code": "settlement_amount",
+                "value": "10747.44"
+              }
+            ]
+          }
+        ]
+      },
+      "updated_at": "2026-09-26T20:00:21.284Z"
+    }
+  }
+}

@@ -301,6 +301,8 @@ if (fs.existsSync(distPath)) {
       req.path.startsWith('/api') ||
       req.path.startsWith('/ondc') ||
       req.path.endsWith('.php') ||
+      req.path.endsWith('.zip') ||
+      req.path.endsWith('.json') ||
       ['/search', '/select', '/init', '/confirm', '/status', '/cancel', '/update', '/rating', '/track', '/support'].includes(req.path)
     ) {
       return next();

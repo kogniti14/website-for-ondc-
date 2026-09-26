@@ -16,9 +16,120 @@ import {
   TrendingUp,
   Terminal,
   Play,
+  Download,
+  Package,
+  FileCode,
 } from 'lucide-react';
 
 const TOTAL_CATALOG_PRODUCTS = 12;
+
+interface WorkbenchFileItem {
+  filename: string;
+  scenario: string;
+  name: string;
+  desc: string;
+  size: string;
+  badge: string;
+}
+
+const WORKBENCH_DOWNLOAD_ITEMS: WorkbenchFileItem[] = [
+  {
+    filename: '01_on_search.json',
+    scenario: 'Scenario 1',
+    name: 'Discovery & Catalog',
+    desc: 'Full 13-product catalogue, HSN 4:4802/4820, statutory GST & B2B tier slabs',
+    size: '67.5 KB',
+    badge: 'Discovery',
+  },
+  {
+    filename: '02_on_select.json',
+    scenario: 'Scenario 2',
+    name: 'Select & Quotation',
+    desc: 'Item validation, 8% bulk tier discount, intrastate CGST+SGST breakdown',
+    size: '2.5 KB',
+    badge: 'Quotation',
+  },
+  {
+    filename: '03_on_init.json',
+    scenario: 'Scenario 3',
+    name: 'Order Initialization',
+    desc: 'Billing address, B2B enterprise delivery terms & payment settlement terms',
+    size: '3.1 KB',
+    badge: 'Initialization',
+  },
+  {
+    filename: '04_on_confirm.json',
+    scenario: 'Scenario 4',
+    name: 'Order Confirmation',
+    desc: 'Confirmed order state Created, atomic inventory lock & commercial tax invoice',
+    size: '3.2 KB',
+    badge: 'Order Confirmation',
+  },
+  {
+    filename: '05_on_status.json',
+    scenario: 'Scenario 5',
+    name: 'Order Status Update',
+    desc: 'Accepted state, shipment tracking URL & dispatch manifest',
+    size: '1.2 KB',
+    badge: 'Order Status',
+  },
+  {
+    filename: '06_on_update_partial_return.json',
+    scenario: 'Scenario 6',
+    name: 'Partial Order Return',
+    desc: 'Active reverse flow: reverse fulfillment Return_Approved, proportional refund',
+    size: '5.5 KB',
+    badge: 'Partial Return',
+  },
+  {
+    filename: '07_on_update_full_return.json',
+    scenario: 'Scenario 7',
+    name: 'Full Order Return',
+    desc: 'Active reverse flow: 100% tax credit note & reverse pickup authorization',
+    size: '5.5 KB',
+    badge: 'Full Return',
+  },
+  {
+    filename: '08_on_cancel.json',
+    scenario: 'Scenario 8',
+    name: 'Order Cancellation',
+    desc: 'Cancellation reason 001, inventory restoration & audit logs',
+    size: '701 B',
+    badge: 'Cancellation',
+  },
+  {
+    filename: '09_on_track.json',
+    scenario: 'Scenario 9',
+    name: 'Shipment Tracking',
+    desc: 'Consignment tracking link & reverse logistics tracking status',
+    size: '668 B',
+    badge: 'Tracking',
+  },
+  {
+    filename: '10_on_support.json',
+    scenario: 'Scenario 10',
+    name: 'Support & Escalation',
+    desc: 'Enterprise customer care, grievance officer & phone/email contacts',
+    size: '674 B',
+    badge: 'Support',
+  },
+  {
+    filename: 'workbench_manifest.json',
+    scenario: 'Manifest',
+    name: 'Workbench Submission Manifest',
+    desc: 'Protocol metadata, subscriber ID, endpoints, and scenario index',
+    size: '1.9 KB',
+    badge: 'Index',
+  },
+  {
+    filename: 'README.md',
+    scenario: 'Docs',
+    name: 'Workbench Guide & Manual',
+    desc: 'Step-by-step instructions for uploading files to ONDC Workbench',
+    size: '1.1 KB',
+    badge: 'Guide',
+  },
+];
 
 interface OndcOrder {
   id: string;
@@ -200,6 +311,21 @@ export const OndcManagement: React.FC = () => {
       setTimeout(() => setCopiedSimJson(false), 2500);
     } catch {
       alert('Could not copy JSON');
+    }
+  };
+
+  const [copiedFile, setCopiedFile] = useState<string | null>(null);
+
+  const handleCopyFileContent = async (filename: string) => {
+    try {
+      const res = await fetch(`/ondc/download/workbench-file/${filename}`);
+      if (!res.ok) throw new Error('File not found');
+      const text = await res.text();
+      await navigator.clipboard.writeText(text);
+      setCopiedFile(filename);
+      setTimeout(() => setCopiedFile(null), 2500);
+    } catch {
+      alert(`Could not copy ${filename}. Please click the Download button directly.`);
     }
   };
 
@@ -629,9 +755,206 @@ export const OndcManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Sub-tab 5: Live Workbench Scenario Simulator */}
+      {/* Sub-tab 5: Live Workbench Scenario Simulator & Download Pack */}
       {activeSubTab === 'workbench' && (
-        <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '1.75rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          {/* Download Workbench Compliance Pack Card */}
+          <div
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '12px',
+              border: '1px solid #E2E8F0',
+              padding: '1.75rem',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                flexWrap: 'wrap',
+                gap: '1.25rem',
+                marginBottom: '1.25rem',
+                paddingBottom: '1.25rem',
+                borderBottom: '1px solid #F1F5F9',
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
+                  <span
+                    style={{
+                      background: '#DCFCE7',
+                      color: '#166534',
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: '999px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                    }}
+                  >
+                    <Package size={12} /> RET 1.2.5 Ready
+                  </span>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>
+                    Download ONDC Workbench Compliance Package
+                  </h3>
+                </div>
+                <p style={{ color: '#64748B', fontSize: '0.85rem', margin: 0, maxWidth: '720px' }}>
+                  Download production-tested JSON payloads for all 10 ONDC Retail (eB2B) Workbench scenarios. Generated directly
+                  from Kogniti Minds' live catalog, tax engine, volume pricing rules, and reverse return logistics.
+                </p>
+              </div>
+
+              {/* 1-Click ZIP Download Action */}
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <a
+                  href="/ondc-workbench-kit.zip"
+                  download="ondc-workbench-kit.zip"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.7rem 1.4rem',
+                    fontSize: '0.88rem',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Download size={16} />
+                  Download Complete ZIP Kit
+                </a>
+                <a
+                  href="/ondc/download/workbench-file/workbench_manifest.json"
+                  download="workbench_manifest.json"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    background: '#F8FAFC',
+                    color: '#334155',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '8px',
+                    padding: '0.7rem 1rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                  }}
+                >
+                  <FileCode size={15} />
+                  Manifest (.json)
+                </a>
+              </div>
+            </div>
+
+            {/* Files List Table */}
+            <div style={{ overflowX: 'auto', border: '1px solid #E2E8F0', borderRadius: '8px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
+                    <th style={{ padding: '0.75rem 1rem', width: '130px' }}>Scenario</th>
+                    <th style={{ padding: '0.75rem 1rem', width: '220px' }}>File Name</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Description & Scope</th>
+                    <th style={{ padding: '0.75rem 1rem', width: '90px' }}>Size</th>
+                    <th style={{ padding: '0.75rem 1rem', width: '190px', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {WORKBENCH_DOWNLOAD_ITEMS.map((item, idx) => (
+                    <tr
+                      key={item.filename}
+                      style={{
+                        borderBottom: idx === WORKBENCH_DOWNLOAD_ITEMS.length - 1 ? 'none' : '1px solid #F1F5F9',
+                        background: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA',
+                      }}
+                    >
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            background: item.badge === 'Guide' ? '#FEF3C7' : item.badge === 'Index' ? '#E0E7FF' : '#EFF6FF',
+                            color: item.badge === 'Guide' ? '#92400E' : item.badge === 'Index' ? '#3730A3' : '#1E40AF',
+                            padding: '0.15rem 0.5rem',
+                            borderRadius: '4px',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                          }}
+                        >
+                          {item.badge}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 600, color: '#0F172A' }}>
+                        {item.filename}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#475569' }}>
+                        <div style={{ fontWeight: 600, color: '#1E293B', marginBottom: '0.15rem' }}>{item.name}</div>
+                        <div style={{ fontSize: '0.76rem', color: '#64748B' }}>{item.desc}</div>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#64748B', whiteSpace: 'nowrap' }}>
+                        {item.size}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() => handleCopyFileContent(item.filename)}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              background: copiedFile === item.filename ? '#10B981' : '#F1F5F9',
+                              color: copiedFile === item.filename ? '#FFFFFF' : '#334155',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '6px',
+                              padding: '0.35rem 0.65rem',
+                              fontSize: '0.74rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                            }}
+                            title="Copy file contents to clipboard"
+                          >
+                            {copiedFile === item.filename ? <Check size={12} /> : <Copy size={12} />}
+                            {copiedFile === item.filename ? 'Copied' : 'Copy'}
+                          </button>
+                          <a
+                            href={`/ondc/download/workbench-file/${item.filename}`}
+                            download={item.filename}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              background: '#2563EB',
+                              color: '#FFFFFF',
+                              borderRadius: '6px',
+                              padding: '0.35rem 0.65rem',
+                              fontSize: '0.74rem',
+                              fontWeight: 600,
+                              textDecoration: 'none',
+                              boxShadow: '0 1px 2px rgba(37, 99, 235, 0.2)',
+                            }}
+                            title={`Download ${item.filename}`}
+                          >
+                            <Download size={12} />
+                            Download
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Sub-tab 5: Live Workbench Scenario Simulator */}
+          <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '1.75rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
             <div>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0F172A', margin: '0 0 0.4rem' }}>
@@ -767,6 +1090,7 @@ export const OndcManagement: React.FC = () => {
               </pre>
             </div>
           )}
+          </div>
         </div>
       )}
     </div>

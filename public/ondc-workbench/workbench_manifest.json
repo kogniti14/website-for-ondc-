@@ -1,0 +1,61 @@
+{
+  "organization": "KOGNITI MINDS PRIVATE LIMITED",
+  "website": "https://kognitiminds.com",
+  "bpp_id": "kognitiminds.com",
+  "domain": "ONDC:RETeB2B",
+  "core_version": "1.2.5",
+  "active_workbench_flow": "Buyer_Initiated_Return_(Full_Order_and_Partial_Order)",
+  "generated_at": "2026-09-26T20:00:21.277Z",
+  "files": [
+    {
+      "file": "01_on_search.json",
+      "action": "on_search",
+      "description": "Full catalog discovery with B2B bulk discount slabs & 4: HSN prefix"
+    },
+    {
+      "file": "02_on_select.json",
+      "action": "on_select",
+      "description": "Quotation with 8% volume tier discount & intrastate GST breakup"
+    },
+    {
+      "file": "03_on_init.json",
+      "action": "on_init",
+      "description": "Order initialization with business billing address & payment terms"
+    },
+    {
+      "file": "04_on_confirm.json",
+      "action": "on_confirm",
+      "description": "Order confirmation with state Created & inventory lock"
+    },
+    {
+      "file": "05_on_status.json",
+      "action": "on_status",
+      "description": "Real-time order milestone tracking & fulfillment state"
+    },
+    {
+      "file": "06_on_update_partial_return.json",
+      "action": "on_update",
+      "description": "Buyer-initiated partial return with reverse logistics Return_Approved & proportional refund"
+    },
+    {
+      "file": "07_on_update_full_return.json",
+      "action": "on_update",
+      "description": "Buyer-initiated full return with 100% refund adjustment"
+    },
+    {
+      "file": "08_on_cancel.json",
+      "action": "on_cancel",
+      "description": "Order cancellation with reason code 001"
+    },
+    {
+      "file": "09_on_track.json",
+      "action": "on_track",
+      "description": "Shipment tracking URL"
+    },
+    {
+      "file": "10_on_support.json",
+      "action": "on_support",
+      "description": "Customer & enterprise support contact details"
+    }
+  ]
+}

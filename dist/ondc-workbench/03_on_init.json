@@ -1,0 +1,119 @@
+{
+  "context": {
+    "domain": "ONDC:RETeB2B",
+    "country": "IND",
+    "city": "std:080",
+    "action": "on_init",
+    "core_version": "1.2.5",
+    "bap_id": "workbench.ondc.tech",
+    "bap_uri": "https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer",
+    "bpp_id": "kognitiminds.com",
+    "bpp_uri": "https://kognitiminds.com",
+    "transaction_id": "54e3d489-0be3-455b-9d41-3da39d520377",
+    "message_id": "e2e858db-bfd7-4ee4-9b27-c10ce5cda195",
+    "timestamp": "2026-09-26T20:00:21.277Z",
+    "ttl": "PT30S"
+  },
+  "message": {
+    "order": {
+      "provider": {
+        "id": "kogniti-minds-bpp"
+      },
+      "provider_location": {
+        "id": "L1"
+      },
+      "items": [
+        {
+          "id": "km-agri-a4-75",
+          "fulfillment_id": "F1",
+          "quantity": {
+            "count": 50
+          }
+        }
+      ],
+      "billing": {
+        "name": "Apex Educational Trust",
+        "address": {
+          "street": "Knowledge Park II",
+          "city": "Greater Noida",
+          "state": "Uttar Pradesh",
+          "area_code": "201310"
+        },
+        "tax_number": "07AAAAA0000A1Z5"
+      },
+      "fulfillments": [
+        {
+          "id": "F1",
+          "type": "Delivery",
+          "tracking": true,
+          "end": {
+            "location": {
+              "address": {
+                "street": "Knowledge Park II",
+                "city": "Greater Noida",
+                "state": "Uttar Pradesh",
+                "area_code": "201310"
+              }
+            }
+          }
+        }
+      ],
+      "quote": {
+        "price": {
+          "currency": "INR",
+          "value": "11981.44"
+        },
+        "breakup": [
+          {
+            "@ondc/org/item_id": "km-agri-a4-75",
+            "@ondc/org/item_quantity": {
+              "count": 50
+            },
+            "title": "Kogniti AgroPrint 75 GSM A4 Sustainable Copier Paper (500 Sheets)",
+            "@ondc/org/title_type": "item",
+            "price": {
+              "currency": "INR",
+              "value": "9108.00"
+            },
+            "item": {
+              "quantity": {
+                "available": {
+                  "count": "2140"
+                },
+                "maximum": {
+                  "count": "500"
+                }
+              },
+              "price": {
+                "currency": "INR",
+                "value": "182.16"
+              }
+            }
+          },
+          {
+            "@ondc/org/item_id": "km-agri-a4-75",
+            "title": "Tax (CGST 9% + SGST 9%)",
+            "@ondc/org/title_type": "tax",
+            "price": {
+              "currency": "INR",
+              "value": "1639.44"
+            }
+          },
+          {
+            "title": "Delivery charges (Surface Logistics)",
+            "@ondc/org/title_type": "delivery",
+            "price": {
+              "currency": "INR",
+              "value": "1234.00"
+            }
+          }
+        ],
+        "ttl": "P1D"
+      },
+      "payment": {
+        "type": "ON-FULFILLMENT",
+        "status": "NOT-PAID"
+      }
+    }
+  }
+}

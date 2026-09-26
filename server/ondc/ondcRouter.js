@@ -6,8 +6,15 @@
 
 import express from 'express';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import ondcConfig from './config.js';
 import { createAuthorizationHeader, verifyAuthorization } from './security/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '../..');
 import {
   buildOndcCatalog,
   getAuthoritativeProducts,
@@ -959,6 +966,104 @@ ondcRouter.get('/api/admin/ondc/stats', (req, res) => {
     activeTransactions: transactions.length,
     recentErrors: logs.filter((l) => l.error || l.status >= 400).length,
   });
+});
+
+/**
+ * GET /api/admin/ondc/workbench/files - List all downloadable workbench files and kit info
+ */
+ondcRouter.get('/api/admin/ondc/workbench/files', (req, res) => {
+  const workbenchDir = [
+    path.join(projectRoot, 'public', 'ondc-workbench'),
+    path.join(projectRoot, 'dist', 'ondc-workbench'),
+  ].find((d) => fs.existsSync(d));
+
+  if (!workbenchDir) {
+    return res.status(404).json({ success: false, error: 'Workbench directory not found' });
+  }
+
+  try {
+    const rawFiles = fs.readdirSync(workbenchDir);
+    const files = rawFiles
+      .filter((f) => f.endsWith('.json') || f.endsWith('.md'))
+      .sort()
+      .map((fileName) => {
+        const filePath = path.join(workbenchDir, fileName);
+        const stats = fs.statSync(filePath);
+        return {
+          filename: fileName,
+          sizeBytes: stats.size,
+          downloadUrl: `/ondc/download/workbench-file/${fileName}`,
+        };
+      });
+
+    return res.status(200).json({
+      success: true,
+      totalFiles: files.length,
+      files,
+      kitDownloadUrl: '/ondc/download/workbench-kit',
+      kitDirectUrl: '/ondc-workbench-kit.zip',
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * Helper to stream / download workbench zip kit
+ */
+const serveWorkbenchZip = (req, res) => {
+  const candidatePaths = [
+    path.join(projectRoot, 'public', 'ondc-workbench-kit.zip'),
+    path.join(projectRoot, 'dist', 'ondc-workbench-kit.zip'),
+    path.join(projectRoot, 'ondc-workbench-kit.zip'),
+  ];
+
+  const zipPath = candidatePaths.find((p) => fs.existsSync(p));
+  if (!zipPath) {
+    return res.status(404).json({ success: false, error: 'Workbench ZIP package not found on server' });
+  }
+
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', 'attachment; filename="ondc-workbench-kit.zip"');
+  return res.sendFile(zipPath);
+};
+
+ondcRouter.get(['/download/workbench-kit', '/ondc/download/workbench-kit', '/ondc-workbench-kit.zip'], serveWorkbenchZip);
+
+/**
+ * GET /ondc/download/workbench-file/:filename - Download individual scenario file
+ */
+ondcRouter.get(
+  ['/download/workbench-file/:filename', '/ondc/download/workbench-file/:filename'],
+  (req, res) => {
+  const rawFilename = req.params.filename || '';
+  const filename = path.basename(rawFilename);
+
+  if (!filename || (!filename.endsWith('.json') && !filename.endsWith('.md'))) {
+    return res.status(400).json({ success: false, error: 'Invalid file requested' });
+  }
+
+  const candidateDirs = [
+    path.join(projectRoot, 'public', 'ondc-workbench'),
+    path.join(projectRoot, 'dist', 'ondc-workbench'),
+  ];
+
+  let targetPath = null;
+  for (const dir of candidateDirs) {
+    const p = path.join(dir, filename);
+    if (fs.existsSync(p)) {
+      targetPath = p;
+      break;
+    }
+  }
+
+  if (!targetPath) {
+    return res.status(404).json({ success: false, error: `File '${filename}' not found` });
+  }
+
+  res.setHeader('Content-Type', filename.endsWith('.json') ? 'application/json' : 'text/markdown; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  return res.sendFile(targetPath);
 });
 
 export default ondcRouter;

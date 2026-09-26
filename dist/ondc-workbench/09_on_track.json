@@ -1,0 +1,23 @@
+{
+  "context": {
+    "domain": "ONDC:RETeB2B",
+    "country": "IND",
+    "city": "std:080",
+    "action": "on_track",
+    "core_version": "1.2.5",
+    "bap_id": "workbench.ondc.tech",
+    "bap_uri": "https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer",
+    "bpp_id": "kognitiminds.com",
+    "bpp_uri": "https://kognitiminds.com",
+    "transaction_id": "54e3d489-0be3-455b-9d41-3da39d520377",
+    "message_id": "ee0e557b-7b56-4c4f-9e7c-86cf330de227",
+    "timestamp": "2026-09-26T20:00:21.277Z",
+    "ttl": "PT30S"
+  },
+  "message": {
+    "tracking": {
+      "url": "https://kognitiminds.com/track/KM_ONDC_ORD_881290",
+      "status": "active"
+    }
+  }
+}
