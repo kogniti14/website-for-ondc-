@@ -131,6 +131,33 @@ const WORKBENCH_DOWNLOAD_ITEMS: WorkbenchFileItem[] = [
   },
 ];
 
+interface LiveEndpoint {
+  action: string;
+  method: string;
+  path: string;
+  fullUrl: string;
+  name: string;
+  desc: string;
+}
+
+const LIVE_ENDPOINTS_LIST: LiveEndpoint[] = [
+  { action: 'health', method: 'GET', path: '/ondc/health', fullUrl: 'https://kognitiminds.com/ondc/health', name: 'Health & Heartbeat Check', desc: 'Validates service health and production environment readiness' },
+  { action: 'search', method: 'POST', path: '/search', fullUrl: 'https://kognitiminds.com/search', name: 'Catalog Discovery', desc: 'B2B Catalog broadcast with HSN (4: prefix) and volume discount slabs' },
+  { action: 'select', method: 'POST', path: '/select', fullUrl: 'https://kognitiminds.com/select', name: 'Quote & MOQ Selection', desc: 'Computes B2B wholesale pricing, MOQ & 18% GST (CGST+SGST / IGST)' },
+  { action: 'init', method: 'POST', path: '/init', fullUrl: 'https://kognitiminds.com/init', name: 'Order Initialization', desc: 'Accepts buyer billing, delivery logistics, terms and fulfillments' },
+  { action: 'confirm', method: 'POST', path: '/confirm', fullUrl: 'https://kognitiminds.com/confirm', name: 'Order Confirmation', desc: 'Persists order, generates order ID and locks inventory atomically' },
+  { action: 'status', method: 'POST', path: '/status', fullUrl: 'https://kognitiminds.com/status', name: 'Order Status Query', desc: 'Returns current order fulfillment status and milestones' },
+  { action: 'track', method: 'POST', path: '/track', fullUrl: 'https://kognitiminds.com/track', name: 'Live Courier Tracking', desc: 'Generates active tracking URL and delivery TAT' },
+  { action: 'cancel', method: 'POST', path: '/cancel', fullUrl: 'https://kognitiminds.com/cancel', name: 'Order Cancellation', desc: 'Cancels active order and restocks inventory' },
+  { action: 'update', method: 'POST', path: '/update', fullUrl: 'https://kognitiminds.com/update', name: 'Buyer-Initiated Return', desc: 'Handles partial and full order reverse logistics per RETeB2B 1.2.5' },
+  { action: 'rating', method: 'POST', path: '/rating', fullUrl: 'https://kognitiminds.com/rating', name: 'Feedback & Rating', desc: 'Accepts buyer feedback and satisfaction ratings' },
+  { action: 'support', method: 'POST', path: '/support', fullUrl: 'https://kognitiminds.com/support', name: 'Customer Support', desc: 'Returns official contact channels (phone, email, web)' },
+];
+
+const CALLBACK_ENDPOINTS_LIST = [
+  'on_search', 'on_select', 'on_init', 'on_confirm', 'on_status', 'on_track', 'on_cancel', 'on_update', 'on_rating', 'on_support'
+];
+
 interface OndcOrder {
   id: string;
   orderNumber: string;
@@ -200,6 +227,103 @@ export const OndcManagement: React.FC = () => {
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationResult, setSimulationResult] = useState<any>(null);
   const [copiedSimJson, setCopiedSimJson] = useState(false);
+
+  // Live Production Endpoint Diagnostics State
+  const [endpointTestingState, setEndpointTestingState] = useState<Record<string, { status: 'idle' | 'testing' | 'success' | 'error'; statusCode?: number; latencyMs?: number; error?: string }>>({});
+  const [isTestingAll, setIsTestingAll] = useState(false);
+  const [copiedEndpointUrl, setCopiedEndpointUrl] = useState<string | null>(null);
+
+  const testEndpoint = async (actionKey: string, method: string, path: string) => {
+    setEndpointTestingState((prev) => ({
+      ...prev,
+      [actionKey]: { status: 'testing' },
+    }));
+
+    const start = performance.now();
+    try {
+      let res;
+      if (method === 'GET') {
+        res = await fetch(path);
+      } else {
+        res = await fetch(path, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Signature keyId="kognitiminds.com|kogniti-key-01|ed25519",algorithm="ed25519",created="1700000000",expires="1700003600",headers="(request-target) host date digest",signature="vJp..."',
+          },
+          body: JSON.stringify({
+            context: {
+              domain: 'ONDC:RETeB2B',
+              country: 'IND',
+              city: 'std:080',
+              action: actionKey,
+              core_version: '1.2.5',
+              bap_id: 'workbench.ondc.tech',
+              bap_uri: 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer',
+              transaction_id: `diag_txn_${Date.now()}`,
+              message_id: `diag_msg_${Date.now()}`,
+              timestamp: new Date().toISOString(),
+              ttl: 'PT30S',
+            },
+            message:
+              actionKey === 'search'
+                ? { intent: { item: { descriptor: { name: 'paper' } } } }
+                : actionKey === 'select'
+                ? { order: { items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }] } }
+                : actionKey === 'init'
+                ? { order: { items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }], billing: { name: 'Acme School', address: { city: 'Noida', state: 'Uttar Pradesh' } } } }
+                : actionKey === 'confirm'
+                ? { order: { id: `ord_diag_${Date.now()}`, items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }] } }
+                : actionKey === 'status'
+                ? { order_id: 'ord_sample_01' }
+                : actionKey === 'track'
+                ? { order_id: 'ord_sample_01' }
+                : actionKey === 'cancel'
+                ? { order_id: 'ord_sample_01', cancellation_reason_id: '001' }
+                : actionKey === 'update'
+                ? { update_target: 'fulfillment', order: { id: 'ord_sample_01', items: [{ id: 'km-agri-a4-75', quantity: { count: 5 } }] } }
+                : actionKey === 'rating'
+                ? { rating_category: 'Order', id: 'ord_sample_01', value: 5 }
+                : actionKey === 'support'
+                ? { ref_id: 'ord_sample_01' }
+                : {},
+          }),
+        });
+      }
+      const elapsed = Math.round(performance.now() - start);
+      if (res.ok) {
+        setEndpointTestingState((prev) => ({
+          ...prev,
+          [actionKey]: { status: 'success', statusCode: res.status, latencyMs: elapsed },
+        }));
+      } else {
+        setEndpointTestingState((prev) => ({
+          ...prev,
+          [actionKey]: { status: 'error', statusCode: res.status, latencyMs: elapsed, error: `HTTP ${res.status}` },
+        }));
+      }
+    } catch (err: any) {
+      const elapsed = Math.round(performance.now() - start);
+      setEndpointTestingState((prev) => ({
+        ...prev,
+        [actionKey]: { status: 'error', latencyMs: elapsed, error: err.message || 'Network error' },
+      }));
+    }
+  };
+
+  const testAllEndpoints = async () => {
+    setIsTestingAll(true);
+    for (const ep of LIVE_ENDPOINTS_LIST) {
+      await testEndpoint(ep.action, ep.method, ep.path);
+    }
+    setIsTestingAll(false);
+  };
+
+  const copyEndpointUrl = (url: string, id: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedEndpointUrl(id);
+    setTimeout(() => setCopiedEndpointUrl(null), 2000);
+  };
 
   // Fetch real data from ONDC backend APIs
   const fetchData = async () => {
@@ -566,6 +690,182 @@ export const OndcManagement: React.FC = () => {
                 <span style={{ color: '#64748B', display: 'block' }}>Key ID:</span>
                 <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#0F172A' }}>kogniti-key-01</span>
               </div>
+            </div>
+          </div>
+
+          {/* Live Production Endpoints & Ping Diagnostic */}
+          <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '1.5rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A', margin: '0 0 0.25rem' }}>
+                  Live Production Endpoints (Buyer &rarr; Seller App/BPP)
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748B' }}>
+                  Compliant with ONDC RETeB2B 1.2.5. Tested directly against live Hostinger production.
+                </p>
+              </div>
+
+              <button
+                onClick={testAllEndpoints}
+                disabled={isTestingAll}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.55rem 1.1rem',
+                  borderRadius: '8px',
+                  background: '#2563EB',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: isTestingAll ? 'not-allowed' : 'pointer',
+                  opacity: isTestingAll ? 0.7 : 1,
+                }}
+              >
+                <RefreshCw size={14} className={isTestingAll ? 'animate-spin' : ''} />
+                {isTestingAll ? 'Verifying Endpoints...' : 'Test All Live Endpoints'}
+              </button>
+            </div>
+
+            <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                <thead>
+                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', textAlign: 'left' }}>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Action & Method</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Production Route</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Function</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Real-Time Status</th>
+                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {LIVE_ENDPOINTS_LIST.map((ep, idx) => {
+                    const testState = endpointTestingState[ep.action] || { status: 'idle' };
+                    const isCopied = copiedEndpointUrl === ep.path;
+                    return (
+                      <tr key={ep.path} style={{ borderBottom: idx !== LIVE_ENDPOINTS_LIST.length - 1 ? '1px solid #F1F5F9' : 'none', background: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          <span
+                            style={{
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '4px',
+                              fontWeight: 700,
+                              fontSize: '0.7rem',
+                              background: ep.method === 'GET' ? '#ECFDF5' : '#EEF2FF',
+                              color: ep.method === 'GET' ? '#059669' : '#4F46E5',
+                            }}
+                          >
+                            {ep.method}
+                          </span>
+                          <span style={{ marginLeft: '0.5rem', fontWeight: 600, color: '#0F172A' }}>/{ep.action}</span>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', color: '#334155' }}>
+                          {ep.fullUrl}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', color: '#64748B' }}>
+                          <strong>{ep.name}</strong>
+                          <div style={{ fontSize: '0.75rem', marginTop: '0.1rem' }}>{ep.desc}</div>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          {testState.status === 'idle' && (
+                            <span style={{ color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                              <Clock size={13} /> Ready to test
+                            </span>
+                          )}
+                          {testState.status === 'testing' && (
+                            <span style={{ color: '#2563EB', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
+                              <RefreshCw size={13} className="animate-spin" /> Pinging...
+                            </span>
+                          )}
+                          {testState.status === 'success' && (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '9999px',
+                                background: '#ECFDF5',
+                                color: '#059669',
+                                fontWeight: 700,
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              <CheckCircle2 size={13} /> {testState.statusCode} OK • {testState.latencyMs}ms
+                            </span>
+                          )}
+                          {testState.status === 'error' && (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '9999px',
+                                background: '#FEF2F2',
+                                color: '#DC2626',
+                                fontWeight: 700,
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              <AlertTriangle size={13} /> {testState.error || 'Failed'}
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.4rem' }}>
+                            <button
+                              onClick={() => testEndpoint(ep.action, ep.method, ep.path)}
+                              disabled={testState.status === 'testing'}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                padding: '0.3rem 0.6rem',
+                                borderRadius: '6px',
+                                border: '1px solid #CBD5E1',
+                                background: '#FFFFFF',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                color: '#334155',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <Play size={11} /> Test
+                            </button>
+                            <button
+                              onClick={() => copyEndpointUrl(ep.fullUrl, ep.path)}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.25rem',
+                                padding: '0.3rem 0.6rem',
+                                borderRadius: '6px',
+                                border: '1px solid #CBD5E1',
+                                background: '#FFFFFF',
+                                fontSize: '0.75rem',
+                                color: '#64748B',
+                                cursor: 'pointer',
+                              }}
+                              title="Copy URL"
+                            >
+                              {isCopied ? <Check size={11} color="#10B981" /> : <Copy size={11} />}
+                              {isCopied ? 'Copied' : 'Copy'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Inbound Callbacks Note */}
+            <div style={{ marginTop: '1rem', padding: '0.85rem 1rem', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.8rem', color: '#64748B' }}>
+              <strong style={{ color: '#0F172A' }}>Inbound Protocol Callback Endpoints:</strong>{' '}
+              {CALLBACK_ENDPOINTS_LIST.map((cb) => `https://kognitiminds.com/${cb}`).join(', ')}
             </div>
           </div>
         </div>

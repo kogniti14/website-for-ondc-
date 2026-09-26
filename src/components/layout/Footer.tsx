@@ -23,9 +23,10 @@ interface FooterProps {
   openPolicyModal: (type: 'privacy' | 'terms' | 'shipping' | 'refund') => void;
   isB2B?: boolean;
   onNavigateToShop?: () => void;
+  onOpenOndcModal?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPolicyModal, isB2B = false, onNavigateToShop }) => {
+export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPolicyModal, isB2B = false, onNavigateToShop, onOpenOndcModal }) => {
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
   const [siteMedia, setSiteMedia] = useState<SiteMedia>(() => storageService.getSiteMedia());
@@ -270,7 +271,12 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
               >
                 Available On Official Platforms
               </div>
-              <div className="official-platform-card" style={{ padding: '6px 12px' }}>
+              <div
+                className="official-platform-card"
+                style={{ padding: '6px 12px', cursor: onOpenOndcModal ? 'pointer' : 'default' }}
+                onClick={() => onOpenOndcModal && onOpenOndcModal()}
+                title="Click to view live ONDC Node Status & Production Endpoints"
+              >
                 <img
                   src="/available-on-hero.png"
                   alt="Available on GeM (Government e-Marketplace) and ONDC (Open Network for Digital Commerce)"
@@ -346,6 +352,16 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
               <li>
                 <button onClick={() => setActiveTab('b2b')} style={{ color: '#60A5FA', fontWeight: 600 }}>
                   Enter B2B Portal
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    if (onOpenOndcModal) onOpenOndcModal();
+                  }}
+                  style={{ color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  🌐 ONDC Node Status (v1.2.5)
                 </button>
               </li>
               <li>

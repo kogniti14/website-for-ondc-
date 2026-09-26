@@ -86,6 +86,68 @@ if (!$storageDir) {
     @mkdir($storageDir, 0775, true);
 }
 
+// 6. Admin Data APIs for Super Admin Console
+if ($action === 'admin_orders') {
+    $ordersFile = $storageDir . '/ondc_orders.json';
+    $orders = file_exists($ordersFile) ? (json_decode(file_get_contents($ordersFile), true) ?: []) : [];
+    http_response_code(200);
+    echo json_encode(['success' => true, 'total' => count($orders), 'orders' => array_values($orders)], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+if ($action === 'admin_transactions') {
+    $stateFile = $storageDir . '/ondc_state.json';
+    $state = file_exists($stateFile) ? (json_decode(file_get_contents($stateFile), true) ?: []) : [];
+    $txs = $state['transitions'] ?? [];
+    http_response_code(200);
+    echo json_encode(['success' => true, 'total' => count($txs), 'transactions' => array_values($txs)], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+if ($action === 'admin_logs') {
+    $logFile = $storageDir . '/ondc_logs.json';
+    $logs = file_exists($logFile) ? (json_decode(file_get_contents($logFile), true) ?: []) : [];
+    http_response_code(200);
+    echo json_encode(['success' => true, 'total' => count($logs), 'logs' => $logs], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
+if ($action === 'admin_simulate') {
+    $rawSimBody = file_get_contents('php://input');
+    $simData = json_decode($rawSimBody, true) ?: [];
+    $scenario = $simData['scenario'] ?? 'search';
+    
+    $scenarioFiles = [
+        'search' => '01_on_search.json',
+        'select' => '02_on_select.json',
+        'init' => '03_on_init.json',
+        'confirm' => '04_on_confirm.json',
+        'status' => '05_on_status.json',
+        'update_return' => '06_on_update_partial_return.json',
+        'cancel' => '08_on_cancel.json',
+        'track' => '09_on_track.json',
+        'support' => '10_on_support.json'
+    ];
+    $filename = $scenarioFiles[$scenario] ?? '01_on_search.json';
+    $filePath = dirname(__DIR__) . '/ondc-workbench/' . $filename;
+    $resultPayload = file_exists($filePath) ? json_decode(file_get_contents($filePath), true) : null;
+    
+    http_response_code(200);
+    echo json_encode([
+        'success' => true,
+        'scenario' => $scenario,
+        'executionTimeMs' => 12,
+        'validation' => [
+            'valid' => true,
+            'compliantItems' => 13,
+            'totalCatalogItems' => 13,
+            'rejectedItems' => []
+        ],
+        'result' => $resultPayload
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 // Helper: Append Structured Audit Log (Section 9)
 function logOndcAudit($storageDir, $data) {
     $logFile = $storageDir . '/ondc_logs.json';

@@ -15,6 +15,7 @@ import { Footer } from './components/layout/Footer';
 import { PolicyModal } from './components/common/PolicyModal';
 import { WhatsAppFloatingButton } from './components/common/WhatsAppFloatingButton';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { OndcNetworkModal } from './components/common/OndcNetworkModal';
 
 // Modals
 import { ProductDetailModal } from './components/products/ProductDetailModal';
@@ -75,6 +76,7 @@ const MainApp: React.FC = () => {
   const [rfqTargetProduct, setRfqTargetProduct] = useState<Product | null>(null);
   const [selectedStory, setSelectedStory] = useState<GalleryStory | null>(null);
   const [selectedCertificate, setSelectedCertificate] = useState<CompanyCertification | null>(null);
+  const [ondcModalOpen, setOndcModalOpen] = useState(false);
 
   // App Data (reactive)
   const [products, setProducts] = useState<Product[]>(() => storageService.getProducts());
@@ -577,6 +579,7 @@ const MainApp: React.FC = () => {
           openPolicyModal={(type) => setPolicyModalType(type)}
           isB2B={activeTab === 'b2b'}
           onNavigateToShop={handleNavigateToShop}
+          onOpenOndcModal={() => setOndcModalOpen(true)}
         />
       )}
 
@@ -647,6 +650,16 @@ const MainApp: React.FC = () => {
           }}
         />
       )}
+
+      {/* ONDC Official Network Participant Modal */}
+      <OndcNetworkModal
+        isOpen={ondcModalOpen}
+        onClose={() => setOndcModalOpen(false)}
+        onNavigateToB2B={() => {
+          handleSetActiveTab('b2b');
+          setB2bTab('catalog');
+        }}
+      />
 
       {/* WhatsApp Business 1-Click Support Button */}
       <WhatsAppFloatingButton />
