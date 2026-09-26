@@ -10,6 +10,8 @@ DirectoryIndex dist/index.html index.html
 
 <IfModule mod_mime.c>
   AddType application/pdf .pdf
+  AddType application/zip .zip
+  AddType application/json .json
   AddType image/webp .webp
   AddType image/png .png
   AddType image/jpeg .jpg .jpeg

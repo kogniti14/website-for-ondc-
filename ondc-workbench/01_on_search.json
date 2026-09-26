@@ -1,0 +1,1992 @@
+{
+  "context": {
+    "domain": "ONDC:RETeB2B",
+    "country": "IND",
+    "city": "std:080",
+    "action": "on_search",
+    "core_version": "1.2.5",
+    "bap_id": "workbench.ondc.tech",
+    "bap_uri": "https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer",
+    "bpp_id": "kognitiminds.com",
+    "bpp_uri": "https://kognitiminds.com",
+    "transaction_id": "54e3d489-0be3-455b-9d41-3da39d520377",
+    "message_id": "0b0e557b-7b56-4c4f-9e7c-86cf330de223",
+    "timestamp": "2026-09-26T20:00:21.277Z",
+    "ttl": "PT30S"
+  },
+  "message": {
+    "catalog": {
+      "bpp/descriptor": {
+        "name": "KOGNITI MINDS PRIVATE LIMITED",
+        "symbol": "https://kognitiminds.com/logo-icon.png",
+        "short_desc": "Sustainable, Agri-Waste & Tree-Free Paper Manufacturer & Institutional Supplier",
+        "long_desc": "Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues (wheat straw, sugarcane bagasse, paddy stalks) to eliminate stubble burning and prevent deforestation.",
+        "images": [
+          "https://kognitiminds.com/logo-icon.png"
+        ],
+        "tags": [
+          {
+            "code": "bpp_terms",
+            "list": [
+              {
+                "code": "gstin",
+                "value": "07AABCK1234F1Z5"
+              },
+              {
+                "code": "pan",
+                "value": "AABCK1234F"
+              },
+              {
+                "code": "cin",
+                "value": "U21098DL2024PTC123456"
+              }
+            ]
+          }
+        ]
+      },
+      "bpp/categories": [
+        {
+          "id": "cat_paper",
+          "descriptor": {
+            "name": "Sustainable & Agri-Waste-Based Paper"
+          }
+        },
+        {
+          "id": "cat_notebooks",
+          "descriptor": {
+            "name": "Eco Notebooks & Notepads"
+          }
+        },
+        {
+          "id": "cat_stationery",
+          "descriptor": {
+            "name": "Stationery & Office Organizers"
+          }
+        },
+        {
+          "id": "cat_gifting",
+          "descriptor": {
+            "name": "Corporate Gifting & Hampers"
+          }
+        },
+        {
+          "id": "cat_institutional",
+          "descriptor": {
+            "name": "Institutional Bulk Pallets"
+          }
+        }
+      ],
+      "bpp/fulfillments": [
+        {
+          "id": "F1",
+          "type": "Delivery",
+          "tracking": true,
+          "contact": {
+            "phone": "+91 98111 22334",
+            "email": "support@kognitiminds.com"
+          }
+        }
+      ],
+      "bpp/providers": [
+        {
+          "id": "kogniti-minds-bpp",
+          "time": {
+            "label": "enable",
+            "timestamp": "2026-09-26T20:00:21.278Z"
+          },
+          "descriptor": {
+            "name": "KOGNITI MINDS PRIVATE LIMITED",
+            "symbol": "https://kognitiminds.com/logo-icon.png",
+            "short_desc": "Sustainable, Agri-Waste & Tree-Free Paper Manufacturer & Institutional Supplier",
+            "long_desc": "Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues (wheat straw, sugarcane bagasse, paddy stalks) to eliminate stubble burning and prevent deforestation.",
+            "images": [
+              "https://kognitiminds.com/logo-icon.png"
+            ]
+          },
+          "ttl": "P1D",
+          "categories": [
+            {
+              "id": "cat_paper",
+              "descriptor": {
+                "name": "Sustainable & Agri-Waste-Based Paper"
+              }
+            },
+            {
+              "id": "cat_notebooks",
+              "descriptor": {
+                "name": "Eco Notebooks & Notepads"
+              }
+            },
+            {
+              "id": "cat_stationery",
+              "descriptor": {
+                "name": "Stationery & Office Organizers"
+              }
+            },
+            {
+              "id": "cat_gifting",
+              "descriptor": {
+                "name": "Corporate Gifting & Hampers"
+              }
+            },
+            {
+              "id": "cat_institutional",
+              "descriptor": {
+                "name": "Institutional Bulk Pallets"
+              }
+            }
+          ],
+          "locations": [
+            {
+              "id": "L1",
+              "gps": "28.6280,77.3750",
+              "address": {
+                "street": "Kogniti Corporate Towers, Sector 62",
+                "city": "Noida",
+                "state": "Uttar Pradesh",
+                "area_code": "201309"
+              },
+              "circle": {
+                "gps": "28.6280,77.3750",
+                "radius": {
+                  "unit": "km",
+                  "value": "3000"
+                }
+              },
+              "time": {
+                "label": "enable",
+                "timestamp": "2026-09-26T20:00:21.278Z",
+                "days": "1,2,3,4,5,6",
+                "schedule": {
+                  "holidays": [],
+                  "frequency": "PT4H",
+                  "times": [
+                    "1000",
+                    "1800"
+                  ]
+                },
+                "range": {
+                  "start": "1000",
+                  "end": "1800"
+                }
+              }
+            }
+          ],
+          "fulfillments": [
+            {
+              "id": "F1",
+              "type": "Delivery",
+              "tracking": true,
+              "contact": {
+                "phone": "+91 98111 22334",
+                "email": "support@kognitiminds.com"
+              }
+            }
+          ],
+          "items": [
+            {
+              "id": "km-agri-a4-75",
+              "parent_item_id": "cat_paper",
+              "descriptor": {
+                "name": "Kogniti AgroPrint 75 GSM A4 Sustainable Copier Paper (500 Sheets)",
+                "code": "4:48025610",
+                "symbol": "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80",
+                "short_desc": "Eco-engineered multipurpose 75 GSM A4 copier paper manufactured using agricultural crop residue pulp.",
+                "long_desc": "Breakthrough sustainable paper manufactured from agricultural residue such as wheat straw, sugarcane bagasse, and paddy stalks. Eliminates stubble burning and protects forest ecosystems.",
+                "images": [
+                  "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80",
+                  "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=1000&q=80"
+                ]
+              },
+              "price": {
+                "currency": "INR",
+                "value": "198.00",
+                "maximum_value": "399.00"
+              },
+              "category_id": "cat_paper",
+              "fulfillment_id": "F1",
+              "location_id": "L1",
+              "quantity": {
+                "available": {
+                  "count": "2140"
+                },
+                "maximum": {
+                  "count": "500"
+                },
+                "minimum": {
+                  "count": "10"
+                }
+              },
+              "time": {
+                "label": "enable",
+                "timestamp": "2026-09-26T20:00:21.278Z"
+              },
+              "matched": true,
+              "recommended": true,
+              "tags": [
+                {
+                  "code": "origin",
+                  "list": [
+                    {
+                      "code": "country",
+                      "value": "IND"
+                    }
+                  ]
+                },
+                {
+                  "code": "attribute",
+                  "list": [
+                    {
+                      "code": "brand",
+                      "value": "KOGNITI MINDS"
+                    },
+                    {
+                      "code": "hsn_code",
+                      "value": "48025610"
+                    },
+                    {
+                      "code": "tax_rate",
+                      "value": "18%"
+                    },
+                    {
+                      "code": "weight",
+                      "value": "2.35 kg"
+                    },
+                    {
+                      "code": "dimensions",
+                      "value": "21.0cm x 29.7cm x 5.2cm"
+                    }
+                  ]
+                },
+                {
+                  "code": "b2b/moq",
+                  "list": [
+                    {
+                      "code": "min_order_quantity",
+                      "value": "10"
+                    }
+                  ]
+                },
+                {
+                  "code": "bpp/item_discount",
+                  "list": [
+                    {
+                      "code": "slab_10",
+                      "value": "{\"min_qty\":10,\"max_qty\":49,\"discount_percent\":0,\"label\":\"Base Wholesale\"}"
+                    },
+                    {
+                      "code": "slab_50",
+                      "value": "{\"min_qty\":50,\"max_qty\":199,\"discount_percent\":8,\"label\":\"Office Tier (8% Off)\"}"
+                    },
+                    {
+                      "code": "slab_200",
+                      "value": "{\"min_qty\":200,\"max_qty\":499,\"discount_percent\":15,\"label\":\"Campus Tier (15% Off)\"}"
+                    },
+                    {
+                      "code": "slab_500",
+                      "value": "{\"min_qty\":500,\"max_qty\":null,\"discount_percent\":22,\"label\":\"Institutional Truckload (22% Off)\"}"
+                    }
+                  ]
+                },
+                {
+                  "code": "serviceability",
+                  "list": [
+                    {
+                      "code": "location",
+                      "value": "L1"
+                    },
+                    {
+                      "code": "category",
+                      "value": "cat_paper"
+                    },
+                    {
+                      "code": "type",
+                      "value": "10"
+                    },
+                    {
+                      "code": "val",
+                      "value": "3000"
+                    },
+                    {
+                      "code": "unit",
+                      "value": "km"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "km-agri-a4-80",
+              "parent_item_id": "cat_paper",
+              "descriptor": {
+                "name": "Kogniti AgroPrint 80 GSM A4 Premium Copier Paper (500 Sheets)",
+                "code": "4:48025610",
+                "symbol": "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=1000&q=80",
+                "short_desc": "High-density 80 GSM A4 agricultural residue paper with 98% ISO brightness.",
+                "long_desc": "Engineered for boardrooms, law firms, and high-impact presentations. Ultra-smooth surface prevents feathering.",
+                "images": [
+                  "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=1000&q=80"
+                ]
+              },
+              "price": {
+                "currency": "INR",
+                "value": "225.00",
+                "maximum_value": "449.00"
+              },
+              "category_id": "cat_paper",
+              "fulfillment_id": "F1",
+              "location_id": "L1",
+              "quantity": {
+                "available": {
+                  "count": "1800"
+                },
+                "maximum": {
+                  "count": "500"
+                },
+                "minimum": {
+                  "count": "10"
+                }
+              },
+              "time": {
+                "label": "enable",
+                "timestamp": "2026-09-26T20:00:21.278Z"
+              },
+              "matched": true,
+              "recommended": true,
+              "tags": [
+                {
+                  "code": "origin",
+                  "list": [
+                    {
+                      "code": "country",
+                      "value": "IND"
+                    }
+                  ]
+                },
+                {
+                  "code": "attribute",
+                  "list": [
+                    {
+                      "code": "brand",
+                      "value": "KOGNITI MINDS"
+                    },
+                    {
+                      "code": "hsn_code",
+                      "value": "48025610"
+                    },
+                    {
+                      "code": "tax_rate",
+                      "value": "18%"
+                    },
+                    {
+                      "code": "weight",
+                      "value": "2.50 kg"
+                    },
+                    {
+                      "code": "dimensions",
+                      "value": "21.0cm x 29.7cm x 5.6cm"
+                    }
+                  ]
+                },
+                {
+                  "code": "b2b/moq",
+                  "list": [
+                    {
+                      "code": "min_order_quantity",
+                      "value": "10"
+                    }
+                  ]
+                },
+                {
+                  "code": "bpp/item_discount",
+                  "list": [
+                    {
+                      "code": "slab_10",
+                      "value": "{\"min_qty\":10,\"max_qty\":49,\"discount_percent\":0,\"label\":\"Base Wholesale\"}"
+                    },
+                    {
+                      "code": "slab_50",
+                      "value": "{\"min_qty\":50,\"max_qty\":199,\"discount_percent\":8,\"label\":\"Corporate Tier (8% Off)\"}"
+                    },
+                    {
+                      "code": "slab_200",
+                      "value": "{\"min_qty\":200,\"max_qty\":null,\"discount_percent\":18,\"label\":\"Bulk Enterprise (18% Off)\"}"
+                    }
+                  ]
+                },
+                {
+                  "code": "serviceability",
+                  "list": [
+                    {
+                      "code": "location",
+                      "value": "L1"
+                    },
+                    {
+                      "code": "category",
+                      "value": "cat_paper"
+                    },
+                    {
+                      "code": "type",
+                      "value": "10"
+                    },
+                    {
+                      "code": "val",
+                      "value": "3000"
+                    },
+                    {
+                      "code": "unit",
+                      "value": "km"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "km-copier-a4-carton",
+              "parent_item_id": "cat_paper",
+              "descriptor": {
+                "name": "Kogniti AgroPrint A4 Carton Pack (5 Reams / 2,500 Sheets)",
+                "code": "4:48025610",
+                "symbol": "https://images.unsplash.com/photo-1589330694653-dad6ef495b54?auto=format&fit=crop&w=1000&q=80",
+                "short_desc": "Standard office master carton holding 5 shrink-wrapped reams of 75 GSM sustainable paper.",
+                "long_desc": "Master carton packaging engineered for quick handling and institutional storage in corporate mailrooms.",
+                "images": [
+                  "https://images.unsplash.com/photo-1589330694653-dad6ef495b54?auto=format&fit=crop&w=1000&q=80"
+                ]
+              },
+              "price": {
+                "currency": "INR",
+                "value": "940.00",
+                "maximum_value": "1899.00"
+              },
+              "category_id": "cat_paper",
+              "fulfillment_id": "F1",
+              "location_id": "L1",
+              "quantity": {
+                "available": {
+                  "count": "450"
+                },
+                "maximum": {
+                  "count": "450"
+                },
+                "minimum": {
+                  "count": "4"
+                }
+              },
+              "time": {
+                "label": "enable",
+                "timestamp": "2026-09-26T20:00:21.278Z"
+              },
+              "matched": true,
+              "recommended": true,
+              "tags": [
+                {
+                  "code": "origin",
+                  "list": [
+                    {
+                      "code": "country",
+                      "value": "IND"
+                    }
+                  ]
+                },
+                {
+                  "code": "attribute",
+                  "list": [
+                    {
+                      "code": "brand",
+                      "value": "KOGNITI MINDS"
+                    },
+                    {
+                      "code": "hsn_code",
+                      "value": "48025610"
+                    },
+                    {
+                      "code": "tax_rate",
+                      "value": "18%"
+                    },
+                    {
+                      "code": "weight",
+                      "value": "11.8 kg"
+                    },
+                    {
+                      "code": "dimensions",
+                      "value": "31.5cm x 22.5cm x 27.5cm"
+                    }
+                  ]
+                },
+                {
+                  "code": "b2b/moq",
+                  "list": [
+                    {
+                      "code": "min_order_quantity",
+                      "value": "4"
+                    }
+                  ]
+                },
+                {
+                  "code": "bpp/item_discount",
+                  "list": [
+                    {
+                      "code": "slab_4",
+                      "value": "{\"min_qty\":4,\"max_qty\":19,\"discount_percent\":0,\"label\":\"Carton Wholesale\"}"
+                    },
+                    {
+                      "code": "slab_20",
+                      "value": "{\"min_qty\":20,\"max_qty\":99,\"discount_percent\":10,\"label\":\"Pallet Order (10% Off)\"}"
+                    },
+                    {
+                      "code": "slab_100",
+                      "value": "{\"min_qty\":100,\"max_qty\":null,\"discount_percent\":18,\"label\":\"Full Truckload (18% Off)\"}"
+                    }
+                  ]
+                },
+                {
+                  "code": "serviceability",
+                  "list": [
+                    {
+                      "code": "location",
+                      "value": "L1"
+                    },
+                    {
+                      "code": "category",
+                      "value": "cat_paper"
+                    },
+                    {
+                      "code": "type",
+                      "value": "10"
+                    },
+                    {
+                      "code": "val",
+                      "value": "3000"
+                    },
+                    {
+                      "code": "unit",
+                      "value": "km"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "km-notebook-spiral-a5",
+              "parent_item_id": "cat_notebooks",
+              "descriptor": {
+                "name": "Kogniti EcoSpiral A5 Professional Notebook (160 Pages)",
+                "code": "4:48201090",
+                "symbol": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1000&q=80",
+                "short_desc": "Executive wire-bound A5 notebook with 100% post-consumer recycled covers.",
+                "long_desc": "Twin-loop black metal wire-bound notebook. Ideal for daily notes, project logs, and training workshops.",
+                "images": [
+                  "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1000&q=80"
+                ]
+              },
+              "price": {
+                "currency": "INR",
+                "value": "110.00",
+                "maximum_value": "249.00"
+              },
+              "category_id": "cat_notebooks",
+              "fulfillment_id": "F1",
+              "location_id": "L1",
+              "quantity": {
+                "available": {
+                  "count": "1200"
+                },
+                "maximum": {
+                  "count": "500"
+                },
+                "minimum": {
+                  "count": "25"
+                }
+              },
+              "time": {
+                "label": "enable",
+                "timestamp": "2026-09-26T20:00:21.278Z"
+              },
+              "matched": true,
+              "recommended": true,
+              "tags": [
+                {
+                  "code": "origin",
+                  "list": [
+                    {
+                      "code": "country",
+                      "value": "IND"
+                    }
+                  ]
+                },
+                {
+                  "code": "attribute",
+                  "list": [
+                    {
+                      "code": "brand",
+                      "value": "KOGNITI MINDS"
+                    },
+                    {
+                      "code": "hsn_code",
+                      "value": "48201090"
+                    },
+                    {
+                      "code": "tax_rate",
+                      "value": "18%"
+                    },
+                    {
+                      "code": "weight",
+                      "value": "0.24 kg"
+                    },
+                    {
+                      "code": "dimensions",
+                      "value": "14.8cm x 21.0cm x 1.4cm"
+                    }
+                  ]
+                },
+                {
+                  "code": "b2b/moq",
+                  "list": [
+                    {
+                      "code": "min_order_quantity",
+                      "value": "25"
+                    }
+                  ]
+                },
+                {
+                  "code": "bpp/item_discount",
+                  "list": [
+                    {
+                      "code": "slab_25",
+                      "value": "{\"min_qty\":25,\"max_qty\":99,\"discount_percent\":0,\"label\":\"Office Wholesale\"}"
+                    },
+                    {
+                      "code": "slab_100",
+                      "value": "{\"min_qty\":100,\"max_qty\":499,\"discount_percent\":12,\"label\":\"Conference Bulk (12% Off)\"}"
+                    },
+                    {
+                      "code": "slab_500",
+                      "value": "{\"min_qty\":500,\"max_qty\":null,\"discount_percent\":20,\"label\":\"Annual Supply (20% Off)\"}"
+                    }
+                  ]
+                },
+                {
+                  "code": "serviceability",
+                  "list": [
+                    {
+                      "code": "location",
+                      "value": "L1"
+                    },
+                    {
+                      "code": "category",
+                      "value": "cat_notebooks"
+                    },
+                    {
+                      "code": "type",
+                      "value": "10"
+                    },
+                    {
+                      "code": "val",
+                      "value": "3000"
+                    },
+                    {
+                      "code": "unit",
+                      "value": "km"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "km-notebook-subject-b5",
+              "parent_item_id": "cat_notebooks",
+              "descriptor": {
+                "name": "Kogniti Multi-Subject B5 Campus Notebook (300 Pages)",
+                "code": "4:48201090",
+                "symbol": "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=1000&q=80",
+                "short_desc": "B5 5-subject notebook with color-coded dividers made from recycled board.",
+                "long_desc": "Designed for university students and multi-project corporate teams.",
+                "images": [
+                  "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=1000&q=80"
+                ]
+              },
+              "price": {
+                "currency": "INR",
+                "value": "185.00",
+                "maximum_value": "399.00"
+              },
+              "category_id": "cat_notebooks",
+              "fulfillment_id": "F1",
+              "location_id": "L1",
+              "quantity": {
+                "available": {
+                  "count": "800"
+                },
+                "maximum": {
+                  "count": "500"
+                },
+                "minimum": {
+                  "count": "20"
+                }
+              },
+              "time": {
+                "label": "enable",
+                "timestamp": "2026-09-26T20:00:21.278Z"
+              },
+              "matched": true,
+              "recommended": true,
+              "tags": [
+                {
+                  "code": "origin",
+                  "list": [
+                    {
+                      "code": "country",
+                      "value": "IND"
+                    }
+                  ]
+                },
+                {
+                  "code": "attribute",
+                  "list": [
+                    {
+                      "code": "brand",
+                      "value": "KOGNITI MINDS"
+                    },
+                    {
+                      "code": "hsn_code",
+                      "value": "48201090"
+                    },
+                    {
+                      "code": "tax_rate",
+                      "value": "18%"
+                    },
+                    {
+                      "code": "weight",
+                      "value": "0.45 kg"
+                    },
+                    {
+                      "code": "dimensions",
+                      "value": "17.6cm x 25.0cm x 2.2cm"
+                    }
+                  ]
+                },
+                {
+                  "code": "b2b/moq",
+                  "list": [
+                    {
+                      "code": "min_order_quantity",
+                      "value": "20"
+                    }
+                  ]
+                },
+                {
+                  "code": "bpp/item_discount",
+                  "list": [
+                    {
+                      "code": "slab_20",
+                      "value": "{\"min_qty\":20,\"max_qty\":99,\"discount_percent\":0,\"label\":\"Institutional Base\"}"
+                    },
+                    {
+                      "code": "slab_100",
+                      "value": "{\"min_qty\":100,\"max_qty\":299,\"discount_percent\":10,\"label\":\"Campus Bookstore (10% Off)\"}"
+                    },
+                    {
+                      "code": "slab_300",
+                      "value": "{\"min_qty\":300,\"max_qty\":null,\"discount_percent\":18,\"label\":\"University Tier (18% Off)\"}"
+                    }
+                  ]
+                },
+                {
+                  "code": "serviceability",
+                  "list": [
+                    {
+                      "code": "location",
+                      "value": "L1"
+                    },
+                    {
+                      "code": "category",
+                      "value": "cat_notebooks"
+                    },
+                    {
+                      "code": "type",
+                      "value": "10"
+                    },
+                    {
+                      "code": "val",
+                      "value": "3000"
+                    },
+                    {
+                      "code": "unit",
+                      "value": "km"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "km-journal-hardbound",
+              "parent_item_id": "cat_notebooks",
+              "descriptor": {
+                "name": "Kogniti Heritage Hardbound Executive Journal (192 Pages)",
+                "code": "4:48201090",
+                "symbol": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1000&q=80",
+                "short_desc": "Hardbound luxury journal with bookmark ribbon, elastic band, and back pocket.",
+                "long_desc": "Crafted for leadership meetings, strategic journaling, and corporate milestones.",
+                "images": [
+                  "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1000&q=80"
+                ]
+              },
+              "price": {
+                "currency": "INR",
+                "value": "280.00",
+                "maximum_value": "599.00"
+              },
+              "category_id": "cat_notebooks",
+              "fulfillment_id": "F1",
+              "location_id": "L1",
+              "quantity": {
+                "available": {
+                  "count": "650"
+                },
+                "maximum": {
+                  "count": "500"
+                },
+                "minimum": {
+                  "count": "15"
+                }
+              },
+              "time": {
+                "label": "enable",
+                "timestamp": "2026-09-26T20:00:21.278Z"
+              },
+              "matched": true,
+              "recommended": true,
+              "tags": [
+                {
+                  "code": "origin",
+                  "list": [
+                    {
+                      "code": "country",
+                      "value": "IND"
+                    }
+                  ]
+                },
+                {
+                  "code": "attribute",
+                  "list": [
+                    {
+                      "code": "brand",
+                      "value": "KOGNITI MINDS"
+                    },
+                    {
+                      "code": "hsn_code",
+                      "value": "48201090"
+                    },
+                    {
+                      "code": "tax_rate",
+                      "value": "18%"
+                    },
+                    {
+                      "code": "weight",
+                      "value": "0.38 kg"
+                    },
+                    {
+                      "code": "dimensions",
+                      "value": "14.5cm x 21.5cm x 1.8cm"
+                    }
+                  ]
+                },
+                {
+                  "code": "b2b/moq",
+                  "list": [
+                    {
+                      "code": "min_order_quantity",
+                      "value": "15"
+                    }
+                  ]
+                },
+                {
+                  "code": "bpp/item_discount",
+                  "list": [
+                    {
+                      "code": "slab_15",
+                      "value": "{\"min_qty\":15,\"max_qty\":49,\"discount_percent\":0,\"label\":\"Executive Base\"}"
+                    },
+                    {
+                      "code": "slab_50",
+                      "value": "{\"min_qty\":50,\"max_qty\":199,\"discount_percent\":10,\"label\":\"Corporate Gifting (10% Off)\"}"
+                    },
+                    {
+                      "code": "slab_200",
+                      "value": "{\"min_qty\":200,\"max_qty\":null,\"discount_percent\":20,\"label\":\"Summit Edition (20% Off)\"}"
+                    }
+                  ]
+                },
+                {
+                  "code": "serviceability",
+                  "list": [
+                    {
+                      "code": "location",
+                      "value": "L1"
+                    },
+                    {
+                      "code": "category",
+                      "value": "cat_notebooks"
+                    },
+                    {
+                      "code": "type",
+                      "value": "10"
+                    },
+                    {
+                      "code": "val",
+                      "value": "3000"
+                    },
+                    {
+                      "code": "unit",
+                      "value": "km"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "km-journal-dotted",
+              "parent_item_id": "cat_paper",
+              "descriptor": {
+                "name": "Kogniti Artisan Dotted Grid Eco-Journal (A5, 160 Pages)",
+                "code": "4:48201000",
+                "symbol": "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=1000&q=80",
+                "short_desc": "Minimalist dotted grid journal with 160 numbered pages of 90 GSM tree-free paper. Perfect for bullet journaling, agile sprint tracking, architectural sketches, and creative planning.",
+                "long_desc": "Designed for organizers, designers, and creatives, the Artisan Dotted Grid Journal gives you complete layout freedom. The 5mm light gray dots guide your writing and diagrams without distracting from your content.",
+                "images": [
+                  "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=1000&q=80",
+                  "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1000&q=80"
+                ]
+              },
+              "price": {
+                "currency": "INR",
+                "value": "265.00",
+                "maximum_value": "549.00"
+              },
+              "category_id": "cat_paper",
+              "fulfillment_id": "F1",
+              "location_id": "L1",
+              "quantity": {
+                "available": {
+                  "count": "950"
+                },
+                "maximum": {
+                  "count": "500"
+                },
+                "minimum": {
+                  "count": "15"
+                }
+              },
+              "time": {
+                "label": "enable",
+                "timestamp": "2026-09-26T20:00:21.278Z"
+              },
+              "matched": true,
+              "recommended": true,
+              "tags": [
+                {
+                  "code": "origin",
+                  "list": [
+                    {
+                      "code": "country",
+                      "value": "IND"
+                    }
+                  ]
+                },
+                {
+                  "code": "attribute",
+                  "list": [
+                    {
+                      "code": "brand",
+                      "value": "KOGNITI MINDS"
+                    },
+                    {
+                      "code": "hsn_code",
+                      "value": "48201000"
+                    },
+                    {
+                      "code": "tax_rate",
+                      "value": "18%"
+                    },
+                    {
+                      "code": "weight",
+                      "value": "290 g"
+                    },
+                    {
+                      "code": "dimensions",
+                      "value": "14.8cm x 21.0cm x 1.2cm"
+                    }
+                  ]
+                },
+                {
+                  "code": "b2b/moq",
+                  "list": [
+                    {
+                      "code": "min_order_quantity",
+                      "value": "15"
+                    }
+                  ]
+                },
+                {
+                  "code": "bpp/item_discount",
+                  "list": [
+                    {
+                      "code": "slab_15",
+                      "value": "{\"min_qty\":15,\"max_qty\":49,\"discount_percent\":0,\"label\":\"Base Wholesale\"}"
+                    },
+                    {
+                      "code": "slab_50",
+                      "value": "{\"min_qty\":50,\"max_qty\":149,\"discount_percent\":10,\"label\":\"Studio Batch (10% Off)\"}"
+                    },
+                    {
+                      "code": "slab_150",
+                      "value": "{\"min_qty\":150,\"max_qty\":null,\"discount_percent\":16,\"label\":\"Retail Bulk (16% Off)\"}"
+                    }
+                  ]
+                },
+                {
+                  "code": "serviceability",
+                  "list": [
+                    {
+                      "code": "location",
+                      "value": "L1"
+                    },
+                    {
+                      "code": "category",
+                      "value": "cat_paper"
+                    },
+                    {
+                      "code": "type",
+                      "value": "10"
+                    },
+                    {
+                      "code": "val",
+                      "value": "3000"
+                    },
+                    {
+                      "code": "unit",
+                      "value": "km"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "km-stat-desk-organizer",
+              "parent_item_id": "cat_stationery",
+              "descriptor": {
+                "name": "Kogniti KraftDesk Modular Desktop Organizer Set",
+                "code": "4:48191010",
+                "symbol": "https://images.unsplash.com/photo-1585776245991-cf89dd7fc73a?auto=format&fit=crop&w=1000&q=80",
+                "short_desc": "Plastic-free modular 4-piece desk organizer set for modern workspaces.",
+                "long_desc": "Includes pen stand, document tray, sticky notes cube, and card holder.",
+                "images": [
+                  "https://images.unsplash.com/photo-1585776245991-cf89dd7fc73a?auto=format&fit=crop&w=1000&q=80"
+                ]
+              },
+              "price": {
+                "currency": "INR",
+                "value": "320.00",
+                "maximum_value": "699.00"
+              },
+              "category_id": "cat_stationery",
+              "fulfillment_id": "F1",
+              "location_id": "L1",
+              "quantity": {
+                "available": {
+                  "count": "350"
+                },
+                "maximum": {
+                  "count": "350"
+                },
+                "minimum": {
+                  "count": "10"
+                }
+              },
+              "time": {
+                "label": "enable",
+                "timestamp": "2026-09-26T20:00:21.278Z"
+              },
+              "matched": true,
+              "recommended": true,
+              "tags": [
+                {
+                  "code": "origin",
+                  "list": [
+                    {
+                      "code": "country",
+                      "value": "IND"
+                    }
+                  ]
+                },
+                {
+                  "code": "attribute",
+                  "list": [
+                    {
+                      "code": "brand",
+                      "value": "KOGNITI MINDS"
+                    },
+                    {
+                      "code": "hsn_code",
+                      "value": "48191010"
+                    },
+                    {
+                      "code": "tax_rate",
+                      "value": "18%"
+                    },
+                    {
+                      "code": "weight",
+                      "value": "0.62 kg"
+                    },
+                    {
+                      "code": "dimensions",
+                      "value": "28.0cm x 18.0cm x 12.0cm"
+                    }
+                  ]
+                },
+                {
+                  "code": "b2b/moq",
+                  "list": [
+                    {
+                      "code": "min_order_quantity",
+                      "value": "10"
+                    }
+                  ]
+                },
+                {
+                  "code": "bpp/item_discount",
+                  "list": [
+                    {
+                      "code": "slab_10",
+                      "value": "{\"min_qty\":10,\"max_qty\":49,\"discount_percent\":0,\"label\":\"Office Wholesale\"}"
+                    },
+                    {
+                      "code": "slab_50",
+                      "value": "{\"min_qty\":50,\"max_qty\":149,\"discount_percent\":8,\"label\":\"Facility Setup (8% Off)\"}"
+                    },
+                    {
+                      "code": "slab_150",
+                      "value": "{\"min_qty\":150,\"max_qty\":null,\"discount_percent\":16,\"label\":\"Workspace Fitout (16% Off)\"}"
+                    }
+                  ]
+                },
+                {
+                  "code": "serviceability",
+                  "list": [
+                    {
+                      "code": "location",
+                      "value": "L1"
+                    },
+                    {
+                      "code": "category",
+                      "value": "cat_stationery"
+                    },
+                    {
+                      "code": "type",
+                      "value": "10"
+                    },
+                    {
+                      "code": "val",
+                      "value": "3000"
+                    },
+                    {
+                      "code": "unit",
+                      "value": "km"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "km-pen-bamboo-roller",
+              "parent_item_id": "cat_stationery",
+              "descriptor": {
+                "name": "Kogniti PureStem Bamboo Rollerball Pen (Pack of 10)",
+                "code": "4:96081019",
+                "symbol": "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=1000&q=80",
+                "short_desc": "Sustainable bamboo rollerball pens with laser-engravable natural barrels.",
+                "long_desc": "Smooth 0.7mm blue gel refill, balanced weight, and zero single-use plastic barrel.",
+                "images": [
+                  "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=1000&q=80"
+                ]
+              },
+              "price": {
+                "currency": "INR",
+                "value": "210.00",
+                "maximum_value": "499.00"
+              },
+              "category_id": "cat_stationery",
+              "fulfillment_id": "F1",
+              "location_id": "L1",
+              "quantity": {
+                "available": {
+                  "count": "900"
+                },
+                "maximum": {
+                  "count": "500"
+                },
+                "minimum": {
+                  "count": "15"
+                }
+              },
+              "time": {
+                "label": "enable",
+                "timestamp": "2026-09-26T20:00:21.278Z"
+              },
+              "matched": true,
+              "recommended": true,
+              "tags": [
+                {
+                  "code": "origin",
+                  "list": [
+                    {
+                      "code": "country",
+                      "value": "IND"
+                    }
+                  ]
+                },
+                {
+                  "code": "attribute",
+                  "list": [
+                    {
+                      "code": "brand",
+                      "value": "KOGNITI MINDS"
+                    },
+                    {
+                      "code": "hsn_code",
+                      "value": "96081019"
+                    },
+                    {
+                      "code": "tax_rate",
+                      "value": "18%"
+                    },
+                    {
+                      "code": "weight",
+                      "value": "0.18 kg"
+                    },
+                    {
+                      "code": "dimensions",
+                      "value": "14.0cm x 1.1cm x 1.1cm"
+                    }
+                  ]
+                },
+                {
+                  "code": "b2b/moq",
+                  "list": [
+                    {
+                      "code": "min_order_quantity",
+                      "value": "15"
+                    }
+                  ]
+                },
+                {
+                  "code": "bpp/item_discount",
+                  "list": [
+                    {
+                      "code": "slab_15",
+                      "value": "{\"min_qty\":15,\"max_qty\":49,\"discount_percent\":0,\"label\":\"Pack Wholesale\"}"
+                    },
+                    {
+                      "code": "slab_50",
+                      "value": "{\"min_qty\":50,\"max_qty\":199,\"discount_percent\":12,\"label\":\"Event Swag (12% Off)\"}"
+                    },
+                    {
+                      "code": "slab_200",
+                      "value": "{\"min_qty\":200,\"max_qty\":null,\"discount_percent\":22,\"label\":\"Corporate Bulk (22% Off)\"}"
+                    }
+                  ]
+                },
+                {
+                  "code": "serviceability",
+                  "list": [
+                    {
+                      "code": "location",
+                      "value": "L1"
+                    },
+                    {
+                      "code": "category",
+                      "value": "cat_stationery"
+                    },
+                    {
+                      "code": "type",
+                      "value": "10"
+                    },
+                    {
+                      "code": "val",
+                      "value": "3000"
+                    },
+                    {
+                      "code": "unit",
+                      "value": "km"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "km-folder-kraft-expandable",
+              "parent_item_id": "cat_stationery",
+              "descriptor": {
+                "name": "Kogniti FileMaster Expandable Kraft Document Folder (Pack of 10)",
+                "code": "4:48203000",
+                "symbol": "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80",
+                "short_desc": "Expandable 2-inch gusset document wallet holding up to 300 A4 sheets.",
+                "long_desc": "Reinforced edges and natural cotton ribbon tie closure for compliance and records.",
+                "images": [
+                  "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80"
+                ]
+              },
+              "price": {
+                "currency": "INR",
+                "value": "195.00",
+                "maximum_value": "449.00"
+              },
+              "category_id": "cat_stationery",
+              "fulfillment_id": "F1",
+              "location_id": "L1",
+              "quantity": {
+                "available": {
+                  "count": "750"
+                },
+                "maximum": {
+                  "count": "500"
+                },
+                "minimum": {
+                  "count": "15"
+                }
+              },
+              "time": {
+                "label": "enable",
+                "timestamp": "2026-09-26T20:00:21.278Z"
+              },
+              "matched": true,
+              "recommended": true,
+              "tags": [
+                {
+                  "code": "origin",
+                  "list": [
+                    {
+                      "code": "country",
+                      "value": "IND"
+                    }
+                  ]
+                },
+                {
+                  "code": "attribute",
+                  "list": [
+                    {
+                      "code": "brand",
+                      "value": "KOGNITI MINDS"
+                    },
+                    {
+                      "code": "hsn_code",
+                      "value": "48203000"
+                    },
+                    {
+                      "code": "tax_rate",
+                      "value": "18%"
+                    },
+                    {
+                      "code": "weight",
+                      "value": "0.85 kg"
+                    },
+                    {
+                      "code": "dimensions",
+                      "value": "34.5cm x 24.5cm x 5.0cm"
+                    }
+                  ]
+                },
+                {
+                  "code": "b2b/moq",
+                  "list": [
+                    {
+                      "code": "min_order_quantity",
+                      "value": "15"
+                    }
+                  ]
+                },
+                {
+                  "code": "bpp/item_discount",
+                  "list": [
+                    {
+                      "code": "slab_15",
+                      "value": "{\"min_qty\":15,\"max_qty\":49,\"discount_percent\":0,\"label\":\"Carton Tier\"}"
+                    },
+                    {
+                      "code": "slab_50",
+                      "value": "{\"min_qty\":50,\"max_qty\":199,\"discount_percent\":10,\"label\":\"Enterprise Legal (10% Off)\"}"
+                    },
+                    {
+                      "code": "slab_200",
+                      "value": "{\"min_qty\":200,\"max_qty\":null,\"discount_percent\":18,\"label\":\"Archive Bulk (18% Off)\"}"
+                    }
+                  ]
+                },
+                {
+                  "code": "serviceability",
+                  "list": [
+                    {
+                      "code": "location",
+                      "value": "L1"
+                    },
+                    {
+                      "code": "category",
+                      "value": "cat_stationery"
+                    },
+                    {
+                      "code": "type",
+                      "value": "10"
+                    },
+                    {
+                      "code": "val",
+                      "value": "3000"
+                    },
+                    {
+                      "code": "unit",
+                      "value": "km"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "km-art-sketchbook-a4",
+              "parent_item_id": "cat_notebooks",
+              "descriptor": {
+                "name": "Kogniti Artisan Heavyweight A4 Art Sketchbook (120 Pages, 140 GSM)",
+                "code": "4:48201090",
+                "symbol": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1000&q=80",
+                "short_desc": "Acid-free 140 GSM artist sketchbook with cold-pressed natural texture.",
+                "long_desc": "Micro-perforated sheets allow clean tearing without damaging binding.",
+                "images": [
+                  "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1000&q=80"
+                ]
+              },
+              "price": {
+                "currency": "INR",
+                "value": "240.00",
+                "maximum_value": "499.00"
+              },
+              "category_id": "cat_notebooks",
+              "fulfillment_id": "F1",
+              "location_id": "L1",
+              "quantity": {
+                "available": {
+                  "count": "500"
+                },
+                "maximum": {
+                  "count": "500"
+                },
+                "minimum": {
+                  "count": "15"
+                }
+              },
+              "time": {
+                "label": "enable",
+                "timestamp": "2026-09-26T20:00:21.278Z"
+              },
+              "matched": true,
+              "recommended": true,
+              "tags": [
+                {
+                  "code": "origin",
+                  "list": [
+                    {
+                      "code": "country",
+                      "value": "IND"
+                    }
+                  ]
+                },
+                {
+                  "code": "attribute",
+                  "list": [
+                    {
+                      "code": "brand",
+                      "value": "KOGNITI MINDS"
+                    },
+                    {
+                      "code": "hsn_code",
+                      "value": "48201090"
+                    },
+                    {
+                      "code": "tax_rate",
+                      "value": "18%"
+                    },
+                    {
+                      "code": "weight",
+                      "value": "0.62 kg"
+                    },
+                    {
+                      "code": "dimensions",
+                      "value": "21.0cm x 29.7cm x 1.8cm"
+                    }
+                  ]
+                },
+                {
+                  "code": "b2b/moq",
+                  "list": [
+                    {
+                      "code": "min_order_quantity",
+                      "value": "15"
+                    }
+                  ]
+                },
+                {
+                  "code": "bpp/item_discount",
+                  "list": [
+                    {
+                      "code": "slab_15",
+                      "value": "{\"min_qty\":15,\"max_qty\":49,\"discount_percent\":0,\"label\":\"Studio Wholesale\"}"
+                    },
+                    {
+                      "code": "slab_50",
+                      "value": "{\"min_qty\":50,\"max_qty\":199,\"discount_percent\":10,\"label\":\"Design School (10% Off)\"}"
+                    },
+                    {
+                      "code": "slab_200",
+                      "value": "{\"min_qty\":200,\"max_qty\":null,\"discount_percent\":20,\"label\":\"Institutional (20% Off)\"}"
+                    }
+                  ]
+                },
+                {
+                  "code": "serviceability",
+                  "list": [
+                    {
+                      "code": "location",
+                      "value": "L1"
+                    },
+                    {
+                      "code": "category",
+                      "value": "cat_notebooks"
+                    },
+                    {
+                      "code": "type",
+                      "value": "10"
+                    },
+                    {
+                      "code": "val",
+                      "value": "3000"
+                    },
+                    {
+                      "code": "unit",
+                      "value": "km"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "km-eco-hamper-exec",
+              "parent_item_id": "cat_gifting",
+              "descriptor": {
+                "name": "Kogniti Executive GreenWelcome Eco Hamper Box",
+                "code": "4:48209090",
+                "symbol": "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=1000&q=80",
+                "short_desc": "Comprehensive corporate welcome kit in debossed magnetic-latch kraft box.",
+                "long_desc": "Includes journal, bamboo pen, desk calendar, plantable seed coaster, notebook, sticker pack.",
+                "images": [
+                  "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=1000&q=80"
+                ]
+              },
+              "price": {
+                "currency": "INR",
+                "value": "920.00",
+                "maximum_value": "1899.00"
+              },
+              "category_id": "cat_gifting",
+              "fulfillment_id": "F1",
+              "location_id": "L1",
+              "quantity": {
+                "available": {
+                  "count": "220"
+                },
+                "maximum": {
+                  "count": "220"
+                },
+                "minimum": {
+                  "count": "5"
+                }
+              },
+              "time": {
+                "label": "enable",
+                "timestamp": "2026-09-26T20:00:21.278Z"
+              },
+              "matched": true,
+              "recommended": true,
+              "tags": [
+                {
+                  "code": "origin",
+                  "list": [
+                    {
+                      "code": "country",
+                      "value": "IND"
+                    }
+                  ]
+                },
+                {
+                  "code": "attribute",
+                  "list": [
+                    {
+                      "code": "brand",
+                      "value": "KOGNITI MINDS"
+                    },
+                    {
+                      "code": "hsn_code",
+                      "value": "48209090"
+                    },
+                    {
+                      "code": "tax_rate",
+                      "value": "18%"
+                    },
+                    {
+                      "code": "weight",
+                      "value": "1.45 kg"
+                    },
+                    {
+                      "code": "dimensions",
+                      "value": "32.0cm x 26.0cm x 9.0cm"
+                    }
+                  ]
+                },
+                {
+                  "code": "b2b/moq",
+                  "list": [
+                    {
+                      "code": "min_order_quantity",
+                      "value": "5"
+                    }
+                  ]
+                },
+                {
+                  "code": "bpp/item_discount",
+                  "list": [
+                    {
+                      "code": "slab_5",
+                      "value": "{\"min_qty\":5,\"max_qty\":24,\"discount_percent\":0,\"label\":\"Corporate Base\"}"
+                    },
+                    {
+                      "code": "slab_25",
+                      "value": "{\"min_qty\":25,\"max_qty\":99,\"discount_percent\":8,\"label\":\"Quarterly Induction (8% Off)\"}"
+                    },
+                    {
+                      "code": "slab_100",
+                      "value": "{\"min_qty\":100,\"max_qty\":null,\"discount_percent\":18,\"label\":\"Enterprise Annual (18% Off)\"}"
+                    }
+                  ]
+                },
+                {
+                  "code": "serviceability",
+                  "list": [
+                    {
+                      "code": "location",
+                      "value": "L1"
+                    },
+                    {
+                      "code": "category",
+                      "value": "cat_gifting"
+                    },
+                    {
+                      "code": "type",
+                      "value": "10"
+                    },
+                    {
+                      "code": "val",
+                      "value": "3000"
+                    },
+                    {
+                      "code": "unit",
+                      "value": "km"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "km-inst-pallet-a4",
+              "parent_item_id": "cat_institutional",
+              "descriptor": {
+                "name": "Kogniti Institutional Bulk Pallet: 75 GSM Agro Copier Paper (40 Cartons / 200 Reams)",
+                "code": "4:48025610",
+                "symbol": "https://images.unsplash.com/photo-1589330694653-dad6ef495b54?auto=format&fit=crop&w=1000&q=80",
+                "short_desc": "Industrial wooden pallet wrapped in weather-proof stretch film with 100,000 sheets.",
+                "long_desc": "Delivered directly via hydraulic liftgate trucks. Dedicated transport insurance and batch quality certificate included.",
+                "images": [
+                  "https://images.unsplash.com/photo-1589330694653-dad6ef495b54?auto=format&fit=crop&w=1000&q=80"
+                ]
+              },
+              "price": {
+                "currency": "INR",
+                "value": "38000.00",
+                "maximum_value": "79800.00"
+              },
+              "category_id": "cat_institutional",
+              "fulfillment_id": "F1",
+              "location_id": "L1",
+              "quantity": {
+                "available": {
+                  "count": "25"
+                },
+                "maximum": {
+                  "count": "25"
+                },
+                "minimum": {
+                  "count": "1"
+                }
+              },
+              "time": {
+                "label": "enable",
+                "timestamp": "2026-09-26T20:00:21.278Z"
+              },
+              "matched": true,
+              "recommended": true,
+              "tags": [
+                {
+                  "code": "origin",
+                  "list": [
+                    {
+                      "code": "country",
+                      "value": "IND"
+                    }
+                  ]
+                },
+                {
+                  "code": "attribute",
+                  "list": [
+                    {
+                      "code": "brand",
+                      "value": "KOGNITI MINDS"
+                    },
+                    {
+                      "code": "hsn_code",
+                      "value": "48025610"
+                    },
+                    {
+                      "code": "tax_rate",
+                      "value": "18%"
+                    },
+                    {
+                      "code": "weight",
+                      "value": "475.0 kg"
+                    },
+                    {
+                      "code": "dimensions",
+                      "value": "120.0cm x 100.0cm x 135.0cm"
+                    }
+                  ]
+                },
+                {
+                  "code": "b2b/moq",
+                  "list": [
+                    {
+                      "code": "min_order_quantity",
+                      "value": "1"
+                    }
+                  ]
+                },
+                {
+                  "code": "bpp/item_discount",
+                  "list": [
+                    {
+                      "code": "slab_1",
+                      "value": "{\"min_qty\":1,\"max_qty\":2,\"discount_percent\":0,\"label\":\"Single Pallet\"}"
+                    },
+                    {
+                      "code": "slab_3",
+                      "value": "{\"min_qty\":3,\"max_qty\":9,\"discount_percent\":5,\"label\":\"Multi-Campus (5% Off)\"}"
+                    },
+                    {
+                      "code": "slab_10",
+                      "value": "{\"min_qty\":10,\"max_qty\":null,\"discount_percent\":12,\"label\":\"Container Load (12% Off)\"}"
+                    }
+                  ]
+                },
+                {
+                  "code": "serviceability",
+                  "list": [
+                    {
+                      "code": "location",
+                      "value": "L1"
+                    },
+                    {
+                      "code": "category",
+                      "value": "cat_institutional"
+                    },
+                    {
+                      "code": "type",
+                      "value": "10"
+                    },
+                    {
+                      "code": "val",
+                      "value": "3000"
+                    },
+                    {
+                      "code": "unit",
+                      "value": "km"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "tags": [
+            {
+              "code": "serviceability",
+              "list": [
+                {
+                  "code": "location",
+                  "value": "L1"
+                },
+                {
+                  "code": "category",
+                  "value": "cat_paper"
+                },
+                {
+                  "code": "type",
+                  "value": "10"
+                },
+                {
+                  "code": "val",
+                  "value": "3000"
+                },
+                {
+                  "code": "unit",
+                  "value": "km"
+                }
+              ]
+            },
+            {
+              "code": "serviceability",
+              "list": [
+                {
+                  "code": "location",
+                  "value": "L1"
+                },
+                {
+                  "code": "category",
+                  "value": "cat_notebooks"
+                },
+                {
+                  "code": "type",
+                  "value": "10"
+                },
+                {
+                  "code": "val",
+                  "value": "3000"
+                },
+                {
+                  "code": "unit",
+                  "value": "km"
+                }
+              ]
+            },
+            {
+              "code": "serviceability",
+              "list": [
+                {
+                  "code": "location",
+                  "value": "L1"
+                },
+                {
+                  "code": "category",
+                  "value": "cat_stationery"
+                },
+                {
+                  "code": "type",
+                  "value": "10"
+                },
+                {
+                  "code": "val",
+                  "value": "3000"
+                },
+                {
+                  "code": "unit",
+                  "value": "km"
+                }
+              ]
+            },
+            {
+              "code": "serviceability",
+              "list": [
+                {
+                  "code": "location",
+                  "value": "L1"
+                },
+                {
+                  "code": "category",
+                  "value": "cat_gifting"
+                },
+                {
+                  "code": "type",
+                  "value": "10"
+                },
+                {
+                  "code": "val",
+                  "value": "3000"
+                },
+                {
+                  "code": "unit",
+                  "value": "km"
+                }
+              ]
+            },
+            {
+              "code": "serviceability",
+              "list": [
+                {
+                  "code": "location",
+                  "value": "L1"
+                },
+                {
+                  "code": "category",
+                  "value": "cat_institutional"
+                },
+                {
+                  "code": "type",
+                  "value": "10"
+                },
+                {
+                  "code": "val",
+                  "value": "3000"
+                },
+                {
+                  "code": "unit",
+                  "value": "km"
+                }
+              ]
+            },
+            {
+              "code": "timing",
+              "list": [
+                {
+                  "code": "type",
+                  "value": "Order"
+                },
+                {
+                  "code": "location",
+                  "value": "L1"
+                },
+                {
+                  "code": "day_from",
+                  "value": "1"
+                },
+                {
+                  "code": "day_to",
+                  "value": "6"
+                },
+                {
+                  "code": "time_from",
+                  "value": "0900"
+                },
+                {
+                  "code": "time_to",
+                  "value": "1900"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && cp -r dist/assets . 2>/dev/null && cp -n public/*.png public/*.ico public/*.svg . 2>/dev/null || true",
+    "build": "tsc -b && vite build && cp -r dist/assets . 2>/dev/null && cp -r dist/ondc-workbench . 2>/dev/null && cp dist/ondc-workbench-kit.zip . 2>/dev/null && cp -n public/*.png public/*.ico public/*.svg . 2>/dev/null || true",
     "start": "node server.js",
     "test": "node test-regression.js",
     "test:ondc": "node test-ondc.js",
