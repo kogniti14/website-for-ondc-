@@ -24,6 +24,7 @@ $health = [
     'timestamp' => gmdate('Y-m-d\TH:i:s\Z'),
     'environment' => 'production',
     'server' => 'Hostinger LiteSpeed Web Server',
+    'server_ip' => $_SERVER['SERVER_ADDR'] ?? 'unknown',
     'firebase' => [
         'projectId' => 'kognitiminds-ondc',
         'realtimeDatabase' => true,

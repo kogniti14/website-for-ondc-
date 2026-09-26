@@ -57,21 +57,17 @@
   RewriteEngine On
   RewriteBase /
 
-  # 0. Canonical Domain Enforcement & HTTPS Normalization
-  # Prevent ERR_CERT_COMMON_NAME_INVALID by strictly redirecting www and all non-canonical hosts to https://kognitiminds.com
-  RewriteCond %{HTTP_HOST} ^www\.kognitiminds\.com$ [NC]
-  RewriteRule ^(.*)$ https://kognitiminds.com/$1 [R=301,L]
-
-  # Redirect any IP address, alternate hostname or unmapped Hostinger alias to canonical https://kognitiminds.com
+  # 0. Canonical Domain & HTTPS Normalization
+  # Redirect any IP address, internal LiteSpeed proxy alias or unmapped host to canonical domain
   RewriteCond %{HTTP_HOST} !^(www\.)?kognitiminds\.com$ [NC]
   RewriteCond %{HTTP_HOST} !^localhost [NC]
   RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
   RewriteRule ^(.*)$ https://kognitiminds.com/$1 [R=301,L]
 
-  # Strictly enforce HTTPS to canonical domain (prevents %{HTTP_HOST} mismatch)
+  # Strictly enforce HTTPS on the current valid domain (supports both www.kognitiminds.com and kognitiminds.com seamlessly)
   RewriteCond %{HTTPS} off
   RewriteCond %{HTTP:X-Forwarded-Proto} !https
-  RewriteRule ^(.*)$ https://kognitiminds.com/$1 [R=301,L]
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
 
   # Strip tracking query parameters (e.g. srsltid from Google Search/Merchant)
   RewriteCond %{QUERY_STRING} (?:^|&)srsltid=[^&]* [NC]
