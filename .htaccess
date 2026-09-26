@@ -83,6 +83,8 @@ DirectoryIndex dist/index.html index.html
   RewriteRule ^ - [L]
 
   # 2. Direct Native Handlers for Production APIs (Zero proxy overhead, zero 503 errors)
+  RewriteRule ^ondc/health/?$ public/api/ondc-gateway.php?action=health [QSA,L]
+  RewriteRule ^health/?$ public/api/ondc-gateway.php?action=health [QSA,L]
   RewriteRule ^ondc-workbench-kit\.zip$ public/api/download-workbench.php?file=zip [QSA,L]
   RewriteRule ^ondc/download/workbench-kit/?$ public/api/download-workbench.php?file=zip [QSA,L]
   RewriteRule ^ondc/download/workbench-file/([a-zA-Z0-9_.-]+)$ public/api/download-workbench.php?file=$1 [QSA,L]
@@ -93,16 +95,15 @@ DirectoryIndex dist/index.html index.html
   RewriteRule ^api/upload/?$ public/api/upload.php [QSA,L]
   RewriteRule ^api/data/([a-zA-Z0-9_-]+)/?([a-zA-Z0-9_-]*)?$ public/api/data.php?collection=$1&id=$2 [QSA,L]
 
-  # 3. Uploads resolution (public/uploads or uploads)
-  RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
+  # 3. Dedicated ONDC RETeB2B 1.2.5 Protocol Routes (Hostinger LiteSpeed Native Execution - Zero 503 errors)
+  RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support)$ public/api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteRule ^(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)$ public/api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteRule ^ondc/(search|select|init|confirm|status|track|cancel|update|rating|support)$ public/api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteRule ^ondc/(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)$ public/api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteRule ^ondc/on_search_sample/?$ public/api/ondc-gateway.php?action=on_search_sample [QSA,L]
 
-  # 4. Dedicated ONDC Protocol routes to Node.js backend (Port 3000)
-  <IfModule mod_proxy.c>
-    RewriteCond %{REQUEST_URI} !\.php$ [NC]
-    RewriteCond %{REQUEST_URI} !\.(zip|json|md|png|jpe?g|svg|ico)$ [NC]
-    RewriteCond %{REQUEST_URI} ^/(search|select|init|confirm|status|cancel|update|rating|track|support|on_search|on_select|on_init|on_confirm|on_status|on_cancel|on_update|on_rating|on_track|on_support|on_search_sample|ondc(/|$)|api/admin/ondc) [NC]
-    RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
-  </IfModule>
+  # 4. Uploads resolution (public/uploads or uploads)
+  RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
 
   # 5. Root index route -> always serve dist/index.html
   RewriteRule ^$ dist/index.html [L]

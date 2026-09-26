@@ -74,21 +74,27 @@
   RewriteRule ^(.*)$ https://kognitiminds.com/$1? [R=301,L]
 
   # 1. Direct Native Handlers for Production APIs (Zero proxy overhead, zero 503 errors)
+  RewriteRule ^ondc/health/?$ api/ondc-gateway.php?action=health [QSA,L]
+  RewriteRule ^health/?$ api/ondc-gateway.php?action=health [QSA,L]
+  RewriteRule ^ondc-workbench-kit\.zip$ api/download-workbench.php?file=zip [QSA,L]
+  RewriteRule ^ondc/download/workbench-kit/?$ api/download-workbench.php?file=zip [QSA,L]
+  RewriteRule ^ondc/download/workbench-file/([a-zA-Z0-9_.-]+)$ api/download-workbench.php?file=$1 [QSA,L]
+  RewriteRule ^api/admin/ondc/workbench/files/?$ api/download-workbench.php [QSA,L]
   RewriteRule ^api/auth/send-otp/?$ api/send-email.php [QSA,L]
   RewriteRule ^api/resend/?$ api/send-email.php [QSA,L]
   RewriteRule ^api/health/?$ api/health.php [QSA,L]
   RewriteRule ^api/upload/?$ api/upload.php [QSA,L]
   RewriteRule ^api/data/([a-zA-Z0-9_-]+)/?([a-zA-Z0-9_-]*)?$ api/data.php?collection=$1&id=$2 [QSA,L]
 
+  # Dedicated ONDC RETeB2B 1.2.5 Protocol Routes (Hostinger Native Execution - Zero 503 errors)
+  RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support)$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteRule ^(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteRule ^ondc/(search|select|init|confirm|status|track|cancel|update|rating|support)$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteRule ^ondc/(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteRule ^ondc/on_search_sample/?$ api/ondc-gateway.php?action=on_search_sample [QSA,L]
+
   # 2. Direct Static Upload Serving
   RewriteRule ^uploads/(.*)$ uploads/$1 [L]
-
-  # 3. Dedicated ONDC Protocol routes to Node.js backend (Port 3000) ONLY
-  <IfModule mod_proxy.c>
-    RewriteCond %{REQUEST_URI} !\.php$ [NC]
-    RewriteCond %{REQUEST_URI} ^/(search|select|init|confirm|status|cancel|update|rating|track|support|ondc) [NC]
-    RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
-  </IfModule>
 
   # 4. Serve physical static files and directories directly if they exist
   RewriteCond %{REQUEST_FILENAME} -f [OR]

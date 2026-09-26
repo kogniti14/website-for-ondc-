@@ -236,11 +236,12 @@ async function runTests() {
     });
   };
 
-  // Health check
+  // Health check (Section 10: ONDC Workbench compliance)
   const healthRes = await makeReq('/ondc/health');
   assert(healthRes.status === 200, 'GET /ondc/health returned HTTP 200');
   assert(healthRes.body.status === 'healthy', 'Health check reports status: healthy');
-  assert(healthRes.body.config.domain === 'ONDC:RETeB2B', 'Health check reports domain: ONDC:RETeB2B');
+  assert(healthRes.body.service === 'kogniti-minds-ondc', 'Health check reports service: kogniti-minds-ondc');
+  assert(healthRes.body.environment === 'production', 'Health check reports environment: production');
 
   // Sample on_search endpoint for Workbench
   const sampleRes = await makeReq('/ondc/on_search_sample');
@@ -336,6 +337,30 @@ async function runTests() {
   });
   assert(updateRes.status === 200, 'POST /update responded with HTTP 200');
   assert(updateRes.body.message?.ack?.status === 'ACK', 'POST /update responded with synchronous ACK for return flow');
+
+  // POST /track
+  const trackRes = await makeReq('/track', 'POST', {
+    context: { ...testContext, message_id: 'msg_track_01', action: 'track' },
+    message: { order_id: 'ord_http_test_01' },
+  });
+  assert(trackRes.status === 200, 'POST /track responded with HTTP 200');
+  assert(trackRes.body.message?.ack?.status === 'ACK', 'POST /track responded with synchronous ACK');
+
+  // POST /rating
+  const ratingRes = await makeReq('/rating', 'POST', {
+    context: { ...testContext, message_id: 'msg_rating_01', action: 'rating' },
+    message: { rating_category: 'Order', id: 'ord_http_test_01', value: 5 },
+  });
+  assert(ratingRes.status === 200, 'POST /rating responded with HTTP 200');
+  assert(ratingRes.body.message?.ack?.status === 'ACK', 'POST /rating responded with synchronous ACK');
+
+  // POST /support
+  const supportRes = await makeReq('/support', 'POST', {
+    context: { ...testContext, message_id: 'msg_support_01', action: 'support' },
+    message: { ref_id: 'ord_http_test_01' },
+  });
+  assert(supportRes.status === 200, 'POST /support responded with HTTP 200');
+  assert(supportRes.body.message?.ack?.status === 'ACK', 'POST /support responded with synchronous ACK');
 
   // Test 7: Cancellation & State Machine
   console.log('\n--- 7. Order Cancellation & Negative State Testing ---');

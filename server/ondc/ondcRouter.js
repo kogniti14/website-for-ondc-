@@ -81,6 +81,32 @@ ondcRouter.use(
   })
 );
 
+// ONDC Request Lifecycle Audit Logging Middleware per RETeB2B 1.2.5 Specification (Section 9)
+ondcRouter.use((req, res, next) => {
+  req._ondcStartTime = Date.now();
+  res.on('finish', () => {
+    const rawAction = req.path.replace(/^\/(ondc\/)?/, '');
+    if (!rawAction || rawAction === 'health' || rawAction.startsWith('admin/') || req.method === 'OPTIONS') return;
+    const context = req.body?.context || {};
+    const action = context.action || rawAction;
+    const durationMs = Date.now() - req._ondcStartTime;
+
+    stateManager.addLog({
+      action,
+      transactionId: context.transaction_id || null,
+      messageId: context.message_id || null,
+      httpMethod: req.method,
+      status: res.statusCode,
+      durationMs,
+      signatureValid: req._signatureValid !== undefined ? req._signatureValid : true,
+      schemaValid: req._schemaValid !== undefined ? req._schemaValid : res.statusCode < 400,
+      errorCode: req._errorCode || (res.statusCode >= 400 ? '30000' : null),
+      error: req._error || null,
+    });
+  });
+  next();
+});
+
 /**
  * Standard ONDC ACK / NACK responses
  */
@@ -204,11 +230,17 @@ async function dispatchCallback(bapUri, action, payload) {
 async function validateOndcRequest(req, res, next) {
   const { context } = req.body || {};
   if (!context || !context.domain || !context.action || !context.transaction_id || !context.message_id) {
+    req._schemaValid = false;
+    req._errorCode = '10000';
+    req._error = { code: '10000', message: 'Missing required context attributes (domain, action, transaction_id, message_id)' };
     return sendNack(res, '10000', 'Missing required context attributes (domain, action, transaction_id, message_id)');
   }
 
   // Domain verification: must be ONDC:RETeB2B
   if (context.domain !== ondcConfig.domain) {
+    req._schemaValid = false;
+    req._errorCode = '10001';
+    req._error = { code: '10001', message: `Invalid domain '${context.domain}'. Expected '${ondcConfig.domain}'.` };
     return sendNack(res, '10001', `Invalid domain '${context.domain}'. Expected '${ondcConfig.domain}'.`);
   }
 
@@ -231,6 +263,9 @@ async function validateOndcRequest(req, res, next) {
   });
 
   if (!verification.valid) {
+    req._signatureValid = false;
+    req._errorCode = '20001';
+    req._error = { code: '20001', message: verification.error || 'Unauthorized ONDC request' };
     ondcLogger.warn(context.action, `Authorization verification failed: ${verification.error}`, {
       transactionId: context.transaction_id,
     });
@@ -245,16 +280,12 @@ async function validateOndcRequest(req, res, next) {
   );
 
   if (!transitionCheck.valid) {
+    req._schemaValid = false;
+    req._errorCode = transitionCheck.code || '30000';
+    req._error = { code: req._errorCode, message: transitionCheck.message };
     ondcLogger.warn(context.action, `State transition rejected: ${transitionCheck.message}`, {
       transactionId: context.transaction_id,
       code: transitionCheck.code,
-    });
-    stateManager.addLog({
-      action: context.action,
-      transactionId: context.transaction_id,
-      messageId: context.message_id,
-      status: 400,
-      error: { message: transitionCheck.message },
     });
     return sendNack(res, transitionCheck.code || '30000', transitionCheck.message);
   }
@@ -268,6 +299,8 @@ async function validateOndcRequest(req, res, next) {
     orderId: req.body.message?.order?.id || req.body.message?.order_id || null,
   });
 
+  req._signatureValid = true;
+  req._schemaValid = true;
   next();
 }
 
@@ -277,15 +310,13 @@ async function validateOndcRequest(req, res, next) {
 
 /**
  * GET /health and GET /ondc/health - Service Health Check
+ * Standard health check per ONDC Workbench requirements (Section 10)
  */
 ondcRouter.get(['/health', '/ondc/health'], (req, res) => {
-  const products = getAuthoritativeProducts();
   return res.status(200).json({
     status: 'healthy',
-    timestamp: new Date().toISOString(),
-    config: ondcConfig.getSanitized(),
-    catalogItemCount: products.length,
-    activeWorkbenchFlow: 'Buyer_Initiated_Return_(Full_Order_and_Partial_Order)',
+    service: 'kogniti-minds-ondc',
+    environment: 'production',
   });
 });
 

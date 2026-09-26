@@ -214,14 +214,18 @@ class OndcStateManager {
   }
 
   /**
-   * Add structured audit log
+   * Add structured audit log per ONDC Workbench requirements
    */
   addLog({
     action,
     transactionId = null,
     messageId = null,
+    httpMethod = 'POST',
     status = 200,
     durationMs = 0,
+    signatureValid = true,
+    schemaValid = true,
+    errorCode = null,
     error = null,
     metadata = {},
   }) {
@@ -229,6 +233,15 @@ class OndcStateManager {
       id: `log_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       timestamp: new Date().toISOString(),
       action,
+      transaction_id: transactionId,
+      message_id: messageId,
+      http_method: httpMethod,
+      http_status: status,
+      processing_time_ms: durationMs,
+      signature_verification_result: signatureValid ? 'VALID' : 'INVALID',
+      schema_validation_result: schemaValid ? 'VALID' : 'INVALID',
+      error_code: errorCode || (error ? (error.code || '30000') : null),
+      // Backwards-compatible aliases for admin dashboard UI
       transactionId,
       messageId,
       status,
