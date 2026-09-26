@@ -1,14 +1,19 @@
 /**
  * ONDC:RETeB2B Express Router
- * Implements seller-side protocol endpoints and callbacks for ONDC eB2B
+ * Implements seller-side protocol endpoints, callbacks, and simulation for ONDC Retail (RET 1.2.5 / eB2B)
  * Kogniti Minds Private Limited
  */
 
 import express from 'express';
 import crypto from 'crypto';
 import ondcConfig from './config.js';
-import { createAuthorizationHeader, verifyAuthorization } from './crypto.js';
-import { buildOndcCatalog, PRODUCTS_CATALOG, generateCompleteOnSearchPayload } from './catalogMapper.js';
+import { createAuthorizationHeader, verifyAuthorization } from './security/index.js';
+import {
+  buildOndcCatalog,
+  getAuthoritativeProducts,
+  PRODUCTS_CATALOG,
+  generateCompleteOnSearchPayload,
+} from './catalogMapper.js';
 import {
   calculateQuote,
   createOndcOrder,
@@ -18,6 +23,7 @@ import {
   cancelOrder,
 } from './orderManager.js';
 import { handleBuyerInitiatedReturn } from './returnHandler.js';
+import { validateProductForOndc, validateCatalog } from './catalogValidator.js';
 import ondcLogger from './logger.js';
 import stateManager from './stateManager.js';
 
@@ -178,7 +184,6 @@ async function dispatchCallback(bapUri, action, payload) {
       status: response.status,
     });
   } catch (err) {
-    // Log error gracefully (do not crash)
     ondcLogger.warn(action, `Callback dispatch notice for ${url}: ${err.message}`, {
       bapUri,
       error: err.message,
@@ -187,7 +192,7 @@ async function dispatchCallback(bapUri, action, payload) {
 }
 
 /**
- * Middleware to validate common ONDC context and state transitions
+ * Middleware to validate common ONDC context, authorization, idempotency, and state transitions
  */
 async function validateOndcRequest(req, res, next) {
   const { context } = req.body || {};
@@ -198,6 +203,16 @@ async function validateOndcRequest(req, res, next) {
   // Domain verification: must be ONDC:RETeB2B
   if (context.domain !== ondcConfig.domain) {
     return sendNack(res, '10001', `Invalid domain '${context.domain}'. Expected '${ondcConfig.domain}'.`);
+  }
+
+  // Idempotency check: prevent duplicate order creation, inventory deductions, or double cancellations
+  const idempotency = stateManager.checkIdempotency(context.transaction_id, context.message_id, context.action);
+  if (idempotency.isDuplicate) {
+    ondcLogger.info(context.action, 'Idempotent duplicate request detected. Returning synchronous ACK.', {
+      transactionId: context.transaction_id,
+      messageId: context.message_id,
+    });
+    return sendAck(res);
   }
 
   // Cryptographic authorization verification
@@ -237,7 +252,8 @@ async function validateOndcRequest(req, res, next) {
     return sendNack(res, transitionCheck.code || '30000', transitionCheck.message);
   }
 
-  // Record valid transition in state manager
+  // Record valid transition & register idempotency
+  stateManager.recordIdempotency(context.transaction_id, context.message_id, context.action, { status: 'ACK' });
   stateManager.recordTransition({
     transactionId: context.transaction_id,
     messageId: context.message_id,
@@ -249,27 +265,27 @@ async function validateOndcRequest(req, res, next) {
 }
 
 /* ==========================================================================
-   ONDC Endpoints
+   Protocol Outbound Endpoints (Buyer -> Seller)
    ========================================================================== */
 
 /**
- * GET /ondc/health - Internal Service Health Check
+ * GET /health and GET /ondc/health - Service Health Check
  */
-ondcRouter.get('/ondc/health', (req, res) => {
+ondcRouter.get(['/health', '/ondc/health'], (req, res) => {
+  const products = getAuthoritativeProducts();
   return res.status(200).json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     config: ondcConfig.getSanitized(),
-    catalogItemCount: PRODUCTS_CATALOG.length,
+    catalogItemCount: products.length,
     activeWorkbenchFlow: 'Buyer_Initiated_Return_(Full_Order_and_Partial_Order)',
   });
 });
 
 /**
- * GET /ondc/on_search_sample - Generates complete official on_search payload
- * Useful for copying/testing with ONDC Workbench "Paste on_search" step
+ * GET /on_search_sample and GET /ondc/on_search_sample
  */
-ondcRouter.get(['/ondc/on_search_sample', '/on_search_sample'], (req, res) => {
+ondcRouter.get(['/on_search_sample', '/ondc/on_search_sample'], (req, res) => {
   const samplePayload = generateCompleteOnSearchPayload({
     bap_id: req.query.bap_id || 'buyer-app-preprod.ondc.org',
     bap_uri: req.query.bap_uri || 'https://buyer-app-preprod.ondc.org/protocol/v1',
@@ -284,7 +300,7 @@ ondcRouter.get(['/ondc/on_search_sample', '/on_search_sample'], (req, res) => {
 /**
  * POST /search -> returns ACK, async callback /on_search
  */
-ondcRouter.post('/search', validateOndcRequest, async (req, res) => {
+ondcRouter.post(['/search', '/ondc/search'], validateOndcRequest, async (req, res) => {
   const { context, message } = req.body;
   ondcLogger.info('search', 'Received search request', {
     transactionId: context.transaction_id,
@@ -294,7 +310,6 @@ ondcRouter.post('/search', validateOndcRequest, async (req, res) => {
 
   sendAck(res);
 
-  // Asynchronously generate catalog and invoke on_search
   setImmediate(async () => {
     try {
       const catalog = buildOndcCatalog(message?.intent || {});
@@ -315,7 +330,7 @@ ondcRouter.post('/search', validateOndcRequest, async (req, res) => {
 /**
  * POST /select -> returns ACK, async callback /on_select
  */
-ondcRouter.post('/select', validateOndcRequest, async (req, res) => {
+ondcRouter.post(['/select', '/ondc/select'], validateOndcRequest, async (req, res) => {
   const { context, message } = req.body;
   ondcLogger.info('select', 'Received select request', {
     transactionId: context.transaction_id,
@@ -369,7 +384,7 @@ ondcRouter.post('/select', validateOndcRequest, async (req, res) => {
 /**
  * POST /init -> returns ACK, async callback /on_init
  */
-ondcRouter.post('/init', validateOndcRequest, async (req, res) => {
+ondcRouter.post(['/init', '/ondc/init'], validateOndcRequest, async (req, res) => {
   const { context, message } = req.body;
   ondcLogger.info('init', 'Received init request', {
     transactionId: context.transaction_id,
@@ -423,9 +438,9 @@ ondcRouter.post('/init', validateOndcRequest, async (req, res) => {
 });
 
 /**
- * POST /confirm -> returns ACK, persists order, async callback /on_confirm
+ * POST /confirm -> returns ACK, atomically reserves inventory, persists order, async callback /on_confirm
  */
-ondcRouter.post('/confirm', validateOndcRequest, async (req, res) => {
+ondcRouter.post(['/confirm', '/ondc/confirm'], validateOndcRequest, async (req, res) => {
   const { context, message } = req.body;
   ondcLogger.info('confirm', 'Received confirm request', {
     transactionId: context.transaction_id,
@@ -490,9 +505,9 @@ ondcRouter.post('/confirm', validateOndcRequest, async (req, res) => {
 });
 
 /**
- * POST /status -> returns ACK, async callback /on_status
+ * POST /status -> returns ACK, queries genuine order, async callback /on_status
  */
-ondcRouter.post('/status', validateOndcRequest, async (req, res) => {
+ondcRouter.post(['/status', '/ondc/status'], validateOndcRequest, async (req, res) => {
   const { context, message } = req.body;
   const orderId = message?.order_id || message?.order?.id;
   ondcLogger.info('status', 'Received status query', {
@@ -505,18 +520,23 @@ ondcRouter.post('/status', validateOndcRequest, async (req, res) => {
   setImmediate(async () => {
     try {
       const order = getOrderById(orderId);
+      if (!order) {
+        ondcLogger.warn('on_status', `Order '${orderId}' not found for status query`);
+        return;
+      }
+
       const callbackPayload = {
         context: buildCallbackContext(context, 'on_status'),
         message: {
           order: {
             id: order.id,
-            state: order.orderStatus === 'delivered' ? 'Completed' : 'Accepted',
+            state: order.orderStatus === 'delivered' ? 'Completed' : (order.orderStatus === 'cancelled' ? 'Cancelled' : 'Accepted'),
             provider: { id: ondcConfig.seller.id },
             items: order.items.map((i) => ({
               id: i.id,
               quantity: { count: i.quantity },
             })),
-            fulfillments: [
+            fulfillments: order.fulfillments || [
               {
                 id: 'F1',
                 type: 'Delivery',
@@ -541,9 +561,9 @@ ondcRouter.post('/status', validateOndcRequest, async (req, res) => {
 });
 
 /**
- * POST /cancel -> returns ACK, cancels order, async callback /on_cancel
+ * POST /cancel -> returns ACK, restores inventory, async callback /on_cancel
  */
-ondcRouter.post('/cancel', validateOndcRequest, async (req, res) => {
+ondcRouter.post(['/cancel', '/ondc/cancel'], validateOndcRequest, async (req, res) => {
   const { context, message } = req.body;
   const orderId = message?.order_id || message?.order?.id;
   const reasonId = message?.cancellation_reason_id || '001';
@@ -558,6 +578,11 @@ ondcRouter.post('/cancel', validateOndcRequest, async (req, res) => {
   setImmediate(async () => {
     try {
       const cancelledOrder = cancelOrder(orderId, reasonId);
+      if (!cancelledOrder) {
+        ondcLogger.warn('on_cancel', `Order ${orderId} could not be cancelled (not found)`);
+        return;
+      }
+
       const callbackPayload = {
         context: buildCallbackContext(context, 'on_cancel'),
         message: {
@@ -580,9 +605,9 @@ ondcRouter.post('/cancel', validateOndcRequest, async (req, res) => {
 
 /**
  * POST /update -> Active Workbench Flow: Buyer_Initiated_Return_(Full_Order_and_Partial_Order)
- * Returns ACK, processes return, async callback /on_update
+ * Returns ACK, processes return, restores returned inventory, async callback /on_update
  */
-ondcRouter.post('/update', validateOndcRequest, async (req, res) => {
+ondcRouter.post(['/update', '/ondc/update'], validateOndcRequest, async (req, res) => {
   const { context, message } = req.body;
   ondcLogger.info('update', 'Received update request (Buyer-Initiated Return)', {
     transactionId: context.transaction_id,
@@ -622,7 +647,7 @@ ondcRouter.post('/update', validateOndcRequest, async (req, res) => {
 /**
  * POST /rating -> returns ACK, async callback /on_rating
  */
-ondcRouter.post('/rating', validateOndcRequest, async (req, res) => {
+ondcRouter.post(['/rating', '/ondc/rating'], validateOndcRequest, async (req, res) => {
   const { context } = req.body;
   sendAck(res);
 
@@ -640,7 +665,7 @@ ondcRouter.post('/rating', validateOndcRequest, async (req, res) => {
 /**
  * POST /track -> returns ACK, async callback /on_track
  */
-ondcRouter.post('/track', validateOndcRequest, async (req, res) => {
+ondcRouter.post(['/track', '/ondc/track'], validateOndcRequest, async (req, res) => {
   const { context, message } = req.body;
   const orderId = message?.order_id || 'ondc';
   sendAck(res);
@@ -662,7 +687,7 @@ ondcRouter.post('/track', validateOndcRequest, async (req, res) => {
 /**
  * POST /support -> returns ACK, async callback /on_support
  */
-ondcRouter.post('/support', validateOndcRequest, async (req, res) => {
+ondcRouter.post(['/support', '/ondc/support'], validateOndcRequest, async (req, res) => {
   const { context } = req.body;
   sendAck(res);
 
@@ -680,8 +705,199 @@ ondcRouter.post('/support', validateOndcRequest, async (req, res) => {
 });
 
 /* ==========================================================================
-   Admin & Observability Endpoints
+   Protocol Inbound Callback Endpoints (Gateway / Buyer -> Seller)
    ========================================================================== */
+
+const INBOUND_CALLBACK_ACTIONS = [
+  'on_search',
+  'on_select',
+  'on_init',
+  'on_confirm',
+  'on_status',
+  'on_track',
+  'on_cancel',
+  'on_update',
+  'on_rating',
+  'on_support',
+];
+
+for (const cbAction of INBOUND_CALLBACK_ACTIONS) {
+  ondcRouter.post([`/${cbAction}`, `/ondc/${cbAction}`], async (req, res) => {
+    const { context } = req.body || {};
+    if (!context || !context.transaction_id || !context.message_id) {
+      return sendNack(res, '10000', 'Missing context in callback');
+    }
+
+    // Check idempotency for inbound callbacks
+    const idempotency = stateManager.checkIdempotency(context.transaction_id, context.message_id, cbAction);
+    if (idempotency.isDuplicate) {
+      return sendAck(res);
+    }
+
+    stateManager.recordIdempotency(context.transaction_id, context.message_id, cbAction, { status: 'ACK' });
+    stateManager.recordTransition({
+      transactionId: context.transaction_id,
+      messageId: context.message_id,
+      action: cbAction,
+      orderId: req.body.message?.order?.id || null,
+    });
+
+    ondcLogger.info(cbAction, `Inbound callback received from ${context.bap_id || 'network'}`, {
+      transactionId: context.transaction_id,
+      messageId: context.message_id,
+    });
+
+    return sendAck(res);
+  });
+}
+
+/* ==========================================================================
+   Admin Diagnostic, Observability & Workbench Simulation Endpoints
+   ========================================================================== */
+
+/**
+ * POST /api/admin/ondc/workbench/simulate
+ * Simulates an end-to-end ONDC scenario executing genuine production business logic
+ */
+ondcRouter.post('/api/admin/ondc/workbench/simulate', async (req, res) => {
+  const startTime = Date.now();
+  const { scenario = 'search', payload = {} } = req.body || {};
+
+  try {
+    let resultPayload = null;
+    let validationReport = { valid: true, errors: [] };
+
+    switch (scenario) {
+      case 'search': {
+        const catalog = buildOndcCatalog(payload.intent || {});
+        resultPayload = {
+          context: buildCallbackContext(payload.context || { transaction_id: `sim_txn_${Date.now()}`, message_id: `sim_msg_${Date.now()}` }, 'on_search'),
+          message: { catalog },
+        };
+        const allProds = getAuthoritativeProducts();
+        const catVal = validateCatalog(allProds);
+        validationReport = {
+          valid: catVal.validProducts.length > 0,
+          totalCatalogItems: allProds.length,
+          compliantItems: catVal.validProducts.length,
+          rejectedItems: catVal.rejectedProducts,
+        };
+        break;
+      }
+
+      case 'select': {
+        const items = payload.items || [{ id: 'km-agri-a4-75', quantity: { count: 10 } }];
+        const address = payload.address || { state: 'Uttar Pradesh', city: 'Noida' };
+        const quoteResult = calculateQuote(items, address);
+        resultPayload = {
+          context: buildCallbackContext(payload.context || { transaction_id: `sim_txn_${Date.now()}`, message_id: `sim_msg_${Date.now()}` }, 'on_select'),
+          message: {
+            order: {
+              provider: { id: ondcConfig.seller.id },
+              items: quoteResult.items.map((it) => ({ id: it.id, fulfillment_id: 'F1', quantity: { count: it.quantity } })),
+              fulfillments: [{ id: 'F1', type: 'Delivery', tracking: true, state: { descriptor: { code: 'Serviceable' } } }],
+              quote: quoteResult.ondcQuote,
+            },
+          },
+        };
+        break;
+      }
+
+      case 'init': {
+        const items = payload.items || [{ id: 'km-agri-a4-75', quantity: { count: 10 } }];
+        const billing = payload.billing || { name: 'Acme Enterprises', address: { city: 'Noida', state: 'Uttar Pradesh' } };
+        const quoteResult = calculateQuote(items, billing.address);
+        resultPayload = {
+          context: buildCallbackContext(payload.context || { transaction_id: `sim_txn_${Date.now()}`, message_id: `sim_msg_${Date.now()}` }, 'on_init'),
+          message: {
+            order: {
+              provider: { id: ondcConfig.seller.id },
+              provider_location: { id: 'L1' },
+              items: quoteResult.items.map((it) => ({ id: it.id, fulfillment_id: 'F1', quantity: { count: it.quantity } })),
+              billing,
+              fulfillments: [{ id: 'F1', type: 'Delivery', tracking: true }],
+              quote: quoteResult.ondcQuote,
+              payment: { type: 'ON-FULFILLMENT', status: 'NOT-PAID' },
+            },
+          },
+        };
+        break;
+      }
+
+      case 'confirm': {
+        const orderId = payload.orderId || `sim_ord_${Date.now()}`;
+        const items = payload.items || [{ id: 'km-agri-a4-75', quantity: { count: 10 } }];
+        const context = payload.context || {
+          transaction_id: `sim_txn_${Date.now()}`,
+          message_id: `sim_msg_${Date.now()}`,
+          domain: ondcConfig.domain,
+        };
+        const saved = createOndcOrder({
+          ondcOrderId: orderId,
+          context,
+          orderPayload: {
+            id: orderId,
+            items,
+            billing: payload.billing || { name: 'Acme Enterprises' },
+          },
+        });
+        resultPayload = {
+          context: buildCallbackContext(context, 'on_confirm'),
+          message: {
+            order: {
+              id: saved.id,
+              state: 'Created',
+              grandTotal: saved.grandTotal,
+              items: saved.items,
+            },
+          },
+        };
+        break;
+      }
+
+      case 'update_return': {
+        const orderId = payload.orderId || getAllOndcOrders()[0]?.id;
+        if (!orderId) {
+          throw new Error('No confirmed order available to return. Please run confirm simulation first.');
+        }
+        const returnRes = handleBuyerInitiatedReturn({
+          context: payload.context || { transaction_id: `sim_txn_${Date.now()}`, message_id: `sim_msg_${Date.now()}` },
+          updatePayload: {
+            update_target: 'fulfillment',
+            order: {
+              id: orderId,
+              items: payload.items || [],
+            },
+          },
+        });
+        resultPayload = {
+          returnType: returnRes.returnType,
+          refundAmount: returnRes.totalRefundAmount,
+          order: returnRes.onUpdateOrder,
+        };
+        break;
+      }
+
+      default:
+        throw new Error(`Unsupported simulation scenario: '${scenario}'`);
+    }
+
+    return res.status(200).json({
+      success: true,
+      scenario,
+      executionTimeMs: Date.now() - startTime,
+      validation: validationReport,
+      result: resultPayload,
+    });
+  } catch (err) {
+    return res.status(400).json({
+      success: false,
+      scenario,
+      executionTimeMs: Date.now() - startTime,
+      error: err.message,
+    });
+  }
+});
 
 /**
  * GET /api/admin/ondc/orders - Fetch all ONDC orders for admin dashboard

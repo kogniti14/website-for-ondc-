@@ -8,8 +8,10 @@
 
 import { getOrderById, updateOrderStatus } from './orderManager.js';
 import ondcConfig from './config.js';
-import { PRODUCTS_CATALOG } from './catalogMapper.js';
+import { findProductById, PRODUCTS_CATALOG } from './catalogMapper.js';
+import persistentStore from '../storage/persistentStore.js';
 import stateManager from './stateManager.js';
+import ondcLogger from './logger.js';
 
 export function handleBuyerInitiatedReturn({ context, updatePayload }) {
   const orderId = updatePayload.order?.id;
@@ -105,6 +107,21 @@ export function handleBuyerInitiatedReturn({ context, updatePayload }) {
     note: `Buyer-initiated return approved (${returnType.replace('_', ' ')}). Refund amount: ₹${totalRefundAmount.toFixed(2)}`,
   });
 
+  // Restore inventory in persistentStore for returned quantities
+  try {
+    for (const ret of returnItemsDetails) {
+      const prod = findProductById(ret.id);
+      if (prod) {
+        prod.stock = Number(prod.stock || 0) + ret.returnCount;
+        persistentStore.save('products', prod);
+        ondcLogger.info('update', `Restored ${ret.returnCount} returned units of '${prod.name}' into inventory`);
+      }
+    }
+    persistentStore.save('ondc_orders', order);
+  } catch (invErr) {
+    ondcLogger.warn('update', `Could not update returned inventory in persistentStore: ${invErr.message}`);
+  }
+
   stateManager.recordTransition({
     transactionId: context.transaction_id,
     messageId: context.message_id,
@@ -183,7 +200,7 @@ export function handleBuyerInitiatedReturn({ context, updatePayload }) {
       '@ondc/org/title_type': 'item',
       price: {
         currency: 'INR',
-        value: item.taxableAmount.toFixed(2),
+        value: Number(item.taxableAmount || 0).toFixed(2),
       },
     });
     updatedBreakup.push({
@@ -192,7 +209,7 @@ export function handleBuyerInitiatedReturn({ context, updatePayload }) {
       '@ondc/org/title_type': 'tax',
       price: {
         currency: 'INR',
-        value: item.gstAmount.toFixed(2),
+        value: Number(item.gstAmount !== undefined ? item.gstAmount : (item.gstBreakup?.totalGst || 0)).toFixed(2),
       },
     });
   }

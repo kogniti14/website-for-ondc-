@@ -1,167 +1,127 @@
 /**
  * ONDC:RETeB2B Order Manager & Quotation Engine
  * Kogniti Minds Private Limited
+ * 
+ * Manages ONDC orders, synchronizes with persistentStore,
+ * calculates quotes using the central price engine,
+ * and maintains atomic inventory deductions and rollbacks.
  */
 
-import { findProductById, PRODUCTS_CATALOG } from './catalogMapper.js';
+import { findProductById } from './catalogMapper.js';
+import { calculateFullQuotation } from './priceEngine.js';
 import ondcConfig from './config.js';
+import persistentStore from '../storage/persistentStore.js';
+import ondcLogger from './logger.js';
 
-// In-memory orders store (synced with Supabase if configured)
-const ondcOrdersStore = new Map();
+// Fast in-memory cache of active ONDC orders
+export const ondcOrdersStore = new Map();
 
 /**
- * Calculate quotation for requested items in RETeB2B
+ * Calculate quotation for requested items in RETeB2B using central price engine
+ * @param {Array} orderItems - Requested items
+ * @param {object} deliveryAddress - Delivery address
+ * @returns {object} Quotation result
  */
 export function calculateQuote(orderItems = [], deliveryAddress = {}) {
-  let subtotal = 0;
-  let bulkDiscountTotal = 0;
-  let taxableAmount = 0;
-  let totalGst = 0;
-  const quoteBreakup = [];
-  const processedItems = [];
-
-  const isInterstate = Boolean(
-    deliveryAddress.state &&
-    deliveryAddress.state.toLowerCase() !== ondcConfig.seller.address.state.toLowerCase()
-  );
-
-  for (const requestedItem of orderItems) {
-    const product = findProductById(requestedItem.id);
-    if (!product) {
-      throw new Error(`Product ${requestedItem.id} not found in Kogniti Minds catalogue`);
-    }
-
-    const count = parseInt(requestedItem.quantity?.count || requestedItem.quantity || 1, 10);
-    const baseWholesale = product.b2bWholesalePrice;
-
-    // Determine bulk discount tier based on quantity
-    let discountPercent = 0;
-    let appliedSlabLabel = 'Base Wholesale';
-    for (const slab of product.b2bDiscountSlabs) {
-      if (count >= slab.minQty && (!slab.maxQty || count <= slab.maxQty)) {
-        discountPercent = slab.discountPercent;
-        appliedSlabLabel = slab.label;
-      }
-    }
-
-    const effectiveUnitPrice = Number((baseWholesale * (1 - discountPercent / 100)).toFixed(2));
-    const itemTaxable = Number((effectiveUnitPrice * count).toFixed(2));
-    const baseTotal = Number((baseWholesale * count).toFixed(2));
-    const itemDiscount = Number((baseTotal - itemTaxable).toFixed(2));
-
-    const itemGst = Number(((itemTaxable * product.gstRate) / 100).toFixed(2));
-
-    subtotal += baseTotal;
-    bulkDiscountTotal += itemDiscount;
-    taxableAmount += itemTaxable;
-    totalGst += itemGst;
-
-    processedItems.push({
-      id: product.id,
-      name: product.name,
-      sku: product.sku,
-      hsn: product.hsn,
-      quantity: count,
-      baseWholesalePrice: baseWholesale,
-      effectiveUnitPrice,
-      discountPercent,
-      slabLabel: appliedSlabLabel,
-      taxableAmount: itemTaxable,
-      gstRate: product.gstRate,
-      gstAmount: itemGst,
-      totalAmount: Number((itemTaxable + itemGst).toFixed(2)),
-      image: product.images[0],
-    });
-
-    // ONDC Quote Item Breakup
-    quoteBreakup.push({
-      '@ondc/org/item_id': product.id,
-      '@ondc/org/item_quantity': { count },
-      title: product.name,
-      '@ondc/org/title_type': 'item',
-      price: {
-        currency: 'INR',
-        value: itemTaxable.toFixed(2),
-      },
-      item: {
-        quantity: {
-          available: { count: product.stock.toString() },
-          maximum: { count: Math.min(product.stock, 500).toString() },
-        },
-        price: {
-          currency: 'INR',
-          value: effectiveUnitPrice.toFixed(2),
-        },
-      },
-    });
-
-    // ONDC Tax Breakup
-    quoteBreakup.push({
-      '@ondc/org/item_id': product.id,
-      title: `GST (${product.gstRate}%)`,
-      '@ondc/org/title_type': 'tax',
-      price: {
-        currency: 'INR',
-        value: itemGst.toFixed(2),
-      },
-    });
-  }
-
-  // Delivery / Freight computation (Free freight for bulk enterprise orders above ₹20,000)
-  const shippingFee = taxableAmount >= 20000 || taxableAmount === 0 ? 0 : 250;
-  if (shippingFee > 0) {
-    quoteBreakup.push({
-      title: 'Standard Enterprise Freight Delivery',
-      '@ondc/org/title_type': 'delivery',
-      price: {
-        currency: 'INR',
-        value: shippingFee.toFixed(2),
-      },
-    });
-  }
-
-  const grandTotal = Number((taxableAmount + totalGst + shippingFee).toFixed(2));
+  const quoteResult = calculateFullQuotation(orderItems, deliveryAddress, findProductById);
 
   let cgst = 0;
   let sgst = 0;
   let igst = 0;
-  if (isInterstate) {
-    igst = totalGst;
-  } else {
-    cgst = Number((totalGst / 2).toFixed(2));
-    sgst = Number((totalGst - cgst).toFixed(2));
+
+  for (const item of quoteResult.items) {
+    if (item.gstBreakup) {
+      if (item.gstBreakup.isInterstate) {
+        igst += item.gstBreakup.igst || 0;
+      } else {
+        cgst += item.gstBreakup.cgst || 0;
+        sgst += item.gstBreakup.sgst || 0;
+      }
+    }
   }
 
+  cgst = Number(cgst.toFixed(2));
+  sgst = Number(sgst.toFixed(2));
+  igst = Number(igst.toFixed(2));
+
+  const shippingFee = quoteResult.deliveryCharge || 0;
+
   return {
-    subtotal: Number(subtotal.toFixed(2)),
-    bulkDiscountTotal: Number(bulkDiscountTotal.toFixed(2)),
-    taxableAmount: Number(taxableAmount.toFixed(2)),
+    subtotal: quoteResult.subtotal,
+    bulkDiscountTotal: quoteResult.bulkDiscountTotal,
+    taxableAmount: quoteResult.taxableAmount,
     cgst,
     sgst,
     igst,
-    totalGst: Number(totalGst.toFixed(2)),
+    totalGst: quoteResult.totalGst,
     shippingFee,
-    grandTotal,
-    items: processedItems,
+    grandTotal: quoteResult.grandTotal,
+    items: quoteResult.items,
     ondcQuote: {
       price: {
         currency: 'INR',
-        value: grandTotal.toFixed(2),
+        value: quoteResult.grandTotal.toFixed(2),
       },
-      breakup: quoteBreakup,
+      breakup: quoteResult.quoteBreakup || [],
       ttl: 'P1D',
     },
   };
 }
 
 /**
- * Persist confirmed ONDC order
+ * Persist confirmed ONDC order and atomically deduct inventory
+ * @param {object} params
+ * @param {string} params.ondcOrderId - ONDC order ID
+ * @param {object} params.context - Protocol context
+ * @param {object} params.orderPayload - Inbound order payload
+ * @returns {object} Saved order record
  */
-export function createOndcOrder({ ondcOrderId, context, orderPayload }) {
-  const quote = calculateQuote(orderPayload.items || [], orderPayload.fulfillments?.[0]?.end?.location?.address || {});
+export function createOndcOrder({ ondcOrderId, context, orderPayload = {} }) {
+  const deliveryAddress = orderPayload.fulfillments?.[0]?.end?.location?.address || {};
+  const requestedItems = orderPayload.items || [];
+
+  const quote = calculateQuote(requestedItems, deliveryAddress);
+
+  // 1. Verify stock availability and deduct inventory atomically
+  const inventoryDeductions = [];
+  try {
+    for (const reqItem of requestedItems) {
+      const prod = findProductById(reqItem.id);
+      if (!prod) {
+        throw new Error(`Product ${reqItem.id} not found in catalog`);
+      }
+      const count = parseInt(reqItem.quantity?.count || reqItem.quantity || 1, 10);
+      const currentStock = Number(prod.stock !== undefined ? prod.stock : 100);
+
+      if (currentStock < count) {
+        const err = new Error(`Insufficient stock for product '${prod.name}'. Requested ${count}, available ${currentStock}`);
+        err.code = '30006';
+        throw err;
+      }
+
+      // Deduct inventory
+      prod.stock = Math.max(0, currentStock - count);
+      persistentStore.save('products', prod);
+      inventoryDeductions.push({ productId: prod.id, deductedCount: count });
+    }
+  } catch (stockErr) {
+    // Rollback any partial deductions on failure
+    for (const d of inventoryDeductions) {
+      const p = findProductById(d.productId);
+      if (p) {
+        p.stock = Number(p.stock || 0) + d.deductedCount;
+        persistentStore.save('products', p);
+      }
+    }
+    throw stockErr;
+  }
+
+  // 2. Build canonical order record
+  const resolvedOrderId = ondcOrderId || orderPayload.id || `km_ondc_${Date.now()}`;
+  const nowIso = new Date().toISOString();
 
   const orderRecord = {
-    id: ondcOrderId || orderPayload.id || `km_ondc_${Date.now()}`,
+    id: resolvedOrderId,
     orderNumber: `KM-ONDC-${Date.now().toString().slice(-6)}`,
     poNumber: orderPayload.payment?.params?.transaction_id || `PO-ONDC-${Date.now().toString().slice(-6)}`,
     source: 'ondc',
@@ -171,12 +131,12 @@ export function createOndcOrder({ ondcOrderId, context, orderPayload }) {
       bapId: context.bap_id,
       bapUri: context.bap_uri,
       bppId: context.bpp_id || ondcConfig.subscriberId,
-      domain: context.domain,
+      domain: context.domain || ondcConfig.domain,
     },
-    businessName: orderPayload.billing?.name || 'ONDC B2B Buyer',
-    gstin: orderPayload.billing?.tax_number || orderPayload.tags?.find?.((t) => t.code === 'bap_terms')?.list?.find?.((l) => l.code === 'gstin')?.value || '',
-    shippingAddress: orderPayload.fulfillments?.[0]?.end?.location?.address || {},
-    billingAddress: orderPayload.billing?.address || orderPayload.fulfillments?.[0]?.end?.location?.address || {},
+    businessName: orderPayload.billing?.name || 'ONDC Enterprise Buyer',
+    gstin: orderPayload.billing?.tax_number || '',
+    shippingAddress: deliveryAddress,
+    billingAddress: orderPayload.billing?.address || deliveryAddress,
     items: quote.items,
     subtotal: quote.subtotal,
     bulkDiscountTotal: quote.bulkDiscountTotal,
@@ -189,12 +149,13 @@ export function createOndcOrder({ ondcOrderId, context, orderPayload }) {
     grandTotal: quote.grandTotal,
     orderStatus: 'confirmed',
     paymentStatus: orderPayload.payment?.status === 'PAID' ? 'paid' : 'pending_po_approval',
-    createdAt: new Date().toISOString(),
+    createdAt: nowIso,
+    updatedAt: nowIso,
     statusTimeline: [
       {
         status: 'CONFIRMED',
-        timestamp: new Date().toISOString(),
-        note: 'Order placed and confirmed via ONDC eB2B network',
+        timestamp: nowIso,
+        note: 'Order confirmed via ONDC network. Real inventory reserved.',
       },
     ],
     fulfillments: [
@@ -203,92 +164,165 @@ export function createOndcOrder({ ondcOrderId, context, orderPayload }) {
         type: 'Delivery',
         state: { descriptor: { code: 'Order-picked-up' } },
         tracking: true,
-        tracking_url: `https://kognitiminds.com/track/${ondcOrderId || 'ondc'}`,
+        tracking_url: `https://kognitiminds.com/track/${resolvedOrderId}`,
       },
     ],
   };
 
+  // 3. Persist to memory and disk
   ondcOrdersStore.set(orderRecord.id, orderRecord);
+  try {
+    persistentStore.save('ondc_orders', orderRecord);
+  } catch (err) {
+    ondcLogger.warn('orderManager', `Could not persist order to disk: ${err.message}`);
+  }
+
+  ondcLogger.info('confirm', `Order ${orderRecord.id} created successfully. Total: ₹${orderRecord.grandTotal}`, {
+    transactionId: context.transaction_id,
+    orderId: orderRecord.id,
+  });
+
   return orderRecord;
 }
 
 /**
- * Retrieve ONDC order by ID
+ * Retrieve ONDC order by ID from memory or persistentStore.
+ * Returns null if not found (genuine protocol lookup, zero fake mock objects).
+ * @param {string} id - Order ID
+ * @returns {object|null}
  */
 export function getOrderById(id) {
+  if (!id) return null;
+
+  // 1. Check in-memory store
   if (ondcOrdersStore.has(id)) {
     return ondcOrdersStore.get(id);
   }
 
-  // Provide synthetic lookup for Workbench tests if order not seeded
-  const mockOrder = {
-    id,
-    orderNumber: `KM-ONDC-${id.slice(-6)}`,
-    source: 'ondc',
-    businessName: 'ONDC Verified Enterprise Buyer',
-    items: [
-      {
-        id: PRODUCTS_CATALOG[0].id,
-        name: PRODUCTS_CATALOG[0].name,
-        sku: PRODUCTS_CATALOG[0].sku,
-        quantity: 20,
-        effectiveUnitPrice: PRODUCTS_CATALOG[0].b2bWholesalePrice,
-        taxableAmount: PRODUCTS_CATALOG[0].b2bWholesalePrice * 20,
-        gstAmount: (PRODUCTS_CATALOG[0].b2bWholesalePrice * 20 * 0.18),
-        totalAmount: (PRODUCTS_CATALOG[0].b2bWholesalePrice * 20 * 1.18),
-      },
-    ],
-    grandTotal: Number((PRODUCTS_CATALOG[0].b2bWholesalePrice * 20 * 1.18).toFixed(2)),
-    orderStatus: 'delivered',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    statusTimeline: [
-      { status: 'DELIVERED', timestamp: new Date().toISOString(), note: 'Delivered successfully' },
-    ],
-  };
+  // 2. Check persistentStore
+  try {
+    const fromDisk = persistentStore.getById('ondc_orders', id);
+    if (fromDisk) {
+      ondcOrdersStore.set(fromDisk.id, fromDisk);
+      return fromDisk;
+    }
 
-  ondcOrdersStore.set(id, mockOrder);
-  return mockOrder;
+    // Check b2b_orders collection as fallback
+    const fromB2b = persistentStore.getById('b2b_orders', id);
+    if (fromB2b) {
+      ondcOrdersStore.set(fromB2b.id, fromB2b);
+      return fromB2b;
+    }
+  } catch (err) {
+    ondcLogger.warn('orderManager', `Error looking up order '${id}' in persistentStore: ${err.message}`);
+  }
+
+  return null;
 }
 
 /**
- * Update order status
+ * Update order status and record timeline event
+ * @param {string} id - Order ID
+ * @param {string} newStatus - New status
+ * @param {string} note - Optional note
+ * @returns {object|null} Updated order
  */
 export function updateOrderStatus(id, newStatus, note = '') {
   const order = getOrderById(id);
-  if (order) {
-    order.orderStatus = newStatus;
-    order.statusTimeline.push({
-      status: newStatus.toUpperCase(),
-      timestamp: new Date().toISOString(),
-      note: note || `Order status updated to ${newStatus}`,
-    });
+  if (!order) return null;
+
+  order.orderStatus = newStatus;
+  order.updatedAt = new Date().toISOString();
+  order.statusTimeline = order.statusTimeline || [];
+  order.statusTimeline.push({
+    status: newStatus.toUpperCase(),
+    timestamp: new Date().toISOString(),
+    note: note || `Order status updated to ${newStatus}`,
+  });
+
+  ondcOrdersStore.set(order.id, order);
+  try {
+    persistentStore.save('ondc_orders', order);
+  } catch (err) {
+    ondcLogger.warn('orderManager', `Error updating order ${id} on disk: ${err.message}`);
   }
+
   return order;
 }
 
 /**
- * Cancel an order
+ * Cancel an order and restore inventory in persistentStore
+ * @param {string} id - Order ID
+ * @param {string} reasonId - ONDC cancellation reason code
+ * @param {string} note - Cancellation note
+ * @returns {object|null} Cancelled order
  */
 export function cancelOrder(id, reasonId = '001', note = '') {
   const order = getOrderById(id);
-  if (order) {
-    order.orderStatus = 'cancelled';
-    order.cancellationReason = reasonId;
-    order.statusTimeline.push({
-      status: 'CANCELLED',
-      timestamp: new Date().toISOString(),
-      note: note || `Order cancelled by buyer with reason code: ${reasonId}`,
-    });
+  if (!order) return null;
+
+  if (order.orderStatus === 'cancelled') {
+    return order; // Already cancelled
   }
+
+  // Restore inventory in persistentStore
+  if (Array.isArray(order.items)) {
+    for (const it of order.items) {
+      const prod = findProductById(it.id);
+      if (prod) {
+        const qty = parseInt(it.quantity || 1, 10);
+        prod.stock = Number(prod.stock || 0) + qty;
+        persistentStore.save('products', prod);
+        ondcLogger.info('cancel', `Restored ${qty} units of ${prod.name} into inventory`);
+      }
+    }
+  }
+
+  order.orderStatus = 'cancelled';
+  order.cancellationReason = reasonId;
+  order.updatedAt = new Date().toISOString();
+  order.statusTimeline = order.statusTimeline || [];
+  order.statusTimeline.push({
+    status: 'CANCELLED',
+    timestamp: new Date().toISOString(),
+    note: note || `Order cancelled by buyer with reason code: ${reasonId}. Inventory restored.`,
+  });
+
+  ondcOrdersStore.set(order.id, order);
+  try {
+    persistentStore.save('ondc_orders', order);
+  } catch (err) {
+    ondcLogger.warn('orderManager', `Error saving cancelled order ${id} on disk: ${err.message}`);
+  }
+
   return order;
 }
 
 /**
  * Return all registered ONDC orders for admin dashboard
+ * Merges memory and disk stores
+ * @returns {Array} List of orders
  */
 export function getAllOndcOrders() {
-  return Array.from(ondcOrdersStore.values()).sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  const combined = new Map();
+
+  try {
+    const diskOrders = persistentStore.getAll('ondc_orders');
+    if (Array.isArray(diskOrders)) {
+      for (const ord of diskOrders) {
+        if (ord && ord.id) combined.set(ord.id, ord);
+      }
+    }
+  } catch {
+    // Disk store fallback
+  }
+
+  for (const [id, ord] of ondcOrdersStore.entries()) {
+    combined.set(id, ord);
+  }
+
+  return Array.from(combined.values()).sort(
+    (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
   );
 }
 

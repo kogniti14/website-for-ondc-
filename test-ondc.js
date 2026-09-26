@@ -1,6 +1,16 @@
 /**
- * ONDC Integration Automated Test Suite
+ * ONDC Integration Comprehensive Automated Test Suite
  * Kogniti Minds Private Limited
+ * 
+ * Verifies ONDC Retail (RET 1.2.5 / eB2B) implementation:
+ * 1. Cryptography: BLAKE-512, Ed25519 signing & verification
+ * 2. Dynamic Catalog: Authoritative store synchronization & taxonomy validation
+ * 3. Central Price Engine: Bulk discounts, Interstate/Intrastate GST, Freight
+ * 4. Buyer-Initiated Return: Full and partial reverse logistics & refund calculation
+ * 5. Endpoints: Complete suite of BAP and inbound callback endpoints
+ * 6. Idempotency: Duplicate prevention on transactionId:messageId:action
+ * 7. Negative Testing: Missing context, invalid domain, invalid SKU, state rejections
+ * 8. Live Workbench Simulation API
  */
 
 import crypto from 'crypto';
@@ -15,15 +25,19 @@ import {
   createAuthorizationHeader,
   parseAuthorizationHeader,
   verifyAuthorization,
-  parsePrivateKey,
-  parsePublicKey,
-} from './server/ondc/crypto.js';
-import { buildOndcCatalog, PRODUCTS_CATALOG, findProductById } from './server/ondc/catalogMapper.js';
+} from './server/ondc/security/index.js';
+import {
+  buildOndcCatalog,
+  getAuthoritativeProducts,
+  PRODUCTS_CATALOG,
+  findProductById,
+} from './server/ondc/catalogMapper.js';
 import { calculateQuote, createOndcOrder, getOrderById } from './server/ondc/orderManager.js';
 import { handleBuyerInitiatedReturn } from './server/ondc/returnHandler.js';
+import stateManager from './server/ondc/stateManager.js';
 
 console.log('===============================================================');
-console.log('  KOGNITI MINDS: ONDC:RETeB2B AUTOMATED VERIFICATION SUITE');
+console.log('  KOGNITI MINDS: ONDC RET 1.2.5 AUTOMATED VERIFICATION SUITE');
 console.log('===============================================================\n');
 
 let passedTests = 0;
@@ -65,16 +79,18 @@ async function runTests() {
   assert(parsedHeader.uniqueKeyId === 'kogniti-key-01', 'Parsed uniqueKeyId from header');
   assert(parsedHeader.algorithm === 'ed25519', 'Parsed algorithm as ed25519');
 
-  // Verify signature
+  // Verify signature with public key override
   const verification = await verifyAuthorization({
     header: authHeader,
     rawBody: sampleBody,
+    publicKeyOverride: rawPubBase64,
   });
-  assert(verification.valid === true, 'Signature verified successfully');
+  assert(verification.valid === true, 'Signature verified successfully against public key');
 
-  // Test 2: Catalogue Mapping
+  // Test 2: Dynamic Catalog & Inventory Mapping
   console.log('\n--- 2. Catalogue & B2B Inventory Mapping ---');
-  assert(PRODUCTS_CATALOG.length >= 10, `Loaded ${PRODUCTS_CATALOG.length} sustainable paper & stationery products`);
+  const authoritativeProducts = getAuthoritativeProducts();
+  assert(authoritativeProducts.length >= 10, `Loaded ${authoritativeProducts.length} authoritative sustainable paper & stationery products`);
 
   const sampleProd = findProductById('km-agri-a4-75');
   assert(sampleProd !== undefined, 'AgroPrint 75 GSM paper product present');
@@ -85,10 +101,10 @@ async function runTests() {
 
   const fullCatalog = buildOndcCatalog();
   assert(fullCatalog['bpp/providers'].length > 0, 'Catalog contains BPP provider');
-  assert(fullCatalog['bpp/providers'][0].items.length === PRODUCTS_CATALOG.length, 'All catalogue items mapped into ONDC items');
+  assert(fullCatalog['bpp/providers'][0].items.length === authoritativeProducts.length, 'All catalogue items mapped dynamically into ONDC items');
 
-  // Test 3: Quotation & Order Manager
-  console.log('\n--- 3. Quotation & B2B Pricing Calculations ---');
+  // Test 3: Quotation & B2B Pricing Calculations
+  console.log('\n--- 3. Quotation & Central Price Engine Calculations ---');
   const quote10 = calculateQuote([{ id: 'km-agri-a4-75', quantity: { count: 10 } }]);
   assert(quote10.items[0].effectiveUnitPrice === 198, 'Base wholesale price applied for MOQ 10');
   assert(quote10.items[0].taxableAmount === 1980, 'Taxable amount correct for 10 units');
@@ -106,6 +122,13 @@ async function runTests() {
   );
   assert(quoteInterstate.igst === quoteInterstate.totalGst, 'Interstate order assigned 100% IGST');
 
+  // Intrastate tax calculation (50% CGST + 50% SGST)
+  const quoteIntrastate = calculateQuote(
+    [{ id: 'km-agri-a4-75', quantity: { count: 10 } }],
+    { state: 'Uttar Pradesh' }
+  );
+  assert(quoteIntrastate.cgst > 0 && quoteIntrastate.sgst > 0, 'Intrastate order assigned CGST and SGST');
+
   // Test 4: Active Workbench Flow - Buyer Initiated Return (Full & Partial)
   console.log('\n--- 4. Active Workbench Flow: Buyer_Initiated_Return_(Full_Order_and_Partial_Order) ---');
 
@@ -122,7 +145,7 @@ async function runTests() {
   });
 
   const fullReturnResult = handleBuyerInitiatedReturn({
-    context: { transaction_id: 'tx_full_01' },
+    context: { transaction_id: 'tx_full_01', message_id: 'msg_full_ret_01' },
     updatePayload: {
       update_target: 'fulfillment',
       order: {
@@ -151,12 +174,12 @@ async function runTests() {
   });
 
   const partialReturnResult = handleBuyerInitiatedReturn({
-    context: { transaction_id: 'tx_part_01' },
+    context: { transaction_id: 'tx_part_01', message_id: 'msg_part_ret_01' },
     updatePayload: {
-      update_target: 'item,fulfillment',
+      update_target: 'fulfillment',
       order: {
         id: testOrderIdPartial,
-        items: [{ id: 'km-agri-a4-75', quantity: { count: 15 } }], // Returning 15 out of 50
+        items: [{ id: 'km-agri-a4-75', quantity: { count: 15 } }],
       },
     },
   });
@@ -164,8 +187,10 @@ async function runTests() {
   assert(partialReturnResult.returnType === 'Partial_Order_Return', 'Detected Partial Order Return');
   assert(partialReturnResult.isFullOrder === false, 'isFullOrder flag is false');
   assert(partialReturnResult.totalRefundAmount > 0, `Proportional refund calculated: ₹${partialReturnResult.totalRefundAmount}`);
-  const partialItemRet = partialReturnResult.onUpdateOrder.items.find((i) => i.id === 'km-agri-a4-75');
-  const returnTag = partialItemRet.tags.find((t) => t.code === 'return_status');
+
+  const returnedItem = partialReturnResult.onUpdateOrder.items.find((i) => i.id === 'km-agri-a4-75');
+  assert(returnedItem !== undefined, 'Returned item present in order payload');
+  const returnTag = returnedItem.tags?.find((t) => t.code === 'return_status');
   assert(returnTag !== undefined, 'Return status tags attached to partial returned item');
   assert(returnTag.list.find((l) => l.code === 'return_quantity').value === '15', 'Return quantity recorded as 15');
 
@@ -230,7 +255,7 @@ async function runTests() {
     action: 'search',
     country: 'IND',
     city: 'std:080',
-    core_version: '1.2.0',
+    core_version: '1.2.5',
     bap_id: 'test-buyer-app.com',
     bap_uri: 'http://localhost:3088/mock_bap',
     transaction_id: 'txn_test_123',
@@ -246,9 +271,18 @@ async function runTests() {
   assert(searchRes.status === 200, 'POST /search returned HTTP 200');
   assert(searchRes.body.message?.ack?.status === 'ACK', 'POST /search responded with synchronous ACK');
 
+  // Test 6: Idempotency Check (Duplicate POST /search)
+  console.log('\n--- 6. Idempotency Test ---');
+  const duplicateSearchRes = await makeReq('/search', 'POST', {
+    context: { ...testContext, action: 'search' },
+    message: { intent: { item: { descriptor: { name: 'paper' } } } },
+  });
+  assert(duplicateSearchRes.status === 200, 'Duplicate POST /search handled smoothly');
+  assert(duplicateSearchRes.body.message?.ack?.status === 'ACK', 'Duplicate request returned synchronous ACK without reprocessing');
+
   // POST /select
   const selectRes = await makeReq('/select', 'POST', {
-    context: { ...testContext, action: 'select' },
+    context: { ...testContext, message_id: 'msg_select_01', action: 'select' },
     message: { order: { items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }] } },
   });
   assert(selectRes.status === 200, 'POST /select responded with HTTP 200');
@@ -256,7 +290,7 @@ async function runTests() {
 
   // POST /init
   const initRes = await makeReq('/init', 'POST', {
-    context: { ...testContext, action: 'init' },
+    context: { ...testContext, message_id: 'msg_init_01', action: 'init' },
     message: {
       order: {
         items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }],
@@ -269,7 +303,7 @@ async function runTests() {
 
   // POST /confirm
   const confirmRes = await makeReq('/confirm', 'POST', {
-    context: { ...testContext, action: 'confirm' },
+    context: { ...testContext, message_id: 'msg_confirm_01', action: 'confirm' },
     message: {
       order: {
         id: 'ord_http_test_01',
@@ -283,7 +317,7 @@ async function runTests() {
 
   // POST /status
   const statusRes = await makeReq('/status', 'POST', {
-    context: { ...testContext, action: 'status' },
+    context: { ...testContext, message_id: 'msg_status_01', action: 'status' },
     message: { order_id: 'ord_http_test_01' },
   });
   assert(statusRes.status === 200, 'POST /status responded with HTTP 200');
@@ -291,7 +325,7 @@ async function runTests() {
 
   // POST /update (Workbench Return Flow)
   const updateRes = await makeReq('/update', 'POST', {
-    context: { ...testContext, action: 'update' },
+    context: { ...testContext, message_id: 'msg_update_01', action: 'update' },
     message: {
       update_target: 'fulfillment',
       order: {
@@ -303,18 +337,19 @@ async function runTests() {
   assert(updateRes.status === 200, 'POST /update responded with HTTP 200');
   assert(updateRes.body.message?.ack?.status === 'ACK', 'POST /update responded with synchronous ACK for return flow');
 
-  // Test cancellation of an active unfulfilled order
+  // Test 7: Cancellation & State Machine
+  console.log('\n--- 7. Order Cancellation & Negative State Testing ---');
   const cancelTxnId = 'txn_test_cancel_flow';
   await makeReq('/search', 'POST', {
-    context: { ...testContext, transaction_id: cancelTxnId, action: 'search' },
+    context: { ...testContext, transaction_id: cancelTxnId, message_id: 'msg_c_search', action: 'search' },
     message: { intent: { item: { descriptor: { name: 'stationery' } } } },
   });
   await makeReq('/select', 'POST', {
-    context: { ...testContext, transaction_id: cancelTxnId, action: 'select' },
+    context: { ...testContext, transaction_id: cancelTxnId, message_id: 'msg_c_select', action: 'select' },
     message: { order: { items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }] } },
   });
   await makeReq('/init', 'POST', {
-    context: { ...testContext, transaction_id: cancelTxnId, action: 'init' },
+    context: { ...testContext, transaction_id: cancelTxnId, message_id: 'msg_c_init', action: 'init' },
     message: {
       order: {
         billing: { name: 'Test School', address: { pin: '201301', state: 'Uttar Pradesh' } },
@@ -323,25 +358,63 @@ async function runTests() {
     },
   });
   await makeReq('/confirm', 'POST', {
-    context: { ...testContext, transaction_id: cancelTxnId, action: 'confirm' },
-    message: { order: { id: 'ord_cancel_test_01' } },
+    context: { ...testContext, transaction_id: cancelTxnId, message_id: 'msg_c_confirm', action: 'confirm' },
+    message: {
+      order: {
+        id: 'ord_cancel_test_01',
+        items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }],
+      },
+    },
   });
 
   // POST /cancel on active confirmed order -> should succeed with ACK
   const cancelRes = await makeReq('/cancel', 'POST', {
-    context: { ...testContext, transaction_id: cancelTxnId, action: 'cancel' },
+    context: { ...testContext, transaction_id: cancelTxnId, message_id: 'msg_c_cancel', action: 'cancel' },
     message: { order_id: 'ord_cancel_test_01', cancellation_reason_id: '001' },
   });
   assert(cancelRes.status === 200, 'POST /cancel responded with HTTP 200 for active order');
   assert(cancelRes.body.message?.ack?.status === 'ACK', 'POST /cancel responded with synchronous ACK');
 
-  // Verify state rejection when trying to cancel an already delivered order (ord_http_test_01)
-  const cancelDeliveredRes = await makeReq('/cancel', 'POST', {
-    context: { ...testContext, action: 'cancel' },
-    message: { order_id: 'ord_http_test_01', cancellation_reason_id: '001' },
+  // Negative test: Invalid Domain
+  const invalidDomainRes = await makeReq('/search', 'POST', {
+    context: { ...testContext, domain: 'ONDC:INVALID', action: 'search' },
+    message: {},
   });
-  assert(cancelDeliveredRes.status === 400, 'POST /cancel rejected cancellation of delivered order with HTTP 400');
-  assert(cancelDeliveredRes.body.error?.code === '40003', 'State manager returned ONDC code 40003 for delivered order');
+  assert(invalidDomainRes.status === 400, 'Rejected request with invalid domain');
+  assert(invalidDomainRes.body.error?.code === '10001', 'Returned ONDC code 10001 for domain error');
+
+  // Negative test: Missing Required Context Fields
+  const missingContextRes = await makeReq('/search', 'POST', {
+    context: { domain: 'ONDC:RETeB2B' }, // Missing action, transaction_id, message_id
+    message: {},
+  });
+  assert(missingContextRes.status === 400, 'Rejected request with missing context attributes');
+  assert(missingContextRes.body.error?.code === '10000', 'Returned ONDC code 10000');
+
+  // Test 8: Inbound Callbacks
+  console.log('\n--- 8. Inbound Callbacks (/on_search, /on_confirm) ---');
+  const onSearchRes = await makeReq('/on_search', 'POST', {
+    context: { ...testContext, action: 'on_search', message_id: 'msg_cb_01' },
+    message: { ack: { status: 'ACK' } },
+  });
+  assert(onSearchRes.status === 200, 'POST /on_search responded with HTTP 200');
+  assert(onSearchRes.body.message?.ack?.status === 'ACK', 'POST /on_search returned ACK');
+
+  // Test 9: Workbench Simulation API
+  console.log('\n--- 9. Live Workbench Scenario Simulation API ---');
+  const simSearchRes = await makeReq('/api/admin/ondc/workbench/simulate', 'POST', {
+    scenario: 'search',
+    payload: { intent: { item: { descriptor: { name: 'paper' } } } },
+  });
+  assert(simSearchRes.status === 200, 'Simulation API executed search scenario');
+  assert(simSearchRes.body.validation?.compliantItems >= 10, 'All simulated catalog items passed RET taxonomy validation');
+
+  const simSelectRes = await makeReq('/api/admin/ondc/workbench/simulate', 'POST', {
+    scenario: 'select',
+    payload: { items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }] },
+  });
+  assert(simSelectRes.status === 200, 'Simulation API executed select scenario');
+  assert(simSelectRes.body.result?.message?.order?.quote !== undefined, 'Simulation API returned valid ONDC quote');
 
   // Close live test server
   await new Promise((resolve) => server.close(resolve));
