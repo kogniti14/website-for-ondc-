@@ -77,17 +77,22 @@ DirectoryIndex dist/index.html index.html
   RewriteCond %{QUERY_STRING} (?:^|&)srsltid=[^&]* [NC]
   RewriteRule ^(.*)$ https://kognitiminds.com/$1? [R=301,L]
 
-  # 1. Direct Native Handlers for Production APIs (Zero proxy overhead, zero 503 errors)
+  # 1. Existing Physical Files & Directories (Serve immediately with zero overhead)
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # 2. Direct Native Handlers for Production APIs (Zero proxy overhead, zero 503 errors)
   RewriteRule ^api/auth/send-otp/?$ public/api/send-email.php [QSA,L]
   RewriteRule ^api/resend/?$ public/api/send-email.php [QSA,L]
   RewriteRule ^api/health/?$ public/api/health.php [QSA,L]
   RewriteRule ^api/upload/?$ public/api/upload.php [QSA,L]
   RewriteRule ^api/data/([a-zA-Z0-9_-]+)/?([a-zA-Z0-9_-]*)?$ public/api/data.php?collection=$1&id=$2 [QSA,L]
 
-  # 2. Uploads resolution (public/uploads or uploads)
+  # 3. Uploads resolution (public/uploads or uploads)
   RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
 
-  # 3. Dedicated ONDC Protocol routes to Node.js backend (Port 3000)
+  # 4. Dedicated ONDC Protocol routes to Node.js backend (Port 3000)
   <IfModule mod_proxy.c>
     RewriteCond %{REQUEST_URI} !\.php$ [NC]
     RewriteCond %{REQUEST_URI} !\.(zip|json|md|png|jpe?g|svg|ico)$ [NC]
@@ -95,26 +100,20 @@ DirectoryIndex dist/index.html index.html
     RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
   </IfModule>
 
-  # 4. Root index route -> always serve dist/index.html
+  # 5. Root index route -> always serve dist/index.html
   RewriteRule ^$ dist/index.html [L]
   RewriteRule ^index\.html$ dist/index.html [L]
 
-  # 5. Direct /assets/* resolution (works whether assets is in ./assets or ./dist/assets)
+  # 6. Direct /assets/* resolution (works whether assets is in ./assets or ./dist/assets)
   RewriteCond %{REQUEST_URI} ^/assets/ [NC]
   RewriteCond %{REQUEST_FILENAME} -f
   RewriteRule ^ - [L]
 
   RewriteRule ^assets/(.*)$ dist/assets/$1 [L]
 
-  # 6. Physical files and directories served directly if present
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
-  RewriteCond %{REQUEST_FILENAME} -d
-  RewriteRule ^ - [L]
-
-  # 7. Fallback to dist/ for root-level static files (e.g. logo-icon.png, favicon.ico, ondc-workbench-kit.zip)
+  # 7. Fallback to dist/ for root-level static files (e.g. logo-icon.png, favicon.ico)
   RewriteCond %{REQUEST_URI} !^/dist/
   RewriteRule ^([a-zA-Z0-9_-]+\.(png|jpe?g|gif|ico|svg|webp|woff2?|ttf|eot|pdf|zip|json))$ dist/$1 [L]
-  RewriteRule ^ondc-workbench/(.*)$ dist/ondc-workbench/$1 [L]
 
   # 8. Missing static assets guard (clean 404, never fallback to index.html for assets)
   RewriteCond %{REQUEST_URI} \.(js|css|png|jpe?g|gif|ico|svg|webp|woff2?|ttf|eot|pdf|zip|json)$ [NC]
