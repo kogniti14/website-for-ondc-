@@ -85,10 +85,10 @@ DirectoryIndex dist/index.html index.html
   # 2. Uploads resolution (public/uploads or uploads)
   RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
 
-  # 3. Dedicated ONDC Protocol routes to Node.js backend (Port 3000) ONLY
+  # 3. Dedicated ONDC Protocol routes to Node.js backend (Port 3000)
   <IfModule mod_proxy.c>
     RewriteCond %{REQUEST_URI} !\.php$ [NC]
-    RewriteCond %{REQUEST_URI} ^/(search|select|init|confirm|status|cancel|update|rating|track|support|ondc) [NC]
+    RewriteCond %{REQUEST_URI} ^/(search|select|init|confirm|status|cancel|update|rating|track|support|on_search|on_select|on_init|on_confirm|on_status|on_cancel|on_update|on_rating|on_track|on_support|on_search_sample|ondc|api/admin/ondc) [NC]
     RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
   </IfModule>
 
