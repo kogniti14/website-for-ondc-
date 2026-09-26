@@ -99,6 +99,8 @@ if (!empty($requested)) {
 // 3. Fallback: Directory Listing / Index
 $workbenchDir = null;
 $checkDirs = [
+    __DIR__ . '/../ondc-workbench',
+    __DIR__ . '/../../ondc-workbench',
     $rootDir . '/public/ondc-workbench',
     $rootDir . '/dist/ondc-workbench',
     $rootDir . '/ondc-workbench',
