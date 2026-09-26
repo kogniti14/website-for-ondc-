@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build && cp -r dist/assets . 2>/dev/null && cp -n public/*.png public/*.ico public/*.svg . 2>/dev/null || true",
     "start": "node server.js",
+    "test": "node test-regression.js",
     "test:ondc": "node test-ondc.js",
+    "test:regression": "node test-regression.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
