@@ -97,35 +97,44 @@ if (!empty($requested)) {
 }
 
 // 3. Fallback: Directory Listing / Index
-$workbenchDir = null;
-$checkDirs = [
-    __DIR__ . '/../ondc-workbench',
-    __DIR__ . '/../../ondc-workbench',
+$scenarioFiles = [
+    '01_on_search.json',
+    '02_on_select.json',
+    '03_on_init.json',
+    '04_on_confirm.json',
+    '05_on_status.json',
+    '06_on_update_partial_return.json',
+    '07_on_update_full_return.json',
+    '08_on_cancel.json',
+    '09_on_track.json',
+    '10_on_support.json',
+    'workbench_manifest.json',
+    'README.md',
+];
+
+$candidateDirs = [
     $rootDir . '/public/ondc-workbench',
     $rootDir . '/dist/ondc-workbench',
     $rootDir . '/ondc-workbench',
+    __DIR__ . '/../ondc-workbench',
+    __DIR__ . '/../../ondc-workbench',
 ];
-foreach ($checkDirs as $d) {
-    if (is_dir($d)) {
-        $workbenchDir = $d;
-        break;
-    }
-}
 
 $files = [];
-if ($workbenchDir && is_dir($workbenchDir)) {
-    $items = scandir($workbenchDir);
-    foreach ($items as $item) {
-        if ($item === '.' || $item === '..') continue;
-        $filePath = $workbenchDir . '/' . $item;
-        if (is_file($filePath)) {
-            $files[] = [
-                'filename' => $item,
-                'sizeBytes' => filesize($filePath),
-                'downloadUrl' => '/ondc/download/workbench-file/' . $item,
-            ];
+foreach ($scenarioFiles as $item) {
+    $size = 0;
+    foreach ($candidateDirs as $dir) {
+        $p = $dir . '/' . $item;
+        if (file_exists($p) && is_readable($p)) {
+            $size = filesize($p);
+            break;
         }
     }
+    $files[] = [
+        'filename' => $item,
+        'sizeBytes' => $size,
+        'downloadUrl' => '/ondc/download/workbench-file/' . $item,
+    ];
 }
 
 header('Content-Type: application/json; charset=utf-8');
