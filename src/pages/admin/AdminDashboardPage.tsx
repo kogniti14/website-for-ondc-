@@ -105,7 +105,31 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
   const [activeTab, setActiveTab] = useState<
     'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery' | 'gallery_categories' | 'certifications' | 'cert_categories' | 'policies' | 'ondc' | 'testimonials' | 'company_master'
-  >('overview');
+  >(() => {
+    if (typeof window !== 'undefined') {
+      const p = window.location.pathname.toLowerCase();
+      if (p.startsWith('/admin/ondc')) return 'ondc';
+      if (p.startsWith('/admin/company-master') || p.startsWith('/admin/company_master')) return 'company_master';
+      if (p.startsWith('/admin/products')) return 'products';
+      if (window.location.hash === '#ondc') return 'ondc';
+    }
+    return 'overview';
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window !== 'undefined') {
+        const p = window.location.pathname.toLowerCase();
+        if (p.startsWith('/admin/ondc')) {
+          setActiveTab('ondc');
+        } else if (p.startsWith('/admin/company-master') || p.startsWith('/admin/company_master')) {
+          setActiveTab('company_master');
+        }
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Razorpay Gateway State
   const [razorpayConfig, setRazorpayConfig] = useState<RazorpayConfig>(() => razorpayService.getConfig());

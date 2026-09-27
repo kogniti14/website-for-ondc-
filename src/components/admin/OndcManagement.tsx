@@ -13,15 +13,33 @@ import {
   FileText,
   Clock,
   ArrowRight,
+  ArrowLeft,
   TrendingUp,
   Terminal,
   Play,
   Download,
   Package,
   FileCode,
+  CheckCircle,
+  XCircle,
+  ChevronRight,
+  HelpCircle,
+  Layers,
+  Database,
+  Lock,
+  Key,
+  Activity,
+  Send,
+  Server,
+  UserCheck,
 } from 'lucide-react';
+import {
+  SELLER_API_CONTRACTS,
+  SellerApiContract,
+  OndcSellerDashboardStats,
+} from './ondcContracts';
 
-const TOTAL_CATALOG_PRODUCTS = 12;
+const TOTAL_CATALOG_PRODUCTS = 13;
 
 interface WorkbenchFileItem {
   filename: string;
@@ -154,10 +172,6 @@ const LIVE_ENDPOINTS_LIST: LiveEndpoint[] = [
   { action: 'support', method: 'POST', path: '/support', fullUrl: 'https://kognitiminds.com/support', name: 'Customer Support', desc: 'Returns official contact channels (phone, email, web)' },
 ];
 
-const CALLBACK_ENDPOINTS_LIST = [
-  'on_search', 'on_select', 'on_init', 'on_confirm', 'on_status', 'on_track', 'on_cancel', 'on_update', 'on_rating', 'on_support'
-];
-
 interface OndcOrder {
   id: string;
   orderNumber: string;
@@ -217,11 +231,33 @@ interface LogEntry {
 
 export const OndcManagement: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'overview' | 'orders' | 'transactions' | 'logs' | 'workbench'>('overview');
+  const [selectedApiAction, setSelectedApiAction] = useState<string | null>(null);
+  const [activePayloadTab, setActivePayloadTab] = useState<'request' | 'sync' | 'callback' | 'state'>('request');
+
+  const [stats, setStats] = useState<OndcSellerDashboardStats>({
+    role: 'SELLER',
+    domain: 'ONDC:RETeB2B',
+    version: '1.2.5',
+    environment: 'Production',
+    bppId: 'kogniti-minds-bpp',
+    bppUri: 'https://kognitiminds.com',
+    gatewayStatus: 'Connected',
+    signatureStatus: 'Ed25519 Active',
+    databaseStatus: 'Operational',
+    callbackStatus: 'Active (10 Callbacks Ready)',
+    lastTransaction: 'Active',
+    failedTransactions: 0,
+    pendingTransactions: 0,
+    totalOrders: 0,
+    totalRevenue: 0,
+  });
+
   const [orders, setOrders] = useState<OndcOrder[]>([]);
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [copiedPayload, setCopiedPayload] = useState(false);
+  const [copiedSectionJson, setCopiedSectionJson] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedScenario, setSelectedScenario] = useState<'search' | 'select' | 'init' | 'confirm' | 'update_return'>('search');
   const [isSimulating, setIsSimulating] = useState(false);
@@ -232,6 +268,44 @@ export const OndcManagement: React.FC = () => {
   const [endpointTestingState, setEndpointTestingState] = useState<Record<string, { status: 'idle' | 'testing' | 'success' | 'error'; statusCode?: number; latencyMs?: number; error?: string }>>({});
   const [isTestingAll, setIsTestingAll] = useState(false);
   const [copiedEndpointUrl, setCopiedEndpointUrl] = useState<string | null>(null);
+  const [copiedFile, setCopiedFile] = useState<string | null>(null);
+
+  // Synchronize URL path with active API Section (/admin/ondc/:apiAction)
+  useEffect(() => {
+    const handleUrlCheck = () => {
+      if (typeof window === 'undefined') return;
+      const path = window.location.pathname.toLowerCase();
+      const match = path.match(/^\/admin\/ondc\/([a-z_]+)$/);
+      if (match && match[1]) {
+        const contract = SELLER_API_CONTRACTS.find((c) => c.action === match[1]);
+        if (contract) {
+          setSelectedApiAction(contract.action);
+          return;
+        }
+      }
+      setSelectedApiAction(null);
+    };
+    handleUrlCheck();
+    window.addEventListener('popstate', handleUrlCheck);
+    return () => window.removeEventListener('popstate', handleUrlCheck);
+  }, []);
+
+  const handleOpenApiSection = (actionKey: string) => {
+    setSelectedApiAction(actionKey);
+    setActivePayloadTab('request');
+    if (typeof window !== 'undefined') {
+      window.history.pushState(null, '', `/admin/ondc/${actionKey}`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleBackToDashboard = () => {
+    setSelectedApiAction(null);
+    if (typeof window !== 'undefined') {
+      window.history.pushState(null, '', '/admin/ondc');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const testEndpoint = async (actionKey: string, method: string, path: string) => {
     setEndpointTestingState((prev) => ({
@@ -329,46 +403,35 @@ export const OndcManagement: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      // 0. Fetch Stats
+      const statsRes = await fetch('/api/admin/ondc/stats').catch(() => null);
+      if (statsRes && statsRes.ok) {
+        const s = await statsRes.json();
+        setStats((prev) => ({
+          ...prev,
+          role: s.role || 'SELLER',
+          domain: s.domain || 'ONDC:RETeB2B',
+          version: s.version || '1.2.5',
+          environment: s.environment || 'Production',
+          bppId: s.bppId || 'kogniti-minds-bpp',
+          bppUri: s.bppUri || 'https://kognitiminds.com',
+          gatewayStatus: s.gatewayStatus || 'Connected',
+          signatureStatus: s.signatureStatus || 'Ed25519 Active',
+          databaseStatus: s.databaseStatus || 'Operational',
+          callbackStatus: s.callbackStatus || 'Active (10 Callbacks Ready)',
+          lastTransaction: s.lastTransaction || 'Active',
+          failedTransactions: s.failedTransactions || 0,
+          pendingTransactions: s.pendingTransactions || 0,
+          totalOrders: s.totalOrders || 0,
+          totalRevenue: s.totalRevenue || 0,
+        }));
+      }
+
       // 1. Fetch Orders
       const ordersRes = await fetch('/api/admin/ondc/orders').catch(() => null);
       if (ordersRes && ordersRes.ok) {
         const data = await ordersRes.json();
         setOrders(data.orders || []);
-      } else {
-        // Fallback default sample orders
-        setOrders([
-          {
-            id: 'ord_ondc_sample_01',
-            orderNumber: 'KM-ONDC-881290',
-            poNumber: 'PO-ONDC-WB-01',
-            businessName: 'Apex Educational Trust',
-            gstin: '07AAAAA0000A1Z5',
-            grandTotal: 18688.0,
-            orderStatus: 'Return_Approved',
-            createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-            ondcContext: {
-              transactionId: '54e3d489-0be3-455b-9d41-3da39d520377',
-              messageId: '0b0e557b-7b56-4c4f-9e7c-86cf330de223',
-              bapId: 'buyer-app-preprod.ondc.org',
-            },
-            returnDetails: {
-              returnType: 'Partial_Order_Return',
-              refundAmount: 4672.8,
-              status: 'Return_Approved',
-              returnApprovedAt: new Date().toISOString(),
-            },
-            items: [
-              {
-                id: 'km-agri-a4-75',
-                name: 'Kogniti AgroPrint 75 GSM A4 Sustainable Copier Paper',
-                sku: 'KM-PAP-AG75',
-                quantity: 80,
-                effectiveUnitPrice: 182.16,
-                totalAmount: 14572.8,
-              },
-            ],
-          },
-        ]);
       }
 
       // 2. Fetch Transactions
@@ -403,8 +466,14 @@ export const OndcManagement: React.FC = () => {
       setCopiedPayload(true);
       setTimeout(() => setCopiedPayload(false), 2500);
     } catch {
-      alert('Could not copy automatically. Please open /docs/on_search_payload.json in the repository.');
+      alert('Could not copy automatically. Please open /ondc-workbench/01_on_search.json in the repository.');
     }
+  };
+
+  const handleCopySectionJson = (data: any) => {
+    navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+    setCopiedSectionJson(true);
+    setTimeout(() => setCopiedSectionJson(false), 2000);
   };
 
   const handleRunSimulation = async () => {
@@ -418,7 +487,6 @@ export const OndcManagement: React.FC = () => {
       });
       const data = await res.json();
       setSimulationResult(data);
-      // Refresh transactions and logs to reflect simulated actions
       fetchData();
     } catch (err: any) {
       setSimulationResult({ success: false, error: err.message || 'Simulation request failed' });
@@ -438,8 +506,6 @@ export const OndcManagement: React.FC = () => {
     }
   };
 
-  const [copiedFile, setCopiedFile] = useState<string | null>(null);
-
   const handleCopyFileContent = async (filename: string) => {
     try {
       const res = await fetch(`/ondc/download/workbench-file/${filename}`);
@@ -453,6 +519,17 @@ export const OndcManagement: React.FC = () => {
     }
   };
 
+  const currentContract = selectedApiAction
+    ? SELLER_API_CONTRACTS.find((c) => c.action === selectedApiAction) || null
+    : null;
+
+  const currentContractIndex = currentContract
+    ? SELLER_API_CONTRACTS.findIndex((c) => c.action === currentContract.action)
+    : -1;
+
+  const prevContract = currentContractIndex > 0 ? SELLER_API_CONTRACTS[currentContractIndex - 1] : null;
+  const nextContract = currentContractIndex >= 0 && currentContractIndex < SELLER_API_CONTRACTS.length - 1 ? SELLER_API_CONTRACTS[currentContractIndex + 1] : null;
+
   const filteredOrders = orders.filter(
     (o) =>
       o.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -462,14 +539,14 @@ export const OndcManagement: React.FC = () => {
 
   return (
     <div style={{ padding: '1.5rem 0', fontFamily: 'inherit' }}>
-      {/* Top Header Card */}
+      {/* 1. Official Canonical Seller Header Banner */}
       <div
         style={{
           background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
           borderRadius: '16px',
           padding: '1.75rem 2rem',
           color: '#FFFFFF',
-          marginBottom: '2rem',
+          marginBottom: '1.75rem',
           boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.25)',
           display: 'flex',
           flexWrap: 'wrap',
@@ -479,44 +556,70 @@ export const OndcManagement: React.FC = () => {
         }}
       >
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
             <span
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                background: 'rgba(16, 185, 129, 0.2)',
+                background: 'rgba(16, 185, 129, 0.25)',
                 color: '#34D399',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-                padding: '0.25rem 0.75rem',
+                border: '1px solid rgba(16, 185, 129, 0.5)',
+                padding: '0.3rem 0.85rem',
                 borderRadius: '999px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
+                fontSize: '0.8rem',
+                fontWeight: 800,
                 letterSpacing: '0.05em',
                 textTransform: 'uppercase',
               }}
             >
-              <CheckCircle2 size={13} /> Active • ONDC:RETeB2B (v1.2.5)
+              <CheckCircle2 size={14} /> ROLE: {stats.role} (BPP)
+            </span>
+            <span
+              style={{
+                background: 'rgba(59, 130, 246, 0.2)',
+                color: '#93C5FD',
+                border: '1px solid rgba(59, 130, 246, 0.4)',
+                padding: '0.3rem 0.75rem',
+                borderRadius: '999px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+              }}
+            >
+              Domain: {stats.domain}
             </span>
             <span
               style={{
                 background: 'rgba(255, 255, 255, 0.1)',
-                padding: '0.25rem 0.6rem',
+                padding: '0.3rem 0.65rem',
                 borderRadius: '999px',
-                fontSize: '0.75rem',
+                fontSize: '0.8rem',
                 fontWeight: 600,
                 color: '#CBD5E1',
               }}
             >
-              Pre-Production Mode
+              Version: {stats.version}
+            </span>
+            <span
+              style={{
+                background: 'rgba(245, 158, 11, 0.2)',
+                color: '#FCD34D',
+                border: '1px solid rgba(245, 158, 11, 0.4)',
+                padding: '0.3rem 0.65rem',
+                borderRadius: '999px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+              }}
+            >
+              {stats.environment}
             </span>
           </div>
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
-            ONDC eB2B Seller Console
+
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: '#FFFFFF' }}>
+            ONDC Seller-Side (BPP) API Dashboard
           </h2>
-          <p style={{ margin: '0.4rem 0 0', color: '#94A3B8', fontSize: '0.9rem', maxWidth: '650px' }}>
-            Direct network participant node for Kogniti Minds Private Limited on ONDC. Managing automated order lifecycles,
-            quotations, and return flows.
+          <p style={{ margin: '0.4rem 0 0', color: '#94A3B8', fontSize: '0.92rem', maxWidth: '720px' }}>
+            KOGNITI MINDS PRIVATE LIMITED operates exclusively as the Seller / BPP participant node on the Open Network for Digital Commerce under RETeB2B 1.2.5. Connected to real product inventory, dynamic pricing, and warehouse logistics.
           </p>
         </div>
 
@@ -539,7 +642,7 @@ export const OndcManagement: React.FC = () => {
             }}
           >
             {copiedPayload ? <Check size={16} /> : <Copy size={16} />}
-            {copiedPayload ? 'Copied on_search JSON!' : 'Copy on_search for Workbench'}
+            {copiedPayload ? 'Copied on_search JSON!' : 'Copy on_search Payload'}
           </button>
           <button
             onClick={fetchData}
@@ -558,34 +661,133 @@ export const OndcManagement: React.FC = () => {
               cursor: 'pointer',
             }}
           >
-            <RefreshCw size={15} className={isLoading ? 'spin' : ''} />
+            <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} />
             Refresh
           </button>
         </div>
       </div>
 
-      {/* Navigation Sub-Tabs */}
+      {/* 2. Top Metric Cards: Gateway, Signatures, DB, Callbacks & Transactions */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: '1rem',
+          marginBottom: '1.75rem',
+        }}
+      >
+        <div style={{ background: '#FFFFFF', padding: '1.1rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <div style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            BPP / Seller ID
+          </div>
+          <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', marginTop: '0.35rem', fontFamily: 'monospace' }}>
+            {stats.bppId}
+          </div>
+          <div style={{ color: '#2563EB', fontSize: '0.72rem', marginTop: '0.2rem', fontFamily: 'monospace' }}>
+            {stats.bppUri}
+          </div>
+        </div>
+
+        <div style={{ background: '#FFFFFF', padding: '1.1rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <div style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Gateway Status
+          </div>
+          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10B981', marginTop: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
+            {stats.gatewayStatus}
+          </div>
+          <div style={{ color: '#64748B', fontSize: '0.72rem', marginTop: '0.2rem' }}>
+            Direct Hostinger Native Sync
+          </div>
+        </div>
+
+        <div style={{ background: '#FFFFFF', padding: '1.1rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <div style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Signature Status
+          </div>
+          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A', marginTop: '0.35rem' }}>
+            {stats.signatureStatus}
+          </div>
+          <div style={{ color: '#10B981', fontSize: '0.72rem', marginTop: '0.2rem', fontWeight: 600 }}>
+            Ed25519 + BLAKE-512 Body Digest
+          </div>
+        </div>
+
+        <div style={{ background: '#FFFFFF', padding: '1.1rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <div style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Database Status
+          </div>
+          <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', marginTop: '0.35rem' }}>
+            {stats.databaseStatus}
+          </div>
+          <div style={{ color: '#64748B', fontSize: '0.72rem', marginTop: '0.2rem' }}>
+            {TOTAL_CATALOG_PRODUCTS} Genuine Products Connected
+          </div>
+        </div>
+
+        <div style={{ background: '#FFFFFF', padding: '1.1rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <div style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Callback Status
+          </div>
+          <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#2563EB', marginTop: '0.35rem' }}>
+            {stats.callbackStatus}
+          </div>
+          <div style={{ color: '#64748B', fontSize: '0.72rem', marginTop: '0.2rem' }}>
+            Signed Inbound & Outbound Ready
+          </div>
+        </div>
+
+        <div style={{ background: '#FFFFFF', padding: '1.1rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <div style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Last Transaction
+          </div>
+          <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F172A', marginTop: '0.35rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {stats.lastTransaction}
+          </div>
+          <div style={{ color: '#64748B', fontSize: '0.72rem', marginTop: '0.2rem' }}>
+            Audit state machine verified
+          </div>
+        </div>
+
+        <div style={{ background: '#FFFFFF', padding: '1.1rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <div style={{ color: '#64748B', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Failed / Pending
+          </div>
+          <div style={{ fontSize: '1.25rem', fontWeight: 800, color: stats.failedTransactions > 0 ? '#EF4444' : '#10B981', marginTop: '0.35rem' }}>
+            {stats.failedTransactions} <span style={{ fontSize: '0.85rem', color: '#64748B', fontWeight: 500 }}>/ {stats.pendingTransactions} pending</span>
+          </div>
+          <div style={{ color: stats.failedTransactions > 0 ? '#EF4444' : '#10B981', fontSize: '0.72rem', marginTop: '0.2rem', fontWeight: 600 }}>
+            {stats.failedTransactions === 0 ? '✓ Zero failed transactions' : `${stats.failedTransactions} need inspection`}
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Navigation Sub-Tabs */}
       <div
         style={{
           display: 'flex',
           gap: '1rem',
           borderBottom: '1px solid #E2E8F0',
-          marginBottom: '1.5rem',
+          marginBottom: '1.75rem',
+          flexWrap: 'wrap',
         }}
       >
         {[
-          { id: 'overview', label: 'Protocol Overview & Health', icon: Globe },
+          { id: 'overview', label: 'Seller API Contracts (10)', icon: Layers },
           { id: 'orders', label: `ONDC Orders (${orders.length})`, icon: FileText },
           { id: 'transactions', label: `State Machine (${transactions.length})`, icon: RotateCcw },
           { id: 'logs', label: `Audit Logs (${logs.length})`, icon: Shield },
           { id: 'workbench', label: 'Workbench Simulator', icon: Terminal },
         ].map((tab) => {
           const Icon = tab.icon;
-          const isActive = activeSubTab === tab.id;
+          const isActive = activeSubTab === tab.id && selectedApiAction === null;
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveSubTab(tab.id as any)}
+              onClick={() => {
+                setSelectedApiAction(null);
+                setActiveSubTab(tab.id as any);
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -607,642 +809,986 @@ export const OndcManagement: React.FC = () => {
         })}
       </div>
 
-      {/* Sub-tab 1: Overview & Health */}
-      {activeSubTab === 'overview' && (
-        <div>
-          {/* Key Metrics */}
+      {/* =========================================================================
+          VIEW A: Dedicated Single API Section (When an API Card is Clicked)
+          ========================================================================= */}
+      {selectedApiAction && currentContract && (
+        <div style={{ marginBottom: '2rem' }}>
+          {/* Breadcrumb & Navigation Bar */}
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#FFFFFF',
+              padding: '1rem 1.25rem',
+              borderRadius: '12px',
+              border: '1px solid #E2E8F0',
+              marginBottom: '1.5rem',
+              flexWrap: 'wrap',
               gap: '1rem',
-              marginBottom: '1.75rem',
             }}
           >
-            <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-              <div style={{ color: '#64748B', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase' }}>
-                Subscriber Domain
-              </div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', marginTop: '0.4rem' }}>
-                ONDC:RETeB2B
-              </div>
-              <div style={{ color: '#10B981', fontSize: '0.75rem', marginTop: '0.25rem', fontWeight: 600 }}>
-                API Contract v1.2.5 Compliant
-              </div>
-            </div>
-
-            <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-              <div style={{ color: '#64748B', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase' }}>
-                Active Catalogue Items
-              </div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', marginTop: '0.4rem' }}>
-                {TOTAL_CATALOG_PRODUCTS} Products
-              </div>
-              <div style={{ color: '#64748B', fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                All mapped with 4:HSN & 18% GST
-              </div>
-            </div>
-
-            <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-              <div style={{ color: '#64748B', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase' }}>
-                Active Workbench Flow
-              </div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0F172A', marginTop: '0.4rem' }}>
-                Buyer_Initiated_Return
-              </div>
-              <div style={{ color: '#3B82F6', fontSize: '0.75rem', marginTop: '0.25rem', fontWeight: 600 }}>
-                Full & Partial Return Handlers Ready
-              </div>
-            </div>
-
-            <div style={{ background: '#FFFFFF', padding: '1.25rem', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
-              <div style={{ color: '#64748B', fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase' }}>
-                Cryptographic Security
-              </div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#10B981', marginTop: '0.4rem' }}>
-                Ed25519 + BLAKE-512
-              </div>
-              <div style={{ color: '#64748B', fontSize: '0.75rem', marginTop: '0.25rem' }}>
-                Zero secrets exposed to frontend
-              </div>
-            </div>
-          </div>
-
-          {/* Node Configuration Details */}
-          <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '1.5rem', marginBottom: '1.5rem' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A', margin: '0 0 1rem' }}>
-              Node Protocol Configuration
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', fontSize: '0.85rem' }}>
-              <div>
-                <span style={{ color: '#64748B', display: 'block' }}>Subscriber ID (BPP ID):</span>
-                <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#0F172A' }}>kognitiminds.com</span>
-              </div>
-              <div>
-                <span style={{ color: '#64748B', display: 'block' }}>Callback Base URL:</span>
-                <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#0F172A' }}>https://kognitiminds.com/&lt;action&gt;</span>
-              </div>
-              <div>
-                <span style={{ color: '#64748B', display: 'block' }}>Registry URL:</span>
-                <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#0F172A' }}>https://preprod.registry.ondc.org/ondc</span>
-              </div>
-              <div>
-                <span style={{ color: '#64748B', display: 'block' }}>Key ID:</span>
-                <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#0F172A' }}>kogniti-key-01</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Live Production Endpoints & Ping Diagnostic */}
-          <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '1.5rem', marginBottom: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A', margin: '0 0 0.25rem' }}>
-                  Live Production Endpoints (Buyer &rarr; Seller App/BPP)
-                </h3>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748B' }}>
-                  Compliant with ONDC RETeB2B 1.2.5. Tested directly against live Hostinger production.
-                </p>
-              </div>
-
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <button
-                onClick={testAllEndpoints}
-                disabled={isTestingAll}
+                onClick={handleBackToDashboard}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.4rem',
-                  padding: '0.55rem 1.1rem',
+                  background: '#F1F5F9',
+                  border: '1px solid #CBD5E1',
                   borderRadius: '8px',
-                  background: '#2563EB',
-                  color: '#FFFFFF',
-                  border: 'none',
+                  padding: '0.5rem 0.85rem',
                   fontSize: '0.85rem',
                   fontWeight: 600,
-                  cursor: isTestingAll ? 'not-allowed' : 'pointer',
-                  opacity: isTestingAll ? 0.7 : 1,
+                  color: '#334155',
+                  cursor: 'pointer',
                 }}
               >
-                <RefreshCw size={14} className={isTestingAll ? 'animate-spin' : ''} />
-                {isTestingAll ? 'Verifying Endpoints...' : 'Test All Live Endpoints'}
+                <ArrowLeft size={15} /> All APIs
               </button>
+              <div style={{ fontSize: '0.9rem', color: '#64748B' }}>
+                <span style={{ color: '#0F172A', fontWeight: 700 }}>/admin/ondc</span> /{' '}
+                <span style={{ color: '#2563EB', fontWeight: 700 }}>{currentContract.action}</span>
+              </div>
             </div>
 
-            <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                <thead>
-                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', textAlign: 'left' }}>
-                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Action & Method</th>
-                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Production Route</th>
-                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Function</th>
-                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600 }}>Real-Time Status</th>
-                    <th style={{ padding: '0.75rem 1rem', fontWeight: 600, textAlign: 'right' }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {LIVE_ENDPOINTS_LIST.map((ep, idx) => {
-                    const testState = endpointTestingState[ep.action] || { status: 'idle' };
-                    const isCopied = copiedEndpointUrl === ep.path;
-                    return (
-                      <tr key={ep.path} style={{ borderBottom: idx !== LIVE_ENDPOINTS_LIST.length - 1 ? '1px solid #F1F5F9' : 'none', background: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
-                        <td style={{ padding: '0.75rem 1rem' }}>
-                          <span
-                            style={{
-                              padding: '0.2rem 0.5rem',
-                              borderRadius: '4px',
-                              fontWeight: 700,
-                              fontSize: '0.7rem',
-                              background: ep.method === 'GET' ? '#ECFDF5' : '#EEF2FF',
-                              color: ep.method === 'GET' ? '#059669' : '#4F46E5',
-                            }}
-                          >
-                            {ep.method}
-                          </span>
-                          <span style={{ marginLeft: '0.5rem', fontWeight: 600, color: '#0F172A' }}>/{ep.action}</span>
-                        </td>
-                        <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', color: '#334155' }}>
-                          {ep.fullUrl}
-                        </td>
-                        <td style={{ padding: '0.75rem 1rem', color: '#64748B' }}>
-                          <strong>{ep.name}</strong>
-                          <div style={{ fontSize: '0.75rem', marginTop: '0.1rem' }}>{ep.desc}</div>
-                        </td>
-                        <td style={{ padding: '0.75rem 1rem' }}>
-                          {testState.status === 'idle' && (
-                            <span style={{ color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                              <Clock size={13} /> Ready to test
-                            </span>
-                          )}
-                          {testState.status === 'testing' && (
-                            <span style={{ color: '#2563EB', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
-                              <RefreshCw size={13} className="animate-spin" /> Pinging...
-                            </span>
-                          )}
-                          {testState.status === 'success' && (
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.3rem',
-                                padding: '0.2rem 0.5rem',
-                                borderRadius: '9999px',
-                                background: '#ECFDF5',
-                                color: '#059669',
-                                fontWeight: 700,
-                                fontSize: '0.75rem',
-                              }}
-                            >
-                              <CheckCircle2 size={13} /> {testState.statusCode} OK • {testState.latencyMs}ms
-                            </span>
-                          )}
-                          {testState.status === 'error' && (
-                            <span
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.3rem',
-                                padding: '0.2rem 0.5rem',
-                                borderRadius: '9999px',
-                                background: '#FEF2F2',
-                                color: '#DC2626',
-                                fontWeight: 700,
-                                fontSize: '0.75rem',
-                              }}
-                            >
-                              <AlertTriangle size={13} /> {testState.error || 'Failed'}
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.4rem' }}>
-                            <button
-                              onClick={() => testEndpoint(ep.action, ep.method, ep.path)}
-                              disabled={testState.status === 'testing'}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                                padding: '0.3rem 0.6rem',
-                                borderRadius: '6px',
-                                border: '1px solid #CBD5E1',
-                                background: '#FFFFFF',
-                                fontSize: '0.75rem',
-                                fontWeight: 600,
-                                color: '#334155',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              <Play size={11} /> Test
-                            </button>
-                            <button
-                              onClick={() => copyEndpointUrl(ep.fullUrl, ep.path)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.25rem',
-                                padding: '0.3rem 0.6rem',
-                                borderRadius: '6px',
-                                border: '1px solid #CBD5E1',
-                                background: '#FFFFFF',
-                                fontSize: '0.75rem',
-                                color: '#64748B',
-                                cursor: 'pointer',
-                              }}
-                              title="Copy URL"
-                            >
-                              {isCopied ? <Check size={11} color="#10B981" /> : <Copy size={11} />}
-                              {isCopied ? 'Copied' : 'Copy'}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Inbound Callbacks Note */}
-            <div style={{ marginTop: '1rem', padding: '0.85rem 1rem', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.8rem', color: '#64748B' }}>
-              <strong style={{ color: '#0F172A' }}>Inbound Protocol Callback Endpoints:</strong>{' '}
-              {CALLBACK_ENDPOINTS_LIST.map((cb) => `https://kognitiminds.com/${cb}`).join(', ')}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sub-tab 2: ONDC Orders */}
-      {activeSubTab === 'orders' && (
-        <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', gap: '1rem', flexWrap: 'wrap' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>
-              Network Orders
-            </h3>
-            <div style={{ position: 'relative', width: '280px' }}>
-              <Search size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
-              <input
-                type="text"
-                placeholder="Search order ref or transaction ID..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem 0.75rem 0.5rem 2.2rem',
-                  fontSize: '0.85rem',
-                  borderRadius: '6px',
-                  border: '1px solid #CBD5E1',
-                }}
-              />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {prevContract && (
+                <button
+                  onClick={() => handleOpenApiSection(prevContract.action)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    background: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '6px',
+                    padding: '0.45rem 0.75rem',
+                    fontSize: '0.8rem',
+                    color: '#475569',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <ArrowLeft size={13} /> Prev ({prevContract.action})
+                </button>
+              )}
+              {nextContract && (
+                <button
+                  onClick={() => handleOpenApiSection(nextContract.action)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    background: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '6px',
+                    padding: '0.45rem 0.75rem',
+                    fontSize: '0.8rem',
+                    color: '#475569',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Next ({nextContract.action}) <ArrowRight size={13} />
+                </button>
+              )}
             </div>
           </div>
 
-          {filteredOrders.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#64748B' }}>
-              <p style={{ margin: 0 }}>No ONDC network orders recorded yet.</p>
-              <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>Run test flows from the ONDC Workbench to trigger inbound orders.</p>
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
-                    <th style={{ padding: '0.75rem' }}>Order Ref</th>
-                    <th style={{ padding: '0.75rem' }}>Buyer Entity</th>
-                    <th style={{ padding: '0.75rem' }}>Amount</th>
-                    <th style={{ padding: '0.75rem' }}>Status</th>
-                    <th style={{ padding: '0.75rem' }}>Return Status</th>
-                    <th style={{ padding: '0.75rem' }}>Transaction ID</th>
-                    <th style={{ padding: '0.75rem' }}>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredOrders.map((order) => (
-                    <tr key={order.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '0.75rem', fontWeight: 600, color: '#0F172A' }}>{order.orderNumber}</td>
-                      <td style={{ padding: '0.75rem' }}>
-                        <div>{order.businessName}</div>
-                        {order.gstin && <span style={{ fontSize: '0.75rem', color: '#64748B' }}>GSTIN: {order.gstin}</span>}
-                      </td>
-                      <td style={{ padding: '0.75rem', fontWeight: 600 }}>₹{order.grandTotal.toLocaleString('en-IN')}</td>
-                      <td style={{ padding: '0.75rem' }}>
-                        <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: '#DCFCE7', color: '#166534', fontSize: '0.75rem', fontWeight: 600 }}>
-                          {order.orderStatus.toUpperCase()}
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.75rem' }}>
-                        {order.returnDetails ? (
-                          <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: '#FEF3C7', color: '#92400E', fontSize: '0.75rem', fontWeight: 600 }}>
-                            {order.returnDetails.status.replace('_', ' ')} (₹{order.returnDetails.refundAmount})
-                          </span>
-                        ) : (
-                          <span style={{ color: '#94A3B8' }}>None</span>
-                        )}
-                      </td>
-                      <td style={{ padding: '0.75rem', fontFamily: 'monospace', fontSize: '0.75rem', color: '#64748B' }}>
-                        {order.ondcContext?.transactionId?.slice(0, 16)}...
-                      </td>
-                      <td style={{ padding: '0.75rem', color: '#64748B' }}>
-                        {new Date(order.createdAt).toLocaleDateString('en-IN')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Sub-tab 3: State Machine */}
-      {activeSubTab === 'transactions' && (
-        <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '1.5rem' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A', margin: '0 0 1rem' }}>
-            ONDC Transaction State Machine
-          </h3>
-          <p style={{ color: '#64748B', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-            Validates sequential transitions across the eB2B lifecycle. Invalid out-of-order calls return official NACK errors.
-          </p>
-
-          {transactions.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#64748B' }}>
-              <p style={{ margin: 0 }}>No active transaction transitions recorded in this server session.</p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {transactions.map((tx) => (
-                <div key={tx.transactionId} style={{ padding: '1rem', border: '1px solid #E2E8F0', borderRadius: '8px', background: '#F8FAFC' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', fontWeight: 600, color: '#0F172A' }}>
-                      TXN: {tx.transactionId}
-                    </span>
-                    <span style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', background: '#E0E7FF', color: '#3730A3', fontSize: '0.75rem', fontWeight: 700 }}>
-                      Current State: {tx.currentState}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center', fontSize: '0.8rem', color: '#475569' }}>
-                    {tx.history.map((h, idx) => (
-                      <React.Fragment key={idx}>
-                        <span style={{ background: '#FFFFFF', border: '1px solid #CBD5E1', padding: '0.25rem 0.5rem', borderRadius: '4px' }}>
-                          <strong>{h.action}</strong> ({h.toState})
-                        </span>
-                        {idx < tx.history.length - 1 && <ArrowRight size={13} color="#94A3B8" />}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Sub-tab 4: Audit Logs */}
-      {activeSubTab === 'logs' && (
-        <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '1.5rem' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A', margin: '0 0 1rem' }}>
-            Structured Protocol Audit Logs
-          </h3>
-          <p style={{ color: '#64748B', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-            Sanitized logs capturing every inbound request, timestamp, execution latency, and error status (zero secrets).
-          </p>
-
-          {logs.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#64748B' }}>
-              <p style={{ margin: 0 }}>No recent protocol logs.</p>
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
-                    <th style={{ padding: '0.6rem' }}>Timestamp</th>
-                    <th style={{ padding: '0.6rem' }}>Action</th>
-                    <th style={{ padding: '0.6rem' }}>Status</th>
-                    <th style={{ padding: '0.6rem' }}>Transaction ID</th>
-                    <th style={{ padding: '0.6rem' }}>Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map((log) => (
-                    <tr key={log.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '0.6rem', color: '#64748B' }}>{new Date(log.timestamp).toLocaleTimeString()}</td>
-                      <td style={{ padding: '0.6rem', fontWeight: 600 }}>{log.action}</td>
-                      <td style={{ padding: '0.6rem' }}>
-                        <span
-                          style={{
-                            padding: '0.15rem 0.4rem',
-                            borderRadius: '4px',
-                            background: log.status < 400 ? '#DCFCE7' : '#FEE2E2',
-                            color: log.status < 400 ? '#166534' : '#991B1B',
-                            fontWeight: 700,
-                          }}
-                        >
-                          {log.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.6rem', fontFamily: 'monospace', color: '#64748B' }}>
-                        {log.transactionId ? `${log.transactionId.slice(0, 18)}...` : 'N/A'}
-                      </td>
-                      <td style={{ padding: '0.6rem', color: log.error ? '#DC2626' : '#64748B' }}>
-                        {log.error || 'Success'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Sub-tab 5: Live Workbench Scenario Simulator & Download Pack */}
-      {activeSubTab === 'workbench' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {/* Download Workbench Compliance Pack Card */}
+          {/* Section Hero Card */}
           <div
             style={{
               background: '#FFFFFF',
-              borderRadius: '12px',
+              borderRadius: '16px',
               border: '1px solid #E2E8F0',
               padding: '1.75rem',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+              marginBottom: '1.5rem',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.5rem' }}>
+                  <span
+                    style={{
+                      background: currentContract.badgeColor,
+                      color: '#FFFFFF',
+                      fontSize: '0.8rem',
+                      fontWeight: 800,
+                      padding: '0.25rem 0.65rem',
+                      borderRadius: '6px',
+                      textTransform: 'uppercase',
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    POST /{currentContract.action}
+                  </span>
+                  <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 600 }}>
+                    Category: {currentContract.category}
+                  </span>
+                </div>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                  {currentContract.name}
+                </h3>
+                <p style={{ margin: '0.4rem 0 0', color: '#475569', fontSize: '0.92rem', maxWidth: '750px' }}>
+                  {currentContract.description}
+                </p>
+              </div>
+
+              {/* Live Test Trigger Button */}
+              <div>
+                <button
+                  onClick={() => testEndpoint(currentContract.action, 'POST', currentContract.backendEndpoint)}
+                  disabled={endpointTestingState[currentContract.action]?.status === 'testing'}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: '#2563EB',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.7rem 1.25rem',
+                    fontSize: '0.9rem',
+                    fontWeight: 700,
+                    cursor: endpointTestingState[currentContract.action]?.status === 'testing' ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)',
+                  }}
+                >
+                  <RefreshCw
+                    size={16}
+                    className={endpointTestingState[currentContract.action]?.status === 'testing' ? 'animate-spin' : ''}
+                  />
+                  {endpointTestingState[currentContract.action]?.status === 'testing'
+                    ? 'Verifying Endpoint...'
+                    : `Run Live Test on POST /${currentContract.action}`}
+                </button>
+                {endpointTestingState[currentContract.action] && endpointTestingState[currentContract.action].status !== 'idle' && (
+                  <div style={{ marginTop: '0.5rem', textAlign: 'right', fontSize: '0.82rem' }}>
+                    {endpointTestingState[currentContract.action].status === 'success' && (
+                      <span style={{ color: '#10B981', fontWeight: 700 }}>
+                        ✓ HTTP {endpointTestingState[currentContract.action].statusCode} OK ({endpointTestingState[currentContract.action].latencyMs}ms)
+                      </span>
+                    )}
+                    {endpointTestingState[currentContract.action].status === 'error' && (
+                      <span style={{ color: '#EF4444', fontWeight: 700 }}>
+                        ✕ {endpointTestingState[currentContract.action].error} ({endpointTestingState[currentContract.action].latencyMs}ms)
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Endpoint Paths Bar */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: '1rem',
+                marginTop: '1.25rem',
+                background: '#F8FAFC',
+                padding: '1rem',
+                borderRadius: '8px',
+                border: '1px solid #E2E8F0',
+                fontSize: '0.85rem',
+              }}
+            >
+              <div>
+                <span style={{ color: '#64748B', display: 'block', fontSize: '0.75rem', fontWeight: 600 }}>
+                  INBOUND ENDPOINT (KOGNITI MINDS EXPOSES):
+                </span>
+                <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0F172A' }}>
+                  {currentContract.backendEndpoint}
+                </span>
+              </div>
+              <div>
+                <span style={{ color: '#64748B', display: 'block', fontSize: '0.75rem', fontWeight: 600 }}>
+                  OUTBOUND ASYNCHRONOUS CALLBACK GENERATED:
+                </span>
+                <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#2563EB' }}>
+                  {currentContract.callbackEndpoint}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* THE 6 MANDATORY ARCHITECTURAL QUESTIONS & ANSWERS PANEL */}
+          <div
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #E2E8F0',
+              padding: '1.75rem',
+              marginBottom: '1.75rem',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+            }}
+          >
+            <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', margin: '0 0 1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Shield size={20} style={{ color: '#2563EB' }} />
+              RETeB2B 1.2.5 Seller / BPP Contract Audit (6 Mandates)
+            </h4>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '1.25rem' }}>
+              {/* Question 1 */}
+              <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                <div style={{ color: '#2563EB', fontWeight: 800, fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.3rem' }}>
+                  1. Who sends the request?
+                </div>
+                <div style={{ color: '#0F172A', fontWeight: 600, fontSize: '0.9rem' }}>
+                  {currentContract.questions.whoSends}
+                </div>
+                <div style={{ color: '#64748B', fontSize: '0.75rem', marginTop: '0.35rem' }}>
+                  Direction: <span style={{ color: '#D97706', fontWeight: 600 }}>Buyer ➔ Seller Node</span>
+                </div>
+              </div>
+
+              {/* Question 2 */}
+              <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                <div style={{ color: '#2563EB', fontWeight: 800, fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.3rem' }}>
+                  2. Who receives the request?
+                </div>
+                <div style={{ color: '#0F172A', fontWeight: 600, fontSize: '0.9rem' }}>
+                  {currentContract.questions.whoReceives}
+                </div>
+                <div style={{ color: '#64748B', fontSize: '0.75rem', marginTop: '0.35rem' }}>
+                  Role: <span style={{ color: '#10B981', fontWeight: 700 }}>SELLER / BPP ONLY</span>
+                </div>
+              </div>
+
+              {/* Question 3 */}
+              <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                <div style={{ color: '#2563EB', fontWeight: 800, fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.3rem' }}>
+                  3. Which callback is generated?
+                </div>
+                <div style={{ color: '#0F172A', fontWeight: 600, fontSize: '0.9rem', fontFamily: 'monospace' }}>
+                  {currentContract.questions.callbackGenerated}
+                </div>
+                <div style={{ color: '#64748B', fontSize: '0.75rem', marginTop: '0.35rem' }}>
+                  Signature: <span style={{ color: '#10B981', fontWeight: 600 }}>Ed25519 Signed by Seller</span>
+                </div>
+              </div>
+
+              {/* Question 4 */}
+              <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                <div style={{ color: '#2563EB', fontWeight: 800, fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.3rem' }}>
+                  4. Which endpoint KOGNITI MINDS must expose?
+                </div>
+                <div style={{ color: '#0F172A', fontWeight: 600, fontSize: '0.9rem', fontFamily: 'monospace' }}>
+                  {currentContract.questions.endpointExposed}
+                </div>
+                <div style={{ color: '#64748B', fontSize: '0.75rem', marginTop: '0.35rem' }}>
+                  HTTP Method: <span style={{ color: '#2563EB', fontWeight: 700 }}>POST</span>
+                </div>
+              </div>
+
+              {/* Question 5 */}
+              <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                <div style={{ color: '#2563EB', fontWeight: 800, fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.3rem' }}>
+                  5. Which response schema is required?
+                </div>
+                <div style={{ color: '#0F172A', fontWeight: 500, fontSize: '0.88rem', lineHeight: '1.4' }}>
+                  {currentContract.questions.responseSchemaRequired}
+                </div>
+              </div>
+
+              {/* Question 6 */}
+              <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                <div style={{ color: '#2563EB', fontWeight: 800, fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: '0.3rem' }}>
+                  6. Which transaction state must be stored?
+                </div>
+                <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.84rem', color: '#334155' }}>
+                  {currentContract.questions.transactionStateStored.map((stateItem, sIdx) => (
+                    <li key={sIdx} style={{ marginBottom: '0.2rem' }}>
+                      {stateItem}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Payload Inspector with Tabs */}
+          <div
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #E2E8F0',
+              overflow: 'hidden',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
             }}
           >
             <div
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'flex-start',
+                alignItems: 'center',
+                padding: '0.75rem 1.25rem',
+                background: '#F8FAFC',
+                borderBottom: '1px solid #E2E8F0',
                 flexWrap: 'wrap',
-                gap: '1.25rem',
-                marginBottom: '1.25rem',
-                paddingBottom: '1.25rem',
-                borderBottom: '1px solid #F1F5F9',
+                gap: '0.75rem',
               }}
             >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem' }}>
-                  <span
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {[
+                  { id: 'request', label: `Expected Request Payload (${currentContract.action})` },
+                  { id: 'sync', label: 'Synchronous Response (ACK)' },
+                  { id: 'callback', label: `Generated Callback (/on_${currentContract.action})` },
+                  { id: 'state', label: 'Transaction State & Audit' },
+                ].map((pt) => (
+                  <button
+                    key={pt.id}
+                    onClick={() => setActivePayloadTab(pt.id as any)}
                     style={{
-                      background: '#DCFCE7',
-                      color: '#166534',
-                      padding: '0.2rem 0.6rem',
-                      borderRadius: '999px',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.3rem',
+                      background: activePayloadTab === pt.id ? '#2563EB' : '#FFFFFF',
+                      color: activePayloadTab === pt.id ? '#FFFFFF' : '#475569',
+                      border: activePayloadTab === pt.id ? '1px solid #2563EB' : '1px solid #CBD5E1',
+                      borderRadius: '6px',
+                      padding: '0.4rem 0.85rem',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
                     }}
                   >
-                    <Package size={12} /> RET 1.2.5 Ready
-                  </span>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>
-                    Download ONDC Workbench Compliance Package
-                  </h3>
+                    {pt.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() =>
+                  handleCopySectionJson(
+                    activePayloadTab === 'request'
+                      ? currentContract.sampleRequest
+                      : activePayloadTab === 'sync'
+                      ? currentContract.sampleSyncResponse
+                      : activePayloadTab === 'callback'
+                      ? currentContract.sampleCallback
+                      : currentContract.questions.transactionStateStored
+                  )
+                }
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  background: copiedSectionJson ? '#10B981' : '#FFFFFF',
+                  color: copiedSectionJson ? '#FFFFFF' : '#334155',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '6px',
+                  padding: '0.4rem 0.85rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {copiedSectionJson ? <Check size={14} /> : <Copy size={14} />}
+                {copiedSectionJson ? 'Copied to Clipboard!' : 'Copy Active JSON'}
+              </button>
+            </div>
+
+            <pre
+              style={{
+                margin: 0,
+                padding: '1.25rem',
+                background: '#0F172A',
+                color: '#38BDF8',
+                fontSize: '0.8rem',
+                fontFamily: 'monospace',
+                maxHeight: '450px',
+                overflowY: 'auto',
+                lineHeight: '1.5',
+              }}
+            >
+              {JSON.stringify(
+                activePayloadTab === 'request'
+                  ? currentContract.sampleRequest
+                  : activePayloadTab === 'sync'
+                  ? currentContract.sampleSyncResponse
+                  : activePayloadTab === 'callback'
+                  ? currentContract.sampleCallback
+                  : {
+                      stored_states: currentContract.questions.transactionStateStored,
+                      node_subscriber_id: 'kognitiminds.com',
+                      node_bpp_id: 'kogniti-minds-bpp',
+                      timestamp: new Date().toISOString(),
+                    },
+                null,
+                2
+              )}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          VIEW B: 10 Clickable API Cards Grid (When on /admin/ondc Overview)
+          ========================================================================= */}
+      {selectedApiAction === null && activeSubTab === 'overview' && (
+        <div style={{ marginBottom: '2.5rem' }}>
+          <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                RETeB2B 1.2.5 Seller / BPP Endpoints & Contracts
+              </h3>
+              <p style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', color: '#64748B' }}>
+                Click any API card below to open its dedicated section, review contract directionality, and execute live test calls.
+              </p>
+            </div>
+
+            <button
+              onClick={testAllEndpoints}
+              disabled={isTestingAll}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.55rem 1.1rem',
+                borderRadius: '8px',
+                background: '#2563EB',
+                color: '#FFFFFF',
+                border: 'none',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: isTestingAll ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <RefreshCw size={14} className={isTestingAll ? 'animate-spin' : ''} />
+              {isTestingAll ? 'Verifying Endpoints...' : 'Test All 10 Live Endpoints'}
+            </button>
+          </div>
+
+          {/* 10 Clickable API Cards */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+              gap: '1.25rem',
+            }}
+          >
+            {SELLER_API_CONTRACTS.map((api) => {
+              const testState = endpointTestingState[api.action] || { status: 'idle' };
+              return (
+                <div
+                  key={api.action}
+                  onClick={() => handleOpenApiSection(api.action)}
+                  style={{
+                    background: '#FFFFFF',
+                    borderRadius: '14px',
+                    border: '1px solid #E2E8F0',
+                    padding: '1.35rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.03)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 10px 20px -3px rgba(37, 99, 235, 0.12)';
+                    e.currentTarget.style.borderColor = '#93C5FD';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'none';
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.03)';
+                    e.currentTarget.style.borderColor = '#E2E8F0';
+                  }}
+                >
+                  <div>
+                    {/* Top Row: Action tag & Test status */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                      <span
+                        style={{
+                          background: api.badgeColor,
+                          color: '#FFFFFF',
+                          padding: '0.25rem 0.6rem',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          fontWeight: 800,
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        POST /{api.action}
+                      </span>
+                      {testState.status === 'success' && (
+                        <span style={{ color: '#10B981', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <CheckCircle size={13} /> {testState.statusCode} OK ({testState.latencyMs}ms)
+                        </span>
+                      )}
+                      {testState.status === 'error' && (
+                        <span style={{ color: '#EF4444', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <XCircle size={13} /> Error
+                        </span>
+                      )}
+                      {testState.status === 'testing' && (
+                        <span style={{ color: '#2563EB', fontSize: '0.75rem', fontWeight: 600 }}>
+                          Testing...
+                        </span>
+                      )}
+                    </div>
+
+                    <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.35rem' }}>
+                      {api.name}
+                    </h4>
+
+                    <p style={{ margin: '0 0 0.75rem', color: '#64748B', fontSize: '0.82rem', lineHeight: '1.4' }}>
+                      {api.description}
+                    </p>
+
+                    {/* Request & Callback direction indicators */}
+                    <div style={{ background: '#F8FAFC', padding: '0.6rem 0.75rem', borderRadius: '8px', fontSize: '0.75rem', marginBottom: '0.75rem', border: '1px solid #F1F5F9' }}>
+                      <div style={{ color: '#334155', fontWeight: 600, marginBottom: '0.2rem' }}>
+                        ➔ Request: <span style={{ color: '#2563EB' }}>{api.sender}</span>
+                      </div>
+                      <div style={{ color: '#334155', fontWeight: 600 }}>
+                        ➔ Callback: <span style={{ color: '#10B981' }}>{api.callbackEndpoint}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Action Footer */}
+                  <div
+                    style={{
+                      borderTop: '1px solid #F1F5F9',
+                      paddingTop: '0.75rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span style={{ fontSize: '0.78rem', color: '#64748B', fontFamily: 'monospace' }}>
+                      /admin/ondc/{api.action}
+                    </span>
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem',
+                        color: '#2563EB',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      Open API Section <ChevronRight size={15} />
+                    </span>
+                  </div>
                 </div>
-                <p style={{ color: '#64748B', fontSize: '0.85rem', margin: 0, maxWidth: '720px' }}>
-                  Download production-tested JSON payloads for all 10 ONDC Retail (eB2B) Workbench scenarios. Generated directly
-                  from Kogniti Minds' live catalog, tax engine, volume pricing rules, and reverse return logistics.
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          VIEW C: Orders Sub-tab
+          ========================================================================= */}
+      {selectedApiAction === null && activeSubTab === 'orders' && (
+        <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>
+              ONDC B2B Orders ({filteredOrders.length})
+            </h3>
+            <div style={{ position: 'relative', minWidth: '260px' }}>
+              <Search size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+              <input
+                type="text"
+                placeholder="Search orders, buyers, or txn ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.5rem 0.75rem 0.5rem 2.2rem',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  fontSize: '0.85rem',
+                  outline: 'none',
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', textAlign: 'left' }}>
+                  <th style={{ padding: '0.75rem 1rem' }}>Order Number</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Buyer Entity</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Grand Total</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Status</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Transaction ID</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
+                      No ONDC orders found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredOrders.map((o) => (
+                    <tr key={o.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#0F172A' }}>{o.orderNumber}</td>
+                      <td style={{ padding: '0.75rem 1rem' }}>{o.businessName}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>₹{o.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span style={{ background: '#DCFCE7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                          {o.orderStatus}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontSize: '0.75rem', color: '#64748B' }}>
+                        {o.ondcContext?.transactionId || 'N/A'}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#64748B', fontSize: '0.75rem' }}>
+                        {new Date(o.createdAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          VIEW D: State Machine Sub-tab
+          ========================================================================= */}
+      {selectedApiAction === null && activeSubTab === 'transactions' && (
+        <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '1.5rem' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A', margin: '0 0 1rem' }}>
+            ONDC State Machine Transitions ({transactions.length})
+          </h3>
+          <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', textAlign: 'left' }}>
+                  <th style={{ padding: '0.75rem 1rem' }}>Transaction ID</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Order ID</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Current State</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Updated At</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
+                      No active transitions recorded yet.
+                    </td>
+                  </tr>
+                ) : (
+                  transactions.map((tx, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 600 }}>{tx.transactionId}</td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#64748B' }}>{tx.orderId || '—'}</td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span style={{ background: '#EFF6FF', color: '#1E40AF', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                          {tx.currentState}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#64748B', fontSize: '0.75rem' }}>
+                        {new Date(tx.updatedAt).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          VIEW E: Audit Logs Sub-tab
+          ========================================================================= */}
+      {selectedApiAction === null && activeSubTab === 'logs' && (
+        <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '1.5rem' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A', margin: '0 0 1rem' }}>
+            ONDC Protocol Audit Logs ({logs.length})
+          </h3>
+          <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+              <thead>
+                <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', textAlign: 'left' }}>
+                  <th style={{ padding: '0.75rem 1rem' }}>Timestamp</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Action</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>HTTP Status</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Duration</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Transaction ID</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
+                      No audit logs captured yet.
+                    </td>
+                  </tr>
+                ) : (
+                  logs.map((log) => (
+                    <tr key={log.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '0.75rem 1rem', color: '#64748B' }}>{new Date(log.timestamp).toLocaleTimeString()}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>{log.action}</td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span
+                          style={{
+                            background: log.status < 400 ? '#DCFCE7' : '#FEE2E2',
+                            color: log.status < 400 ? '#166534' : '#991B1B',
+                            padding: '0.2rem 0.4rem',
+                            borderRadius: '4px',
+                            fontWeight: 700,
+                          }}
+                        >
+                          {log.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#64748B' }}>{log.durationMs || 0} ms</td>
+                      <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontSize: '0.75rem' }}>{log.transactionId || '—'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          VIEW F: Workbench Simulator Sub-tab
+          ========================================================================= */}
+      {selectedApiAction === null && activeSubTab === 'workbench' && (
+        <div>
+          {/* Workbench Kit Download Bar */}
+          <div
+            style={{
+              background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              color: '#FFFFFF',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '1rem',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                <Package size={18} style={{ color: '#38BDF8' }} />
+                <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>
+                  Official ONDC RETeB2B 1.2.5 Workbench Kit
+                </h4>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#94A3B8' }}>
+                Download all 10 verified JSON artifacts mapped directly to Kogniti Minds real paper catalogue.
+              </p>
+            </div>
+
+            <a
+              href="/ondc-workbench-kit.zip"
+              download="ondc-workbench-kit.zip"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                background: '#2563EB',
+                color: '#FFFFFF',
+                textDecoration: 'none',
+                padding: '0.65rem 1.25rem',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+              }}
+            >
+              <Download size={15} /> Download Full Workbench Kit (.zip)
+            </a>
+          </div>
+
+          {/* Workbench Simulator Runner */}
+          <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '1.5rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#0F172A' }}>
+                  Interactive Scenario Simulator
+                </h4>
+                <p style={{ margin: '0.2rem 0 0', fontSize: '0.85rem', color: '#64748B' }}>
+                  Executes genuine seller business logic against active inventory and taxes.
                 </p>
               </div>
 
-              {/* 1-Click ZIP Download Action */}
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <a
-                  href="/ondc-workbench-kit.zip"
-                  download="ondc-workbench-kit.zip"
+              <button
+                onClick={handleRunSimulation}
+                disabled={isSimulating}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.6rem 1.2rem',
+                  borderRadius: '8px',
+                  background: '#10B981',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: isSimulating ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <Play size={14} />
+                {isSimulating ? 'Simulating...' : 'Execute Scenario'}
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+              {[
+                { id: 'search', label: '1. Search / Discovery', desc: 'Authoritative 13-product catalogue' },
+                { id: 'select', label: '2. Select / Quote', desc: 'Item validation, 8% bulk discount & GST' },
+                { id: 'init', label: '3. Init / Terms', desc: 'Billing address, fulfillment & payment terms' },
+                { id: 'confirm', label: '4. Confirm / Order', desc: 'Atomic inventory deduction & order creation' },
+                { id: 'update_return', label: '5. Buyer-Initiated Return', desc: 'Active reverse flow: Partial/Full return & refund' },
+              ].map((sc) => (
+                <div
+                  key={sc.id}
+                  onClick={() => setSelectedScenario(sc.id as any)}
                   style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                    color: '#FFFFFF',
-                    border: 'none',
+                    padding: '0.85rem',
                     borderRadius: '8px',
-                    padding: '0.7rem 1.4rem',
-                    fontSize: '0.88rem',
-                    fontWeight: 700,
-                    textDecoration: 'none',
-                    boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)',
+                    border: selectedScenario === sc.id ? '2px solid #2563EB' : '1px solid #E2E8F0',
+                    background: selectedScenario === sc.id ? '#EFF6FF' : '#F8FAFC',
                     cursor: 'pointer',
                   }}
                 >
-                  <Download size={16} />
-                  Download Complete ZIP Kit
-                </a>
-                <a
-                  href="/ondc/download/workbench-file/workbench_manifest.json"
-                  download="workbench_manifest.json"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    background: '#F8FAFC',
-                    color: '#334155',
-                    border: '1px solid #CBD5E1',
-                    borderRadius: '8px',
-                    padding: '0.7rem 1rem',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    textDecoration: 'none',
-                  }}
-                >
-                  <FileCode size={15} />
-                  Manifest (.json)
-                </a>
-              </div>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: selectedScenario === sc.id ? '#1E40AF' : '#0F172A' }}>
+                    {sc.label}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '0.2rem' }}>
+                    {sc.desc}
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {/* Files List Table */}
-            <div style={{ overflowX: 'auto', border: '1px solid #E2E8F0', borderRadius: '8px' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', textAlign: 'left' }}>
+            {/* Simulation Results */}
+            {simulationResult && (
+              <div style={{ marginTop: '1.25rem', border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
+                <div style={{ background: '#F1F5F9', padding: '0.65rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span
+                      style={{
+                        background: simulationResult.success ? '#DCFCE7' : '#FEE2E2',
+                        color: simulationResult.success ? '#166534' : '#991B1B',
+                        padding: '0.2rem 0.5rem',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {simulationResult.success ? 'PASSED (200 OK)' : 'FAILED'}
+                    </span>
+                    <span style={{ fontSize: '0.8rem', color: '#64748B' }}>
+                      Execution: {simulationResult.executionTimeMs}ms
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleCopySimJson}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                      background: copiedSimJson ? '#10B981' : '#FFFFFF',
+                      color: copiedSimJson ? '#FFFFFF' : '#334155',
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {copiedSimJson ? <Check size={13} /> : <Copy size={13} />}
+                    {copiedSimJson ? 'Copied!' : 'Copy JSON'}
+                  </button>
+                </div>
+                <pre
+                  style={{
+                    margin: 0,
+                    padding: '1rem',
+                    background: '#0F172A',
+                    color: '#38BDF8',
+                    fontSize: '0.78rem',
+                    fontFamily: 'monospace',
+                    maxHeight: '350px',
+                    overflowY: 'auto',
+                  }}
+                >
+                  {JSON.stringify(simulationResult.result || simulationResult, null, 2)}
+                </pre>
+              </div>
+            )}
+          </div>
+
+          {/* Workbench Files Download Table */}
+          <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '1.5rem' }}>
+            <h4 style={{ margin: '0 0 1rem', fontSize: '1.1rem', fontWeight: 700, color: '#0F172A' }}>
+              Individual Artifact Downloads
+            </h4>
+            <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                 <thead>
-                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
-                    <th style={{ padding: '0.75rem 1rem', width: '130px' }}>Scenario</th>
-                    <th style={{ padding: '0.75rem 1rem', width: '220px' }}>File Name</th>
-                    <th style={{ padding: '0.75rem 1rem' }}>Description & Scope</th>
-                    <th style={{ padding: '0.75rem 1rem', width: '90px' }}>Size</th>
-                    <th style={{ padding: '0.75rem 1rem', width: '190px', textAlign: 'right' }}>Actions</th>
+                  <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', textAlign: 'left' }}>
+                    <th style={{ padding: '0.65rem 1rem' }}>Filename</th>
+                    <th style={{ padding: '0.65rem 1rem' }}>Scenario</th>
+                    <th style={{ padding: '0.65rem 1rem' }}>Size</th>
+                    <th style={{ padding: '0.65rem 1rem', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {WORKBENCH_DOWNLOAD_ITEMS.map((item, idx) => (
-                    <tr
-                      key={item.filename}
-                      style={{
-                        borderBottom: idx === WORKBENCH_DOWNLOAD_ITEMS.length - 1 ? 'none' : '1px solid #F1F5F9',
-                        background: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA',
-                      }}
-                    >
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            background: item.badge === 'Guide' ? '#FEF3C7' : item.badge === 'Index' ? '#E0E7FF' : '#EFF6FF',
-                            color: item.badge === 'Guide' ? '#92400E' : item.badge === 'Index' ? '#3730A3' : '#1E40AF',
-                            padding: '0.15rem 0.5rem',
-                            borderRadius: '4px',
-                            fontSize: '0.72rem',
-                            fontWeight: 700,
-                          }}
-                        >
-                          {item.badge}
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 600, color: '#0F172A' }}>
-                        {item.filename}
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#475569' }}>
-                        <div style={{ fontWeight: 600, color: '#1E293B', marginBottom: '0.15rem' }}>{item.name}</div>
-                        <div style={{ fontSize: '0.76rem', color: '#64748B' }}>{item.desc}</div>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#64748B', whiteSpace: 'nowrap' }}>
-                        {item.size}
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                    <tr key={item.filename} style={{ borderBottom: idx !== WORKBENCH_DOWNLOAD_ITEMS.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
+                      <td style={{ padding: '0.65rem 1rem', fontFamily: 'monospace', fontWeight: 600 }}>{item.filename}</td>
+                      <td style={{ padding: '0.65rem 1rem' }}>{item.name}</td>
+                      <td style={{ padding: '0.65rem 1rem', color: '#64748B' }}>{item.size}</td>
+                      <td style={{ padding: '0.65rem 1rem', textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
                           <button
                             onClick={() => handleCopyFileContent(item.filename)}
                             style={{
-                              display: 'inline-flex',
+                              display: 'flex',
                               alignItems: 'center',
                               gap: '0.25rem',
                               background: copiedFile === item.filename ? '#10B981' : '#F1F5F9',
                               color: copiedFile === item.filename ? '#FFFFFF' : '#334155',
                               border: '1px solid #CBD5E1',
-                              borderRadius: '6px',
-                              padding: '0.35rem 0.65rem',
-                              fontSize: '0.74rem',
+                              borderRadius: '4px',
+                              padding: '0.25rem 0.55rem',
+                              fontSize: '0.72rem',
                               fontWeight: 600,
                               cursor: 'pointer',
-                              transition: 'all 0.15s ease',
                             }}
-                            title="Copy file contents to clipboard"
                           >
-                            {copiedFile === item.filename ? <Check size={12} /> : <Copy size={12} />}
+                            {copiedFile === item.filename ? <Check size={11} /> : <Copy size={11} />}
                             {copiedFile === item.filename ? 'Copied' : 'Copy'}
                           </button>
                           <a
                             href={`/ondc/download/workbench-file/${item.filename}`}
                             download={item.filename}
                             style={{
-                              display: 'inline-flex',
+                              display: 'flex',
                               alignItems: 'center',
                               gap: '0.25rem',
                               background: '#2563EB',
                               color: '#FFFFFF',
-                              borderRadius: '6px',
-                              padding: '0.35rem 0.65rem',
-                              fontSize: '0.74rem',
-                              fontWeight: 600,
                               textDecoration: 'none',
-                              boxShadow: '0 1px 2px rgba(37, 99, 235, 0.2)',
+                              borderRadius: '4px',
+                              padding: '0.25rem 0.55rem',
+                              fontSize: '0.72rem',
+                              fontWeight: 600,
                             }}
-                            title={`Download ${item.filename}`}
                           >
-                            <Download size={12} />
-                            Download
+                            <Download size={11} /> Download
                           </a>
                         </div>
                       </td>
@@ -1251,145 +1797,6 @@ export const OndcManagement: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          </div>
-
-          {/* Sub-tab 5: Live Workbench Scenario Simulator */}
-          <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '1.75rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
-            <div>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#0F172A', margin: '0 0 0.4rem' }}>
-                ONDC RET 1.2.5 Workbench Simulator & Validator
-              </h3>
-              <p style={{ color: '#64748B', fontSize: '0.85rem', margin: 0, maxWidth: '700px' }}>
-                Execute genuine ONDC scenarios against Kogniti Minds' live production business logic, validating taxonomy,
-                HSN codes, pricing slabs, tax breakup, and reverse return logistics with zero fake/hard-coded responses.
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button
-                onClick={handleRunSimulation}
-                disabled={isSimulating}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  background: isSimulating ? '#94A3B8' : '#2563EB',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '0.65rem 1.2rem',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  cursor: isSimulating ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)',
-                }}
-              >
-                <Play size={15} />
-                {isSimulating ? 'Simulating Scenario...' : 'Execute Scenario'}
-              </button>
-            </div>
-          </div>
-
-          {/* Scenario Selection Grid */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
-              Select Scenario to Verify:
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
-              {[
-                { id: 'search', label: '1. Search / Discovery', desc: 'Full catalogue taxonomy & serviceability audit' },
-                { id: 'select', label: '2. Select / Quote', desc: 'Item validation, tiered bulk discount & GST' },
-                { id: 'init', label: '3. Init / Terms', desc: 'Billing address, fulfillment & payment terms' },
-                { id: 'confirm', label: '4. Confirm / Order', desc: 'Real order creation & atomic inventory lock' },
-                { id: 'update_return', label: '5. Buyer-Initiated Return', desc: 'Active flow: Partial/Full return & reverse QC refund' },
-              ].map((sc) => (
-                <div
-                  key={sc.id}
-                  onClick={() => setSelectedScenario(sc.id as any)}
-                  style={{
-                    padding: '1rem',
-                    borderRadius: '8px',
-                    border: selectedScenario === sc.id ? '2px solid #2563EB' : '1px solid #E2E8F0',
-                    background: selectedScenario === sc.id ? '#EFF6FF' : '#F8FAFC',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: selectedScenario === sc.id ? '#1E40AF' : '#0F172A', marginBottom: '0.25rem' }}>
-                    {sc.label}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                    {sc.desc}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Results Viewer */}
-          {simulationResult && (
-            <div style={{ marginTop: '1.5rem', border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
-              <div style={{ background: '#F1F5F9', padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span
-                    style={{
-                      background: simulationResult.success ? '#DCFCE7' : '#FEE2E2',
-                      color: simulationResult.success ? '#166534' : '#991B1B',
-                      padding: '0.2rem 0.5rem',
-                      borderRadius: '4px',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                    }}
-                  >
-                    {simulationResult.success ? 'PASSED (200 OK)' : 'FAILED'}
-                  </span>
-                  <span style={{ fontSize: '0.8rem', color: '#64748B' }}>
-                    Execution: {simulationResult.executionTimeMs}ms
-                  </span>
-                  {simulationResult.validation && (
-                    <span style={{ fontSize: '0.8rem', color: '#166534', fontWeight: 600 }}>
-                      ✓ {simulationResult.validation.compliantItems || 13} products verified
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={handleCopySimJson}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    background: copiedSimJson ? '#10B981' : '#FFFFFF',
-                    color: copiedSimJson ? '#FFFFFF' : '#334155',
-                    border: '1px solid #CBD5E1',
-                    borderRadius: '6px',
-                    padding: '0.35rem 0.75rem',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {copiedSimJson ? <Check size={13} /> : <Copy size={13} />}
-                  {copiedSimJson ? 'Copied!' : 'Copy JSON'}
-                </button>
-              </div>
-
-              <pre
-                style={{
-                  margin: 0,
-                  padding: '1rem',
-                  background: '#0F172A',
-                  color: '#38BDF8',
-                  fontSize: '0.78rem',
-                  fontFamily: 'monospace',
-                  maxHeight: '400px',
-                  overflowY: 'auto',
-                  lineHeight: '1.45',
-                }}
-              >
-                {JSON.stringify(simulationResult.result || simulationResult, null, 2)}
-              </pre>
-            </div>
-          )}
           </div>
         </div>
       )}

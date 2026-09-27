@@ -167,22 +167,27 @@ const MainApp: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab, b2bTab]);
 
-  // Support direct hash navigation and back button for all sections
+  // Support direct pathname & hash navigation and back button for all sections
   useEffect(() => {
-    const handleHashCheck = () => {
+    const handleRouteCheck = () => {
+      const pathname = (typeof window !== 'undefined' ? window.location.pathname : '').toLowerCase();
+      if (pathname.startsWith('/admin')) {
+        setActiveTab('admin');
+        return;
+      }
       const hash = window.location.hash.replace('#', '').toLowerCase();
-      if (['terms', 'privacy', 'refund', 'shipping', 'new-arrivals', 'certifications', 'stories', 'shop', 'products', 'b2b'].includes(hash)) {
+      if (['terms', 'privacy', 'refund', 'shipping', 'new-arrivals', 'certifications', 'stories', 'shop', 'products', 'b2b', 'admin'].includes(hash)) {
         setActiveTab(hash);
       } else if (!hash || hash === 'home') {
         setActiveTab('home');
       }
     };
-    handleHashCheck();
-    window.addEventListener('hashchange', handleHashCheck);
-    window.addEventListener('popstate', handleHashCheck);
+    handleRouteCheck();
+    window.addEventListener('hashchange', handleRouteCheck);
+    window.addEventListener('popstate', handleRouteCheck);
     return () => {
-      window.removeEventListener('hashchange', handleHashCheck);
-      window.removeEventListener('popstate', handleHashCheck);
+      window.removeEventListener('hashchange', handleRouteCheck);
+      window.removeEventListener('popstate', handleRouteCheck);
     };
   }, []);
 
@@ -510,7 +515,10 @@ const MainApp: React.FC = () => {
               quotations={quotations}
               coupons={coupons}
               onRefresh={refreshData}
-              onExitAdmin={() => setActiveTab('home')}
+              onExitAdmin={() => {
+                window.history.pushState(null, '', '/');
+                setActiveTab('home');
+              }}
             />
           ) : (
             <div className="container" style={{ padding: '5rem 1.25rem', textAlign: 'center' }}>

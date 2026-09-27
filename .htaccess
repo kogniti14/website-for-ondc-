@@ -92,6 +92,7 @@ DirectoryIndex dist/index.html index.html
   RewriteRule ^api/admin/ondc/orders/?$ public/api/ondc-gateway.php?action=admin_orders [QSA,L]
   RewriteRule ^api/admin/ondc/transactions/?$ public/api/ondc-gateway.php?action=admin_transactions [QSA,L]
   RewriteRule ^api/admin/ondc/logs/?$ public/api/ondc-gateway.php?action=admin_logs [QSA,L]
+  RewriteRule ^api/admin/ondc/stats/?$ public/api/ondc-gateway.php?action=admin_stats [QSA,L]
   RewriteRule ^api/auth/send-otp/?$ public/api/send-email.php [QSA,L]
   RewriteRule ^api/resend/?$ public/api/send-email.php [QSA,L]
   RewriteRule ^api/health/?$ public/api/health.php [QSA,L]

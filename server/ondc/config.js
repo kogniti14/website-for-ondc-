@@ -4,11 +4,13 @@
  */
 
 export const ondcConfig = {
-  env: (process.env.ONDC_ENV || 'preprod').toLowerCase(),
+  role: 'SELLER',
+  env: (process.env.ONDC_ENV || 'production').toLowerCase(),
   port: parseInt(process.env.PORT || '3000', 10),
   
   // ONDC Network Identifiers
   subscriberId: process.env.ONDC_SUBSCRIBER_ID || 'kognitiminds.com',
+  bppId: 'kogniti-minds-bpp',
   subscriberUri: process.env.ONDC_SUBSCRIBER_URI || 'https://kognitiminds.com',
   domain: process.env.ONDC_REGISTRY_DOMAIN || 'ONDC:RETeB2B',
   city: process.env.ONDC_CITY || 'std:080',
@@ -64,9 +66,11 @@ export const ondcConfig = {
    */
   getSanitized() {
     return {
+      role: this.role,
       domain: this.domain,
       environment: this.env,
       subscriberId: this.subscriberId,
+      bppId: this.bppId,
       subscriberUri: this.subscriberUri,
       keyId: this.keyId,
       hasSigningKeys: this.hasKeys(),
