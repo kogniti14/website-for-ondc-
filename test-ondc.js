@@ -431,6 +431,15 @@ async function runTests() {
   const getSearchRes = await makeReq('/search', 'GET');
   assert(getSearchRes.status === 405, 'GET /search returned HTTP 405 Method Not Allowed NACK');
 
+  // 8a-2. Browser GET with Accept: text/html -> MUST redirect to dedicated Admin SPA Route
+  const browserGetRes = await makeReq('/on_search', 'GET', null, { 'Accept': 'text/html,application/xhtml+xml' });
+  assert(browserGetRes.status === 302, 'Browser GET /on_search redirects to Admin SPA route with HTTP 302');
+  assert(browserGetRes.headers['location'] === '/admin/ondc/on-search', 'Browser GET /on_search redirects to /admin/ondc/on-search');
+
+  const browserGetSearchRes = await makeReq('/search', 'GET', null, { 'Accept': 'text/html,application/xhtml+xml' });
+  assert(browserGetSearchRes.status === 302, 'Browser GET /search redirects to Admin SPA route with HTTP 302');
+  assert(browserGetSearchRes.headers['location'] === '/admin/ondc/search', 'Browser GET /search redirects to /admin/ondc/search');
+
   // 8b. OPTIONS preflight CORS request -> MUST return HTTP 200 OK
   const optionsRes = await makeReq('/on_search', 'OPTIONS');
   assert(optionsRes.status === 200, 'OPTIONS /on_search returned HTTP 200 OK for CORS preflight');

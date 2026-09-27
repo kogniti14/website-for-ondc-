@@ -44,18 +44,40 @@ export const OndcNetworkModal: React.FC<OndcNetworkModalProps> = ({ isOpen, onCl
     setTimeout(() => setCopiedEndpoint(null), 2000);
   };
 
-  const ENDPOINTS = [
-    { method: 'POST', path: 'https://kognitiminds.com/search', desc: 'Product Discovery & Catalog Broadcast' },
-    { method: 'POST', path: 'https://kognitiminds.com/select', desc: 'B2B Quotation, MOQ & GST Calculation' },
-    { method: 'POST', path: 'https://kognitiminds.com/init', desc: 'Order Initialization & Fulfillment Setup' },
-    { method: 'POST', path: 'https://kognitiminds.com/confirm', desc: 'Order Placement & Atomic Inventory Lock' },
-    { method: 'POST', path: 'https://kognitiminds.com/status', desc: 'Order & Milestone Status Query' },
-    { method: 'POST', path: 'https://kognitiminds.com/track', desc: 'Live Shipment Tracking' },
-    { method: 'POST', path: 'https://kognitiminds.com/cancel', desc: 'Order Cancellation & Restock' },
-    { method: 'POST', path: 'https://kognitiminds.com/update', desc: 'Buyer Return (Full & Partial Orders)' },
-    { method: 'POST', path: 'https://kognitiminds.com/rating', desc: 'Buyer Feedback & Rating' },
-    { method: 'POST', path: 'https://kognitiminds.com/support', desc: 'Customer Service & Contact Details' },
+  const [activeCategory, setActiveCategory] = useState<'callbacks' | 'inbound' | 'all'>('callbacks');
+
+  const SELLER_CALLBACKS = [
+    { method: 'POST', path: 'https://kognitiminds.com/on_search', desc: 'Outbound / Inbound Catalog Discovery Callback' },
+    { method: 'POST', path: 'https://kognitiminds.com/on_select', desc: 'Outbound / Inbound Quotation & Tax Breakdown Callback' },
+    { method: 'POST', path: 'https://kognitiminds.com/on_init', desc: 'Outbound / Inbound Fulfillment & Terms Setup Callback' },
+    { method: 'POST', path: 'https://kognitiminds.com/on_confirm', desc: 'Outbound / Inbound Atomic Order Confirmation Callback' },
+    { method: 'POST', path: 'https://kognitiminds.com/on_status', desc: 'Outbound / Inbound Order Milestone Status Callback' },
+    { method: 'POST', path: 'https://kognitiminds.com/on_track', desc: 'Outbound / Inbound Real-Time Logistics Tracking Callback' },
+    { method: 'POST', path: 'https://kognitiminds.com/on_cancel', desc: 'Outbound / Inbound Cancellation & Restocking Callback' },
+    { method: 'POST', path: 'https://kognitiminds.com/on_update', desc: 'Outbound / Inbound Buyer-Initiated Return Flow Callback' },
+    { method: 'POST', path: 'https://kognitiminds.com/on_rating', desc: 'Outbound / Inbound Seller Rating & Feedback Callback' },
+    { method: 'POST', path: 'https://kognitiminds.com/on_support', desc: 'Outbound / Inbound Customer Support Details Callback' },
   ];
+
+  const INBOUND_ACTIONS = [
+    { method: 'POST', path: 'https://kognitiminds.com/search', desc: 'Inbound Catalog Discovery Request' },
+    { method: 'POST', path: 'https://kognitiminds.com/select', desc: 'Inbound B2B Quotation, MOQ & GST Calculation' },
+    { method: 'POST', path: 'https://kognitiminds.com/init', desc: 'Inbound Order Initialization & Fulfillment Setup' },
+    { method: 'POST', path: 'https://kognitiminds.com/confirm', desc: 'Inbound Order Placement & Inventory Lock' },
+    { method: 'POST', path: 'https://kognitiminds.com/status', desc: 'Inbound Order Status Query' },
+    { method: 'POST', path: 'https://kognitiminds.com/track', desc: 'Inbound Live Shipment Tracking Query' },
+    { method: 'POST', path: 'https://kognitiminds.com/cancel', desc: 'Inbound Order Cancellation & Restock Request' },
+    { method: 'POST', path: 'https://kognitiminds.com/update', desc: 'Inbound Buyer Return Request (Full & Partial)' },
+    { method: 'POST', path: 'https://kognitiminds.com/rating', desc: 'Inbound Buyer Rating & Feedback Submission' },
+    { method: 'POST', path: 'https://kognitiminds.com/support', desc: 'Inbound Customer Service Inquiry' },
+  ];
+
+  const displayedEndpoints =
+    activeCategory === 'callbacks'
+      ? SELLER_CALLBACKS
+      : activeCategory === 'inbound'
+      ? INBOUND_ACTIONS
+      : [...SELLER_CALLBACKS, ...INBOUND_ACTIONS];
 
   return (
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 9999 }}>
@@ -213,13 +235,62 @@ export const OndcNetworkModal: React.FC<OndcNetworkModalProps> = ({ isOpen, onCl
 
         {/* Live Production Endpoints Table */}
         <div style={{ marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>
-              Live Production Endpoints (Buyer &rarr; Seller App)
+              Live Production Endpoints (ONDC:RETeB2B v1.2.5)
             </h3>
             <span style={{ fontSize: '0.75rem', color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <CheckCircle2 size={13} /> HTTPS / SSL Verified
+              <CheckCircle2 size={13} /> HTTPS / SSL Verified • POST Only
             </span>
+          </div>
+
+          {/* Category Toggle Tabs */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <button
+              onClick={() => setActiveCategory('callbacks')}
+              style={{
+                padding: '0.35rem 0.75rem',
+                borderRadius: '6px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+                background: activeCategory === 'callbacks' ? '#0F172A' : '#F1F5F9',
+                color: activeCategory === 'callbacks' ? '#FFFFFF' : '#475569',
+              }}
+            >
+              Seller Callbacks (10)
+            </button>
+            <button
+              onClick={() => setActiveCategory('inbound')}
+              style={{
+                padding: '0.35rem 0.75rem',
+                borderRadius: '6px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+                background: activeCategory === 'inbound' ? '#0F172A' : '#F1F5F9',
+                color: activeCategory === 'inbound' ? '#FFFFFF' : '#475569',
+              }}
+            >
+              Inbound Actions (10)
+            </button>
+            <button
+              onClick={() => setActiveCategory('all')}
+              style={{
+                padding: '0.35rem 0.75rem',
+                borderRadius: '6px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+                background: activeCategory === 'all' ? '#0F172A' : '#F1F5F9',
+                color: activeCategory === 'all' ? '#FFFFFF' : '#475569',
+              }}
+            >
+              All 20 Endpoints
+            </button>
           </div>
 
           <div
@@ -230,7 +301,7 @@ export const OndcNetworkModal: React.FC<OndcNetworkModalProps> = ({ isOpen, onCl
               fontSize: '0.82rem',
             }}
           >
-            {ENDPOINTS.map((ep, idx) => {
+            {displayedEndpoints.map((ep, idx) => {
               const isCopied = copiedEndpoint === ep.path;
               return (
                 <div
@@ -241,7 +312,7 @@ export const OndcNetworkModal: React.FC<OndcNetworkModalProps> = ({ isOpen, onCl
                     justifyContent: 'space-between',
                     padding: '0.65rem 0.9rem',
                     background: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC',
-                    borderBottom: idx !== ENDPOINTS.length - 1 ? '1px solid #F1F5F9' : 'none',
+                    borderBottom: idx !== displayedEndpoints.length - 1 ? '1px solid #F1F5F9' : 'none',
                     gap: '0.75rem',
                   }}
                 >
@@ -317,7 +388,29 @@ export const OndcNetworkModal: React.FC<OndcNetworkModalProps> = ({ isOpen, onCl
           <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
             Available for automated procurement on all ONDC Buyer Applications.
           </div>
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => {
+                onClose();
+                window.location.href = '/admin/ondc';
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.55rem 1.1rem',
+                borderRadius: '8px',
+                background: '#0F172A',
+                color: '#FFFFFF',
+                border: 'none',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+                cursor: 'pointer',
+              }}
+            >
+              Open ONDC Console
+              <ExternalLink size={14} />
+            </button>
             <button
               onClick={() => {
                 onClose();

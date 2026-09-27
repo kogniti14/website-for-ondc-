@@ -45,6 +45,7 @@ import { B2BCertificationsPage } from './pages/b2b/B2BCertificationsPage';
 
 // Admin Page
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
+import { OndcManagement } from './components/admin/OndcManagement';
 
 // Legal & Policy Pages
 import { LegalPolicyPage } from './pages/legal/LegalPolicyPage';
@@ -172,6 +173,12 @@ const MainApp: React.FC = () => {
     const handleRouteCheck = () => {
       const pathname = (typeof window !== 'undefined' ? window.location.pathname : '').toLowerCase();
       if (pathname.startsWith('/admin')) {
+        setActiveTab('admin');
+        return;
+      }
+      if (pathname.startsWith('/on_') || pathname.match(/^\/(search|select|init|confirm|status|track|cancel|update|rating|support)$/)) {
+        const cleanSlug = pathname.replace(/^\//, '').replace(/_/g, '-');
+        window.history.replaceState(null, '', `/admin/ondc/${cleanSlug}`);
         setActiveTab('admin');
         return;
       }
@@ -520,7 +527,55 @@ const MainApp: React.FC = () => {
                 setActiveTab('home');
               }}
             />
-          ) : (
+          ) : typeof window !== 'undefined' && window.location.pathname.startsWith('/admin/ondc') ? (
+              <div className="container" style={{ padding: '2rem 1.25rem', maxWidth: '1440px', margin: '0 auto' }}>
+                <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FFFFFF', padding: '0.85rem 1.25rem', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                  <button
+                    onClick={() => {
+                      window.history.pushState(null, '', '/');
+                      setActiveTab('home');
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      background: '#FFFFFF',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      color: '#475569',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ← Back to Storefront
+                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 500 }}>Public Protocol Explorer • ONDC:RETeB2B v1.2.5</span>
+                    <button
+                      onClick={() => {
+                        setAdminAuthMode('login');
+                        setAdminAuthModalOpen(true);
+                      }}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        borderRadius: '8px',
+                        background: '#0F172A',
+                        color: '#FFFFFF',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Admin Sign In
+                    </button>
+                  </div>
+                </div>
+                <OndcManagement />
+              </div>
+            ) : (
             <div className="container" style={{ padding: '5rem 1.25rem', textAlign: 'center' }}>
               <div
                 className="card"

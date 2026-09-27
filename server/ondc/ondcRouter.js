@@ -360,7 +360,14 @@ const PROTOCOL_POST_ONLY_ENDPOINTS = [
 
 for (const act of PROTOCOL_POST_ONLY_ENDPOINTS) {
   // Reject GET with standard ONDC Domain Error 405 NACK
+  // For browser navigation (Accept: text/html), redirect to dedicated Admin UI route
   ondcRouter.get([`/${act}`, `/ondc/${act}`], (req, res) => {
+    const acceptHeader = req.headers['accept'] || '';
+    if (acceptHeader.includes('text/html')) {
+      const slug = act.replace(/_/g, '-');
+      return res.redirect(`/admin/ondc/${slug}`);
+    }
+
     return res.status(405).json({
       message: {
         ack: {

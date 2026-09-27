@@ -254,6 +254,15 @@ function sendNackResponse($httpStatus, $code, $message, $storageDir, $logParams 
 
 // 6. Enforce POST Method for all protocol actions
 if ($httpMethod !== 'POST') {
+    // If request originates from a human browser (Accept header includes text/html),
+    // redirect smoothly to the dedicated Admin UI SPA route
+    $acceptHeader = $_SERVER['HTTP_ACCEPT'] ?? '';
+    if (stripos($acceptHeader, 'text/html') !== false) {
+        $slug = str_replace('_', '-', $action);
+        header("Location: /admin/ondc/{$slug}", true, 302);
+        exit;
+    }
+
     sendNackResponse(405, '10000', 'Method Not Allowed. ONDC protocol requires HTTP POST.', $storageDir, [
         'action' => $action,
         'http_method' => $httpMethod,
