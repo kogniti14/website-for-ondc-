@@ -204,7 +204,7 @@ const MainApp: React.FC = () => {
   const handleNavigateToShop = () => {
     setSelectedCategory('All');
     setSearchQuery('');
-    handleSetActiveTab('products');
+    handleSetActiveTab('shop');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -319,13 +319,14 @@ const MainApp: React.FC = () => {
 
         {(activeTab === 'products' || activeTab === 'shop') && (
           <ProductListingPage
+            key={activeTab}
             products={products}
             categories={categories}
             initialCategory={activeTab === 'shop' ? 'All' : selectedCategory}
             initialSearch={activeTab === 'shop' ? '' : searchQuery}
             onOpenProduct={handleOpenProduct}
             onBuyNow={handleBuyNow}
-            isShopNowView={false}
+            isShopNowView={activeTab === 'shop'}
           />
         )}
 

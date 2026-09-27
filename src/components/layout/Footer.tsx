@@ -296,8 +296,8 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
               <li>
                 <button
                   onClick={() => {
-                    if (onNavigateToShop) onNavigateToShop();
-                    else setActiveTab('products');
+                    setActiveTab('products');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   style={{ color: '#94A3B8' }}
                 >
@@ -308,7 +308,10 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
                 <button
                   onClick={() => {
                     if (onNavigateToShop) onNavigateToShop();
-                    else setActiveTab('products');
+                    else {
+                      setActiveTab('shop');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
                   }}
                   style={{ color: '#94A3B8' }}
                 >

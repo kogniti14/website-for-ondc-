@@ -511,8 +511,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
             <button
               onClick={() => {
-                if (onNavigateToShop) onNavigateToShop();
-                else setActiveTab('products');
+                setActiveTab('products');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               style={{
                 color: (activeTab === 'products' || activeTab === 'new-arrivals') ? 'var(--primary)' : 'var(--slate-700)',
@@ -525,7 +525,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => {
                 if (onNavigateToShop) onNavigateToShop();
-                else setActiveTab('products');
+                else {
+                  setActiveTab('shop');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
               }}
               style={{
                 color: activeTab === 'shop' ? 'var(--primary)' : 'var(--slate-700)',
@@ -666,9 +669,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
           <button
             onClick={() => {
-              if (onNavigateToShop) onNavigateToShop();
-              else setActiveTab('products');
+              setActiveTab('products');
               setMobileMenuOpen(false);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             className="btn btn-secondary"
             style={{ justifyContent: 'flex-start' }}
@@ -678,7 +681,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => {
               if (onNavigateToShop) onNavigateToShop();
-              else setActiveTab('products');
+              else {
+                setActiveTab('shop');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
               setMobileMenuOpen(false);
             }}
             className="btn btn-secondary"
