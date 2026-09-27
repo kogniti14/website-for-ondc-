@@ -83,6 +83,7 @@ DirectoryIndex dist/index.html index.html
   RewriteRule ^ - [L]
 
   # 2. Direct Native Handlers for Production APIs (Zero proxy overhead, zero 503 errors)
+  RewriteRule ^api/ondc/health/?$ public/api/ondc-gateway.php?action=health [QSA,L]
   RewriteRule ^ondc/health/?$ public/api/ondc-gateway.php?action=health [QSA,L]
   RewriteRule ^health/?$ public/api/ondc-gateway.php?action=health [QSA,L]
   RewriteRule ^ondc-workbench-kit\.zip$ public/api/download-workbench.php?file=zip [QSA,L]

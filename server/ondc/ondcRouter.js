@@ -81,6 +81,21 @@ ondcRouter.use(
   })
 );
 
+// Malformed JSON syntax error handler per Beckn protocol
+ondcRouter.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({
+      message: { ack: { status: 'NACK' } },
+      error: {
+        type: 'DOMAIN-ERROR',
+        code: '10000',
+        message: 'Invalid JSON syntax in request body.',
+      },
+    });
+  }
+  next(err);
+});
+
 // ONDC Request Lifecycle Audit Logging Middleware per RETeB2B 1.2.5 Specification (Section 9)
 ondcRouter.use((req, res, next) => {
   req._ondcStartTime = Date.now();
@@ -244,6 +259,14 @@ async function validateOndcRequest(req, res, next) {
     return sendNack(res, '10001', `Invalid domain '${context.domain}'. Expected '${ondcConfig.domain}'.`);
   }
 
+  // Version verification: must be 1.2.5
+  if (context.core_version && context.core_version !== '1.2.5') {
+    req._schemaValid = false;
+    req._errorCode = '10002';
+    req._error = { code: '10002', message: `Unsupported core_version '${context.core_version}'. Expected '1.2.5'.` };
+    return sendNack(res, '10002', `Unsupported core_version '${context.core_version}'. Expected '1.2.5'.`);
+  }
+
   // Idempotency check: prevent duplicate order creation, inventory deductions, or double cancellations
   const idempotency = stateManager.checkIdempotency(context.transaction_id, context.message_id, context.action);
   if (idempotency.isDuplicate) {
@@ -309,16 +332,57 @@ async function validateOndcRequest(req, res, next) {
    ========================================================================== */
 
 /**
- * GET /health and GET /ondc/health - Service Health Check
- * Standard health check per ONDC Workbench requirements (Section 10)
+ * Non-ONDC Health Check Endpoints (Section 10: ONDC Workbench compliance)
+ * Standard health check to verify service health without triggering ONDC protocol actions.
  */
-ondcRouter.get(['/health', '/ondc/health'], (req, res) => {
+ondcRouter.get(['/health', '/ondc/health', '/api/ondc/health', '/api/health'], (req, res) => {
   return res.status(200).json({
     status: 'healthy',
     service: 'kogniti-minds-ondc',
+    role: ondcConfig.role || 'SELLER',
+    domain: ondcConfig.domain,
+    version: ondcConfig.coreVersion,
     environment: 'production',
+    bpp_id: ondcConfig.bppId || 'kogniti-minds-bpp',
+    bpp_uri: ondcConfig.subscriberUri || 'https://kognitiminds.com',
   });
 });
+
+/**
+ * All 20 ONDC Protocol Endpoints (Inbound Actions and Seller Callbacks).
+ * Strictly POST-only per official ONDC RFC.
+ * HTTP GET requests return 405 Method Not Allowed with standard Beckn NACK.
+ */
+const PROTOCOL_POST_ONLY_ENDPOINTS = [
+  'search', 'select', 'init', 'confirm', 'status', 'track', 'cancel', 'update', 'rating', 'support',
+  'on_search', 'on_select', 'on_init', 'on_confirm', 'on_status', 'on_track', 'on_cancel', 'on_update', 'on_rating', 'on_support'
+];
+
+for (const act of PROTOCOL_POST_ONLY_ENDPOINTS) {
+  // Reject GET with standard ONDC Domain Error 405 NACK
+  ondcRouter.get([`/${act}`, `/ondc/${act}`], (req, res) => {
+    return res.status(405).json({
+      message: {
+        ack: {
+          status: 'NACK',
+        },
+      },
+      error: {
+        type: 'DOMAIN-ERROR',
+        code: '10000',
+        message: 'Method Not Allowed. ONDC protocol requires HTTP POST.',
+      },
+    });
+  });
+
+  // CORS Preflight OPTIONS handler
+  ondcRouter.options([`/${act}`, `/ondc/${act}`], (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, Digest, Date, X-Requested-With, Accept');
+    return res.status(200).end();
+  });
+}
 
 /**
  * GET /on_search_sample and GET /ondc/on_search_sample
@@ -762,8 +826,20 @@ const INBOUND_CALLBACK_ACTIONS = [
 for (const cbAction of INBOUND_CALLBACK_ACTIONS) {
   ondcRouter.post([`/${cbAction}`, `/ondc/${cbAction}`], async (req, res) => {
     const { context } = req.body || {};
-    if (!context || !context.transaction_id || !context.message_id) {
-      return sendNack(res, '10000', 'Missing context in callback');
+    if (!context || !context.domain || !context.action || !context.transaction_id || !context.message_id) {
+      return sendNack(res, '10000', 'Missing required context attributes (domain, action, transaction_id, message_id)');
+    }
+
+    if (context.domain !== ondcConfig.domain) {
+      return sendNack(res, '10001', `Invalid domain '${context.domain}'. Expected '${ondcConfig.domain}'.`);
+    }
+
+    if (context.core_version && context.core_version !== '1.2.5') {
+      return sendNack(res, '10002', `Unsupported core_version '${context.core_version}'. Expected '1.2.5'.`);
+    }
+
+    if (context.action && context.action !== cbAction) {
+      return sendNack(res, '10003', `Action mismatch: expected '${cbAction}', received '${context.action}'.`);
     }
 
     // Check idempotency for inbound callbacks

@@ -44,12 +44,17 @@ if (empty($rawAction)) {
 $action = strtolower(preg_replace('/[^a-zA-Z0-9_]/', '', $rawAction));
 
 // 3. Health Check Endpoint (Section 10: ONDC Workbench compliance)
-if ($action === 'health' || $action === 'ondc/health') {
+if ($action === 'health' || $action === 'ondc/health' || $action === 'api/ondc/health' || $action === 'api/health') {
     http_response_code(200);
     echo json_encode([
         'status' => 'healthy',
         'service' => 'kogniti-minds-ondc',
-        'environment' => 'production'
+        'role' => 'SELLER',
+        'domain' => 'ONDC:RETeB2B',
+        'version' => '1.2.5',
+        'environment' => 'production',
+        'bpp_id' => 'kogniti-minds-bpp',
+        'bpp_uri' => 'https://kognitiminds.com'
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     exit;
 }
@@ -292,6 +297,17 @@ if (empty($context['domain']) || empty($context['action']) || empty($context['tr
 // Validate ONDC Domain
 if ($context['domain'] !== 'ONDC:RETeB2B') {
     sendNackResponse(400, '10001', "Invalid domain '{$context['domain']}'. Expected 'ONDC:RETeB2B'.", $storageDir, [
+        'action' => $context['action'],
+        'transaction_id' => $context['transaction_id'],
+        'message_id' => $context['message_id'],
+        'http_method' => $httpMethod,
+        'processing_time_ms' => round((microtime(true) - $startTime) * 1000, 2)
+    ]);
+}
+
+// Validate ONDC Version
+if (!empty($context['core_version']) && $context['core_version'] !== '1.2.5') {
+    sendNackResponse(400, '10002', "Unsupported core_version '{$context['core_version']}'. Expected '1.2.5'.", $storageDir, [
         'action' => $context['action'],
         'transaction_id' => $context['transaction_id'],
         'message_id' => $context['message_id'],

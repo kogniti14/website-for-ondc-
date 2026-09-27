@@ -197,15 +197,16 @@ async function runTests() {
   // Test 5: Live HTTP Server & Root Protocol Endpoints
   console.log('\n--- 5. Live HTTP Server Protocol Endpoints Test ---');
   const app = express();
-  app.use(cors());
+  app.use(cors({ optionsSuccessStatus: 200 }));
   app.use('/', ondcRouter);
 
   const server = http.createServer(app);
   await new Promise((resolve) => server.listen(3088, resolve));
   console.log('  Live test server listening on http://localhost:3088');
 
-  const makeReq = async (endpoint, method = 'GET', body = null) => {
+  const makeReq = async (endpoint, method = 'GET', body = null, headers = {}) => {
     return new Promise((resolve, reject) => {
+      const isStringBody = typeof body === 'string';
       const options = {
         hostname: 'localhost',
         port: 3088,
@@ -213,6 +214,7 @@ async function runTests() {
         method,
         headers: {
           'Content-Type': 'application/json',
+          ...headers,
         },
       };
 
@@ -221,16 +223,16 @@ async function runTests() {
         res.on('data', (chunk) => (data += chunk));
         res.on('end', () => {
           try {
-            resolve({ status: res.statusCode, body: JSON.parse(data) });
+            resolve({ status: res.statusCode, headers: res.headers, body: JSON.parse(data) });
           } catch {
-            resolve({ status: res.statusCode, raw: data });
+            resolve({ status: res.statusCode, headers: res.headers, raw: data });
           }
         });
       });
 
       req.on('error', reject);
-      if (body) {
-        req.write(JSON.stringify(body));
+      if (body !== null) {
+        req.write(isStringBody ? body : JSON.stringify(body));
       }
       req.end();
     });
@@ -416,14 +418,158 @@ async function runTests() {
   assert(missingContextRes.status === 400, 'Rejected request with missing context attributes');
   assert(missingContextRes.body.error?.code === '10000', 'Returned ONDC code 10000');
 
-  // Test 8: Inbound Callbacks
-  console.log('\n--- 8. Inbound Callbacks (/on_search, /on_confirm) ---');
-  const onSearchRes = await makeReq('/on_search', 'POST', {
-    context: { ...testContext, action: 'on_search', message_id: 'msg_cb_01' },
+  // Test 8: HTTP Method Enforcement, Protocol Compliance & Seller Callbacks
+  console.log('\n--- 8. HTTP Method Enforcement, Protocol Compliance & Seller Callbacks ---');
+
+  // 8a. GET request on protocol endpoints -> MUST return HTTP 405 Method Not Allowed NACK
+  const getOnSearchRes = await makeReq('/on_search', 'GET');
+  assert(getOnSearchRes.status === 405, 'GET /on_search returned HTTP 405 Method Not Allowed');
+  assert(getOnSearchRes.body.message?.ack?.status === 'NACK', 'GET /on_search returned standard Beckn NACK');
+  assert(getOnSearchRes.body.error?.code === '10000', 'GET /on_search returned error code 10000');
+  assert(getOnSearchRes.body.error?.message?.includes('Method Not Allowed'), 'GET /on_search returned clear Method Not Allowed message');
+
+  const getSearchRes = await makeReq('/search', 'GET');
+  assert(getSearchRes.status === 405, 'GET /search returned HTTP 405 Method Not Allowed NACK');
+
+  // 8b. OPTIONS preflight CORS request -> MUST return HTTP 200 OK
+  const optionsRes = await makeReq('/on_search', 'OPTIONS');
+  assert(optionsRes.status === 200, 'OPTIONS /on_search returned HTTP 200 OK for CORS preflight');
+  assert(optionsRes.headers['access-control-allow-methods']?.includes('POST'), 'OPTIONS header allows POST method');
+
+  // 8c. Dedicated Non-ONDC Health Check Endpoints -> MUST return HTTP 200 OK
+  const healthApiRes = await makeReq('/api/ondc/health', 'GET');
+  assert(healthApiRes.status === 200, 'GET /api/ondc/health returned HTTP 200 OK');
+  assert(healthApiRes.body.status === 'healthy', 'GET /api/ondc/health reports healthy');
+  assert(healthApiRes.body.domain === 'ONDC:RETeB2B', 'GET /api/ondc/health reports ONDC:RETeB2B domain');
+  assert(healthApiRes.body.role === 'SELLER', 'GET /api/ondc/health reports SELLER role');
+
+  const healthGeneralRes = await makeReq('/api/health', 'GET');
+  assert(healthGeneralRes.status === 200, 'GET /api/health returned HTTP 200 OK');
+
+  // 8d. All 10 Official RETeB2B 1.2.5 Seller / BPP Callback Endpoints via POST
+  const sellerCallbacks = [
+    'on_search',
+    'on_select',
+    'on_init',
+    'on_confirm',
+    'on_status',
+    'on_track',
+    'on_cancel',
+    'on_update',
+    'on_rating',
+    'on_support',
+  ];
+
+  for (const cb of sellerCallbacks) {
+    const cbRes = await makeReq(`/${cb}`, 'POST', {
+      context: {
+        domain: 'ONDC:RETeB2B',
+        action: cb,
+        core_version: '1.2.5',
+        country: 'IND',
+        city: 'std:080',
+        bap_id: 'test-buyer-app.com',
+        bap_uri: 'http://localhost:3088/mock_bap',
+        transaction_id: `txn_suite_${cb}`,
+        message_id: `msg_suite_${cb}`,
+        timestamp: new Date().toISOString(),
+      },
+      message: { ack: { status: 'ACK' } },
+    });
+    assert(cbRes.status === 200, `POST /${cb} responded with HTTP 200`);
+    assert(cbRes.body.message?.ack?.status === 'ACK', `POST /${cb} returned synchronous ACK`);
+  }
+
+  // 8e. Negative Test: Malformed JSON Body -> MUST return HTTP 400 Bad Request NACK
+  const malformedJsonRes = await makeReq('/on_search', 'POST', '{ malformed: json, unquoted: 123 ');
+  assert(malformedJsonRes.status === 400, 'POST /on_search with malformed JSON rejected with HTTP 400');
+  assert(malformedJsonRes.body.message?.ack?.status === 'NACK', 'Malformed JSON returned NACK');
+  assert(malformedJsonRes.body.error?.code === '10000', 'Malformed JSON returned error code 10000');
+
+  // 8f. Negative Test: Missing Required Context Fields -> MUST return HTTP 400 NACK
+  const missingContextCbRes = await makeReq('/on_search', 'POST', {
+    message: { catalog: {} },
+  });
+  assert(missingContextCbRes.status === 400, 'POST /on_search with missing context rejected with HTTP 400');
+  assert(missingContextCbRes.body.error?.code === '10000', 'Missing context returned code 10000');
+
+  // 8g. Negative Test: Wrong Domain -> MUST return HTTP 400 NACK
+  const wrongDomainCbRes = await makeReq('/on_search', 'POST', {
+    context: {
+      domain: 'ONDC:RET99',
+      action: 'on_search',
+      core_version: '1.2.5',
+      transaction_id: 'txn_wrong_dom',
+      message_id: 'msg_wrong_dom',
+    },
+    message: {},
+  });
+  assert(wrongDomainCbRes.status === 400, 'POST /on_search with wrong domain rejected with HTTP 400');
+  assert(wrongDomainCbRes.body.error?.code === '10001', 'Wrong domain returned code 10001');
+
+  // 8h. Negative Test: Wrong Core Version -> MUST return HTTP 400 NACK
+  const wrongVersionCbRes = await makeReq('/on_search', 'POST', {
+    context: {
+      domain: 'ONDC:RETeB2B',
+      action: 'on_search',
+      core_version: '0.9.0',
+      transaction_id: 'txn_wrong_ver',
+      message_id: 'msg_wrong_ver',
+    },
+    message: {},
+  });
+  assert(wrongVersionCbRes.status === 400, 'POST /on_search with wrong version rejected with HTTP 400');
+  assert(wrongVersionCbRes.body.error?.code === '10002', 'Wrong core_version returned code 10002');
+
+  // 8i. Idempotency: Duplicate Inbound Callback Message -> MUST return HTTP 200 ACK
+  const dupTxnId = 'txn_idemp_cb_test';
+  const dupMsgId = 'msg_idemp_cb_test';
+  const firstCbRes = await makeReq('/on_search', 'POST', {
+    context: {
+      domain: 'ONDC:RETeB2B',
+      action: 'on_search',
+      core_version: '1.2.5',
+      transaction_id: dupTxnId,
+      message_id: dupMsgId,
+    },
     message: { ack: { status: 'ACK' } },
   });
-  assert(onSearchRes.status === 200, 'POST /on_search responded with HTTP 200');
-  assert(onSearchRes.body.message?.ack?.status === 'ACK', 'POST /on_search returned ACK');
+  assert(firstCbRes.status === 200, 'Initial callback registered successfully with ACK');
+
+  const secondCbRes = await makeReq('/on_search', 'POST', {
+    context: {
+      domain: 'ONDC:RETeB2B',
+      action: 'on_search',
+      core_version: '1.2.5',
+      transaction_id: dupTxnId,
+      message_id: dupMsgId,
+    },
+    message: { ack: { status: 'ACK' } },
+  });
+  assert(secondCbRes.status === 200, 'Duplicate callback message handled with idempotent ACK');
+  assert(secondCbRes.body.message?.ack?.status === 'ACK', 'Duplicate callback returned ACK');
+
+  // 8j. Negative Test: Invalid Cryptographic Signature -> MUST return HTTP 400 NACK
+  const invalidSigRes = await makeReq('/search', 'POST', {
+    context: {
+      domain: 'ONDC:RETeB2B',
+      action: 'search',
+      core_version: '1.2.5',
+      transaction_id: 'txn_bad_sig',
+      message_id: 'msg_bad_sig',
+    },
+    message: { intent: { item: { descriptor: { name: 'paper' } } } },
+  }, {
+    Authorization: 'Signature keyId="fake.com|bad-key|ed25519",algorithm="ed25519",created="1000",expires="2000",headers="(request-target) host date digest",signature="invalidBase64"',
+  });
+  assert(invalidSigRes.status === 400, 'Request with invalid signature rejected with HTTP 400');
+  assert(invalidSigRes.body.error?.code === '20001', 'Invalid signature returned code 20001');
+
+  // 8k. Negative Test: Unknown Action -> MUST return HTTP 404
+  const unknownActionRes = await makeReq('/unknown_protocol_action', 'POST', {
+    context: { domain: 'ONDC:RETeB2B' },
+  });
+  assert(unknownActionRes.status === 404, 'Unknown protocol action rejected with HTTP 404');
 
   // Test 9: Workbench Simulation API
   console.log('\n--- 9. Live Workbench Scenario Simulation API ---');

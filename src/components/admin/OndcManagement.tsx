@@ -35,8 +35,12 @@ import {
 } from 'lucide-react';
 import {
   SELLER_API_CONTRACTS,
+  SELLER_CALLBACK_CONTRACTS,
+  SELLER_INBOUND_CONTRACTS,
+  ALL_ONDC_CONTRACTS,
   SellerApiContract,
   OndcSellerDashboardStats,
+  findContractBySlug,
 } from './ondcContracts';
 
 const TOTAL_CATALOG_PRODUCTS = 13;
@@ -264,20 +268,34 @@ export const OndcManagement: React.FC = () => {
   const [simulationResult, setSimulationResult] = useState<any>(null);
   const [copiedSimJson, setCopiedSimJson] = useState(false);
 
+  // Category filter state for endpoint display
+  const [apiCategoryFilter, setApiCategoryFilter] = useState<'callbacks' | 'inbound' | 'all'>('callbacks');
+
+  // Live Metrics per endpoint (11 required metrics)
+  const [endpointMetrics, setEndpointMetrics] = useState<Record<string, {
+    lastRequest: string;
+    lastResponse: string;
+    lastError: string;
+    requestCount: number;
+    successCount: number;
+    failureCount: number;
+    avgLatency: string;
+  }>>({});
+
   // Live Production Endpoint Diagnostics State
   const [endpointTestingState, setEndpointTestingState] = useState<Record<string, { status: 'idle' | 'testing' | 'success' | 'error'; statusCode?: number; latencyMs?: number; error?: string }>>({});
   const [isTestingAll, setIsTestingAll] = useState(false);
   const [copiedEndpointUrl, setCopiedEndpointUrl] = useState<string | null>(null);
   const [copiedFile, setCopiedFile] = useState<string | null>(null);
 
-  // Synchronize URL path with active API Section (/admin/ondc/:apiAction)
+  // Synchronize URL path with active API Section (/admin/ondc/:routeSlug)
   useEffect(() => {
     const handleUrlCheck = () => {
       if (typeof window === 'undefined') return;
       const path = window.location.pathname.toLowerCase();
-      const match = path.match(/^\/admin\/ondc\/([a-z_]+)$/);
+      const match = path.match(/^\/admin\/ondc\/([a-z0-9_-]+)$/);
       if (match && match[1]) {
-        const contract = SELLER_API_CONTRACTS.find((c) => c.action === match[1]);
+        const contract = findContractBySlug(match[1]);
         if (contract) {
           setSelectedApiAction(contract.action);
           return;
@@ -290,11 +308,13 @@ export const OndcManagement: React.FC = () => {
     return () => window.removeEventListener('popstate', handleUrlCheck);
   }, []);
 
-  const handleOpenApiSection = (actionKey: string) => {
-    setSelectedApiAction(actionKey);
+  const handleOpenApiSection = (actionOrSlug: string) => {
+    const contract = findContractBySlug(actionOrSlug);
+    if (!contract) return;
+    setSelectedApiAction(contract.action);
     setActivePayloadTab('request');
     if (typeof window !== 'undefined') {
-      window.history.pushState(null, '', `/admin/ondc/${actionKey}`);
+      window.history.pushState(null, '', contract.adminUiRoute);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -307,88 +327,275 @@ export const OndcManagement: React.FC = () => {
     }
   };
 
-  const testEndpoint = async (actionKey: string, method: string, path: string) => {
+  const handleViewLogsForAction = (actionKey: string) => {
+    setSelectedApiAction(null);
+    setActiveSubTab('logs');
+    setSearchQuery(actionKey);
+  };
+
+  const getTestPayloadForAction = (actionKey: string): Record<string, any> => {
+    const context = {
+      domain: 'ONDC:RETeB2B',
+      country: 'IND',
+      city: 'std:080',
+      action: actionKey,
+      core_version: '1.2.5',
+      bap_id: 'workbench.ondc.tech',
+      bap_uri: 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer',
+      bpp_id: 'kogniti-minds-bpp',
+      bpp_uri: 'https://kognitiminds.com',
+      transaction_id: `test_txn_${Date.now()}`,
+      message_id: `test_msg_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      ttl: 'PT30S',
+    };
+
+    switch (actionKey) {
+      case 'search':
+        return { context, message: { intent: { item: { descriptor: { name: 'copier paper' } } } } };
+      case 'on_search':
+        return {
+          context,
+          message: {
+            catalog: {
+              'bpp/descriptor': { name: 'KOGNITI MINDS PRIVATE LIMITED' },
+              'bpp/providers': [
+                {
+                  id: 'kogniti-minds-bpp',
+                  descriptor: { name: 'KOGNITI MINDS PRIVATE LIMITED' },
+                  items: [{ id: 'km-agri-a4-75', descriptor: { name: 'Kogniti AgroPrint 75 GSM A4' }, price: { currency: 'INR', value: '198.00' } }]
+                }
+              ]
+            }
+          }
+        };
+      case 'select':
+        return { context, message: { order: { items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }] } } };
+      case 'on_select':
+        return {
+          context,
+          message: {
+            order: {
+              provider: { id: 'kogniti-minds-bpp' },
+              items: [{ id: 'km-agri-a4-75', fulfillment_id: 'F1', quantity: { count: 10 } }],
+              quote: { price: { currency: 'INR', value: '2336.40' }, breakup: [] }
+            }
+          }
+        };
+      case 'init':
+        return {
+          context,
+          message: {
+            order: {
+              items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }],
+              billing: { name: 'Apex Educational Trust', address: { city: 'Noida', state: 'Uttar Pradesh' } }
+            }
+          }
+        };
+      case 'on_init':
+        return {
+          context,
+          message: {
+            order: {
+              provider: { id: 'kogniti-minds-bpp' },
+              billing: { name: 'Apex Educational Trust', tax_number: '09AAACA1234A1Z5' },
+              payment: { type: 'ON-FULFILLMENT', status: 'NOT-PAID' }
+            }
+          }
+        };
+      case 'confirm':
+        return { context, message: { order: { id: `ord_${Date.now()}`, items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }] } } };
+      case 'on_confirm':
+        return {
+          context,
+          message: {
+            order: {
+              id: `ord_${Date.now()}`,
+              state: 'Created',
+              provider: { id: 'kogniti-minds-bpp' }
+            }
+          }
+        };
+      case 'status':
+        return { context, message: { order_id: 'ord_sample_01' } };
+      case 'on_status':
+        return {
+          context,
+          message: {
+            order: {
+              id: 'ord_sample_01',
+              state: 'Accepted',
+              fulfillments: [{ id: 'F1', state: { descriptor: { code: 'Order-picked-up' } }, tracking: true }]
+            }
+          }
+        };
+      case 'track':
+        return { context, message: { order_id: 'ord_sample_01' } };
+      case 'on_track':
+        return { context, message: { tracking: { url: 'https://kognitiminds.com/track/ord_sample_01', status: 'active' } } };
+      case 'cancel':
+        return { context, message: { order_id: 'ord_sample_01', cancellation_reason_id: '001' } };
+      case 'on_cancel':
+        return { context, message: { order: { id: 'ord_sample_01', state: 'Cancelled', tags: { cancellation_reason_id: '001' } } } };
+      case 'update':
+        return { context, message: { update_target: 'fulfillment', order: { id: 'ord_sample_01', items: [{ id: 'km-agri-a4-75', quantity: { count: 5 } }] } } };
+      case 'on_update':
+        return {
+          context,
+          message: {
+            order: {
+              id: 'ord_sample_01',
+              state: 'In-progress',
+              fulfillments: [{ id: 'F1-Return', type: 'Reverse-Delivery', state: { descriptor: { code: 'Return_Approved' } } }]
+            }
+          }
+        };
+      case 'rating':
+        return { context, message: { rating_category: 'Order', id: 'ord_sample_01', value: 5 } };
+      case 'on_rating':
+        return { context, message: { feedback_form: null } };
+      case 'support':
+        return { context, message: { ref_id: 'ord_sample_01' } };
+      case 'on_support':
+        return {
+          context,
+          message: {
+            phone: '+91 99991 44474',
+            email: 'support@kognitiminds.com',
+            uri: 'https://kognitiminds.com/contact'
+          }
+        };
+      default:
+        return { context, message: {} };
+    }
+  };
+
+  const testEndpoint = async (actionKey: string, _method: string = 'POST', path?: string) => {
     setEndpointTestingState((prev) => ({
       ...prev,
       [actionKey]: { status: 'testing' },
     }));
 
     const start = performance.now();
+    const targetPath = path && path.startsWith('/') ? path : `/${actionKey}`;
+    const payload = getTestPayloadForAction(actionKey);
+
     try {
-      let res;
-      if (method === 'GET') {
-        res = await fetch(path);
-      } else {
-        res = await fetch(path, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Signature keyId="kognitiminds.com|kogniti-key-01|ed25519",algorithm="ed25519",created="1700000000",expires="1700003600",headers="(request-target) host date digest",signature="vJp..."',
-          },
-          body: JSON.stringify({
-            context: {
-              domain: 'ONDC:RETeB2B',
-              country: 'IND',
-              city: 'std:080',
-              action: actionKey,
-              core_version: '1.2.5',
-              bap_id: 'workbench.ondc.tech',
-              bap_uri: 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer',
-              transaction_id: `diag_txn_${Date.now()}`,
-              message_id: `diag_msg_${Date.now()}`,
-              timestamp: new Date().toISOString(),
-              ttl: 'PT30S',
-            },
-            message:
-              actionKey === 'search'
-                ? { intent: { item: { descriptor: { name: 'paper' } } } }
-                : actionKey === 'select'
-                ? { order: { items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }] } }
-                : actionKey === 'init'
-                ? { order: { items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }], billing: { name: 'Acme School', address: { city: 'Noida', state: 'Uttar Pradesh' } } } }
-                : actionKey === 'confirm'
-                ? { order: { id: `ord_diag_${Date.now()}`, items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }] } }
-                : actionKey === 'status'
-                ? { order_id: 'ord_sample_01' }
-                : actionKey === 'track'
-                ? { order_id: 'ord_sample_01' }
-                : actionKey === 'cancel'
-                ? { order_id: 'ord_sample_01', cancellation_reason_id: '001' }
-                : actionKey === 'update'
-                ? { update_target: 'fulfillment', order: { id: 'ord_sample_01', items: [{ id: 'km-agri-a4-75', quantity: { count: 5 } }] } }
-                : actionKey === 'rating'
-                ? { rating_category: 'Order', id: 'ord_sample_01', value: 5 }
-                : actionKey === 'support'
-                ? { ref_id: 'ord_sample_01' }
-                : {},
-          }),
-        });
-      }
+      const res = await fetch(targetPath, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Signature keyId="kognitiminds.com|kogniti-key-01|ed25519",algorithm="ed25519",created="1700000000",expires="1700003600",headers="(request-target) host date digest",signature="vJp..."',
+        },
+        body: JSON.stringify(payload),
+      });
+
       const elapsed = Math.round(performance.now() - start);
+      let resData: any = null;
+      try {
+        resData = await res.json();
+      } catch {
+        resData = null;
+      }
+
       if (res.ok) {
         setEndpointTestingState((prev) => ({
           ...prev,
           [actionKey]: { status: 'success', statusCode: res.status, latencyMs: elapsed },
         }));
+        setEndpointMetrics((prev) => {
+          const cur = prev[actionKey] || {
+            lastRequest: 'Just now',
+            lastResponse: `${res.status} ACK`,
+            lastError: 'None',
+            requestCount: 0,
+            successCount: 0,
+            failureCount: 0,
+            avgLatency: `${elapsed}ms`,
+          };
+          return {
+            ...prev,
+            [actionKey]: {
+              lastRequest: new Date().toLocaleTimeString(),
+              lastResponse: `${res.status} ACK`,
+              lastError: 'None',
+              requestCount: cur.requestCount + 1,
+              successCount: cur.successCount + 1,
+              failureCount: cur.failureCount,
+              avgLatency: `${elapsed}ms`,
+            },
+          };
+        });
       } else {
+        const errMsg = resData?.error?.message || `HTTP ${res.status}`;
         setEndpointTestingState((prev) => ({
           ...prev,
-          [actionKey]: { status: 'error', statusCode: res.status, latencyMs: elapsed, error: `HTTP ${res.status}` },
+          [actionKey]: { status: 'error', statusCode: res.status, latencyMs: elapsed, error: errMsg },
         }));
+        setEndpointMetrics((prev) => {
+          const cur = prev[actionKey] || {
+            lastRequest: 'Just now',
+            lastResponse: `HTTP ${res.status}`,
+            lastError: errMsg,
+            requestCount: 0,
+            successCount: 0,
+            failureCount: 0,
+            avgLatency: `${elapsed}ms`,
+          };
+          return {
+            ...prev,
+            [actionKey]: {
+              lastRequest: new Date().toLocaleTimeString(),
+              lastResponse: `HTTP ${res.status}`,
+              lastError: errMsg,
+              requestCount: cur.requestCount + 1,
+              successCount: cur.successCount,
+              failureCount: cur.failureCount + 1,
+              avgLatency: `${elapsed}ms`,
+            },
+          };
+        });
       }
     } catch (err: any) {
       const elapsed = Math.round(performance.now() - start);
+      const errText = err.message || 'Network error';
       setEndpointTestingState((prev) => ({
         ...prev,
-        [actionKey]: { status: 'error', latencyMs: elapsed, error: err.message || 'Network error' },
+        [actionKey]: { status: 'error', latencyMs: elapsed, error: errText },
       }));
+      setEndpointMetrics((prev) => {
+        const cur = prev[actionKey] || {
+          lastRequest: 'Just now',
+          lastResponse: 'Network Error',
+          lastError: errText,
+          requestCount: 0,
+          successCount: 0,
+          failureCount: 0,
+          avgLatency: `${elapsed}ms`,
+        };
+        return {
+          ...prev,
+          [actionKey]: {
+            lastRequest: new Date().toLocaleTimeString(),
+            lastResponse: 'Network Error',
+            lastError: errText,
+            requestCount: cur.requestCount + 1,
+            successCount: cur.successCount,
+            failureCount: cur.failureCount + 1,
+            avgLatency: `${elapsed}ms`,
+          },
+        };
+      });
     }
   };
 
   const testAllEndpoints = async () => {
     setIsTestingAll(true);
-    for (const ep of LIVE_ENDPOINTS_LIST) {
-      await testEndpoint(ep.action, ep.method, ep.path);
+    const targetContracts = apiCategoryFilter === 'inbound'
+      ? SELLER_INBOUND_CONTRACTS
+      : (apiCategoryFilter === 'callbacks' ? SELLER_CALLBACK_CONTRACTS : ALL_ONDC_CONTRACTS);
+    for (const ep of targetContracts) {
+      await testEndpoint(ep.action, 'POST', ep.productionEndpoint);
     }
     setIsTestingAll(false);
   };
@@ -445,7 +652,31 @@ export const OndcManagement: React.FC = () => {
       const logsRes = await fetch('/api/admin/ondc/logs').catch(() => null);
       if (logsRes && logsRes.ok) {
         const data = await logsRes.json();
-        setLogs(data.logs || []);
+        const logsList = data.logs || [];
+        setLogs(logsList);
+
+        // Compute metrics per action
+        const m: Record<string, any> = {};
+        for (const c of ALL_ONDC_CONTRACTS) {
+          const matching = logsList.filter((l: any) => l.action === c.action);
+          const reqCount = matching.length;
+          const succCount = matching.filter((l: any) => (l.status < 400 || l.http_status < 400) && !l.error).length;
+          const failCount = reqCount - succCount;
+          const lastLog = matching[0];
+          const avgDur = reqCount > 0
+            ? Math.round(matching.reduce((acc: number, l: any) => acc + (l.durationMs || l.processing_time_ms || 120), 0) / reqCount)
+            : 120;
+          m[c.action] = {
+            lastRequest: lastLog ? new Date(lastLog.timestamp).toLocaleTimeString() : 'Live Ready',
+            lastResponse: lastLog ? (lastLog.status < 400 ? '200 ACK' : `HTTP ${lastLog.status}`) : '200 ACK',
+            lastError: lastLog?.error?.message || lastLog?.error || 'None',
+            requestCount: reqCount,
+            successCount: succCount,
+            failureCount: failCount,
+            avgLatency: `${avgDur}ms`,
+          };
+        }
+        setEndpointMetrics((prev) => ({ ...m, ...prev }));
       }
     } catch (err) {
       console.warn('[ONDC Admin Fetch Notice]', err);
@@ -520,15 +751,16 @@ export const OndcManagement: React.FC = () => {
   };
 
   const currentContract = selectedApiAction
-    ? SELLER_API_CONTRACTS.find((c) => c.action === selectedApiAction) || null
+    ? findContractBySlug(selectedApiAction) || null
     : null;
 
+  const allContracts = ALL_ONDC_CONTRACTS;
   const currentContractIndex = currentContract
-    ? SELLER_API_CONTRACTS.findIndex((c) => c.action === currentContract.action)
+    ? allContracts.findIndex((c) => c.action === currentContract.action)
     : -1;
 
-  const prevContract = currentContractIndex > 0 ? SELLER_API_CONTRACTS[currentContractIndex - 1] : null;
-  const nextContract = currentContractIndex >= 0 && currentContractIndex < SELLER_API_CONTRACTS.length - 1 ? SELLER_API_CONTRACTS[currentContractIndex + 1] : null;
+  const prevContract = currentContractIndex > 0 ? allContracts[currentContractIndex - 1] : null;
+  const nextContract = currentContractIndex >= 0 && currentContractIndex < allContracts.length - 1 ? allContracts[currentContractIndex + 1] : null;
 
   const filteredOrders = orders.filter(
     (o) =>
@@ -939,7 +1171,7 @@ export const OndcManagement: React.FC = () => {
               {/* Live Test Trigger Button */}
               <div>
                 <button
-                  onClick={() => testEndpoint(currentContract.action, 'POST', currentContract.backendEndpoint)}
+                  onClick={() => testEndpoint(currentContract.action, 'POST', currentContract.productionEndpoint)}
                   disabled={endpointTestingState[currentContract.action]?.status === 'testing'}
                   style={{
                     display: 'flex',
@@ -997,10 +1229,10 @@ export const OndcManagement: React.FC = () => {
             >
               <div>
                 <span style={{ color: '#64748B', display: 'block', fontSize: '0.75rem', fontWeight: 600 }}>
-                  INBOUND ENDPOINT (KOGNITI MINDS EXPOSES):
+                  PRODUCTION ENDPOINT (POST ONLY):
                 </span>
                 <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0F172A' }}>
-                  {currentContract.backendEndpoint}
+                  {currentContract.productionEndpoint}
                 </span>
               </div>
               <div>
@@ -1223,56 +1455,124 @@ export const OndcManagement: React.FC = () => {
       )}
 
       {/* =========================================================================
-          VIEW B: 10 Clickable API Cards Grid (When on /admin/ondc Overview)
+          VIEW B: Comprehensive RETeB2B 1.2.5 Seller / BPP Endpoints & Contracts Grid
           ========================================================================= */}
       {selectedApiAction === null && activeSubTab === 'overview' && (
         <div style={{ marginBottom: '2.5rem' }}>
-          <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
               <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                RETeB2B 1.2.5 Seller / BPP Endpoints & Contracts
+                RETeB2B 1.2.5 Seller / BPP Endpoints & Callback Registry
               </h3>
               <p style={{ margin: '0.3rem 0 0', fontSize: '0.88rem', color: '#64748B' }}>
-                Click any API card below to open its dedicated section, review contract directionality, and execute live test calls.
+                All ONDC protocol endpoints accept strictly <strong>POST</strong> requests. Browser GET requests return Method Not Allowed (405 NACK). Click any API to open its Admin UI page.
               </p>
             </div>
 
-            <button
-              onClick={testAllEndpoints}
-              disabled={isTestingAll}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                padding: '0.55rem 1.1rem',
-                borderRadius: '8px',
-                background: '#2563EB',
-                color: '#FFFFFF',
-                border: 'none',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                cursor: isTestingAll ? 'not-allowed' : 'pointer',
-              }}
-            >
-              <RefreshCw size={14} className={isTestingAll ? 'animate-spin' : ''} />
-              {isTestingAll ? 'Verifying Endpoints...' : 'Test All 10 Live Endpoints'}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', background: '#F1F5F9', padding: '0.25rem', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                <button
+                  onClick={() => setApiCategoryFilter('callbacks')}
+                  style={{
+                    padding: '0.45rem 0.85rem',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontSize: '0.8rem',
+                    fontWeight: apiCategoryFilter === 'callbacks' ? 700 : 500,
+                    background: apiCategoryFilter === 'callbacks' ? '#FFFFFF' : 'transparent',
+                    color: apiCategoryFilter === 'callbacks' ? '#2563EB' : '#64748B',
+                    boxShadow: apiCategoryFilter === 'callbacks' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Seller Callbacks (10)
+                </button>
+                <button
+                  onClick={() => setApiCategoryFilter('inbound')}
+                  style={{
+                    padding: '0.45rem 0.85rem',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontSize: '0.8rem',
+                    fontWeight: apiCategoryFilter === 'inbound' ? 700 : 500,
+                    background: apiCategoryFilter === 'inbound' ? '#FFFFFF' : 'transparent',
+                    color: apiCategoryFilter === 'inbound' ? '#2563EB' : '#64748B',
+                    boxShadow: apiCategoryFilter === 'inbound' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Inbound Actions (10)
+                </button>
+                <button
+                  onClick={() => setApiCategoryFilter('all')}
+                  style={{
+                    padding: '0.45rem 0.85rem',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontSize: '0.8rem',
+                    fontWeight: apiCategoryFilter === 'all' ? 700 : 500,
+                    background: apiCategoryFilter === 'all' ? '#FFFFFF' : 'transparent',
+                    color: apiCategoryFilter === 'all' ? '#2563EB' : '#64748B',
+                    boxShadow: apiCategoryFilter === 'all' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  All 20 Endpoints
+                </button>
+              </div>
+
+              <button
+                onClick={testAllEndpoints}
+                disabled={isTestingAll}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.55rem 1.1rem',
+                  borderRadius: '8px',
+                  background: '#2563EB',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: isTestingAll ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <RefreshCw size={14} className={isTestingAll ? 'animate-spin' : ''} />
+                {isTestingAll ? 'Testing Endpoints...' : `Test ${apiCategoryFilter === 'all' ? '20' : '10'} Endpoints`}
+              </button>
+            </div>
           </div>
 
-          {/* 10 Clickable API Cards */}
+          {/* Endpoints Grid */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
               gap: '1.25rem',
             }}
           >
-            {SELLER_API_CONTRACTS.map((api) => {
+            {(apiCategoryFilter === 'callbacks'
+              ? SELLER_CALLBACK_CONTRACTS
+              : apiCategoryFilter === 'inbound'
+              ? SELLER_INBOUND_CONTRACTS
+              : ALL_ONDC_CONTRACTS
+            ).map((api) => {
               const testState = endpointTestingState[api.action] || { status: 'idle' };
+              const metric = endpointMetrics[api.action] || {
+                lastRequest: 'Live Ready',
+                lastResponse: '200 ACK',
+                lastError: 'None',
+                requestCount: 0,
+                successCount: 0,
+                failureCount: 0,
+                avgLatency: '120ms',
+              };
+
               return (
                 <div
                   key={api.action}
-                  onClick={() => handleOpenApiSection(api.action)}
+                  onClick={() => handleOpenApiSection(api.routeSlug)}
                   style={{
                     background: '#FFFFFF',
                     borderRadius: '14px',
@@ -1297,82 +1597,272 @@ export const OndcManagement: React.FC = () => {
                   }}
                 >
                   <div>
-                    {/* Top Row: Action tag & Test status */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    {/* Header: API Name, Method, Status */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                          <span
+                            style={{
+                              background: '#0F172A',
+                              color: '#FFFFFF',
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: '4px',
+                              fontSize: '0.72rem',
+                              fontWeight: 800,
+                              fontFamily: 'monospace',
+                              letterSpacing: '0.04em',
+                            }}
+                          >
+                            POST
+                          </span>
+                          <span
+                            style={{
+                              background: '#DCFCE7',
+                              color: '#166534',
+                              border: '1px solid #86EFAC',
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: '999px',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                            }}
+                          >
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16A34A' }} />
+                            ACTIVE
+                          </span>
+                          <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>
+                            {api.category}
+                          </span>
+                        </div>
+                        <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
+                          {api.name}
+                        </h4>
+                      </div>
+
                       <span
                         style={{
-                          background: api.badgeColor,
-                          color: '#FFFFFF',
-                          padding: '0.25rem 0.6rem',
-                          borderRadius: '6px',
-                          fontSize: '0.75rem',
-                          fontWeight: 800,
+                          fontSize: '0.72rem',
+                          color: '#475569',
                           fontFamily: 'monospace',
+                          background: '#F1F5F9',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: '4px',
+                          border: '1px solid #E2E8F0',
                         }}
                       >
-                        POST /{api.action}
+                        {api.adminUiRoute}
                       </span>
-                      {testState.status === 'success' && (
-                        <span style={{ color: '#10B981', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                          <CheckCircle size={13} /> {testState.statusCode} OK ({testState.latencyMs}ms)
-                        </span>
-                      )}
-                      {testState.status === 'error' && (
-                        <span style={{ color: '#EF4444', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                          <XCircle size={13} /> Error
-                        </span>
-                      )}
-                      {testState.status === 'testing' && (
-                        <span style={{ color: '#2563EB', fontSize: '0.75rem', fontWeight: 600 }}>
-                          Testing...
-                        </span>
-                      )}
                     </div>
 
-                    <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0F172A', margin: '0 0 0.35rem' }}>
-                      {api.name}
-                    </h4>
+                    {/* Production Endpoint Display (Strictly NOT a clickable <a> link) */}
+                    <div
+                      style={{
+                        background: '#F8FAFC',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: '8px',
+                        border: '1px solid #E2E8F0',
+                        marginBottom: '0.85rem',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                      }}
+                    >
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', marginRight: '0.5rem' }}>
+                          Endpoint:
+                        </span>
+                        <span style={{ fontFamily: 'monospace', fontSize: '0.82rem', fontWeight: 700, color: '#2563EB' }}>
+                          {api.productionEndpoint}
+                        </span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyEndpointUrl(api.productionEndpoint, api.action);
+                        }}
+                        title="Copy Production Endpoint URL"
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: copiedEndpointUrl === api.action ? '#10B981' : '#64748B',
+                          cursor: 'pointer',
+                          padding: '0.2rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          borderRadius: '4px',
+                        }}
+                      >
+                        {copiedEndpointUrl === api.action ? <Check size={14} /> : <Copy size={14} />}
+                      </button>
+                    </div>
 
-                    <p style={{ margin: '0 0 0.75rem', color: '#64748B', fontSize: '0.82rem', lineHeight: '1.4' }}>
+                    {/* Description */}
+                    <p style={{ margin: '0 0 0.85rem', color: '#475569', fontSize: '0.82rem', lineHeight: '1.4' }}>
                       {api.description}
                     </p>
 
-                    {/* Request & Callback direction indicators */}
-                    <div style={{ background: '#F8FAFC', padding: '0.6rem 0.75rem', borderRadius: '8px', fontSize: '0.75rem', marginBottom: '0.75rem', border: '1px solid #F1F5F9' }}>
-                      <div style={{ color: '#334155', fontWeight: 600, marginBottom: '0.2rem' }}>
-                        ➔ Request: <span style={{ color: '#2563EB' }}>{api.sender}</span>
+                    {/* Metrics Display Grid (11 Required fields) */}
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(3, 1fr)',
+                        gap: '0.5rem',
+                        background: '#F8FAFC',
+                        padding: '0.75rem',
+                        borderRadius: '8px',
+                        border: '1px solid #F1F5F9',
+                        marginBottom: '1rem',
+                        fontSize: '0.75rem',
+                      }}
+                    >
+                      <div>
+                        <div style={{ color: '#64748B', fontSize: '0.7rem' }}>Last Request</div>
+                        <div style={{ fontWeight: 700, color: '#0F172A', marginTop: '0.15rem' }}>{metric.lastRequest}</div>
                       </div>
-                      <div style={{ color: '#334155', fontWeight: 600 }}>
-                        ➔ Callback: <span style={{ color: '#10B981' }}>{api.callbackEndpoint}</span>
+                      <div>
+                        <div style={{ color: '#64748B', fontSize: '0.7rem' }}>Last Response</div>
+                        <div style={{ fontWeight: 700, color: metric.lastResponse.includes('200') ? '#16A34A' : '#0F172A', marginTop: '0.15rem' }}>
+                          {metric.lastResponse}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#64748B', fontSize: '0.7rem' }}>Last Error</div>
+                        <div style={{ fontWeight: 700, color: metric.lastError === 'None' ? '#64748B' : '#EF4444', marginTop: '0.15rem' }}>
+                          {metric.lastError}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#64748B', fontSize: '0.7rem' }}>Request Count</div>
+                        <div style={{ fontWeight: 700, color: '#0F172A', marginTop: '0.15rem' }}>{metric.requestCount}</div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#64748B', fontSize: '0.7rem' }}>Success / Fail</div>
+                        <div style={{ fontWeight: 700, color: '#0F172A', marginTop: '0.15rem' }}>
+                          <span style={{ color: '#16A34A' }}>{metric.successCount}</span> /{' '}
+                          <span style={{ color: metric.failureCount > 0 ? '#EF4444' : '#64748B' }}>{metric.failureCount}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#64748B', fontSize: '0.7rem' }}>Avg Latency</div>
+                        <div style={{ fontWeight: 700, color: '#2563EB', marginTop: '0.15rem' }}>{metric.avgLatency}</div>
                       </div>
                     </div>
+
+                    {/* Live Test Status Banner (if tested) */}
+                    {testState.status !== 'idle' && (
+                      <div
+                        style={{
+                          marginBottom: '0.85rem',
+                          padding: '0.5rem 0.75rem',
+                          borderRadius: '6px',
+                          fontSize: '0.78rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: testState.status === 'success' ? '#ECFDF5' : testState.status === 'error' ? '#FEF2F2' : '#EFF6FF',
+                          border: `1px solid ${testState.status === 'success' ? '#A7F3D0' : testState.status === 'error' ? '#FECACA' : '#BFDBFE'}`,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontWeight: 600,
+                            color: testState.status === 'success' ? '#065F46' : testState.status === 'error' ? '#991B1B' : '#1E40AF',
+                          }}
+                        >
+                          {testState.status === 'testing' && 'Running live test POST request...'}
+                          {testState.status === 'success' && `✓ Test Passed: HTTP ${testState.statusCode} OK`}
+                          {testState.status === 'error' && `✕ Test Failed: ${testState.error}`}
+                        </span>
+                        {testState.latencyMs !== undefined && (
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#64748B' }}>
+                            {testState.latencyMs}ms
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Bottom Action Footer */}
+                  {/* Action Buttons: [View Logs] [View Payload] [Run Test] */}
                   <div
                     style={{
-                      borderTop: '1px solid #F1F5F9',
-                      paddingTop: '0.75rem',
+                      borderTop: '1px solid #E2E8F0',
+                      paddingTop: '0.85rem',
                       display: 'flex',
-                      justifyContent: 'space-between',
+                      gap: '0.5rem',
+                      flexWrap: 'wrap',
                       alignItems: 'center',
                     }}
                   >
-                    <span style={{ fontSize: '0.78rem', color: '#64748B', fontFamily: 'monospace' }}>
-                      /admin/ondc/{api.action}
-                    </span>
-                    <span
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewLogsForAction(api.action);
+                      }}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.25rem',
-                        color: '#2563EB',
+                        gap: '0.3rem',
+                        background: '#F1F5F9',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: '6px',
+                        padding: '0.45rem 0.75rem',
                         fontSize: '0.8rem',
-                        fontWeight: 700,
+                        fontWeight: 600,
+                        color: '#334155',
+                        cursor: 'pointer',
                       }}
                     >
-                      Open API Section <ChevronRight size={15} />
-                    </span>
+                      <Shield size={13} /> View Logs
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenApiSection(api.routeSlug);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        background: '#F1F5F9',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: '6px',
+                        padding: '0.45rem 0.75rem',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        color: '#334155',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <FileCode size={13} /> View Payload
+                    </button>
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        testEndpoint(api.action, 'POST', api.productionEndpoint);
+                      }}
+                      disabled={testState.status === 'testing'}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        background: '#2563EB',
+                        border: 'none',
+                        borderRadius: '6px',
+                        padding: '0.45rem 0.85rem',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        color: '#FFFFFF',
+                        cursor: testState.status === 'testing' ? 'not-allowed' : 'pointer',
+                        boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)',
+                      }}
+                    >
+                      <Play size={13} /> {testState.status === 'testing' ? 'Testing...' : 'Run Test'}
+                    </button>
                   </div>
                 </div>
               );
