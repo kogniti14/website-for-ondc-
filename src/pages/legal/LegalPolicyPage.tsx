@@ -607,7 +607,7 @@ export const LegalPolicyPage: React.FC<LegalPolicyPageProps> = ({
                     {currentPolicy.contact.entity}
                   </div>
                   <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: '2px' }}>
-                    CIN: U46496UP2024PTC213997 | PAN: AALCK4750F
+                    CIN: U46496UP2024PTC213997 | PAN: AALCK4750F | GSTIN: 09AALCK4750F1ZC
                   </div>
                 </div>
 

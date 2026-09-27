@@ -4,6 +4,7 @@ import { B2COrder, B2BOrder, OrderItemSummary, B2BOrderItemSummary } from '../..
 import { COMPANY_BANK_DETAILS } from '../../config/bankConfig';
 import { storageService } from '../../services/storageService';
 import { getWhatsAppUrl } from '../../config/whatsappConfig';
+import { companyMasterService } from '../../services/companyMasterService';
 
 interface OrderInvoiceModalProps {
   order: B2COrder | B2BOrder;
@@ -100,6 +101,8 @@ export const OrderInvoiceModal: React.FC<OrderInvoiceModalProps> = ({ order, isB
   const isInterState = billingAddress?.state
     ? !billingAddress.state.toLowerCase().includes('uttar') && billingAddress.state.toLowerCase() !== 'up'
     : false;
+
+  const company = companyMasterService.getCompanyMaster();
 
   const invoiceDate = order.confirmedAt
     ? new Date(order.confirmedAt).toLocaleDateString('en-IN', {
@@ -330,16 +333,16 @@ export const OrderInvoiceModal: React.FC<OrderInvoiceModalProps> = ({ order, isB
               />
               <div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', letterSpacing: '0.01em' }}>
-                  KOGNITI MINDS PRIVATE LIMITED
+                  {company.legal_name}
                 </div>
                 <div style={{ fontSize: '0.74rem', color: '#475569' }}>
-                  A-Block, Sector 63, Commercial Hub, Noida, Gautam Buddha Nagar, Uttar Pradesh - 201301
+                  {company.address_line_1}, {company.address_line_2}, {company.district}, {company.state}, {company.country} - {company.pincode}
                 </div>
                 <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                  CIN: U74999UP2022PTC168923 • GSTIN: 09AAECK1234F1Z5 • PAN: AAECK1234F • State Code: 09 (UP)
+                  CIN: {company.cin} • GSTIN: {company.gstin} • PAN: {company.pan} • State Code: {company.gst_state_code} ({company.gst_state})
                 </div>
                 <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                  Email: support@kognitiminds.com • Phone: +91 99991 44474 • Web: www.kognitiminds.com
+                  Email: {company.support_email} • Phone: {company.support_phone} • Web: {company.website}
                 </div>
               </div>
             </div>
@@ -694,7 +697,7 @@ export const OrderInvoiceModal: React.FC<OrderInvoiceModalProps> = ({ order, isB
 
             <div style={{ textAlign: 'center', minWidth: '220px' }}>
               <div style={{ fontWeight: 800, color: '#0F172A', marginBottom: '2.5rem' }}>
-                For KOGNITI MINDS PRIVATE LIMITED
+                For {company.legal_name}
               </div>
               <div style={{ borderTop: '1px solid #94A3B8', paddingTop: '0.35rem', fontSize: '0.74rem', color: '#0F172A', fontWeight: 700 }}>
                 Authorized Signatory

@@ -65,6 +65,7 @@ import { BulkActionBar } from '../../components/admin/BulkActionBar';
 import { WHATSAPP_NUMBER } from '../../config/whatsappConfig';
 import { OndcManagement } from '../../components/admin/OndcManagement';
 import { TestimonialManagement } from '../../components/admin/TestimonialManagement';
+import { CompanyMasterManagement } from '../../components/admin/CompanyMasterManagement';
 import { certificationService } from '../../services/certificationService';
 import { testimonialService } from '../../services/testimonialService';
 import { galleryService } from '../../services/galleryService';
@@ -103,7 +104,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const { currentAdminUser, isSuperAdmin, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery' | 'gallery_categories' | 'certifications' | 'cert_categories' | 'policies' | 'ondc' | 'testimonials'
+    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery' | 'gallery_categories' | 'certifications' | 'cert_categories' | 'policies' | 'ondc' | 'testimonials' | 'company_master'
   >('overview');
 
   // Razorpay Gateway State
@@ -1122,12 +1123,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setQuoteBillingStreet('');
     setQuoteBillingCity('Noida');
     setQuoteBillingState('Uttar Pradesh');
-    setQuoteBillingPincode('201301');
+    setQuoteBillingPincode('201306');
     setQuoteShippingSameAsBilling(true);
     setQuoteShippingStreet('');
     setQuoteShippingCity('Noida');
     setQuoteShippingState('Uttar Pradesh');
-    setQuoteShippingPincode('201301');
+    setQuoteShippingPincode('201306');
     setQuoteLineItems([
       {
         productId: products[0]?.id || '',
@@ -1192,7 +1193,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       street: quoteBillingStreet || 'Commercial Hub',
       city: quoteBillingCity || 'Noida',
       state: quoteBillingState || 'Uttar Pradesh',
-      pincode: quoteBillingPincode || '201301',
+      pincode: quoteBillingPincode || '201306',
       addressType: 'work',
     };
 
@@ -1205,7 +1206,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           street: quoteShippingStreet || quoteBillingStreet || 'Commercial Hub',
           city: quoteShippingCity || quoteBillingCity || 'Noida',
           state: quoteShippingState || quoteBillingState || 'Uttar Pradesh',
-          pincode: quoteShippingPincode || quoteBillingPincode || '201301',
+          pincode: quoteShippingPincode || quoteBillingPincode || '201306',
           addressType: 'work',
         };
 
@@ -1332,12 +1333,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const [manualOrderBillingStreet, setManualOrderBillingStreet] = useState('');
   const [manualOrderBillingCity, setManualOrderBillingCity] = useState('Noida');
   const [manualOrderBillingState, setManualOrderBillingState] = useState('Uttar Pradesh');
-  const [manualOrderBillingPincode, setManualOrderBillingPincode] = useState('201301');
+  const [manualOrderBillingPincode, setManualOrderBillingPincode] = useState('201306');
   const [manualOrderShippingSame, setManualOrderShippingSame] = useState(true);
   const [manualOrderShippingStreet, setManualOrderShippingStreet] = useState('');
   const [manualOrderShippingCity, setManualOrderShippingCity] = useState('Noida');
   const [manualOrderShippingState, setManualOrderShippingState] = useState('Uttar Pradesh');
-  const [manualOrderShippingPincode, setManualOrderShippingPincode] = useState('201301');
+  const [manualOrderShippingPincode, setManualOrderShippingPincode] = useState('201306');
   
   interface ManualOrderLineItem {
     productId?: string;
@@ -1379,12 +1380,12 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     setManualOrderBillingStreet('');
     setManualOrderBillingCity('Noida');
     setManualOrderBillingState('Uttar Pradesh');
-    setManualOrderBillingPincode('201301');
+    setManualOrderBillingPincode('201306');
     setManualOrderShippingSame(true);
     setManualOrderShippingStreet('');
     setManualOrderShippingCity('Noida');
     setManualOrderShippingState('Uttar Pradesh');
-    setManualOrderShippingPincode('201301');
+    setManualOrderShippingPincode('201306');
     const firstP = products[0];
     setManualOrderLineItems([
       {
@@ -1484,7 +1485,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       street: manualOrderBillingStreet || 'Commercial Address',
       city: manualOrderBillingCity || 'Noida',
       state: manualOrderBillingState || 'Uttar Pradesh',
-      pincode: manualOrderBillingPincode || '201301',
+      pincode: manualOrderBillingPincode || '201306',
       addressType: 'work',
     };
 
@@ -1497,7 +1498,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           street: manualOrderShippingStreet || 'Commercial Delivery Address',
           city: manualOrderShippingCity || 'Noida',
           state: manualOrderShippingState || 'Uttar Pradesh',
-          pincode: manualOrderShippingPincode || '201301',
+          pincode: manualOrderShippingPincode || '201306',
           addressType: 'work',
         };
 
@@ -2920,6 +2921,43 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 ONDC:RETeB2B
               </span>
             </button>
+            <button
+              onClick={() => setActiveTab('company_master')}
+              data-tab="company_master"
+              data-active={activeTab === 'company_master'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'company_master' ? '#0F172A' : 'var(--slate-600)',
+                borderBottom: activeTab === 'company_master' ? '2px solid #0F172A' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'company_master' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'company_master' ? '#0F172A' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <Building2 size={16} style={{ color: '#0F172A' }} /> Company Master
+              <span
+                style={{
+                  backgroundColor: '#ECFDF5',
+                  color: '#065F46',
+                  fontSize: '0.62rem',
+                  fontWeight: 800,
+                  padding: '0.1rem 0.4rem',
+                  borderRadius: '4px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Statutory
+              </span>
+            </button>
           </AdminNavSlider>
         </div>
       </div>
@@ -3721,7 +3759,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         </td>
                         <td style={{ padding: '0.85rem 1rem' }}>
                           <div style={{ fontSize: '0.78rem', color: 'var(--slate-700)' }}>
-                            {o.shippingAddress?.city || 'Noida'}, {o.shippingAddress?.pincode || '201301'}
+                            {o.shippingAddress?.city || 'Noida'}, {o.shippingAddress?.pincode || '201306'}
                           </div>
                           <div style={{ fontSize: '0.7rem', color: 'var(--slate-400)' }}>
                             {o.shippingAddress?.state || 'Uttar Pradesh'}
@@ -7439,6 +7477,31 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             <TestimonialManagement />
           </div>
         )}
+
+        {/* Company Master & Statutory Legal Details */}
+        {activeTab === 'company_master' && (
+          <div>
+            <AdminSectionSaveBar
+              sectionKey="company_master"
+              sectionTitle="Company Master & Statutory Legal Details"
+              subtitle="Single source of truth for KOGNITI MINDS PRIVATE LIMITED (CIN, PAN, GSTIN, Address)"
+              isStaged={stagedSections.has('company_master')}
+              onSaveSection={() => {
+                stageSection('company_master');
+                setSectionSaveFeedback((prev) => ({
+                  ...prev,
+                  company_master: { type: 'success', message: 'Company master staged for live synchronization.' },
+                }));
+              }}
+              feedbackMessage={sectionSaveFeedback['company_master']}
+            />
+            <CompanyMasterManagement
+              onSaveSuccess={() => {
+                stageSection('company_master');
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* RFQ Formulate Modal */}
@@ -9940,7 +10003,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                       type="text"
                       value={manualOrderGstin}
                       onChange={(e) => setManualOrderGstin(e.target.value.toUpperCase())}
-                      placeholder="e.g. 09AAECK1234F1Z5"
+                      placeholder="e.g. 07AAAAA0000A1Z5"
                       maxLength={15}
                       className="form-input"
                       style={{ letterSpacing: '0.05em', fontWeight: 600 }}

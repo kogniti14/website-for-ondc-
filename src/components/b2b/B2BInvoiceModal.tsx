@@ -5,6 +5,7 @@ import { storageService } from '../../services/storageService';
 import { RazorpayCheckoutModal } from '../payment/RazorpayCheckoutModal';
 import { WHATSAPP_NUMBER, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
 import { COMPANY_BANK_DETAILS } from '../../config/bankConfig';
+import { companyMasterService } from '../../services/companyMasterService';
 
 interface B2BInvoiceModalProps {
   order: B2BOrder;
@@ -111,6 +112,7 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
   };
 
   const isInterState = !currentOrder.billingAddress.state.toLowerCase().includes('uttar') && currentOrder.billingAddress.state.toLowerCase() !== 'up';
+  const company = companyMasterService.getCompanyMaster();
   const invoiceDate = new Date(currentOrder.createdAt).toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'short',
@@ -346,14 +348,14 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
               <div style={{ fontWeight: 800, color: '#0F172A', marginBottom: '0.35rem', fontSize: '0.9rem' }}>
                 Supplier (Tax Details):
               </div>
-              <div><strong>Kogniti Minds Private Limited</strong></div>
-              <div>Registered Office: Panchsheel Greens-2, Sec-16 B, Gr. Noida West, Bisrakh</div>
-              <div>Gautam Buddha Nagar, Uttar Pradesh, India - 201306</div>
-              <div><strong>GSTIN:</strong> <code style={{ color: '#0284C7', fontWeight: 700 }}>09AALCK4750F1ZC</code></div>
-              <div><strong>PAN:</strong> AALCK4750F | <strong>State Code:</strong> 09 (Uttar Pradesh)</div>
-              <div><strong>CIN:</strong> U46496UP2024PTC213997</div>
+              <div><strong>{company.legal_name}</strong></div>
+              <div>Registered Office: {company.address_line_1}, {company.address_line_2}</div>
+              <div>{company.district}, {company.state}, {company.country} - {company.pincode}</div>
+              <div><strong>GSTIN:</strong> <code style={{ color: '#0284C7', fontWeight: 700 }}>{company.gstin}</code></div>
+              <div><strong>PAN:</strong> {company.pan} | <strong>State Code:</strong> {company.gst_state_code} ({company.gst_state})</div>
+              <div><strong>CIN:</strong> {company.cin}</div>
               <div style={{ color: '#64748B', marginTop: '0.2rem' }}>
-                Sales Desk: sales@kognitiminds.com | Accounts: accounts@kognitiminds.com | Helpline: {getWhatsAppDisplayNumber()}
+                Sales Desk: {company.sales_email} | Accounts: {company.accounts_email} | Helpline: {company.support_phone}
               </div>
             </div>
 
@@ -677,12 +679,12 @@ export const B2BInvoiceModal: React.FC<B2BInvoiceModalProps> = ({ order, onClose
               <div>1. All physical goods supplied are covered under manufacturer on-site commercial warranty.</div>
               <div>2. Payment due strictly per agreed credit terms ({order.paymentTerms}). Overdue interest @ 18% p.a.</div>
               <div>3. Certified that the particulars given above are true and correct under the CGST / SGST Act 2017.</div>
-              <div>4. Subject to Bengaluru Jurisdiction only.</div>
+              <div>4. Subject to Gautam Buddha Nagar (Uttar Pradesh) Jurisdiction.</div>
             </div>
 
             <div style={{ textAlign: 'right', minWidth: '220px' }}>
               <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0F172A' }}>
-                For KOGNITI MINDS PRIVATE LIMITED
+                For {company.legal_name}
               </div>
               <div
                 style={{

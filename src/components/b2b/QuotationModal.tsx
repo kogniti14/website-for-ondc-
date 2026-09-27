@@ -4,6 +4,7 @@ import { B2BQuotation } from '../../types';
 import { COMPANY_BANK_DETAILS } from '../../config/bankConfig';
 import { storageService } from '../../services/storageService';
 import { getWhatsAppUrl } from '../../config/whatsappConfig';
+import { companyMasterService } from '../../services/companyMasterService';
 
 interface QuotationModalProps {
   quotation: B2BQuotation;
@@ -89,6 +90,7 @@ export const QuotationModal: React.FC<QuotationModalProps> = ({
 
   const siteMedia = storageService.getSiteMedia();
   const companyLogo = siteMedia?.logo || '/logo.png';
+  const company = companyMasterService.getCompanyMaster();
 
   const q = quotation;
   const adminQuote = q.adminQuotation;
@@ -176,7 +178,7 @@ export const QuotationModal: React.FC<QuotationModalProps> = ({
   const canAccept = (q.status === 'quoted' || q.status === 'revised_quoted') && onAcceptAndConvert;
 
   const handleShareWhatsApp = () => {
-    const msg = `*Commercial Quotation Ref: ${q.rfqNumber}*\nCompany: Kogniti Minds Private Limited\nClient: ${q.businessName}\nItems: ${items.length} Product(s)\nGrand Total: ₹${grandTotal.toLocaleString('en-IN')}\nValid Until: ${validUntilDate}\n\nPlease review and approve quotation online.`;
+    const msg = `*Commercial Quotation Ref: ${q.rfqNumber}*\nCompany: ${company.legal_name}\nClient: ${q.businessName}\nItems: ${items.length} Product(s)\nGrand Total: ₹${grandTotal.toLocaleString('en-IN')}\nValid Until: ${validUntilDate}\n\nPlease review and approve quotation online.`;
     window.open(getWhatsAppUrl(msg), '_blank');
   };
 
@@ -354,16 +356,16 @@ export const QuotationModal: React.FC<QuotationModalProps> = ({
               />
               <div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', letterSpacing: '0.01em' }}>
-                  KOGNITI MINDS PRIVATE LIMITED
+                  {company.legal_name}
                 </div>
                 <div style={{ fontSize: '0.74rem', color: '#475569' }}>
-                  A-Block, Sector 63, Commercial Hub, Noida, Uttar Pradesh - 201301
+                  {company.address_line_1}, {company.address_line_2}, {company.district}, {company.state}, {company.country} - {company.pincode}
                 </div>
                 <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                  CIN: U74999UP2022PTC168923 • GSTIN: 09AAECK1234F1Z5 • PAN: AAECK1234F
+                  CIN: {company.cin} • GSTIN: {company.gstin} • PAN: {company.pan}
                 </div>
                 <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                  Email: corporate@kognitiminds.com • Phone: +91 99991 44474 • Web: www.kognitiminds.com
+                  Email: {company.sales_email} • Phone: {company.support_phone} • Web: {company.website}
                 </div>
               </div>
             </div>
@@ -669,7 +671,7 @@ export const QuotationModal: React.FC<QuotationModalProps> = ({
             {/* Issuer Signature */}
             <div style={{ textAlign: 'center', padding: '1rem' }}>
               <div style={{ fontWeight: 800, color: '#0F172A', marginBottom: '2.5rem' }}>
-                For KOGNITI MINDS PRIVATE LIMITED
+                For {company.legal_name}
               </div>
               <div style={{ borderTop: '1px solid #94A3B8', paddingTop: '0.35rem', fontSize: '0.74rem', color: '#0F172A', fontWeight: 700 }}>
                 Authorized Signatory

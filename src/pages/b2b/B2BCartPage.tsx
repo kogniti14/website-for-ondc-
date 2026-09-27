@@ -86,7 +86,7 @@ export const B2BCartPage: React.FC<B2BCartPageProps> = ({
       contactPerson: b2bBusiness?.contactPerson || 'Procurement Officer',
       email: b2bBusiness?.businessEmail || 'procurement@business.com',
       phone: b2bBusiness?.mobile || WHATSAPP_NUMBER,
-      deliveryPincode: b2bBusiness?.shippingAddress?.pincode || '201301',
+      deliveryPincode: b2bBusiness?.shippingAddress?.pincode || '201306',
       productId: firstProduct?.id,
       productName: firstProduct?.name || 'Multi-Item Institutional Bulk Order',
       sku: firstProduct?.sku,

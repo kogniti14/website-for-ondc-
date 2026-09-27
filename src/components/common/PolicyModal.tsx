@@ -181,7 +181,13 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ type, onClose, onOpenF
             <div style={{ fontWeight: 700, color: 'var(--slate-900)', marginBottom: '0.4rem' }}>
               Policy & Grievance Contact:
             </div>
-            <div>{policy.contact.entity}</div>
+            <div style={{ fontWeight: 700, color: 'var(--slate-900)' }}>{policy.contact.entity}</div>
+            <div style={{ fontSize: '0.74rem', color: '#64748B', margin: '2px 0 4px' }}>
+              CIN: U46496UP2024PTC213997 | PAN: AALCK4750F | GSTIN: 09AALCK4750F1ZC
+            </div>
+            <div style={{ fontSize: '0.74rem', color: '#64748B', marginBottom: '4px' }}>
+              Address: Panchsheel Greens-2, Sec-16 B, Greater Noida West, Bisrakh, Bishrakh, Gautam Buddha Nagar, Uttar Pradesh - 201306
+            </div>
             <div>
               Email:{' '}
               <a href={`mailto:${policy.contact.email}`} style={{ color: '#0284C7', textDecoration: 'underline' }}>

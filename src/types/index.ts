@@ -726,3 +726,5 @@ export interface CreateReviewInput {
   media?: ReviewMedia[];
 }
 
+export type { CompanyMasterSettings } from '../config/companyMaster';
+

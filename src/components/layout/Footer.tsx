@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { storageService } from '../../services/storageService';
 import { dataSyncBus } from '../../services/dataSyncBus';
+import { companyMasterService } from '../../services/companyMasterService';
 import { SiteMedia } from '../../types';
 import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
 
@@ -30,12 +31,19 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
   const [siteMedia, setSiteMedia] = useState<SiteMedia>(() => storageService.getSiteMedia());
+  const [companyMaster, setCompanyMaster] = useState(() => companyMasterService.getCompanyMaster());
 
   useEffect(() => {
-    const unsub = dataSyncBus.subscribe('site_media', (m) => {
+    const unsubMedia = dataSyncBus.subscribe('site_media', (m) => {
       if (m) setSiteMedia(m);
     });
-    return unsub;
+    const unsubMaster = companyMasterService.subscribe((m) => {
+      setCompanyMaster(m);
+    });
+    return () => {
+      unsubMedia();
+      unsubMaster();
+    };
   }, []);
 
   const handleSubscribe = (e: React.FormEvent) => {
@@ -483,8 +491,8 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
               <div className="flex items-start gap-2" style={{ marginTop: '0.35rem' }}>
                 <MapPin size={14} className="text-amber-400" style={{ flexShrink: 0, marginTop: '3px' }} />
                 <div>
-                  <div style={{ fontSize: '0.74rem', color: '#CBD5E1', fontWeight: 700 }}>Registered Office (Uttar Pradesh):</div>
-                  <span>Panchsheel Greens-2, Sec-16 B, Gr. Noida West, Bisrakh, Bishrakh, Gautam Buddha Nagar, Uttar Pradesh, India - 201306</span>
+                  <div style={{ fontSize: '0.74rem', color: '#CBD5E1', fontWeight: 700 }}>Registered Office ({companyMaster.gst_state}):</div>
+                  <span>{companyMaster.address_line_1}, {companyMaster.address_line_2}, {companyMaster.city}, {companyMaster.district}, {companyMaster.state}, {companyMaster.country} - {companyMaster.pincode}</span>
                 </div>
               </div>
               <div className="flex items-start gap-2" style={{ marginTop: '0.35rem' }}>
@@ -547,6 +555,38 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
                 <CheckCircle2 size={13} /> Thank you! You are now subscribed to Kogniti Minds updates.
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Statutory Corporate Master Identification */}
+        <div
+          style={{
+            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            padding: '0.75rem 1rem',
+            background: 'rgba(255, 255, 255, 0.03)',
+            borderRadius: '8px',
+            marginTop: '1.5rem',
+            marginBottom: '1rem',
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '0.75rem',
+            fontSize: '0.76rem',
+            color: '#94A3B8',
+          }}
+        >
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ color: '#FFFFFF', fontWeight: 700 }}>{companyMaster.legal_name}</span>
+            <span style={{ color: '#475569' }}>•</span>
+            <span>CIN: <code style={{ color: '#93C5FD' }}>{companyMaster.cin}</code></span>
+            <span style={{ color: '#475569' }}>•</span>
+            <span>PAN: <code style={{ color: '#FDE047' }}>{companyMaster.pan}</code></span>
+            <span style={{ color: '#475569' }}>•</span>
+            <span>GSTIN: <code style={{ color: '#86EFAC' }}>{companyMaster.gstin}</code> ({companyMaster.gst_state})</span>
+          </div>
+          <div style={{ color: '#CBD5E1', fontSize: '0.73rem' }}>
+            Registered Office: {companyMaster.address_line_1}, {companyMaster.address_line_2}, {companyMaster.city}, {companyMaster.state}, {companyMaster.country} - {companyMaster.pincode}
           </div>
         </div>
 

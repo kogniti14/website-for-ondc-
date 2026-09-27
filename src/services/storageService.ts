@@ -41,7 +41,9 @@ import {
   B2CAddress,
   B2BDocumentType,
   B2BDocumentAttachment,
+  CompanyMasterSettings,
 } from '../types';
+import { companyMasterService } from './companyMasterService';
 import { MOCK_PRODUCTS, MOCK_COUPONS, CATEGORIES } from '../data/mockProducts';
 import { emailOtpService } from './emailOtpService';
 import { dataSyncBus } from './dataSyncBus';
@@ -70,6 +72,7 @@ const KEYS = {
   RESET_OTPS: 'km_reset_otps_v1',
   CURRENT_USER_SESSION: 'km_user_session_v1',
   SITE_MEDIA: 'km_site_media_v2',
+  COMPANY_SETTINGS: 'km_company_master_v1',
 };
 
 // Initial Seed Data - Production Level (Zero Dummy Accounts)
@@ -1475,7 +1478,7 @@ class StorageService {
         street: 'Commercial Facility',
         city: 'Noida',
         state: 'Uttar Pradesh',
-        pincode: '201301',
+        pincode: '201306',
         addressType: 'work',
       };
       const newBiz: B2BBusiness = {
@@ -1485,8 +1488,8 @@ class StorageService {
         contactPerson: orderData.contactPerson,
         businessEmail: orderData.email || `contact@${orderData.businessName.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
         mobile: orderData.mobile,
-        gstin: orderData.gstin || '09AAECK1234F1Z5',
-        pan: orderData.gstin ? orderData.gstin.slice(2, 12) : 'AAECK1234F',
+        gstin: orderData.gstin || '',
+        pan: orderData.gstin && orderData.gstin.length >= 12 ? orderData.gstin.slice(2, 12) : '',
         businessType: 'Corporate Office',
         status: 'approved',
         billingAddress: defaultAddr,
@@ -1567,7 +1570,7 @@ class StorageService {
       poNumber,
       businessId: business.id,
       businessName: orderData.businessName,
-      gstin: orderData.gstin || business.gstin || '09AAECK1234F1Z5',
+      gstin: orderData.gstin || business.gstin || '',
       source: orderData.source,
       internalRemarks: orderData.internalRemarks,
       shippingAddress: orderData.shippingAddress,
@@ -1763,9 +1766,11 @@ class StorageService {
       street: 'Commercial Delivery Address',
       city: 'Noida',
       state: 'Uttar Pradesh',
-      pincode: quote.deliveryPincode || '201301',
+      pincode: quote.deliveryPincode || '201306',
       addressType: 'work',
     };
+
+    const business = quote.businessId ? this.getB2BBusinessById(quote.businessId) : undefined;
 
     const newOrder: B2BOrder = {
       id: `b2b_ord_${Date.now()}`,
@@ -1773,7 +1778,7 @@ class StorageService {
       poNumber: `PO-${quote.rfqNumber}`,
       businessId: quote.businessId || `biz_${Date.now()}`,
       businessName: quote.businessName,
-      gstin: quote.gstin || '09AAECK1234F1Z5',
+      gstin: quote.gstin || business?.gstin || '',
       shippingAddress: quote.shippingAddress || defaultAddress,
       billingAddress: quote.billingAddress || defaultAddress,
       items,
@@ -2400,7 +2405,13 @@ class StorageService {
       const settings = this.getItem<any>('km_settings_v1', {});
       await this.syncServer('settings', { ...settings, updatedAt: timestamp });
       dataSyncBus.emit('settings', settings);
-      details.push({ label: 'Global Store Settings', count: 'Published' });
+
+      // 6. Publish Company Master Settings
+      const companyMaster = companyMasterService.getCompanyMaster();
+      await this.syncServer('company_settings', { ...companyMaster, updatedAt: timestamp });
+      dataSyncBus.emit('company_settings', companyMaster);
+
+      details.push({ label: 'Global Store & Company Master Settings', count: 'Published' });
 
       return {
         success: true,
@@ -2416,6 +2427,14 @@ class StorageService {
         error: err?.message || 'Failed to sync all sections to live production.',
       };
     }
+  }
+
+  public getCompanyMaster(): CompanyMasterSettings {
+    return companyMasterService.getCompanyMaster();
+  }
+
+  public async saveCompanyMaster(settings: Partial<CompanyMasterSettings>): Promise<{ success: boolean; errors?: string[] }> {
+    return companyMasterService.saveCompanyMaster(settings);
   }
 }
 
