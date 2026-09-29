@@ -50,6 +50,18 @@ import { OndcManagement } from './components/admin/OndcManagement';
 // Legal & Policy Pages
 import { LegalPolicyPage } from './pages/legal/LegalPolicyPage';
 
+// Customer Production Route Pages
+import { SearchPage } from './pages/customer/SearchPage';
+import { ProductDetailPage } from './pages/customer/ProductDetailPage';
+import { CancellationPage } from './pages/customer/CancellationPage';
+import { SupportPage } from './pages/customer/SupportPage';
+import { RatingPage } from './pages/customer/RatingPage';
+import { TrackOrderPage } from './pages/customer/TrackOrderPage';
+import { OrderStatusPage } from './pages/customer/OrderStatusPage';
+import { OrderConfirmPage } from './pages/customer/OrderConfirmPage';
+import { CheckoutInitPage } from './pages/customer/CheckoutInitPage';
+import { OrderUpdatePage } from './pages/customer/OrderUpdatePage';
+
 // Gallery & Certification Components
 import { StoryDetailModal } from './components/gallery/StoryDetailModal';
 import { CertificateDetailModal } from './components/certification/CertificateDetailModal';
@@ -176,10 +188,29 @@ const MainApp: React.FC = () => {
         setActiveTab('admin');
         return;
       }
-      if (pathname.startsWith('/on_') || pathname.match(/^\/(search|select|init|confirm|status|track|cancel|update|rating|support)$/)) {
+      if (pathname.startsWith('/on_')) {
         const cleanSlug = pathname.replace(/^\//, '').replace(/_/g, '-');
         window.history.replaceState(null, '', `/admin/ondc/${cleanSlug}`);
         setActiveTab('admin');
+        return;
+      }
+      // Production Customer Routes:
+      const customerMatch = pathname.match(/^\/(search|select|init|confirm|status|track|cancel|update|rating|support)$/);
+      if (customerMatch) {
+        const routeName = customerMatch[1];
+        setActiveTab(routeName);
+        if (routeName === 'select') {
+          const params = new URLSearchParams(window.location.search);
+          const pid = params.get('productId');
+          if (pid) {
+            const found = storageService.getProductById(pid) || products.find((p) => p.id === pid || p.sku === pid);
+            if (found) setSelectedProduct(found);
+          }
+        } else if (routeName === 'search') {
+          const params = new URLSearchParams(window.location.search);
+          const q = params.get('q');
+          if (q) setSearchQuery(q);
+        }
         return;
       }
       const hash = window.location.hash.replace('#', '').toLowerCase();
@@ -196,14 +227,19 @@ const MainApp: React.FC = () => {
       window.removeEventListener('hashchange', handleRouteCheck);
       window.removeEventListener('popstate', handleRouteCheck);
     };
-  }, []);
+  }, [products]);
 
   // Handlers
   const handleSetActiveTab = (tab: string) => {
     setActiveTab(tab);
-    if (tab === 'home') {
-      if (window.location.hash) {
-        window.history.pushState(null, '', window.location.pathname + window.location.search);
+    if (['search', 'select', 'init', 'confirm', 'status', 'track', 'cancel', 'update', 'rating', 'support'].includes(tab)) {
+      const targetPath = `/${tab}`;
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState(null, '', targetPath + window.location.search);
+      }
+    } else if (tab === 'home') {
+      if (window.location.hash || window.location.pathname !== '/') {
+        window.history.pushState(null, '', '/' + window.location.search);
       }
     } else {
       const targetHash = `#${tab}`;
@@ -222,6 +258,8 @@ const MainApp: React.FC = () => {
 
   const handleOpenProduct = (p: Product) => {
     setSelectedProduct(p);
+    window.history.pushState(null, '', `/select?productId=${p.id}`);
+    setActiveTab('select');
   };
 
   const handleB2BBuyNow = (p: Product) => {
@@ -265,7 +303,8 @@ const MainApp: React.FC = () => {
 
   const handleOrderSuccess = (order: B2COrder) => {
     refreshData();
-    setActiveTab('orders');
+    window.history.pushState(null, '', `/confirm?orderId=${order.orderNumber || order.id}`);
+    setActiveTab('confirm');
   };
 
   return (
@@ -289,7 +328,9 @@ const MainApp: React.FC = () => {
           }}
           onSearchQuery={(q) => {
             setSearchQuery(q);
-            if (q.trim()) setActiveTab('products');
+            const targetUrl = q.trim() ? `/search?q=${encodeURIComponent(q.trim())}` : '/search';
+            window.history.pushState(null, '', targetUrl);
+            setActiveTab('search');
           }}
           onNavigateToShop={handleNavigateToShop}
         />
@@ -417,6 +458,90 @@ const MainApp: React.FC = () => {
           <CustomerDashboardPage
             orders={b2cOrders}
             setActiveTab={setActiveTab}
+          />
+        )}
+
+        {/* --- 10 Production Customer Routes --- */}
+        {activeTab === 'search' && (
+          <SearchPage
+            products={products}
+            categories={categories}
+            onOpenProduct={handleOpenProduct}
+            onBuyNow={handleBuyNow}
+            setActiveTab={handleSetActiveTab}
+          />
+        )}
+
+        {activeTab === 'select' && (
+          <ProductDetailPage
+            products={products}
+            selectedProduct={selectedProduct}
+            onSelectProduct={(p) => setSelectedProduct(p)}
+            onBuyNow={handleBuyNow}
+            setActiveTab={handleSetActiveTab}
+          />
+        )}
+
+        {activeTab === 'cancel' && (
+          <CancellationPage
+            b2cOrders={b2cOrders}
+            b2bOrders={b2bOrders}
+            setActiveTab={handleSetActiveTab}
+          />
+        )}
+
+        {activeTab === 'support' && (
+          <SupportPage
+            setActiveTab={handleSetActiveTab}
+          />
+        )}
+
+        {activeTab === 'rating' && (
+          <RatingPage
+            products={products}
+            b2cOrders={b2cOrders}
+            b2bOrders={b2bOrders}
+            setActiveTab={handleSetActiveTab}
+          />
+        )}
+
+        {activeTab === 'track' && (
+          <TrackOrderPage
+            b2cOrders={b2cOrders}
+            b2bOrders={b2bOrders}
+            setActiveTab={handleSetActiveTab}
+          />
+        )}
+
+        {activeTab === 'status' && (
+          <OrderStatusPage
+            b2cOrders={b2cOrders}
+            b2bOrders={b2bOrders}
+            setActiveTab={handleSetActiveTab}
+          />
+        )}
+
+        {activeTab === 'confirm' && (
+          <OrderConfirmPage
+            b2cOrders={b2cOrders}
+            b2bOrders={b2bOrders}
+            setActiveTab={handleSetActiveTab}
+          />
+        )}
+
+        {activeTab === 'init' && (
+          <CheckoutInitPage
+            products={products}
+            setActiveTab={handleSetActiveTab}
+            openAuthModal={() => handleOpenAuth('login')}
+          />
+        )}
+
+        {activeTab === 'update' && (
+          <OrderUpdatePage
+            b2cOrders={b2cOrders}
+            b2bOrders={b2bOrders}
+            setActiveTab={handleSetActiveTab}
           />
         )}
 

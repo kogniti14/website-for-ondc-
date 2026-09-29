@@ -255,9 +255,18 @@ function sendNackResponse($httpStatus, $code, $message, $storageDir, $logParams 
 // 6. Enforce POST Method for all protocol actions
 if ($httpMethod !== 'POST') {
     // If request originates from a human browser (Accept header includes text/html),
-    // redirect smoothly to the dedicated Admin UI SPA route
+    // serve customer SPA for customer routes, or redirect to Admin Workbench for protocol callback routes
     $acceptHeader = $_SERVER['HTTP_ACCEPT'] ?? '';
     if (stripos($acceptHeader, 'text/html') !== false) {
+        $customerActions = ['search', 'select', 'init', 'confirm', 'status', 'track', 'cancel', 'update', 'rating', 'support'];
+        if (in_array($action, $customerActions)) {
+            $spaPath = dirname(__DIR__, 2) . '/dist/index.html';
+            if (file_exists($spaPath)) {
+                header('Content-Type: text/html; charset=utf-8');
+                readfile($spaPath);
+                exit;
+            }
+        }
         $slug = str_replace('_', '-', $action);
         header("Location: /admin/ondc/{$slug}", true, 302);
         exit;

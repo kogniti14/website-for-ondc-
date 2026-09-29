@@ -411,7 +411,10 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
 
                     {/* Track Details */}
                     <button
-                      onClick={() => handleOpenTrackingModal(order)}
+                      onClick={() => {
+                        window.history.pushState(null, '', `/track?orderId=${order.orderNumber || order.id}`);
+                        setActiveTab('track');
+                      }}
                       className="btn btn-secondary btn-sm"
                       style={{ borderRadius: 'var(--radius-sm)' }}
                       title="Query live courier and ONDC fulfillment tracking"
@@ -419,24 +422,29 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                       <Clock size={14} /> Live Tracker
                     </button>
 
-                    {/* Refresh ONDC Protocol Status */}
+                    {/* Check Status */}
                     <button
-                      onClick={() => handleRefreshProtocolStatus(order)}
-                      disabled={statusRefreshingIds[order.id]}
+                      onClick={() => {
+                        window.history.pushState(null, '', `/status?orderId=${order.orderNumber || order.id}`);
+                        setActiveTab('status');
+                      }}
                       className="btn btn-outline btn-sm"
                       style={{ borderRadius: 'var(--radius-sm)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                      title="Trigger ONDC /status protocol query"
+                      title="View authoritative order status"
                     >
-                      <RefreshCw size={13} className={statusRefreshingIds[order.id] ? 'animate-spin' : ''} />
-                      <span>{statusRefreshingIds[order.id] ? 'Checking...' : 'Check Status'}</span>
+                      <RefreshCw size={13} />
+                      <span>Order Status</span>
                     </button>
 
                     {/* Order Support Action */}
                     <button
-                      onClick={() => handleOpenSupportModal(order)}
+                      onClick={() => {
+                        window.history.pushState(null, '', `/support?orderId=${order.orderNumber || order.id}`);
+                        setActiveTab('support');
+                      }}
                       className="btn btn-secondary btn-sm"
                       style={{ borderRadius: 'var(--radius-sm)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
-                      title="Trigger ONDC /support escalation"
+                      title="Contact customer support for this order"
                     >
                       <HelpCircle size={13} /> Support
                     </button>
@@ -444,7 +452,10 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                     {/* Cancellation Action for Eligible Orders */}
                     {(order.orderStatus === 'placed' || order.orderStatus === 'processing' || order.orderStatus === 'confirmed') && (
                       <button
-                        onClick={() => setOrderToCancel(order)}
+                        onClick={() => {
+                          window.history.pushState(null, '', `/cancel?orderId=${order.orderNumber || order.id}`);
+                          setActiveTab('cancel');
+                        }}
                         className="btn btn-sm"
                         style={{
                           borderRadius: 'var(--radius-sm)',
@@ -457,7 +468,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                           fontWeight: 600,
                           fontSize: '0.75rem',
                         }}
-                        title="Cancel active order via ONDC /cancel"
+                        title="Request cancellation via /cancel"
                       >
                         <X size={13} /> Cancel Order
                       </button>
@@ -466,7 +477,10 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                     {/* Return Action for Delivered Orders */}
                     {order.orderStatus === 'delivered' && (
                       <button
-                        onClick={() => setOrderToReturn(order)}
+                        onClick={() => {
+                          window.history.pushState(null, '', `/update?orderId=${order.orderNumber || order.id}`);
+                          setActiveTab('update');
+                        }}
                         className="btn btn-sm"
                         style={{
                           borderRadius: 'var(--radius-sm)',

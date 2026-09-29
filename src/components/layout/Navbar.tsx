@@ -62,13 +62,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (search.trim()) {
-      ondcClientService.searchProducts(search.trim());
+    const query = search.trim();
+    if (query) {
+      ondcClientService.searchProducts(query);
     }
     if (onSearchQuery) {
-      onSearchQuery(search);
+      onSearchQuery(query);
     }
-    setActiveTab('products');
+    const searchUrl = query ? `/search?q=${encodeURIComponent(query)}` : '/search';
+    window.history.pushState(null, '', searchUrl);
+    setActiveTab('search');
   };
 
   return (
@@ -87,14 +90,25 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Building2 size={14} className="text-blue-400" />
           <span>
             B2B & INSTITUTIONAL ENQUIRIES:{' '}
-            <a href={getTelUrl()} style={{ color: '#93C5FD', fontWeight: 700, textDecoration: 'underline' }}>
-              {getWhatsAppDisplayNumber()}
+            <a
+              href="/support?method=phone"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState(null, '', '/support?method=phone');
+                setActiveTab('support');
+              }}
+              style={{ color: '#93C5FD', fontWeight: 700, textDecoration: 'underline' }}
+            >
+              +91 9931648595
             </a>
             {' | '}
             <a
-              href={getWhatsAppUrl("Hello Kogniti Minds, I would like to enquire about your tree-free agro paper products.")}
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/support?method=whatsapp"
+              onClick={(e) => {
+                e.preventDefault();
+                window.history.pushState(null, '', '/support?method=whatsapp');
+                setActiveTab('support');
+              }}
               style={{ color: '#86EFAC', fontWeight: 700, textDecoration: 'underline' }}
               title="Chat with us on WhatsApp"
             >
@@ -583,14 +597,30 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Briefcase size={14} className="text-blue-600" /> B2B Deals & Wholesale
             </button>
             <button
-              onClick={() => setActiveTab('orders')}
+              onClick={() => {
+                window.history.pushState(null, '', '/track');
+                setActiveTab('track');
+              }}
               style={{
-                color: activeTab === 'orders' ? 'var(--primary)' : 'var(--slate-700)',
-                borderBottom: activeTab === 'orders' ? '2px solid var(--primary)' : '2px solid transparent',
+                color: activeTab === 'track' ? 'var(--primary)' : 'var(--slate-700)',
+                borderBottom: activeTab === 'track' ? '2px solid var(--primary)' : '2px solid transparent',
                 paddingBottom: '0.3rem',
               }}
             >
               Track Orders
+            </button>
+            <button
+              onClick={() => {
+                window.history.pushState(null, '', '/support');
+                setActiveTab('support');
+              }}
+              style={{
+                color: activeTab === 'support' ? 'var(--primary)' : 'var(--slate-700)',
+                borderBottom: activeTab === 'support' ? '2px solid var(--primary)' : '2px solid transparent',
+                paddingBottom: '0.3rem',
+              }}
+            >
+              Support
             </button>
           </div>
 
@@ -745,6 +775,28 @@ export const Navbar: React.FC<NavbarProps> = ({
             style={{ justifyContent: 'flex-start' }}
           >
             <Package size={16} /> My Orders
+          </button>
+          <button
+            onClick={() => {
+              window.history.pushState(null, '', '/track');
+              setActiveTab('track');
+              setMobileMenuOpen(false);
+            }}
+            className="btn btn-secondary"
+            style={{ justifyContent: 'flex-start' }}
+          >
+            <Truck size={16} /> Track Order
+          </button>
+          <button
+            onClick={() => {
+              window.history.pushState(null, '', '/support');
+              setActiveTab('support');
+              setMobileMenuOpen(false);
+            }}
+            className="btn btn-secondary"
+            style={{ justifyContent: 'flex-start' }}
+          >
+            <Phone size={16} /> Customer Support
           </button>
           <button
             onClick={() => {

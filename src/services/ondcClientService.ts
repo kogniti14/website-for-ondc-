@@ -275,6 +275,10 @@ class OndcClientService {
     return await this.postProtocolRequest<OndcQuoteResult>('select', payload);
   }
 
+  public async selectProduct(productId: string, quantity: number = 1): Promise<OndcProtocolResponse<OndcQuoteResult>> {
+    return this.selectItems([{ productId, quantity }]);
+  }
+
   /* ==========================================================================
      3. Checkout / Initialise Order -> POST /init
      ========================================================================== */
@@ -354,6 +358,30 @@ class OndcClientService {
     };
 
     return await this.postProtocolRequest('init', payload);
+  }
+
+  public async initCheckout(
+    deliveryAddress: {
+      name: string;
+      phone: string;
+      addressLine1: string;
+      city: string;
+      state: string;
+      pincode: string;
+      email?: string;
+    },
+    paymentType: string = 'razorpay'
+  ): Promise<OndcProtocolResponse<any>> {
+    return this.initOrder({
+      items: [],
+      customerName: deliveryAddress.name,
+      customerEmail: deliveryAddress.email || 'customer@kognitiminds.com',
+      customerPhone: deliveryAddress.phone,
+      street: deliveryAddress.addressLine1,
+      city: deliveryAddress.city,
+      state: deliveryAddress.state,
+      pincode: deliveryAddress.pincode,
+    });
   }
 
   /* ==========================================================================

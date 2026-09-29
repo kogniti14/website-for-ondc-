@@ -437,8 +437,7 @@ async function runTests() {
   assert(browserGetRes.headers['location'] === '/admin/ondc/on-search', 'Browser GET /on_search redirects to /admin/ondc/on-search');
 
   const browserGetSearchRes = await makeReq('/search', 'GET', null, { 'Accept': 'text/html,application/xhtml+xml' });
-  assert(browserGetSearchRes.status === 302, 'Browser GET /search redirects to Admin SPA route with HTTP 302');
-  assert(browserGetSearchRes.headers['location'] === '/admin/ondc/search', 'Browser GET /search redirects to /admin/ondc/search');
+  assert(browserGetSearchRes.status === 200, 'Browser GET /search serves customer frontend SPA with HTTP 200');
 
   // 8b. OPTIONS preflight CORS request -> MUST return HTTP 200 OK
   const optionsRes = await makeReq('/on_search', 'OPTIONS');

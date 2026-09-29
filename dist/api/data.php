@@ -39,7 +39,8 @@ $allowedCollections = [
     'policy_versions',
     'testimonials',
     'reviews',
-    'review_audit_logs'
+    'review_audit_logs',
+    'cancellation_requests'
 ];
 
 $objectCollections = [

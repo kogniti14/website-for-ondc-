@@ -364,6 +364,13 @@ for (const act of PROTOCOL_POST_ONLY_ENDPOINTS) {
   ondcRouter.get([`/${act}`, `/ondc/${act}`], (req, res) => {
     const acceptHeader = req.headers['accept'] || '';
     if (acceptHeader.includes('text/html')) {
+      const customerActions = ['search', 'select', 'init', 'confirm', 'status', 'track', 'cancel', 'update', 'rating', 'support'];
+      if (customerActions.includes(act)) {
+        const spaPath = path.resolve(projectRoot, 'dist/index.html');
+        if (fs.existsSync(spaPath)) {
+          return res.sendFile(spaPath);
+        }
+      }
       const slug = act.replace(/_/g, '-');
       return res.redirect(`/admin/ondc/${slug}`);
     }

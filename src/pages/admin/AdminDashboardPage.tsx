@@ -45,6 +45,7 @@ import {
   Globe,
   Download,
   ExternalLink,
+  RotateCcw,
 } from 'lucide-react';
 import { Product, B2COrder, B2BOrder, B2BBusiness, B2BQuotation, Coupon, AdminUser, AdminPermissions, Category, B2CUser, SiteMedia, B2BOrderItemSummary, OrderItemSummary, B2BQuotationItem, B2BPaymentRecord, B2CAddress, B2BDocumentType, B2BDocumentAttachment } from '../../types';
 import { storageService } from '../../services/storageService';
@@ -64,6 +65,7 @@ import { PolicyManagement } from '../../components/admin/PolicyManagement';
 import { BulkActionBar } from '../../components/admin/BulkActionBar';
 import { WHATSAPP_NUMBER } from '../../config/whatsappConfig';
 import { OndcManagement } from '../../components/admin/OndcManagement';
+import { CancellationManagement } from '../../components/admin/CancellationManagement';
 import { TestimonialManagement } from '../../components/admin/TestimonialManagement';
 import { CompanyMasterManagement } from '../../components/admin/CompanyMasterManagement';
 import { certificationService } from '../../services/certificationService';
@@ -104,12 +106,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const { currentAdminUser, isSuperAdmin, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery' | 'gallery_categories' | 'certifications' | 'cert_categories' | 'policies' | 'ondc' | 'testimonials' | 'company_master'
+    'overview' | 'products' | 'categories' | 'b2c_orders' | 'b2b_orders' | 'verification' | 'rfqs' | 'coupons' | 'approvals' | 'credentials' | 'media' | 'razorpay' | 'gallery' | 'gallery_categories' | 'certifications' | 'cert_categories' | 'policies' | 'ondc' | 'testimonials' | 'company_master' | 'cancellations'
   >(() => {
     if (typeof window !== 'undefined') {
       const p = window.location.pathname.toLowerCase();
       if (p.startsWith('/admin/ondc')) return 'ondc';
       if (p.startsWith('/admin/company-master') || p.startsWith('/admin/company_master')) return 'company_master';
+      if (p.startsWith('/admin/cancellations')) return 'cancellations';
       if (p.startsWith('/admin/products')) return 'products';
       if (window.location.hash === '#ondc') return 'ondc';
     }
@@ -124,6 +127,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           setActiveTab('ondc');
         } else if (p.startsWith('/admin/company-master') || p.startsWith('/admin/company_master')) {
           setActiveTab('company_master');
+        } else if (p.startsWith('/admin/cancellations')) {
+          setActiveTab('cancellations');
         }
       }
     };
@@ -2599,6 +2604,35 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               }}
             >
               <ShieldCheck size={16} /> Staff & Approvals {pendingAdminRequests > 0 && <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>{pendingAdminRequests}</span>}
+            </button>
+            <button
+              onClick={() => setActiveTab('cancellations')}
+              data-tab="cancellations"
+              data-active={activeTab === 'cancellations'}
+              className="admin-nav-item"
+              style={{
+                padding: '0.5rem 0.2rem',
+                color: activeTab === 'cancellations' ? 'var(--primary)' : 'var(--slate-600)',
+                borderBottom: activeTab === 'cancellations' ? '2px solid var(--primary)' : '2px solid transparent',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                fontSize: '0.9rem',
+                fontWeight: activeTab === 'cancellations' ? 700 : 600,
+                background: 'transparent',
+                border: 'none',
+                borderBottomStyle: 'solid',
+                borderBottomWidth: '2px',
+                borderBottomColor: activeTab === 'cancellations' ? 'var(--primary)' : 'transparent',
+                cursor: 'pointer',
+              }}
+            >
+              <RotateCcw size={16} /> Cancellation Requests{' '}
+              {storageService.getCancellationRequests().filter((r) => r.status === 'pending_admin_approval' || r.status === 'pending_super_admin_approval').length > 0 && (
+                <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>
+                  {storageService.getCancellationRequests().filter((r) => r.status === 'pending_admin_approval' || r.status === 'pending_super_admin_approval').length}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setActiveTab('credentials')}
@@ -6001,6 +6035,17 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               />
             </div>
           </div>
+        )}
+
+        {/* 7b. Order Cancellation Management Tab (Dual-tier B2B & B2C Review) */}
+        {activeTab === 'cancellations' && (
+          <CancellationManagement
+            isSuperAdmin={isSuperAdmin}
+            currentAdminUser={currentAdminUser}
+            b2cOrders={b2cOrders}
+            b2bOrders={b2bOrders}
+            onRefresh={onRefresh}
+          />
         )}
 
         {/* 8. User Credentials & Master Security Hub Tab */}

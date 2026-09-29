@@ -42,6 +42,7 @@ import {
   B2BDocumentType,
   B2BDocumentAttachment,
   CompanyMasterSettings,
+  CancellationRequest,
 } from '../types';
 import { companyMasterService } from './companyMasterService';
 import { MOCK_PRODUCTS, MOCK_COUPONS, CATEGORIES } from '../data/mockProducts';
@@ -73,6 +74,7 @@ const KEYS = {
   CURRENT_USER_SESSION: 'km_user_session_v1',
   SITE_MEDIA: 'km_site_media_v2',
   COMPANY_SETTINGS: 'km_company_master_v1',
+  CANCELLATION_REQUESTS: 'km_cancellation_requests_v1',
 };
 
 // Initial Seed Data - Production Level (Zero Dummy Accounts)
@@ -1365,6 +1367,349 @@ class StorageService {
     dataSyncBus.emit('b2b_orders', remaining);
     dataSyncBus.emit('orders_updated');
     return initial.length - remaining.length;
+  }
+
+  // --- Cancellation Requests (Dual-tier B2B & B2C Order Cancellation Workflow) ---
+  getCancellationRequests(): CancellationRequest[] {
+    return this.getItem<CancellationRequest[]>(KEYS.CANCELLATION_REQUESTS, []);
+  }
+
+  getCancellationRequestById(id: string): CancellationRequest | undefined {
+    return this.getCancellationRequests().find((r) => r.id === id);
+  }
+
+  getCancellationRequestByOrderId(orderId: string): CancellationRequest | undefined {
+    return this.getCancellationRequests().find((r) => r.orderId === orderId);
+  }
+
+  saveCancellationRequest(req: CancellationRequest): void {
+    const requests = this.getCancellationRequests();
+    const idx = requests.findIndex((r) => r.id === req.id);
+    if (idx >= 0) {
+      requests[idx] = req;
+    } else {
+      requests.unshift(req);
+    }
+    this.setItem(KEYS.CANCELLATION_REQUESTS, requests);
+    this.syncServer('cancellation_requests', req);
+    dataSyncBus.emit('cancellation_requests', requests);
+    dataSyncBus.emit('cancellation_requests_updated', requests);
+  }
+
+  submitCancellationRequest(params: {
+    orderId: string;
+    orderType: 'b2c' | 'b2b';
+    reasonCode: string;
+    reasonText: string;
+    explanation?: string;
+    customer: { id: string; name: string; email: string; phone?: string };
+  }): { success: boolean; message: string; request?: CancellationRequest } {
+    const { orderId, orderType, reasonCode, reasonText, explanation, customer } = params;
+
+    // Validate reason
+    if (!reasonCode || !reasonText || reasonText.trim().length === 0) {
+      return { success: false, message: 'Please provide a cancellation reason before submitting your cancellation request.' };
+    }
+    if (reasonCode === 'other' && (!explanation || explanation.trim().length < 5)) {
+      return { success: false, message: 'Please provide a written explanation for your cancellation reason.' };
+    }
+
+    // Lookup order
+    const b2cOrder = orderType === 'b2c' ? this.getB2COrderById(orderId) : undefined;
+    const b2bOrder = orderType === 'b2b' ? this.getB2BOrderById(orderId) : undefined;
+    const order = b2cOrder || b2bOrder;
+
+    if (!order) {
+      return { success: false, message: 'Order not found.' };
+    }
+
+    // 6-hour window check
+    const orderTime = new Date(order.createdAt).getTime();
+    const now = Date.now();
+    const elapsedHours = (now - orderTime) / (1000 * 60 * 60);
+    if (elapsedHours > 6) {
+      return {
+        success: false,
+        message: 'The 6-hour cancellation window has expired. Orders placed more than 6 hours ago cannot be cancelled through the self-service flow. Please contact customer support.',
+      };
+    }
+
+    // Shipping status check
+    const currentStatus = (order.orderStatus || '').toLowerCase();
+    if (['shipped', 'delivered', 'out_for_delivery', 'dispatched'].includes(currentStatus)) {
+      return {
+        success: false,
+        message: 'This order has already been shipped. In accordance with platform policy, shipped orders cannot be cancelled.',
+      };
+    }
+    if (['cancelled', 'rejected'].includes(currentStatus)) {
+      return { success: false, message: 'This order has already been cancelled or rejected.' };
+    }
+
+    // Existing request check
+    const existing = this.getCancellationRequestByOrderId(order.id);
+    if (existing && existing.status !== 'rejected') {
+      return {
+        success: false,
+        message: `A cancellation request for this order is already ${existing.status.replace(/_/g, ' ')}.`,
+      };
+    }
+
+    const orderNumber = order.orderNumber || order.id;
+    const orderTotal = 'grandTotal' in order ? (order as any).grandTotal : ('total' in order ? (order as any).total : 0);
+
+    const newRequest: CancellationRequest = {
+      id: `canc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      orderId: order.id,
+      orderNumber,
+      orderType,
+      customerId: customer.id,
+      customerName: customer.name,
+      customerEmail: customer.email,
+      customerPhone: customer.phone,
+      orderCreatedAt: order.createdAt,
+      orderTotal,
+      orderStatus: order.orderStatus,
+      cancellationReasonCode: reasonCode,
+      cancellationReason: reasonText,
+      additionalExplanation: explanation?.trim() || undefined,
+      requestedAt: new Date().toISOString(),
+      status: 'pending_admin_approval',
+    };
+
+    this.saveCancellationRequest(newRequest);
+
+    // Update order status timeline
+    if (!Array.isArray(order.statusTimeline)) {
+      order.statusTimeline = [];
+    }
+    order.statusTimeline.push({
+      status: 'CANCELLATION REQUESTED',
+      timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      note: `Cancellation requested by customer. Reason: ${reasonText}${explanation ? ` (${explanation})` : ''}. Pending Admin and Super Admin approval.`,
+    });
+
+    if (orderType === 'b2c' && b2cOrder) {
+      this.setItem(KEYS.B2C_ORDERS, this.getB2COrders().map(o => o.id === order.id ? b2cOrder : o));
+      this.syncServer('b2c_orders', b2cOrder);
+      dataSyncBus.emit('b2c_orders', this.getB2COrders());
+    } else if (orderType === 'b2b' && b2bOrder) {
+      this.setItem(KEYS.B2B_ORDERS, this.getB2BOrders().map(o => o.id === order.id ? b2bOrder : o));
+      this.syncServer('b2b_orders', b2bOrder);
+      dataSyncBus.emit('b2b_orders', this.getB2BOrders());
+    }
+    dataSyncBus.emit('orders_updated');
+
+    return {
+      success: true,
+      message: 'Cancellation request submitted successfully. Pending Admin approval.',
+      request: newRequest,
+    };
+  }
+
+  async approveCancellationByAdmin(
+    requestId: string,
+    adminUser: { username: string; role?: string; name?: string }
+  ): Promise<{ success: boolean; message: string }> {
+    const request = this.getCancellationRequestById(requestId);
+    if (!request) return { success: false, message: 'Cancellation request not found.' };
+
+    if (request.status !== 'pending_admin_approval') {
+      return { success: false, message: `Cannot approve request in status: ${request.status}` };
+    }
+
+    // Revalidate 6-hour limit and shipping status from the authoritative order
+    const order = request.orderType === 'b2c'
+      ? this.getB2COrderById(request.orderId)
+      : this.getB2BOrderById(request.orderId);
+
+    if (!order) return { success: false, message: 'Associated order not found.' };
+
+    const orderTime = new Date(order.createdAt).getTime();
+    const elapsedHours = (Date.now() - orderTime) / (1000 * 60 * 60);
+    if (elapsedHours > 6) {
+      request.status = 'ineligible';
+      this.saveCancellationRequest(request);
+      return { success: false, message: 'Cancellation ineligible: 6-hour window has expired.' };
+    }
+
+    const currentStatus = (order.orderStatus || '').toLowerCase();
+    if (['shipped', 'delivered', 'out_for_delivery', 'dispatched'].includes(currentStatus)) {
+      request.status = 'ineligible';
+      this.saveCancellationRequest(request);
+      return { success: false, message: 'Cancellation ineligible: Order has already been shipped.' };
+    }
+
+    request.adminApproval = {
+      approvedBy: adminUser.name || adminUser.username,
+      approvedAt: new Date().toISOString(),
+      action: 'approved',
+    };
+    request.status = 'pending_super_admin_approval';
+    this.saveCancellationRequest(request);
+
+    // Update order status timeline
+    if (!Array.isArray(order.statusTimeline)) {
+      order.statusTimeline = [];
+    }
+    order.statusTimeline.push({
+      status: 'CANCELLATION APPROVED BY ADMIN',
+      timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      note: `Admin approval recorded by ${adminUser.name || adminUser.username}. Awaiting required Super Admin final approval.`,
+    });
+
+    if (request.orderType === 'b2c') {
+      this.setItem(KEYS.B2C_ORDERS, this.getB2COrders().map(o => o.id === order.id ? (order as B2COrder) : o));
+      await this.syncServer('b2c_orders', order);
+      dataSyncBus.emit('b2c_orders', this.getB2COrders());
+    } else {
+      this.setItem(KEYS.B2B_ORDERS, this.getB2BOrders().map(o => o.id === order.id ? (order as B2BOrder) : o));
+      await this.syncServer('b2b_orders', order);
+      dataSyncBus.emit('b2b_orders', this.getB2BOrders());
+    }
+    dataSyncBus.emit('orders_updated');
+
+    return { success: true, message: 'Admin approval recorded. Request is now pending Super Admin approval.' };
+  }
+
+  async approveCancellationBySuperAdmin(
+    requestId: string,
+    superAdminUser: { username: string; role?: string; name?: string }
+  ): Promise<{ success: boolean; message: string }> {
+    const request = this.getCancellationRequestById(requestId);
+    if (!request) return { success: false, message: 'Cancellation request not found.' };
+
+    if (request.status !== 'pending_super_admin_approval') {
+      return {
+        success: false,
+        message: `Super Admin approval requires prior Admin approval. Current status: ${request.status}`,
+      };
+    }
+
+    // Revalidate 6-hour limit and shipping status from authoritative order
+    const order = request.orderType === 'b2c'
+      ? this.getB2COrderById(request.orderId)
+      : this.getB2BOrderById(request.orderId);
+
+    if (!order) return { success: false, message: 'Associated order not found.' };
+
+    const orderTime = new Date(order.createdAt).getTime();
+    const elapsedHours = (Date.now() - orderTime) / (1000 * 60 * 60);
+    if (elapsedHours > 6) {
+      request.status = 'ineligible';
+      this.saveCancellationRequest(request);
+      return { success: false, message: 'Cancellation ineligible: 6-hour window has expired.' };
+    }
+
+    const currentStatus = (order.orderStatus || '').toLowerCase();
+    if (['shipped', 'delivered', 'out_for_delivery', 'dispatched'].includes(currentStatus)) {
+      request.status = 'ineligible';
+      this.saveCancellationRequest(request);
+      return { success: false, message: 'Cancellation ineligible: Order has already been shipped.' };
+    }
+
+    // Record Super Admin approval
+    request.superAdminApproval = {
+      approvedBy: superAdminUser.name || superAdminUser.username,
+      approvedAt: new Date().toISOString(),
+      action: 'approved',
+    };
+    request.status = 'approved';
+    request.processedAt = new Date().toISOString();
+    request.refundStatus = 'pending';
+    this.saveCancellationRequest(request);
+
+    // Execute actual order cancellation and inventory restoration
+    const prevStatus = order.orderStatus;
+    order.orderStatus = 'cancelled';
+    if (!Array.isArray(order.statusTimeline)) {
+      order.statusTimeline = [];
+    }
+    order.statusTimeline.push({
+      status: 'CANCELLATION APPROVED & PROCESSED',
+      timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+      note: `Dual-tier cancellation approved by Admin (${request.adminApproval?.approvedBy}) and Super Admin (${superAdminUser.name || superAdminUser.username}). Stock restored.`,
+    });
+
+    if (prevStatus !== 'cancelled' && prevStatus !== 'rejected' && Array.isArray(order.items)) {
+      await this.restoreProductInventory(order.items.map((it: any) => ({ productId: it.productId, quantity: it.quantity })));
+    }
+
+    if (request.orderType === 'b2c') {
+      this.setItem(KEYS.B2C_ORDERS, this.getB2COrders().map(o => o.id === order.id ? (order as B2COrder) : o));
+      await this.syncServer('b2c_orders', order);
+      dataSyncBus.emit('b2c_orders', this.getB2COrders());
+    } else {
+      this.setItem(KEYS.B2B_ORDERS, this.getB2BOrders().map(o => o.id === order.id ? (order as B2BOrder) : o));
+      await this.syncServer('b2b_orders', order);
+      dataSyncBus.emit('b2b_orders', this.getB2BOrders());
+    }
+    dataSyncBus.emit('orders_updated');
+
+    return {
+      success: true,
+      message: 'Cancellation dual-approval completed. Order cancelled and inventory restored.',
+    };
+  }
+
+  async rejectCancellation(
+    requestId: string,
+    approver: { username: string; role?: string; name?: string },
+    rejectionReason: string
+  ): Promise<{ success: boolean; message: string }> {
+    const request = this.getCancellationRequestById(requestId);
+    if (!request) return { success: false, message: 'Cancellation request not found.' };
+
+    if (!rejectionReason || rejectionReason.trim().length < 3) {
+      return { success: false, message: 'Please provide a valid rejection reason.' };
+    }
+
+    const wasPendingAdmin = request.status === 'pending_admin_approval';
+    request.status = 'rejected';
+    request.rejectionReason = rejectionReason.trim();
+
+    const approvalRecord = {
+      approvedBy: approver.name || approver.username,
+      approvedAt: new Date().toISOString(),
+      action: 'rejected' as const,
+      rejectionReason: rejectionReason.trim(),
+    };
+
+    if (wasPendingAdmin) {
+      request.adminApproval = approvalRecord;
+    } else {
+      request.superAdminApproval = approvalRecord;
+    }
+    this.saveCancellationRequest(request);
+
+    // Update order status timeline
+    const order = request.orderType === 'b2c'
+      ? this.getB2COrderById(request.orderId)
+      : this.getB2BOrderById(request.orderId);
+
+    if (order) {
+      if (!Array.isArray(order.statusTimeline)) {
+        order.statusTimeline = [];
+      }
+      order.statusTimeline.push({
+        status: 'CANCELLATION REQUEST REJECTED',
+        timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        note: `Cancellation rejected by ${approver.name || approver.username}. Reason: ${rejectionReason.trim()}`,
+      });
+
+      if (request.orderType === 'b2c') {
+        this.setItem(KEYS.B2C_ORDERS, this.getB2COrders().map(o => o.id === order.id ? (order as B2COrder) : o));
+        await this.syncServer('b2c_orders', order);
+        dataSyncBus.emit('b2c_orders', this.getB2COrders());
+      } else {
+        this.setItem(KEYS.B2B_ORDERS, this.getB2BOrders().map(o => o.id === order.id ? (order as B2BOrder) : o));
+        await this.syncServer('b2b_orders', order);
+        dataSyncBus.emit('b2b_orders', this.getB2BOrders());
+      }
+      dataSyncBus.emit('orders_updated');
+    }
+
+    return { success: true, message: 'Cancellation request rejected.' };
   }
 
   recordB2BOfflinePayment(

@@ -746,3 +746,56 @@ export interface CreateReviewInput {
 
 export type { CompanyMasterSettings } from '../config/companyMaster';
 
+export type CancellationApprovalStatus =
+  | 'pending_admin_approval'
+  | 'pending_super_admin_approval'
+  | 'approved'
+  | 'rejected'
+  | 'ineligible';
+
+export interface CancellationRequest {
+  id: string;
+  orderId: string;
+  orderNumber: string;
+  orderType: 'b2c' | 'b2b';
+  customerId: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  orderCreatedAt: string;
+  orderTotal: number;
+  orderStatus: string;
+  cancellationReasonCode: string;
+  cancellationReason: string;
+  additionalExplanation?: string;
+  requestedAt: string;
+  status: CancellationApprovalStatus;
+  adminApproval?: {
+    approvedBy: string;
+    approvedAt: string;
+    action: 'approved' | 'rejected';
+    rejectionReason?: string;
+    notes?: string;
+  };
+  superAdminApproval?: {
+    approvedBy: string;
+    approvedAt: string;
+    action: 'approved' | 'rejected';
+    rejectionReason?: string;
+    notes?: string;
+  };
+  processedAt?: string;
+  refundStatus?: 'not_applicable' | 'pending' | 'processed' | 'failed';
+  refundAmount?: number;
+  rejectionReason?: string;
+}
+
+export const CANCELLATION_REASONS = [
+  { code: '001', label: 'Ordered by mistake' },
+  { code: '002', label: 'Wrong product selected' },
+  { code: '003', label: 'Incorrect quantity' },
+  { code: '004', label: 'Delivery address needs correction' },
+  { code: '005', label: 'Delivery taking longer than expected' },
+  { code: '006', label: 'Order no longer required' },
+  { code: 'other', label: 'Other reason (written explanation required)' },
+];
