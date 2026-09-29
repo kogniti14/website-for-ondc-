@@ -1,4 +1,4 @@
-DirectoryIndex dist/index.html index.html
+DirectoryIndex index.html dist/index.html
 
 <IfModule mod_env.c>
   PassEnv RESEND_API_KEY
@@ -107,9 +107,9 @@ DirectoryIndex dist/index.html index.html
   RewriteRule ^on_([a-z]+)$ /admin/ondc/on-$1 [R=302,L]
 
   # Customer routes (search, select, init, confirm, status, track, cancel, update, rating, support):
-  # Human browser navigation -> Load customer SPA (dist/index.html)
+  # Human browser navigation -> Load customer SPA (index.html or dist/index.html)
   RewriteCond %{REQUEST_METHOD} !^POST$
-  RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support)$ dist/index.html [L]
+  RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support)$ index.html [L]
 
   # Protocol Machine-to-Machine POST Endpoints (Buyer -> Seller Gateway):
   RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support)$ public/api/ondc-gateway.php?action=$1 [QSA,L]
@@ -121,18 +121,22 @@ DirectoryIndex dist/index.html index.html
   # 4. Uploads resolution (public/uploads or uploads)
   RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
 
-  # 5. Root index route -> always serve dist/index.html
-  RewriteRule ^$ dist/index.html [L]
-  RewriteRule ^index\.html$ dist/index.html [L]
+  # 5. Root index route -> always serve index.html or dist/index.html
+  RewriteRule ^$ index.html [L]
+  RewriteRule ^index\.html$ index.html [L]
 
   # 6. Direct /assets/* resolution (works whether assets is in ./assets or ./dist/assets)
   RewriteCond %{REQUEST_URI} ^/assets/ [NC]
   RewriteCond %{REQUEST_FILENAME} -f
   RewriteRule ^ - [L]
 
+  RewriteCond %{DOCUMENT_ROOT}/assets/$1 -f
+  RewriteRule ^assets/(.*)$ assets/$1 [L]
   RewriteRule ^assets/(.*)$ dist/assets/$1 [L]
 
-  # 7. Fallback to dist/ for root-level static files (e.g. logo-icon.png, favicon.ico)
+  # 7. Fallback for root-level static files (e.g. logo-icon.png, favicon.ico)
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
   RewriteCond %{REQUEST_URI} !^/dist/
   RewriteRule ^([a-zA-Z0-9_-]+\.(png|jpe?g|gif|ico|svg|webp|woff2?|ttf|eot|pdf|zip|json))$ dist/$1 [L]
 
@@ -140,6 +144,6 @@ DirectoryIndex dist/index.html index.html
   RewriteCond %{REQUEST_URI} \.(js|css|png|jpe?g|gif|ico|svg|webp|woff2?|ttf|eot|pdf|zip|json)$ [NC]
   RewriteRule ^ - [R=404,L]
 
-  # 9. Client-side SPA route fallback (All navigation routes like /shop, /products, /admin go to dist/index.html)
-  RewriteRule . dist/index.html [L]
+  # 9. Client-side SPA route fallback (All navigation routes like /shop, /products, /admin go to index.html)
+  RewriteRule . index.html [L]
 </IfModule>

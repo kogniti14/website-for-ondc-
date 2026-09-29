@@ -261,13 +261,14 @@ if ($httpMethod !== 'POST') {
         $customerActions = ['search', 'select', 'init', 'confirm', 'status', 'track', 'cancel', 'update', 'rating', 'support'];
         if (in_array($action, $customerActions)) {
             $spaCandidates = [
+                ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/index.html',
+                dirname(__DIR__) . '/index.html',
                 dirname(__DIR__, 2) . '/dist/index.html',
                 dirname(__DIR__) . '/dist/index.html',
                 __DIR__ . '/../../dist/index.html',
                 ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/dist/index.html',
                 dirname(__DIR__, 2) . '/index.html',
-                dirname(__DIR__) . '/index.html',
-                ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/index.html',
+                __DIR__ . '/../index.html',
             ];
             foreach ($spaCandidates as $cand) {
                 if (!empty($cand) && file_exists($cand)) {
