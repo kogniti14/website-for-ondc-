@@ -18,6 +18,7 @@ import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useAuth } from '../../context/AuthContext';
 import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
+import { ondcClientService } from '../../services/ondcClientService';
 
 interface CartPageProps {
   products: Product[];
@@ -50,8 +51,36 @@ export const CartPage: React.FC<CartPageProps> = ({
 
   const [couponInput, setCouponInput] = useState('');
   const [couponFeedback, setCouponFeedback] = useState<{ success: boolean; message: string } | null>(null);
+  const [isValidatingQuote, setIsValidatingQuote] = useState(false);
+  const [quoteValidationStatus, setQuoteValidationStatus] = useState<string | null>(null);
 
   const calculations = getB2CCalculations();
+
+  const handleProceedClick = async () => {
+    if (!b2cUser || role !== 'b2c') {
+      if (onOpenAuth) onOpenAuth('login');
+      return;
+    }
+
+    if (b2cCart.length === 0) return;
+
+    setIsValidatingQuote(true);
+    setQuoteValidationStatus('Checking product availability...');
+    try {
+      const items = b2cCart.map((i) => ({ productId: i.productId, quantity: i.quantity }));
+      const res = await ondcClientService.selectItems(items);
+      if (res.success) {
+        setQuoteValidationStatus(null);
+        onProceedToCheckout();
+      } else {
+        setQuoteValidationStatus(res.error?.message || 'Unable to complete this request. Please try again.');
+      }
+    } catch {
+      setQuoteValidationStatus('Unable to complete this request. Please try again.');
+    } finally {
+      setIsValidatingQuote(false);
+    }
+  };
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
@@ -454,15 +483,35 @@ export const CartPage: React.FC<CartPageProps> = ({
                 </div>
               )}
 
+              {/* Quote Validation Feedback */}
+              {quoteValidationStatus && (
+                <div
+                  style={{
+                    padding: '0.65rem 0.85rem',
+                    marginBottom: '0.85rem',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '0.78rem',
+                    background: isValidatingQuote ? '#EFF6FF' : '#FEF2F2',
+                    border: `1px solid ${isValidatingQuote ? '#BFDBFE' : '#FECACA'}`,
+                    color: isValidatingQuote ? '#1E40AF' : '#DC2626',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  {isValidatingQuote ? (
+                    <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%' }} />
+                  ) : (
+                    <AlertCircle size={14} />
+                  )}
+                  <span>{quoteValidationStatus}</span>
+                </div>
+              )}
+
               {/* Proceed Button */}
               <button
-                onClick={() => {
-                  if (!b2cUser || role !== 'b2c') {
-                    if (onOpenAuth) onOpenAuth('login');
-                  } else {
-                    onProceedToCheckout();
-                  }
-                }}
+                onClick={handleProceedClick}
+                disabled={isValidatingQuote}
                 className="btn btn-primary btn-lg"
                 style={{
                   width: '100%',
@@ -472,9 +521,16 @@ export const CartPage: React.FC<CartPageProps> = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '0.5rem',
+                  opacity: isValidatingQuote ? 0.75 : 1,
+                  cursor: isValidatingQuote ? 'not-allowed' : 'pointer',
                 }}
               >
-                {!b2cUser || role !== 'b2c' ? (
+                {isValidatingQuote ? (
+                  <>
+                    <span style={{ display: 'inline-block', width: '16px', height: '16px', border: '2px solid #ffffff', borderTopColor: 'transparent', borderRadius: '50%' }} />
+                    <span>Checking product availability...</span>
+                  </>
+                ) : !b2cUser || role !== 'b2c' ? (
                   <>
                     <Lock size={18} /> Sign In to Proceed to Checkout
                   </>

@@ -18,6 +18,7 @@ import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { storageService } from '../../services/storageService';
 import { WHATSAPP_NUMBER } from '../../config/whatsappConfig';
+import { ondcClientService } from '../../services/ondcClientService';
 
 interface B2BCartPageProps {
   products: Product[];
@@ -40,16 +41,36 @@ export const B2BCartPage: React.FC<B2BCartPageProps> = ({
   const { b2bCart, updateB2BQty, removeFromB2BCart, clearB2BCart, getB2BCalculations } = useCart();
   const [rfqNote, setRfqNote] = useState('');
   const [showRfqSuccessModal, setShowRfqSuccessModal] = useState<B2BQuotation | null>(null);
+  const [isValidatingQuote, setIsValidatingQuote] = useState(false);
+  const [quoteValidationStatus, setQuoteValidationStatus] = useState<string | null>(null);
 
   const calculations = getB2BCalculations();
   const isApproved = role === 'b2b' && !!b2bBusiness;
 
-  const handleCheckoutClick = () => {
+  const handleCheckoutClick = async () => {
     if (!isApproved) {
       openB2BAuthModal();
       return;
     }
-    onProceedToCheckout();
+
+    if (b2bCart.length === 0) return;
+
+    setIsValidatingQuote(true);
+    setQuoteValidationStatus('Checking product availability...');
+    try {
+      const items = b2bCart.map((i) => ({ productId: i.productId, quantity: i.quantity }));
+      const res = await ondcClientService.selectItems(items);
+      if (res.success) {
+        setQuoteValidationStatus(null);
+        onProceedToCheckout();
+      } else {
+        setQuoteValidationStatus(res.error?.message || 'Unable to complete this request. Please try again.');
+      }
+    } catch {
+      setQuoteValidationStatus('Unable to complete this request. Please try again.');
+    } finally {
+      setIsValidatingQuote(false);
+    }
   };
 
   const handleConvertCartToRfq = () => {
@@ -451,8 +472,31 @@ export const B2BCartPage: React.FC<B2BCartPageProps> = ({
 
               {/* Direct Purchase Button */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {quoteValidationStatus && (
+                  <div
+                    style={{
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '0.78rem',
+                      background: isValidatingQuote ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                      border: `1px solid ${isValidatingQuote ? '#3B82F6' : '#EF4444'}`,
+                      color: isValidatingQuote ? '#93C5FD' : '#FCA5A5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    {isValidatingQuote ? (
+                      <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%' }} />
+                    ) : (
+                      <AlertCircle size={14} />
+                    )}
+                    <span>{quoteValidationStatus}</span>
+                  </div>
+                )}
                 <button
                   onClick={handleCheckoutClick}
+                  disabled={isValidatingQuote}
                   className="btn btn-amber"
                   style={{
                     width: '100%',
@@ -464,9 +508,20 @@ export const B2BCartPage: React.FC<B2BCartPageProps> = ({
                     justifyContent: 'center',
                     gap: '0.5rem',
                     boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)',
+                    opacity: isValidatingQuote ? 0.75 : 1,
+                    cursor: isValidatingQuote ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  ⚡ Proceed to Direct Checkout <ArrowRight size={18} />
+                  {isValidatingQuote ? (
+                    <>
+                      <span style={{ display: 'inline-block', width: '16px', height: '16px', border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%' }} />
+                      <span>Checking product availability...</span>
+                    </>
+                  ) : (
+                    <>
+                      ⚡ Proceed to Direct Checkout <ArrowRight size={18} />
+                    </>
+                  )}
                 </button>
 
                 <div style={{ textAlign: 'center', fontSize: '0.75rem', color: '#94A3B8', marginTop: '0.25rem' }}>

@@ -24,6 +24,7 @@ import { storageService } from '../../services/storageService';
 import { dataSyncBus } from '../../services/dataSyncBus';
 import { SiteMedia } from '../../types';
 import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
+import { ondcClientService } from '../../services/ondcClientService';
 
 interface NavbarProps {
   activeTab: string;
@@ -61,6 +62,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (search.trim()) {
+      ondcClientService.searchProducts(search.trim());
+    }
     if (onSearchQuery) {
       onSearchQuery(search);
     }

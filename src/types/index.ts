@@ -257,6 +257,15 @@ export interface B2COrder {
   trackingNumber?: string;
   courierPartner?: 'Delhivery' | 'Blue Dart' | 'Shiprocket' | 'DTDC';
   createdAt: string;
+  ondcContext?: {
+    transactionId: string;
+    messageId: string;
+    bapId?: string;
+    bppId?: string;
+    protocol?: string;
+    channel?: string;
+    timestamp?: string;
+  };
   statusTimeline: {
     status: string;
     timestamp: string;
@@ -350,6 +359,15 @@ export interface B2BOrder {
   trackingNumber?: string;
   courierPartner?: string;
   createdAt: string;
+  ondcContext?: {
+    transactionId: string;
+    messageId: string;
+    bapId?: string;
+    bppId?: string;
+    protocol?: string;
+    channel?: string;
+    timestamp?: string;
+  };
   statusTimeline: {
     status: string;
     timestamp: string;

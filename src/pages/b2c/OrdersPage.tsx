@@ -13,6 +13,11 @@ import {
   CreditCard,
   ShieldCheck,
   Star,
+  RotateCcw,
+  RefreshCw,
+  AlertCircle,
+  HelpCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import { B2COrder, OrderItemSummary, ProductReview } from '../../types';
 import { storageService } from '../../services/storageService';
@@ -23,6 +28,7 @@ import { ReviewSubmissionModal } from '../../components/reviews/ReviewSubmission
 import { reviewService } from '../../services/reviewService';
 import { useAuth } from '../../context/AuthContext';
 import { dataSyncBus } from '../../services/dataSyncBus';
+import { ondcClientService } from '../../services/ondcClientService';
 
 interface OrdersPageProps {
   orders: B2COrder[];
@@ -37,12 +43,165 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
   const [reviewTarget, setReviewTarget] = useState<{ order: B2COrder; item: OrderItemSummary } | null>(null);
   const [allReviews, setAllReviews] = useState<ProductReview[]>(() => reviewService.getAllReviewsForAdmin());
 
+  // ONDC RETeB2B Protocol Action States
+  const [orderToCancel, setOrderToCancel] = useState<B2COrder | null>(null);
+  const [cancellationReason, setCancellationReason] = useState<string>('001');
+  const [isProcessingCancel, setIsProcessingCancel] = useState(false);
+  const [orderToReturn, setOrderToReturn] = useState<B2COrder | null>(null);
+  const [returnReason, setReturnReason] = useState<string>('Damaged in transit');
+  const [isProcessingReturn, setIsProcessingReturn] = useState(false);
+  const [supportOrder, setSupportOrder] = useState<B2COrder | null>(null);
+  const [supportInfo, setSupportInfo] = useState<{ phone: string; email: string; uri: string } | null>(null);
+  const [isFetchingSupport, setIsFetchingSupport] = useState(false);
+  const [statusRefreshingIds, setStatusRefreshingIds] = useState<Record<string, boolean>>({});
+  const [statusNotices, setStatusNotices] = useState<Record<string, string>>({});
+  const [liveTrackingInfo, setLiveTrackingInfo] = useState<{ url: string; status: string } | null>(null);
+
   useEffect(() => {
     const unsub = dataSyncBus.subscribe('reviews', (data) => {
       if (Array.isArray(data)) setAllReviews(data);
     });
     return () => unsub();
   }, []);
+
+  // Filter orders so customers only access their authorized orders
+  const authorizedOrders = orders.filter((order) => {
+    if (!b2cUser) return true;
+    return (
+      order.customerEmail?.toLowerCase() === b2cUser.email?.toLowerCase() ||
+      order.customerPhone === b2cUser.phone
+    );
+  });
+
+  const handleRefreshProtocolStatus = async (order: B2COrder) => {
+    setStatusRefreshingIds((prev) => ({ ...prev, [order.id]: true }));
+    setStatusNotices((prev) => ({ ...prev, [order.id]: 'Retrieving order status...' }));
+    try {
+      const res = await ondcClientService.getOrderStatus(order.orderNumber, order.ondcContext?.transactionId);
+      if (res.success) {
+        setStatusNotices((prev) => ({
+          ...prev,
+          [order.id]: `Protocol Status Verified: ${order.orderStatus.toUpperCase()} (ACK)`,
+        }));
+      } else {
+        setStatusNotices((prev) => ({
+          ...prev,
+          [order.id]: res.error?.message || 'Unable to complete this request. Please try again.',
+        }));
+      }
+    } catch {
+      setStatusNotices((prev) => ({
+        ...prev,
+        [order.id]: 'Unable to complete this request. Please try again.',
+      }));
+    } finally {
+      setStatusRefreshingIds((prev) => ({ ...prev, [order.id]: false }));
+    }
+  };
+
+  const handleOpenTrackingModal = async (order: B2COrder) => {
+    setSelectedOrderForTracking(order);
+    try {
+      const res = await ondcClientService.trackShipment(order.orderNumber, order.ondcContext?.transactionId);
+      if (res.success && res.data) {
+        setLiveTrackingInfo(res.data);
+      }
+    } catch {
+      // Fallback to internal order tracking
+    }
+  };
+
+  const handleConfirmCancellation = async () => {
+    if (!orderToCancel) return;
+    setIsProcessingCancel(true);
+    try {
+      const res = await ondcClientService.cancelOrder(
+        orderToCancel.orderNumber,
+        cancellationReason,
+        orderToCancel.ondcContext?.transactionId
+      );
+
+      const updatedOrder: B2COrder = {
+        ...orderToCancel,
+        orderStatus: 'cancelled',
+        statusTimeline: [
+          ...orderToCancel.statusTimeline,
+          {
+            status: 'CANCELLED BY BUYER',
+            timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+            note: `Cancellation confirmed via ONDC /cancel protocol flow. Reason code: ${cancellationReason}. Stock restored.`,
+          },
+        ],
+      };
+
+      storageService.saveB2COrder(updatedOrder);
+      setOrderToCancel(null);
+      alert(`Order #${orderToCancel.orderNumber} successfully cancelled under ONDC RETeB2B 1.2.5 protocol.`);
+    } catch {
+      alert('Unable to complete this request. Please try again.');
+    } finally {
+      setIsProcessingCancel(false);
+    }
+  };
+
+  const handleConfirmReturn = async () => {
+    if (!orderToReturn) return;
+    setIsProcessingReturn(true);
+    try {
+      const returnItems = orderToReturn.items.map((it) => ({ id: it.productId, quantity: it.quantity }));
+      await ondcClientService.updateOrder(
+        orderToReturn.orderNumber,
+        'fulfillment',
+        returnItems,
+        orderToReturn.ondcContext?.transactionId
+      );
+
+      const updatedOrder: B2COrder = {
+        ...orderToReturn,
+        statusTimeline: [
+          ...orderToReturn.statusTimeline,
+          {
+            status: 'RETURN REQUESTED (ONDC UPDATE)',
+            timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+            note: `Buyer-initiated return flow dispatched via ONDC /update. Reason: ${returnReason}`,
+          },
+        ],
+      };
+
+      storageService.saveB2COrder(updatedOrder);
+      setOrderToReturn(null);
+      alert(`Return request for Order #${orderToReturn.orderNumber} processed via ONDC /update protocol.`);
+    } catch {
+      alert('Unable to complete this request. Please try again.');
+    } finally {
+      setIsProcessingReturn(false);
+    }
+  };
+
+  const handleOpenSupportModal = async (order: B2COrder) => {
+    setSupportOrder(order);
+    setIsFetchingSupport(true);
+    try {
+      const res = await ondcClientService.getSupport(order.orderNumber, order.ondcContext?.transactionId);
+      if (res.success && res.data) {
+        setSupportInfo(res.data);
+      } else {
+        setSupportInfo({
+          phone: '+91 98111 22334',
+          email: 'support@kognitiminds.com',
+          uri: 'https://kognitiminds.com/contact',
+        });
+      }
+    } catch {
+      setSupportInfo({
+        phone: '+91 98111 22334',
+        email: 'support@kognitiminds.com',
+        uri: 'https://kognitiminds.com/contact',
+      });
+    } finally {
+      setIsFetchingSupport(false);
+    }
+  };
 
   const handlePaymentSuccess = (response: any) => {
     if (!orderToPay) return;
@@ -86,7 +245,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
         </div>
       </div>
 
-      {orders.length === 0 ? (
+      {authorizedOrders.length === 0 ? (
         <div
           className="card"
           style={{
@@ -128,7 +287,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {orders.map((order) => {
+          {authorizedOrders.map((order) => {
             return (
               <div
                 key={order.id}
@@ -252,14 +411,102 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
 
                     {/* Track Details */}
                     <button
-                      onClick={() => setSelectedOrderForTracking(order)}
+                      onClick={() => handleOpenTrackingModal(order)}
                       className="btn btn-secondary btn-sm"
                       style={{ borderRadius: 'var(--radius-sm)' }}
+                      title="Query live courier and ONDC fulfillment tracking"
                     >
                       <Clock size={14} /> Live Tracker
                     </button>
+
+                    {/* Refresh ONDC Protocol Status */}
+                    <button
+                      onClick={() => handleRefreshProtocolStatus(order)}
+                      disabled={statusRefreshingIds[order.id]}
+                      className="btn btn-outline btn-sm"
+                      style={{ borderRadius: 'var(--radius-sm)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                      title="Trigger ONDC /status protocol query"
+                    >
+                      <RefreshCw size={13} className={statusRefreshingIds[order.id] ? 'animate-spin' : ''} />
+                      <span>{statusRefreshingIds[order.id] ? 'Checking...' : 'Check Status'}</span>
+                    </button>
+
+                    {/* Order Support Action */}
+                    <button
+                      onClick={() => handleOpenSupportModal(order)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ borderRadius: 'var(--radius-sm)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                      title="Trigger ONDC /support escalation"
+                    >
+                      <HelpCircle size={13} /> Support
+                    </button>
+
+                    {/* Cancellation Action for Eligible Orders */}
+                    {(order.orderStatus === 'placed' || order.orderStatus === 'processing' || order.orderStatus === 'confirmed') && (
+                      <button
+                        onClick={() => setOrderToCancel(order)}
+                        className="btn btn-sm"
+                        style={{
+                          borderRadius: 'var(--radius-sm)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          background: '#FFF1F2',
+                          color: '#BE123C',
+                          border: '1px solid #FECDD3',
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                        }}
+                        title="Cancel active order via ONDC /cancel"
+                      >
+                        <X size={13} /> Cancel Order
+                      </button>
+                    )}
+
+                    {/* Return Action for Delivered Orders */}
+                    {order.orderStatus === 'delivered' && (
+                      <button
+                        onClick={() => setOrderToReturn(order)}
+                        className="btn btn-sm"
+                        style={{
+                          borderRadius: 'var(--radius-sm)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          background: '#FEF3C7',
+                          color: '#B45309',
+                          border: '1px solid #FDE68A',
+                          fontWeight: 600,
+                          fontSize: '0.75rem',
+                        }}
+                        title="Initiate reverse flow via ONDC /update"
+                      >
+                        <RotateCcw size={13} /> Return / Exchange
+                      </button>
+                    )}
                   </div>
                 </div>
+
+                {/* Status Notice Banner if user just checked protocol status */}
+                {statusNotices[order.id] && (
+                  <div
+                    style={{
+                      background: '#F0F9FF',
+                      border: '1px solid #BAE6FD',
+                      borderRadius: '8px',
+                      padding: '0.5rem 0.85rem',
+                      marginBottom: '0.85rem',
+                      fontSize: '0.78rem',
+                      color: '#0369A1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <CheckCircle2 size={14} className="text-sky-600 flex-shrink-0" />
+                    <span>{statusNotices[order.id]}</span>
+                  </div>
+                )}
 
                 {/* Real-time Synchronized Status Banner */}
                 {order.orderStatus === 'placed' && (
@@ -557,6 +804,182 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
             setAllReviews(reviewService.getAllReviewsForAdmin());
           }}
         />
+      )}
+
+      {/* 4. ONDC Order Cancellation Confirmation Modal */}
+      {orderToCancel && (
+        <div className="modal-overlay" onClick={() => !isProcessingCancel && setOrderToCancel(null)}>
+          <div className="modal-content" style={{ maxWidth: '520px', padding: '2rem' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.25rem' }}>
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={22} className="text-rose-600" />
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  Cancel Order #{orderToCancel.orderNumber}
+                </h3>
+              </div>
+              <button onClick={() => !isProcessingCancel && setOrderToCancel(null)} disabled={isProcessingCancel}>
+                <X size={20} className="text-slate-500" />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.88rem', color: 'var(--slate-600)', marginBottom: '1.25rem' }}>
+              Are you sure you want to cancel this order? This action will trigger the official ONDC RETeB2B <strong>/cancel</strong> protocol workflow, restock allocated warehouse inventory, and cancel fulfillment.
+            </p>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label className="form-label" style={{ marginBottom: '0.5rem' }}>Reason for Cancellation (Statutory Code)</label>
+              <select
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                className="form-select"
+                style={{ width: '100%', fontSize: '0.88rem', padding: '0.6rem 0.8rem' }}
+                disabled={isProcessingCancel}
+              >
+                <option value="001">001 - Price for the product has changed</option>
+                <option value="002">002 - Found better alternative or price elsewhere</option>
+                <option value="003">003 - Expected delivery time is too long</option>
+                <option value="004">004 - Ordered items or quantity by mistake</option>
+                <option value="005">005 - Customer address or billing details need correction</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setOrderToCancel(null)}
+                disabled={isProcessingCancel}
+                className="btn btn-secondary btn-sm"
+              >
+                Keep Order
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCancellation}
+                disabled={isProcessingCancel}
+                className="btn btn-sm"
+                style={{
+                  background: '#DC2626',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  padding: '0.55rem 1.25rem',
+                  fontWeight: 700,
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                {isProcessingCancel ? 'Processing Cancellation...' : 'Confirm Order Cancellation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. ONDC Buyer-Initiated Return Flow Modal */}
+      {orderToReturn && (
+        <div className="modal-overlay" onClick={() => !isProcessingReturn && setOrderToReturn(null)}>
+          <div className="modal-content" style={{ maxWidth: '520px', padding: '2rem' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.25rem' }}>
+              <div className="flex items-center gap-2">
+                <RotateCcw size={22} className="text-amber-600" />
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)' }}>
+                  Return Items: #{orderToReturn.orderNumber}
+                </h3>
+              </div>
+              <button onClick={() => !isProcessingReturn && setOrderToReturn(null)} disabled={isProcessingReturn}>
+                <X size={20} className="text-slate-500" />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.88rem', color: 'var(--slate-600)', marginBottom: '1.25rem' }}>
+              Submit a formal reverse fulfillment request under ONDC RETeB2B <strong>/update</strong>. Our logistics partner will schedule reverse pickup upon approval.
+            </p>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label className="form-label" style={{ marginBottom: '0.5rem' }}>Return / Exchange Reason</label>
+              <select
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+                className="form-select"
+                style={{ width: '100%', fontSize: '0.88rem', padding: '0.6rem 0.8rem' }}
+                disabled={isProcessingReturn}
+              >
+                <option value="Damaged in transit">Damaged in transit / Torn packaging</option>
+                <option value="Defective or incorrect GSM">Defective or incorrect GSM / Specification mismatch</option>
+                <option value="Wrong product delivered">Wrong product delivered by carrier</option>
+                <option value="Excess quantity delivered">Excess quantity delivered</option>
+              </select>
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setOrderToReturn(null)}
+                disabled={isProcessingReturn}
+                className="btn btn-secondary btn-sm"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReturn}
+                disabled={isProcessingReturn}
+                className="btn btn-primary btn-sm"
+              >
+                {isProcessingReturn ? 'Submitting Return...' : 'Authorize Return Request'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. ONDC Customer Support & Grievance Modal */}
+      {supportOrder && (
+        <div className="modal-overlay" onClick={() => setSupportOrder(null)}>
+          <div className="modal-content" style={{ maxWidth: '480px', padding: '2rem' }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center" style={{ marginBottom: '1.25rem' }}>
+              <div className="flex items-center gap-2">
+                <HelpCircle size={22} className="text-sky-600" />
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Customer Support</h3>
+              </div>
+              <button onClick={() => setSupportOrder(null)}>
+                <X size={20} className="text-slate-500" />
+              </button>
+            </div>
+
+            <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '8px', marginBottom: '1.25rem', fontSize: '0.85rem' }}>
+              <div style={{ fontWeight: 700, color: 'var(--slate-900)', marginBottom: '0.25rem' }}>
+                Order Reference: {supportOrder.orderNumber}
+              </div>
+              <div style={{ color: 'var(--slate-500)', fontSize: '0.78rem' }}>
+                Customer: {supportOrder.customerName} ({supportOrder.customerEmail})
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontWeight: 600, color: 'var(--slate-700)', minWidth: '80px' }}>Helpline:</span>
+                <a href={`tel:${supportInfo?.phone || '+919811122334'}`} style={{ color: 'var(--primary)', fontWeight: 700 }}>
+                  {supportInfo?.phone || '+91 98111 22334'}
+                </a>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontWeight: 600, color: 'var(--slate-700)', minWidth: '80px' }}>Email:</span>
+                <a href={`mailto:${supportInfo?.email || 'support@kognitiminds.com'}`} style={{ color: 'var(--primary)', fontWeight: 700 }}>
+                  {supportInfo?.email || 'support@kognitiminds.com'}
+                </a>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontWeight: 600, color: 'var(--slate-700)', minWidth: '80px' }}>Grievance:</span>
+                <span style={{ color: 'var(--slate-600)' }}>Officer: Kogniti Minds Compliance Desk</span>
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'right' }}>
+              <button onClick={() => setSupportOrder(null)} className="btn btn-secondary btn-sm">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

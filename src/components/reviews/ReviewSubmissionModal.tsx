@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { ReviewMedia } from '../../types';
 import { reviewService } from '../../services/reviewService';
+import { ondcClientService } from '../../services/ondcClientService';
 
 interface ReviewSubmissionModalProps {
   isOpen: boolean;
@@ -131,6 +132,13 @@ export const ReviewSubmissionModal: React.FC<ReviewSubmissionModalProps> = ({
       });
 
       if (res.success) {
+        // Trigger protocol-compliant ONDC RETeB2B /rating workflow
+        try {
+          await ondcClientService.submitRating(orderNumber || orderId, rating, text.trim());
+        } catch (e) {
+          console.warn('ONDC rating notice:', e);
+        }
+
         setSubmittedSuccess(true);
         if (onSuccess) onSuccess();
       } else {
