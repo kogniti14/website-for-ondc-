@@ -510,17 +510,44 @@ export const SupportPage: React.FC<SupportPageProps> = ({ setActiveTab }) => {
                 boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
               }}
             >
-              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Building2 size={18} className="text-emerald-600" />
-                <span>Corporate & Registered Office</span>
+                <span>Corporate & Statutory Information</span>
               </h3>
-              <div style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.6 }}>
+              <div style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.6, marginBottom: '1rem' }}>
                 <strong style={{ color: '#0F172A', display: 'block' }}>KOGNITI MINDS PRIVATE LIMITED</strong>
                 <div>CIN: U46496UP2024PTC213997</div>
-                <div>GSTIN: 09AALCK4750F1ZC</div>
+                <div>GSTIN: 09AALCK4750F1ZC (State Code: 09, UP)</div>
                 <div>PAN: AALCK4750F</div>
-                <div style={{ marginTop: '0.5rem' }}>
-                  A-1104, ATS One Hamlet, Sector 104, Noida, Gautam Buddha Nagar, Uttar Pradesh, 201304, India
+              </div>
+
+              {/* Registered Office (Uttar Pradesh) */}
+              <div style={{ padding: '0.85rem', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                  <MapPin size={16} className="text-amber-500" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <strong style={{ fontSize: '0.8rem', color: '#0F172A', display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                      Registered Office (Uttar Pradesh):
+                    </strong>
+                    <span style={{ fontSize: '0.82rem', color: '#475569', lineHeight: 1.45, display: 'block', marginTop: '2px' }}>
+                      Panchsheel Greens-2, Sec-16 B, Greater Noida West, Bisrakh, Bishrakh, Greater Noida West, Gautam Buddha Nagar, Uttar Pradesh, India - 201306
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Branch / Operational Office (Bihar) */}
+              <div style={{ padding: '0.85rem', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                  <MapPin size={16} className="text-emerald-600" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    <strong style={{ fontSize: '0.8rem', color: '#0F172A', display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                      Branch / Operational Office (Bihar):
+                    </strong>
+                    <span style={{ fontSize: '0.82rem', color: '#475569', lineHeight: 1.45, display: 'block', marginTop: '2px' }}>
+                      4th Floor, VBSS New Building, Bihiya Chaurasta, Bhojpur (Bihar) - 802154
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>

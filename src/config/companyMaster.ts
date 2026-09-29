@@ -18,6 +18,7 @@ export interface CompanyMasterSettings {
   gst_state_code: string;
   address_line_1: string;
   address_line_2: string;
+  branch_office?: string;
   city: string;
   district: string;
   state: string;
@@ -55,6 +56,7 @@ export const OFFICIAL_COMPANY_MASTER: CompanyMasterSettings = {
   gst_state_code: '09',
   address_line_1: 'Panchsheel Greens-2, Sec-16 B',
   address_line_2: 'Greater Noida West, Bisrakh, Bishrakh',
+  branch_office: '4th Floor, VBSS New Building, Bihiya Chaurasta, Bhojpur (Bihar) - 802154',
   city: 'Greater Noida West',
   district: 'Gautam Buddha Nagar',
   state: 'Uttar Pradesh',
