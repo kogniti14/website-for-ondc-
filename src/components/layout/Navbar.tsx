@@ -234,7 +234,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-3">
             {/* Prominent B2B Portal Switch Button */}
             <button
-              onClick={() => setActiveTab('b2b')}
+              onClick={() => setActiveTab('b2b-overview')}
               className="btn btn-b2b btn-sm hide-on-mobile"
               style={{
                 borderRadius: 'var(--radius-full)',
@@ -557,26 +557,43 @@ export const Navbar: React.FC<NavbarProps> = ({
                 gap: '0.3rem',
               }}
             >
-              Shop Now <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>Deals</span>
+              Shop Now
             </button>
             <button
-              onClick={() => setActiveTab('stories')}
+              onClick={() => {
+                setActiveTab('deals');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
               style={{
-                color: activeTab === 'stories' ? 'var(--primary)' : 'var(--slate-700)',
-                borderBottom: activeTab === 'stories' ? '2px solid var(--primary)' : '2px solid transparent',
+                color: activeTab === 'deals' ? 'var(--primary)' : '#D97706',
+                borderBottom: activeTab === 'deals' ? '2px solid #D97706' : '2px solid transparent',
+                paddingBottom: '0.3rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                fontWeight: 700,
+              }}
+            >
+              <Sparkles size={14} className="text-amber-500" /> DEALS
+            </button>
+            <button
+              onClick={() => setActiveTab('success-stories')}
+              style={{
+                color: (activeTab === 'stories' || activeTab === 'success-stories') ? 'var(--primary)' : 'var(--slate-700)',
+                borderBottom: (activeTab === 'stories' || activeTab === 'success-stories') ? '2px solid var(--primary)' : '2px solid transparent',
                 paddingBottom: '0.3rem',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.3rem',
               }}
             >
-              <Sparkles size={14} className="text-amber-500" /> Success Stories
+              Success Stories
             </button>
             <button
               onClick={() => setActiveTab('certifications')}
               style={{
-                color: activeTab === 'certifications' ? 'var(--primary)' : 'var(--slate-700)',
-                borderBottom: activeTab === 'certifications' ? '2px solid var(--primary)' : '2px solid transparent',
+                color: (activeTab === 'certifications' || activeTab === 'certifications-compliance') ? 'var(--primary)' : 'var(--slate-700)',
+                borderBottom: (activeTab === 'certifications' || activeTab === 'certifications-compliance') ? '2px solid var(--primary)' : '2px solid transparent',
                 paddingBottom: '0.3rem',
                 display: 'flex',
                 alignItems: 'center',
@@ -586,19 +603,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Award size={14} className="text-emerald-600" /> Certifications
             </button>
             <button
-              onClick={() => setActiveTab('b2b')}
+              onClick={() => setActiveTab('b2b-deals')}
               style={{
-                color: 'var(--slate-900)',
+                color: activeTab === 'b2b-deals' ? '#2563EB' : 'var(--slate-900)',
+                borderBottom: activeTab === 'b2b-deals' ? '2px solid #2563EB' : '2px solid transparent',
+                paddingBottom: '0.3rem',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.3rem',
+                fontWeight: 700,
               }}
             >
               <Briefcase size={14} className="text-blue-600" /> B2B Deals & Wholesale
             </button>
             <button
               onClick={() => {
-                window.history.pushState(null, '', '/track');
                 setActiveTab('track');
               }}
               style={{
@@ -611,7 +630,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
             <button
               onClick={() => {
-                window.history.pushState(null, '', '/support');
                 setActiveTab('support');
               }}
               style={{
@@ -626,7 +644,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <div className="flex items-center gap-4 text-slate-500" style={{ fontSize: '0.8rem' }}>
             <button
-              onClick={() => setActiveTab('b2b')}
+              onClick={() => setActiveTab('gst-input-credit')}
               className="text-slate-500 hover:text-blue-600"
               style={{
                 background: 'none',
@@ -638,6 +656,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.25rem',
+                color: activeTab === 'gst-input-credit' ? '#2563EB' : undefined,
+                fontWeight: activeTab === 'gst-input-credit' ? 700 : undefined,
               }}
               title="Claim GST Input Tax Credit on B2B Orders"
             >
@@ -728,13 +748,24 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
           <button
             onClick={() => {
-              setActiveTab('stories');
+              setActiveTab('deals');
+              setMobileMenuOpen(false);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="btn btn-secondary"
+            style={{ justifyContent: 'flex-start', color: '#D97706', fontWeight: 700 }}
+          >
+            <Sparkles size={16} className="text-amber-500" /> DEALS
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('success-stories');
               setMobileMenuOpen(false);
             }}
             className="btn btn-secondary"
             style={{ justifyContent: 'flex-start' }}
           >
-            <Sparkles size={16} className="text-amber-500" /> Success Stories & Gallery
+            Success Stories
           </button>
           <button
             onClick={() => {
@@ -744,11 +775,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="btn btn-secondary"
             style={{ justifyContent: 'flex-start' }}
           >
-            <Award size={16} className="text-emerald-600" /> Certifications & Recognitions
+            <Award size={16} className="text-emerald-600" /> Certifications & Compliance
           </button>
           <button
             onClick={() => {
-              setActiveTab('b2b');
+              setActiveTab('b2b-deals');
               setMobileMenuOpen(false);
             }}
             className="btn btn-b2b"
@@ -758,7 +789,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
           <button
             onClick={() => {
-              setActiveTab('b2b');
+              setActiveTab('gst-input-credit');
               setMobileMenuOpen(false);
             }}
             className="btn btn-secondary"
@@ -778,18 +809,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
           <button
             onClick={() => {
-              window.history.pushState(null, '', '/track');
               setActiveTab('track');
               setMobileMenuOpen(false);
             }}
             className="btn btn-secondary"
             style={{ justifyContent: 'flex-start' }}
           >
-            <Truck size={16} /> Track Order
+            <Truck size={16} /> Track Orders
           </button>
           <button
             onClick={() => {
-              window.history.pushState(null, '', '/support');
               setActiveTab('support');
               setMobileMenuOpen(false);
             }}

@@ -37,6 +37,8 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
 
   const [productId, setProductId] = useState<string>(selectedProduct?.id || products[0]?.id || '');
   const [requestedQty, setRequestedQty] = useState<number>(selectedProduct?.b2bMoq || 20);
+  const [unit, setUnit] = useState<string>('Reams');
+  const [specification, setSpecification] = useState<string>('75 GSM Standard Eco Copier');
   const [targetUnitPrice, setTargetUnitPrice] = useState<number>(
     selectedProduct ? Math.round(selectedProduct.b2bWholesalePrice * 0.9) : 10000
   );
@@ -44,8 +46,12 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
   const [contactPerson, setContactPerson] = useState(b2bBusiness?.contactPerson || '');
   const [email, setEmail] = useState(b2bBusiness?.businessEmail || '');
   const [phone, setPhone] = useState(b2bBusiness?.mobile || '');
+  const [gstin, setGstin] = useState(b2bBusiness?.gstin || '');
+  const [deliveryLocation, setDeliveryLocation] = useState(
+    b2bBusiness?.shippingAddress ? `${b2bBusiness.shippingAddress.city}, ${b2bBusiness.shippingAddress.state}` : ''
+  );
   const [deliveryPincode, setDeliveryPincode] = useState(b2bBusiness?.shippingAddress?.pincode || '560100');
-  const [requiredByDate, setRequiredByDate] = useState('2026-09-30');
+  const [requiredByDate, setRequiredByDate] = useState('2026-10-15');
   const [specialRequirements, setSpecialRequirements] = useState(
     'Required for campus / institutional supply. Please include dispatch schedule and GST breakdown in commercial quote.'
   );
@@ -59,45 +65,42 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
     e.preventDefault();
     setError(null);
 
-    if (!isB2BAuthenticated) {
-      setError('Business Sign In Compulsory: Please sign in to your registered B2B account or register your business before submitting a quotation or placing an order.');
-      setShowB2BAuthPopup(true);
-      if (openB2BAuthModal) openB2BAuthModal();
-      return;
-    }
-
-    if (!companyName || !email || !phone || !requestedQty) {
-      setError('Please fill in all mandatory quotation request fields.');
+    if (!companyName.trim() || !contactPerson.trim() || !email.trim() || !phone.trim() || !requestedQty) {
+      setError('Please fill in all mandatory quotation request fields (Company Name, Contact Person, Email, Phone, and Quantity).');
       return;
     }
 
     if (currentProduct && requestedQty < currentProduct.b2bMoq) {
-      setError(`Minimum Order Quantity (MOQ) for ${currentProduct.name} is ${currentProduct.b2bMoq} units.`);
+      setError(`Minimum Order Quantity (MOQ) for ${currentProduct.name} is ${currentProduct.b2bMoq} ${unit}.`);
       return;
     }
 
+    const rfqReference = `RFQ-KM-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
     const newRfq: B2BQuotation = {
       id: `rfq_${Date.now()}`,
-      rfqNumber: `RFQ-KM-2026-${Math.floor(100 + Math.random() * 900)}`,
-      businessId: b2bBusiness?.id || `biz_${Date.now()}`,
-      businessName: companyName,
-      contactPerson,
-      email,
-      phone,
+      rfqNumber: rfqReference,
+      businessId: b2bBusiness?.id || `prospect_${Date.now()}`,
+      businessName: companyName.trim(),
+      contactPerson: contactPerson.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      gstin: gstin.trim() || undefined,
       productId,
       productName: currentProduct?.name || 'Selected Paper & Stationery Supplies',
       sku: currentProduct?.sku || 'SKU-KM',
       requestedQty,
       targetUnitPrice,
-      deliveryPincode,
+      deliveryPincode: deliveryPincode.trim(),
       requiredByDate,
-      specialRequirements,
+      specialRequirements: `[Unit: ${unit}] [Spec: ${specification}] [Delivery: ${deliveryLocation.trim() || deliveryPincode}] ${specialRequirements.trim()}`,
       status: 'submitted',
       submittedAt: new Date().toISOString(),
     };
 
     storageService.saveB2BQuotation(newRfq);
     setSubmittedRfq(newRfq);
+    if (onSuccess) onSuccess();
   };
 
   return (
@@ -207,8 +210,8 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
             {!isB2BAuthenticated && (
               <div
                 style={{
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  border: '1.5px solid rgba(239, 68, 68, 0.4)',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  border: '1.5px solid rgba(59, 130, 246, 0.35)',
                   borderRadius: 'var(--radius-lg)',
                   padding: '1.25rem 1.5rem',
                   marginBottom: '2rem',
@@ -225,22 +228,22 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
                       width: '44px',
                       height: '44px',
                       borderRadius: '50%',
-                      background: 'rgba(239, 68, 68, 0.2)',
-                      color: '#EF4444',
+                      background: 'rgba(59, 130, 246, 0.2)',
+                      color: '#60A5FA',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexShrink: 0,
                     }}
                   >
-                    <Lock size={22} />
+                    <Building2 size={22} />
                   </div>
                   <div>
                     <div style={{ color: '#FFFFFF', fontWeight: 800, fontSize: '1rem' }}>
-                      Business Sign In Compulsory
+                      Institutional Procurement & Commercial Quotes
                     </div>
                     <div style={{ color: '#94A3B8', fontSize: '0.85rem', marginTop: '0.15rem' }}>
-                      You must be signed in to your registered B2B account to request official quotes and place institutional orders.
+                      Submit your RFQ enquiry directly below to receive a formal quotation, or sign in to link with your verified business dashboard.
                     </div>
                   </div>
                 </div>
@@ -313,14 +316,49 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
                 </select>
               </div>
 
+              {/* Product Specification & Unit Selection */}
+              <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ color: '#CBD5E1' }}>Paper Specification / GSM *</label>
+                  <select
+                    value={specification}
+                    onChange={(e) => setSpecification(e.target.value)}
+                    className="form-select"
+                    style={{ background: '#1E293B', borderColor: 'rgba(255, 255, 255, 0.2)', color: '#FFF', padding: '0.65rem' }}
+                  >
+                    <option value="75 GSM Standard Eco Copier">75 GSM Standard Eco Copier (High Speed Printing)</option>
+                    <option value="70 GSM Economy Daily Printing">70 GSM Economy Agro-Residue Daily Paper</option>
+                    <option value="80 GSM Premium Bright White">80 GSM Premium Multi-Purpose Bright White</option>
+                    <option value="85 GSM Executive Bond">85 GSM Executive Agro-Paper Bond</option>
+                    <option value="Custom Paper Specs">Custom Specification / Institutional Paper</option>
+                  </select>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ color: '#CBD5E1' }}>Quantity Unit *</label>
+                  <select
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
+                    className="form-select"
+                    style={{ background: '#1E293B', borderColor: 'rgba(255, 255, 255, 0.2)', color: '#FFF', padding: '0.65rem' }}
+                  >
+                    <option value="Reams">Reams (500 Sheets per Ream)</option>
+                    <option value="Cartons">Cartons (5 to 10 Reams/Box)</option>
+                    <option value="Packs">Packs (Notebooks / Registers)</option>
+                    <option value="Pallets">Pallets (Bulk Industrial Consignment)</option>
+                    <option value="Metric Tons">Metric Tons (Commercial Agro-Pulp Paper)</option>
+                  </select>
+                </div>
+              </div>
+
               {/* Quantity & Target Price */}
               <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <div className="flex justify-between">
-                    <label className="form-label" style={{ color: '#CBD5E1' }}>Required Quantity (Units) *</label>
+                    <label className="form-label" style={{ color: '#CBD5E1' }}>Required Quantity ({unit}) *</label>
                     {currentProduct && (
                       <span style={{ fontSize: '0.75rem', color: '#FBBF24' }}>
-                        MOQ: {currentProduct.b2bMoq}
+                        MOQ: {currentProduct.b2bMoq} {unit}
                       </span>
                     )}
                   </div>
@@ -350,12 +388,12 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
               {/* Organization & Contact Details */}
               <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ color: '#CBD5E1' }}>Company / School / Entity Name *</label>
+                  <label className="form-label" style={{ color: '#CBD5E1' }}>Business / Entity Name *</label>
                   <input
                     type="text"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g. Delhi Public School / Infosys Campus"
+                    placeholder="e.g. Acme Enterprise / Oxford Public School"
                     className="form-input"
                     style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.2)', color: '#FFF' }}
                     required
@@ -363,7 +401,7 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
                 </div>
 
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ color: '#CBD5E1' }}>Authorized Contact Person *</label>
+                  <label className="form-label" style={{ color: '#CBD5E1' }}>Contact Person *</label>
                   <input
                     type="text"
                     value={contactPerson}
@@ -376,7 +414,7 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
                 </div>
 
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ color: '#CBD5E1' }}>Corporate Email *</label>
+                  <label className="form-label" style={{ color: '#CBD5E1' }}>Business Email *</label>
                   <input
                     type="email"
                     value={email}
@@ -389,7 +427,7 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
                 </div>
 
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ color: '#CBD5E1' }}>Mobile Phone *</label>
+                  <label className="form-label" style={{ color: '#CBD5E1' }}>Phone Number *</label>
                   <input
                     type="tel"
                     value={phone}
@@ -402,16 +440,31 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
                 </div>
               </div>
 
-              {/* Delivery Timeline & Pincode */}
+              {/* GSTIN Field */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label className="form-label" style={{ color: '#CBD5E1' }}>
+                  GSTIN (Where Applicable - For 18% Input Tax Credit)
+                </label>
+                <input
+                  type="text"
+                  maxLength={15}
+                  value={gstin}
+                  onChange={(e) => setGstin(e.target.value)}
+                  placeholder="e.g. 09AALCK4750F1ZC (Optional if unregistered)"
+                  className="form-input"
+                  style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.2)', color: '#FFF' }}
+                />
+              </div>
+
+              {/* Delivery Timeline & Location */}
               <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ color: '#CBD5E1' }}>Destination PIN Code *</label>
+                  <label className="form-label" style={{ color: '#CBD5E1' }}>Delivery Location (City / State) *</label>
                   <input
                     type="text"
-                    maxLength={6}
-                    value={deliveryPincode}
-                    onChange={(e) => setDeliveryPincode(e.target.value)}
-                    placeholder="560100"
+                    value={deliveryLocation}
+                    onChange={(e) => setDeliveryLocation(e.target.value)}
+                    placeholder="e.g. Noida, Uttar Pradesh"
                     className="form-input"
                     style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.2)', color: '#FFF' }}
                     required
@@ -419,7 +472,21 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
                 </div>
 
                 <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label" style={{ color: '#CBD5E1' }}>Required Delivery Deadline *</label>
+                  <label className="form-label" style={{ color: '#CBD5E1' }}>Destination PIN Code *</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={deliveryPincode}
+                    onChange={(e) => setDeliveryPincode(e.target.value)}
+                    placeholder="201306"
+                    className="form-input"
+                    style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.2)', color: '#FFF' }}
+                    required
+                  />
+                </div>
+
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ color: '#CBD5E1' }}>Required Delivery Date *</label>
                   <input
                     type="date"
                     value={requiredByDate}
@@ -431,55 +498,26 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
                 </div>
               </div>
 
-              {/* Special Requirements */}
+              {/* Additional Requirements */}
               <div className="form-group" style={{ marginBottom: '2rem' }}>
-                <label className="form-label" style={{ color: '#CBD5E1' }}>Custom Requirements / Notes</label>
+                <label className="form-label" style={{ color: '#CBD5E1' }}>Additional Requirements</label>
                 <textarea
                   rows={3}
                   value={specialRequirements}
                   onChange={(e) => setSpecialRequirements(e.target.value)}
-                  placeholder="Specify laser logo branding, packaging requirements, on-site assembly assistance, payment credit terms..."
+                  placeholder="Specify packaging requirements, palletization, custom watermarking, payment credit terms, or scheduled monthly dispatches..."
                   className="form-textarea"
                   style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.2)', color: '#FFF' }}
                 />
               </div>
 
-              {isB2BAuthenticated ? (
-                <button
-                  type="submit"
-                  className="btn btn-amber btn-lg"
-                  style={{ width: '100%', borderRadius: 'var(--radius-md)' }}
-                >
-                  <Send size={18} /> Submit Formal RFQ to Kogniti B2B Desk
-                </button>
-              ) : (
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowB2BAuthPopup(true);
-                      if (openB2BAuthModal) openB2BAuthModal();
-                    }}
-                    className="btn btn-primary btn-lg"
-                    style={{
-                      width: '100%',
-                      borderRadius: 'var(--radius-md)',
-                      background: 'linear-gradient(135deg, #DC2626 0%, #EA580C 100%)',
-                      boxShadow: '0 8px 24px rgba(220, 38, 38, 0.35)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      fontWeight: 800,
-                    }}
-                  >
-                    <Lock size={18} /> Sign In Compulsory to Place RFQ Order
-                  </button>
-                  <p style={{ fontSize: '0.78rem', color: '#EF4444', textAlign: 'center', marginTop: '0.45rem', fontWeight: 600 }}>
-                    🔒 Please sign in to your verified B2B account before requesting quotations.
-                  </p>
-                </div>
-              )}
+              <button
+                type="submit"
+                className="btn btn-amber btn-lg"
+                style={{ width: '100%', borderRadius: 'var(--radius-md)', fontWeight: 800, padding: '0.85rem' }}
+              >
+                <Send size={18} /> Submit Request for Quote (RFQ) to Kogniti Commercial Desk
+              </button>
             </form>
           </div>
         )}

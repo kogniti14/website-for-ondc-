@@ -315,40 +315,53 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
               <li>
                 <button
                   onClick={() => {
-                    if (onNavigateToShop) onNavigateToShop();
-                    else {
-                      setActiveTab('shop');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }
+                    setActiveTab('deals');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
-                  style={{ color: '#94A3B8' }}
+                  style={{ color: '#FBBF24', fontWeight: 600 }}
                 >
-                  Shop Deals & Offers
+                  🔥 Deals & Offers
                 </button>
               </li>
               <li>
-                <button onClick={() => setActiveTab('stories')} style={{ color: '#34D399', fontWeight: 600 }}>
+                <button
+                  onClick={() => {
+                    setActiveTab('shop');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ color: '#94A3B8' }}
+                >
+                  Shop Now
+                </button>
+              </li>
+              <li>
+                <button onClick={() => { setActiveTab('success-stories'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ color: '#34D399', fontWeight: 600 }}>
                   ✨ Success Stories & Gallery
                 </button>
               </li>
               <li>
-                <button onClick={() => setActiveTab('certifications')} style={{ color: '#6EE7B7', fontWeight: 600 }}>
+                <button onClick={() => { setActiveTab('certifications'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ color: '#6EE7B7', fontWeight: 600 }}>
                   🏆 Official Certifications
                 </button>
               </li>
               <li>
-                <button onClick={() => setActiveTab('orders')} style={{ color: '#94A3B8' }}>
+                <button onClick={() => { setActiveTab('track'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ color: '#94A3B8' }}>
                   Track Order Status
                 </button>
               </li>
               <li>
-                <button onClick={() => setActiveTab('wishlist')} style={{ color: '#94A3B8' }}>
-                  Saved Wishlist
+                <button onClick={() => { setActiveTab('support'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ color: '#94A3B8' }}>
+                  Customer Support Portal
                 </button>
               </li>
               <li>
-                <button onClick={() => setActiveTab('cart')} style={{ color: '#94A3B8' }}>
+                <button onClick={() => { setActiveTab('cart'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ color: '#94A3B8' }}>
                   Shopping Cart
+                </button>
+              </li>
+              <li>
+                <button onClick={() => { setActiveTab('login'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} style={{ color: '#94A3B8' }}>
+                  Customer Login
                 </button>
               </li>
             </ul>
@@ -361,8 +374,96 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
             </div>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem' }}>
               <li>
-                <button onClick={() => setActiveTab('b2b')} style={{ color: '#60A5FA', fontWeight: 600 }}>
-                  Enter B2B Portal
+                <button
+                  onClick={() => {
+                    if (setB2bTab) setB2bTab('overview');
+                    else setActiveTab('b2b-overview');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ color: '#60A5FA', fontWeight: 600 }}
+                >
+                  B2B Overview Portal
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    if (setB2bTab) setB2bTab('catalog');
+                    else setActiveTab('wholesale-catalog');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ color: '#94A3B8' }}
+                >
+                  Wholesale Catalog
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    if (setB2bTab) setB2bTab('rfq');
+                    else setActiveTab('rfq');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ color: '#FCD34D', fontWeight: 600 }}
+                >
+                  📝 Request a Commercial RFQ
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    if (setB2bTab) setB2bTab('deals');
+                    else setActiveTab('b2b-deals');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ color: '#F59E0B', fontWeight: 600 }}
+                >
+                  ⚡ Wholesale Slabs & Deals
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    setActiveTab('gst-input-credit');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ color: '#34D399', fontWeight: 600 }}
+                >
+                  🧾 GST Input Tax Credit (18% ITC)
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    if (setB2bTab) setB2bTab('dashboard');
+                    else setActiveTab('business-dashboard');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ color: '#94A3B8' }}
+                >
+                  Business Dashboard & Invoices
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    setActiveTab('success-stories');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ color: '#FBBF24', fontWeight: 600 }}
+                >
+                  🏢 ESG Milestones & Stories
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    setActiveTab('certifications-compliance');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ color: '#34D399', fontWeight: 600 }}
+                >
+                  🛡️ Certifications & Compliance
                 </button>
               </li>
               <li>
@@ -373,48 +474,6 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
                   style={{ color: '#10B981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                 >
                   🌐 ONDC Node Status (v1.2.5)
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    setActiveTab('b2b');
-                    if (setB2bTab) setB2bTab('stories');
-                  }}
-                  style={{ color: '#FBBF24', fontWeight: 600 }}
-                >
-                  🏢 ESG Milestones & Stories
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    setActiveTab('b2b');
-                    if (setB2bTab) setB2bTab('certifications');
-                  }}
-                  style={{ color: '#34D399', fontWeight: 600 }}
-                >
-                  🛡️ Compliance & Certifications
-                </button>
-              </li>
-              <li>
-                <button onClick={() => setActiveTab('b2b')} style={{ color: '#94A3B8' }}>
-                  Wholesale Slabs & Pricing
-                </button>
-              </li>
-              <li>
-                <button onClick={() => setActiveTab('b2b')} style={{ color: '#94A3B8' }}>
-                  Request Commercial RFQ
-                </button>
-              </li>
-              <li>
-                <button onClick={() => setActiveTab('b2b')} style={{ color: '#94A3B8' }}>
-                  GST Input Tax Credit
-                </button>
-              </li>
-              <li>
-                <button onClick={() => setActiveTab('b2b')} style={{ color: '#94A3B8' }}>
-                  Institutional & School Paper Supplies
                 </button>
               </li>
             </ul>
@@ -468,6 +527,17 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
                   style={{ color: '#94A3B8', cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit', textAlign: 'left' }}
                 >
                   🚚 Shipping & Logistics Policy
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => {
+                    setActiveTab('support');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  style={{ color: '#38BDF8', cursor: 'pointer', background: 'none', border: 'none', padding: 0, font: 'inherit', textAlign: 'left', fontWeight: 600 }}
+                >
+                  🎧 24/7 Support Desk
                 </button>
               </li>
             </ul>

@@ -27,7 +27,8 @@ interface B2BNavbarProps {
   b2bTab: string;
   setB2bTab: (tab: string) => void;
   onSwitchToB2C: () => void;
-  openB2BAuthModal: () => void;
+  openB2BAuthModal: (mode?: 'login' | 'register') => void;
+  setActiveTab?: (tab: string) => void;
 }
 
 export const B2BNavbar: React.FC<B2BNavbarProps> = ({
@@ -35,6 +36,7 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
   setB2bTab,
   onSwitchToB2C,
   openB2BAuthModal,
+  setActiveTab,
 }) => {
   const { role, b2bBusiness, logout } = useAuth();
   const { b2bCount, getB2BCalculations } = useCart();
@@ -173,7 +175,7 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
           </div>
 
           {/* Navigation Links */}
-          <div className="flex items-center gap-6 hide-on-mobile" style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+          <div className="flex items-center gap-5 hide-on-mobile" style={{ fontSize: '0.86rem', fontWeight: 600 }}>
             <button
               onClick={() => setB2bTab('overview')}
               style={{
@@ -182,7 +184,7 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
                 paddingBottom: '0.3rem',
               }}
             >
-              B2B Overview
+              Overview
             </button>
             <button
               onClick={() => setB2bTab('catalog')}
@@ -195,6 +197,19 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
               Wholesale Catalog
             </button>
             <button
+              onClick={() => setB2bTab('deals')}
+              style={{
+                color: b2bTab === 'deals' ? '#FBBF24' : '#CBD5E1',
+                borderBottom: b2bTab === 'deals' ? '2px solid #FBBF24' : '2px solid transparent',
+                paddingBottom: '0.3rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+              }}
+            >
+              <Tag size={13} className="text-amber-400" /> B2B Deals
+            </button>
+            <button
               onClick={() => setB2bTab('rfq')}
               style={{
                 color: b2bTab === 'rfq' ? '#60A5FA' : '#CBD5E1',
@@ -205,7 +220,7 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
                 gap: '0.35rem',
               }}
             >
-              <FileText size={15} className="text-amber-400" /> Request a Quote (RFQ)
+              <FileText size={14} className="text-amber-400" /> RFQ
             </button>
             <button
               onClick={() => setB2bTab('dashboard')}
@@ -215,30 +230,52 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
                 paddingBottom: '0.3rem',
               }}
             >
-              Business Dashboard
+              Dashboard
             </button>
             <button
-              onClick={() => setB2bTab('stories')}
+              onClick={() => {
+                if (setActiveTab) setActiveTab('gst-input-credit');
+                else setB2bTab('gst');
+              }}
+              style={{
+                color: '#CBD5E1',
+                borderBottom: '2px solid transparent',
+                paddingBottom: '0.3rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+              }}
+            >
+              <ShieldCheck size={13} className="text-emerald-400" /> GST Credit
+            </button>
+            <button
+              onClick={() => {
+                if (setActiveTab) setActiveTab('success-stories');
+                else setB2bTab('stories');
+              }}
               style={{
                 color: b2bTab === 'stories' ? '#60A5FA' : '#CBD5E1',
                 borderBottom: b2bTab === 'stories' ? '2px solid #60A5FA' : '2px solid transparent',
                 paddingBottom: '0.3rem',
               }}
             >
-              Success Stories
+              Stories
             </button>
             <button
-              onClick={() => setB2bTab('certifications')}
+              onClick={() => {
+                if (setActiveTab) setActiveTab('certifications-compliance');
+                else setB2bTab('certifications');
+              }}
               style={{
                 color: b2bTab === 'certifications' ? '#34D399' : '#CBD5E1',
                 borderBottom: b2bTab === 'certifications' ? '2px solid #34D399' : '2px solid transparent',
                 paddingBottom: '0.3rem',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.3rem',
+                gap: '0.25rem',
               }}
             >
-              <Award size={14} className="text-emerald-400" /> Certifications & Compliance
+              <Award size={13} className="text-emerald-400" /> Compliance
             </button>
           </div>
 
@@ -351,13 +388,28 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
                 </button>
               </div>
             ) : (
-              <button
-                onClick={openB2BAuthModal}
-                className="btn btn-amber btn-sm"
-                style={{ borderRadius: 'var(--radius-full)' }}
-              >
-                <UserCheck size={16} /> <span className="hide-on-mobile">Business Login / Register</span><span className="hide-on-desktop">Login</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    window.history.pushState(null, '', '/business-login');
+                    openB2BAuthModal('login');
+                  }}
+                  className="btn btn-outline btn-sm"
+                  style={{ color: '#FCD34D', borderColor: 'rgba(252, 211, 77, 0.4)', borderRadius: 'var(--radius-full)', padding: '0.4rem 0.8rem' }}
+                >
+                  <UserCheck size={14} /> Business Login
+                </button>
+                <button
+                  onClick={() => {
+                    window.history.pushState(null, '', '/business-register');
+                    openB2BAuthModal('register');
+                  }}
+                  className="btn btn-amber btn-sm hide-on-mobile"
+                  style={{ borderRadius: 'var(--radius-full)', padding: '0.4rem 0.8rem' }}
+                >
+                  Register
+                </button>
+              </div>
             )}
 
             {/* Mobile Navigation Menu Toggle */}
@@ -432,6 +484,17 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
 
           <button
             onClick={() => {
+              setB2bTab('deals');
+              setMobileMenuOpen(false);
+            }}
+            className="btn btn-secondary"
+            style={{ justifyContent: 'flex-start', background: 'rgba(255, 255, 255, 0.08)', color: '#FBBF24' }}
+          >
+            <Tag size={16} className="text-amber-400" /> B2B Deals & Wholesale Slabs
+          </button>
+
+          <button
+            onClick={() => {
               setB2bTab('rfq');
               setMobileMenuOpen(false);
             }}
@@ -454,7 +517,20 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
 
           <button
             onClick={() => {
-              setB2bTab('stories');
+              if (setActiveTab) setActiveTab('gst-input-credit');
+              else setB2bTab('gst');
+              setMobileMenuOpen(false);
+            }}
+            className="btn btn-secondary"
+            style={{ justifyContent: 'flex-start', background: 'rgba(255, 255, 255, 0.08)', color: '#34D399' }}
+          >
+            <ShieldCheck size={16} className="text-emerald-400" /> GST Input Tax Credit (18% ITC)
+          </button>
+
+          <button
+            onClick={() => {
+              if (setActiveTab) setActiveTab('success-stories');
+              else setB2bTab('stories');
               setMobileMenuOpen(false);
             }}
             className="btn btn-secondary"
@@ -465,7 +541,8 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
 
           <button
             onClick={() => {
-              setB2bTab('certifications');
+              if (setActiveTab) setActiveTab('certifications-compliance');
+              else setB2bTab('certifications');
               setMobileMenuOpen(false);
             }}
             className="btn btn-secondary"
@@ -497,15 +574,30 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
               <LogOut size={16} /> Sign Out ({b2bBusiness.companyName})
             </button>
           ) : (
-            <button
-              onClick={() => {
-                openB2BAuthModal();
-                setMobileMenuOpen(false);
-              }}
-              className="btn btn-amber"
-            >
-              <UserCheck size={16} /> Business Login / Register
-            </button>
+            <div className="flex gap-2" style={{ marginTop: '0.5rem' }}>
+              <button
+                onClick={() => {
+                  window.history.pushState(null, '', '/business-login');
+                  openB2BAuthModal('login');
+                  setMobileMenuOpen(false);
+                }}
+                className="btn btn-outline btn-sm"
+                style={{ flex: 1, color: '#FCD34D', borderColor: 'rgba(252, 211, 77, 0.4)', justifyContent: 'center' }}
+              >
+                <UserCheck size={15} /> Business Login
+              </button>
+              <button
+                onClick={() => {
+                  window.history.pushState(null, '', '/business-register');
+                  openB2BAuthModal('register');
+                  setMobileMenuOpen(false);
+                }}
+                className="btn btn-amber btn-sm"
+                style={{ flex: 1, justifyContent: 'center' }}
+              >
+                Register (KYC)
+              </button>
+            </div>
           )}
         </div>
       )}

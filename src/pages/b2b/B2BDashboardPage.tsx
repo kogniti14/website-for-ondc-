@@ -19,6 +19,7 @@ import {
   CreditCard,
   RefreshCw,
   Star,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { B2BOrder, B2BQuotation, B2BOrderItemSummary, ProductReview } from '../../types';
@@ -37,6 +38,7 @@ interface B2BDashboardPageProps {
   quotations: B2BQuotation[];
   onRefresh: () => void;
   setB2bTab: (tab: string) => void;
+  openB2BAuthModal?: (mode?: 'login' | 'register') => void;
 }
 
 export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
@@ -44,8 +46,19 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
   quotations,
   onRefresh,
   setB2bTab,
+  openB2BAuthModal,
 }) => {
-  const { b2bBusiness, logout } = useAuth();
+  const { role, b2bBusiness, logout } = useAuth();
+  const isB2BAuthenticated = role === 'b2b' && !!b2bBusiness;
+
+  // Isolate data to authenticated business only - Never expose another company's records
+  const myB2BOrders = isB2BAuthenticated
+    ? b2bOrders.filter((o) => o.businessId === b2bBusiness.id || (b2bBusiness.gstin && o.gstin === b2bBusiness.gstin))
+    : [];
+  const myQuotations = isB2BAuthenticated
+    ? quotations.filter((q) => q.businessId === b2bBusiness.id || (b2bBusiness.businessEmail && q.email === b2bBusiness.businessEmail))
+    : [];
+
   const [activeTab, setActiveTab] = useState<'profile' | 'quotations' | 'orders' | 'invoices'>('quotations');
   const [reviewTarget, setReviewTarget] = useState<{ order: B2BOrder; item: B2BOrderItemSummary } | null>(null);
   const [allReviews, setAllReviews] = useState<ProductReview[]>(() => reviewService.getAllReviewsForAdmin());
@@ -222,6 +235,126 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
     onRefresh();
   };
 
+  if (!isB2BAuthenticated || !b2bBusiness) {
+    return (
+      <div style={{ backgroundColor: '#0A0F1D', color: '#E2E8F0', minHeight: '100vh', padding: '5rem 1.25rem' }}>
+        <div className="container" style={{ maxWidth: '620px', margin: '0 auto', textAlign: 'center' }}>
+          <div
+            style={{
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1.5px solid rgba(245, 158, 11, 0.4)',
+              borderRadius: '24px',
+              padding: '3rem 2rem',
+              backdropFilter: 'blur(16px)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
+            }}
+          >
+            <div
+              style={{
+                width: '76px',
+                height: '76px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.1) 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1.5rem',
+                border: '1.5px solid rgba(245, 158, 11, 0.5)',
+              }}
+            >
+              <Building2 size={38} style={{ color: '#FBBF24' }} />
+            </div>
+
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                background: 'rgba(245, 158, 11, 0.15)',
+                color: '#FBBF24',
+                padding: '0.3rem 0.85rem',
+                borderRadius: '9999px',
+                fontSize: '0.75rem',
+                fontWeight: 800,
+                letterSpacing: '0.04em',
+                textTransform: 'uppercase',
+                marginBottom: '1rem',
+              }}
+            >
+              <Lock size={12} /> B2B Portal Authentication Required
+            </div>
+
+            <h1 style={{ fontSize: '1.9rem', fontWeight: 800, color: '#FFFFFF', marginBottom: '0.75rem', lineHeight: 1.2 }}>
+              Authorized Business Access Required
+            </h1>
+
+            <p style={{ fontSize: '0.92rem', color: '#94A3B8', lineHeight: 1.6, marginBottom: '2rem' }}>
+              The Kogniti Minds Business Dashboard provides confidential commercial quotations, corporate order history, statutory tax invoices, and wholesale account parameters. Please sign in to your verified enterprise account to view this information.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <button
+                onClick={() => {
+                  if (openB2BAuthModal) openB2BAuthModal('login');
+                  else {
+                    window.history.pushState(null, '', '/business-login');
+                    setB2bTab('overview');
+                  }
+                }}
+                className="btn btn-amber btn-lg"
+                style={{ borderRadius: '12px', fontWeight: 800, width: '100%', padding: '0.85rem' }}
+              >
+                Sign In to Business Account
+              </button>
+
+              <button
+                onClick={() => {
+                  if (openB2BAuthModal) openB2BAuthModal('register');
+                  else {
+                    window.history.pushState(null, '', '/business-register');
+                    setB2bTab('overview');
+                  }
+                }}
+                className="btn btn-secondary btn-lg"
+                style={{
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  width: '100%',
+                  padding: '0.85rem',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  color: '#FFFFFF',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                }}
+              >
+                Register New Enterprise Account (GST/MSME)
+              </button>
+            </div>
+
+            <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <button
+                onClick={() => {
+                  window.history.pushState(null, '', '/b2b-overview');
+                  setB2bTab('overview');
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#60A5FA',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
+              >
+                ← Back to B2B Portal Overview
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ backgroundColor: '#0A0F1D', color: '#E2E8F0', minHeight: '100vh', padding: '3.5rem 0 6rem' }}>
       <div className="container">
@@ -230,7 +363,7 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
           <div>
             <div className="flex items-center gap-3">
               <h1 style={{ fontSize: '2.1rem', fontWeight: 800, color: '#FFFFFF' }}>
-                {b2bBusiness?.companyName || 'EduTech Solutions Pvt Ltd'}
+                {b2bBusiness.companyName}
               </h1>
               {isApproved ? (
                 <span className="badge badge-green" style={{ fontSize: '0.75rem', padding: '0.3rem 0.75rem' }}>
@@ -260,7 +393,7 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
               </span>
             </div>
             <div style={{ fontSize: '0.85rem', color: '#94A3B8', marginTop: '0.35rem' }}>
-              GSTIN: <strong>{b2bBusiness?.gstin || '29AAACE1234F1Z8'}</strong> • Type: {b2bBusiness?.businessType || 'Corporate Office'} • Payment Terms: {b2bBusiness?.paymentTerms || 'Net 30'}
+              GSTIN: <strong>{b2bBusiness.gstin || 'Unregistered'}</strong> • Type: {b2bBusiness.businessType || 'Corporate Office'} • Payment Terms: {b2bBusiness.paymentTerms || 'Net 30'}
             </div>
           </div>
 
@@ -329,7 +462,7 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                     <FileText size={16} /> Quotations & RFQs
                   </span>
                   <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>
-                    {quotations.length}
+                    {myQuotations.length}
                   </span>
                 </button>
 
@@ -354,7 +487,7 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                     <Package size={16} /> B2B Orders & POs
                   </span>
                   <span className="badge badge-green" style={{ fontSize: '0.65rem' }}>
-                    {b2bOrders.length}
+                    {myB2BOrders.length}
                   </span>
                 </button>
 
@@ -379,7 +512,7 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                     <FileText size={16} /> Tax Invoices (GST & ITC)
                   </span>
                   <span className="badge badge-amber" style={{ fontSize: '0.65rem' }}>
-                    {b2bOrders.length}
+                    {myB2BOrders.length}
                   </span>
                 </button>
 
@@ -499,14 +632,14 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                   </div>
                 </div>
 
-                {quotations.length === 0 ? (
+                {myQuotations.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94A3B8' }}>
                     <FileText size={32} style={{ margin: '0 auto 0.75rem', opacity: 0.6 }} />
                     <div>No quotations submitted yet.</div>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                    {quotations.map((q) => (
+                    {myQuotations.map((q) => (
                       <div
                         key={q.id}
                         style={{
@@ -1004,13 +1137,13 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                   Institutional B2B Orders & Purchase Orders
                 </h3>
 
-                {b2bOrders.length === 0 ? (
+                {myB2BOrders.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94A3B8' }}>
                     No B2B orders yet.
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                    {b2bOrders.map((ord) => (
+                    {myB2BOrders.map((ord) => (
                       <div
                         key={ord.id}
                         style={{
@@ -1333,10 +1466,10 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                   >
                     <div style={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 600 }}>Total Invoiced Volume</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FFFFFF', margin: '0.2rem 0' }}>
-                      ₹{b2bOrders.reduce((sum, o) => sum + o.grandTotal, 0).toLocaleString('en-IN')}
+                      ₹{myB2BOrders.reduce((sum, o) => sum + o.grandTotal, 0).toLocaleString('en-IN')}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#38BDF8' }}>
-                      {b2bOrders.length} Invoices issued
+                      {myB2BOrders.length} Invoices issued
                     </div>
                   </div>
 
@@ -1350,7 +1483,7 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                   >
                     <div style={{ fontSize: '0.75rem', color: '#A7F3D0', fontWeight: 600 }}>Total Input Tax Credit (ITC)</div>
                     <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#34D399', margin: '0.2rem 0' }}>
-                      ₹{b2bOrders.reduce((sum, o) => sum + o.totalGst, 0).toLocaleString('en-IN')}
+                      ₹{myB2BOrders.reduce((sum, o) => sum + o.totalGst, 0).toLocaleString('en-IN')}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#D1FAE5' }}>
                       Claimable under GSTR-2B
@@ -1367,7 +1500,7 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                   >
                     <div style={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 600 }}>Verified Recipient GSTIN</div>
                     <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#38BDF8', margin: '0.35rem 0', letterSpacing: '0.04em' }}>
-                      {b2bBusiness?.gstin || '29AAACE1234F1Z8'}
+                      {b2bBusiness.gstin || 'Unregistered'}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#10B981' }}>
                       ✓ Compliant Active Entity
@@ -1376,13 +1509,13 @@ export const B2BDashboardPage: React.FC<B2BDashboardPageProps> = ({
                 </div>
 
                 {/* Invoices List */}
-                {b2bOrders.length === 0 ? (
+                {myB2BOrders.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#94A3B8' }}>
                     No B2B tax invoices generated yet.
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    {b2bOrders.map((ord) => (
+                    {myB2BOrders.map((ord) => (
                       <div
                         key={ord.id}
                         style={{

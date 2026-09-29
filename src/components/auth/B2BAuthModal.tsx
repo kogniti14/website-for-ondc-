@@ -30,6 +30,7 @@ import { isSuperAdminIdentifier } from '../../services/adminDbService';
 interface B2BAuthModalProps {
   onClose: () => void;
   onSuccess?: () => void;
+  initialMode?: 'login' | 'register';
 }
 
 export const MANDATORY_DOC_CONFIG: Array<{
@@ -76,8 +77,8 @@ export const MANDATORY_DOC_CONFIG: Array<{
   },
 ];
 
-export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess }) => {
-  const [tab, setTab] = useState<'login' | 'register' | 'forgot'>('login');
+export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess, initialMode = 'login' }) => {
+  const [tab, setTab] = useState<'login' | 'register' | 'forgot'>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);

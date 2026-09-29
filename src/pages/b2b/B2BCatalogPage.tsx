@@ -21,6 +21,7 @@ import { useCart } from '../../context/CartContext';
 interface B2BCatalogPageProps {
   products: Product[];
   categories?: Category[];
+  onlyDeals?: boolean;
   onOpenProduct: (product: Product) => void;
   openB2BAuthModal: () => void;
   onOpenRfqModal: (product: Product) => void;
@@ -30,6 +31,7 @@ interface B2BCatalogPageProps {
 export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
   products,
   categories,
+  onlyDeals = false,
   onOpenProduct,
   openB2BAuthModal,
   onOpenRfqModal,
@@ -154,16 +156,20 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
         <div className="flex items-center justify-between flex-wrap gap-4" style={{ marginBottom: '2rem' }}>
           <div>
             <div className="flex items-center gap-2" style={{ marginBottom: '0.5rem' }}>
-              <span className="badge badge-amber">B2B Wholesale Catalog</span>
+              <span className={`badge ${onlyDeals ? 'badge-green' : 'badge-amber'}`}>
+                {onlyDeals ? '🔥 B2B Deals & Wholesale Offers' : 'B2B Wholesale Catalog'}
+              </span>
               <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
                 {products.length} Products Available
               </span>
             </div>
             <h1 style={{ fontSize: '2.2rem', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
-              Institutional Bulk Procurement
+              {onlyDeals ? 'Wholesale Deals & Volume Slabs' : 'Institutional Bulk Procurement'}
             </h1>
             <p style={{ color: '#94A3B8', fontSize: '0.92rem', marginTop: '0.2rem' }}>
-              Direct manufacturer procurement for schools, offices, universities, corporate enterprises, and resellers.
+              {onlyDeals
+                ? 'Direct factory volume discounts, tiered wholesale slab pricing, and high-volume commercial purchasing opportunities.'
+                : 'Direct manufacturer procurement for schools, offices, universities, corporate enterprises, and resellers.'}
             </p>
           </div>
         </div>

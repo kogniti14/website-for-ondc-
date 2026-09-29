@@ -92,15 +92,16 @@
   RewriteRule ^api/data/([a-zA-Z0-9_-]+)/?([a-zA-Z0-9_-]*)?$ api/data.php?collection=$1&id=$2 [QSA,L]
 
   # Dedicated ONDC RETeB2B 1.2.5 Protocol Routes (Hostinger Native Execution - Zero 503 errors)
-  # Direct browser navigation (GET with Accept: text/html): Redirect to dedicated interactive Admin SPA route
-  RewriteCond %{REQUEST_METHOD} GET
-  RewriteCond %{HTTP:Accept} text/html [NC]
+  # Internal callback routes (on_search, on_select, etc.):
+  # Human browser navigation -> Redirect to dedicated Admin SPA Workbench
+  RewriteCond %{REQUEST_METHOD} !^POST$
   RewriteRule ^on_([a-z]+)$ /admin/ondc/on-$1 [R=302,L]
 
-  RewriteCond %{REQUEST_METHOD} GET
-  RewriteCond %{HTTP:Accept} text/html [NC]
-  RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support)$ /admin/ondc/$1 [R=302,L]
+  # Human browser navigation -> Load SPA (index.html)
+  RewriteCond %{REQUEST_METHOD} !^POST$
+  RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support|products|shop|deals|b2b-overview|wholesale-catalog|rfq|business-dashboard|success-stories|certifications|certifications-compliance|business-login|business-register|b2b-deals|gst-input-credit|login|admin|wishlist|cart|checkout|orders|account|terms|privacy|refund|shipping)$ index.html [L]
 
+  # Protocol Machine-to-Machine POST Endpoints (Buyer -> Seller Gateway):
   RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support)$ api/ondc-gateway.php?action=$1 [QSA,L]
   RewriteRule ^(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)$ api/ondc-gateway.php?action=$1 [QSA,L]
   RewriteRule ^ondc/(search|select|init|confirm|status|track|cancel|update|rating|support)$ api/ondc-gateway.php?action=$1 [QSA,L]

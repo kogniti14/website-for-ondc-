@@ -24,6 +24,7 @@ interface ProductListingPageProps {
   initialSearch?: string;
   initialSort?: string;
   onlyNewArrivals?: boolean;
+  onlyDeals?: boolean;
   onOpenProduct: (product: Product) => void;
   onBuyNow: (product: Product) => void;
   isShopNowView?: boolean;
@@ -36,6 +37,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
   initialSearch = '',
   initialSort,
   onlyNewArrivals: onlyNewArrivalsProp = false,
+  onlyDeals: onlyDealsProp = false,
   onOpenProduct,
   onBuyNow,
   isShopNowView = false,
@@ -48,8 +50,9 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
   const [onlyInStock, setOnlyInStock] = useState<boolean>(false);
   const [onlyBestSellers, setOnlyBestSellers] = useState<boolean>(false);
   const [onlyNewArrivals, setOnlyNewArrivals] = useState<boolean>(Boolean(onlyNewArrivalsProp));
+  const [onlyDeals, setOnlyDeals] = useState<boolean>(Boolean(onlyDealsProp));
   const [sortBy, setSortBy] = useState<string>(
-    initialSort || (onlyNewArrivalsProp ? 'newest' : isShopNowView ? 'bestseller' : 'recommended')
+    initialSort || (onlyDealsProp ? 'price-low' : onlyNewArrivalsProp ? 'newest' : isShopNowView ? 'bestseller' : 'recommended')
   );
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [isOndcSearching, setIsOndcSearching] = useState(false);
@@ -373,6 +376,13 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
               Newly Added Innovations • 100% Tree-Free Agro Paper
             </span>
           </div>
+        ) : onlyDeals ? (
+          <div className="flex items-center gap-2" style={{ marginBottom: '0.4rem' }}>
+            <span className="badge badge-amber">🏷️ Consumer Deals & Offers</span>
+            <span style={{ fontSize: '0.82rem', color: 'var(--slate-500)', fontWeight: 500 }}>
+              Direct Factory Offers • Special Value Bundles • GST Invoiced
+            </span>
+          </div>
         ) : isShopNowView ? (
           <div className="flex items-center gap-2" style={{ marginBottom: '0.4rem' }}>
             <span className="badge badge-amber">🔥 Exclusive Direct Deals & Bestsellers</span>
@@ -391,6 +401,8 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
         <h1 style={{ fontSize: '2.2rem', fontWeight: 800, marginBottom: '0.5rem' }}>
           {onlyNewArrivals
             ? 'New Arrivals & Smart Innovations'
+            : onlyDeals
+            ? 'Deals & Promotional Offers'
             : isShopNowView
             ? 'Shop Now — Deals & Direct Store'
             : selectedCategory !== 'All'
@@ -400,6 +412,8 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
         <p style={{ color: 'var(--slate-500)', fontSize: '0.95rem' }}>
           {onlyNewArrivals
             ? 'Discover the newest launches in upcycled agricultural residue copier paper, tree-free executive notebooks, and smart desk organizers.'
+            : onlyDeals
+            ? 'Discover available consumer promotions, value packs, and special offers on eco-friendly paper using actual configured pricing.'
             : isShopNowView
             ? 'Explore hand-picked bestsellers, bulk ream bundles, and exclusive direct-order deals on 100% agro-residue sustainable paper.'
             : 'Explore our complete catalog of 100% tree-free agricultural residue paper, printing paper reams, executive notebooks, journals, and eco-stationery supplies.'}

@@ -61,6 +61,7 @@ import { OrderStatusPage } from './pages/customer/OrderStatusPage';
 import { OrderConfirmPage } from './pages/customer/OrderConfirmPage';
 import { CheckoutInitPage } from './pages/customer/CheckoutInitPage';
 import { OrderUpdatePage } from './pages/customer/OrderUpdatePage';
+import { GstInputCreditPage } from './pages/customer/GstInputCreditPage';
 
 // Gallery & Certification Components
 import { StoryDetailModal } from './components/gallery/StoryDetailModal';
@@ -83,6 +84,7 @@ const MainApp: React.FC = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [b2bAuthModalOpen, setB2bAuthModalOpen] = useState(false);
+  const [b2bAuthMode, setB2bAuthMode] = useState<'login' | 'register'>('login');
   const [adminAuthModalOpen, setAdminAuthModalOpen] = useState(false);
   const [adminAuthMode, setAdminAuthMode] = useState<'login' | 'register'>('login');
   const [policyModalType, setPolicyModalType] = useState<'privacy' | 'terms' | 'shipping' | 'refund' | null>(null);
@@ -183,7 +185,10 @@ const MainApp: React.FC = () => {
   // Support direct pathname & hash navigation and back button for all sections
   useEffect(() => {
     const handleRouteCheck = () => {
-      const pathname = (typeof window !== 'undefined' ? window.location.pathname : '').toLowerCase();
+      if (typeof window === 'undefined') return;
+      const pathname = window.location.pathname.toLowerCase();
+
+      // 1. Admin & Protocol Explorer Routes
       if (pathname.startsWith('/admin')) {
         setActiveTab('admin');
         return;
@@ -194,7 +199,90 @@ const MainApp: React.FC = () => {
         setActiveTab('admin');
         return;
       }
-      // Production Customer Routes:
+
+      // 2. B2B Portal Dedicated Routes
+      if (pathname === '/b2b-overview') {
+        setActiveTab('b2b');
+        setB2bTab('overview');
+        return;
+      }
+      if (pathname === '/wholesale-catalog') {
+        setActiveTab('b2b');
+        setB2bTab('catalog');
+        return;
+      }
+      if (pathname === '/rfq') {
+        setActiveTab('b2b');
+        setB2bTab('rfq');
+        return;
+      }
+      if (pathname === '/business-dashboard') {
+        setActiveTab('b2b');
+        setB2bTab('dashboard');
+        return;
+      }
+      if (pathname === '/b2b-deals') {
+        setActiveTab('b2b');
+        setB2bTab('deals');
+        return;
+      }
+      if (pathname === '/business-login') {
+        setActiveTab('b2b');
+        setB2bAuthMode('login');
+        setB2bAuthModalOpen(true);
+        return;
+      }
+      if (pathname === '/business-register') {
+        setActiveTab('b2b');
+        setB2bAuthMode('register');
+        setB2bAuthModalOpen(true);
+        return;
+      }
+      if (pathname === '/gst-input-credit') {
+        setActiveTab('gst-input-credit');
+        return;
+      }
+      if (pathname === '/certifications-compliance') {
+        setActiveTab('certifications');
+        return;
+      }
+
+      // 3. Main Website Routes
+      if (pathname === '/login') {
+        setAuthModalMode('login');
+        setAuthModalOpen(true);
+        return;
+      }
+      if (pathname === '/products') {
+        setActiveTab('products');
+        return;
+      }
+      if (pathname === '/shop') {
+        setActiveTab('shop');
+        return;
+      }
+      if (pathname === '/deals') {
+        setActiveTab('deals');
+        return;
+      }
+      if (pathname === '/success-stories') {
+        setActiveTab('stories');
+        return;
+      }
+      if (pathname === '/certifications') {
+        setActiveTab('certifications');
+        return;
+      }
+      if (pathname === '/track') {
+        setActiveTab('track');
+        return;
+      }
+      if (pathname === '/support') {
+        setActiveTab('support');
+        return;
+      }
+
+      // 4. Production Customer Routes (including ONDC)
       const customerMatch = pathname.match(/^\/(search|select|init|confirm|status|track|cancel|update|rating|support)$/);
       if (customerMatch) {
         const routeName = customerMatch[1];
@@ -213,10 +301,19 @@ const MainApp: React.FC = () => {
         }
         return;
       }
+
+      // 5. Utility & Policy Routes
+      const utilMatch = pathname.match(/^\/(cart|checkout|orders|wishlist|account|terms|privacy|refund|shipping)$/);
+      if (utilMatch) {
+        setActiveTab(utilMatch[1]);
+        return;
+      }
+
+      // 6. Hash / Home Fallback
       const hash = window.location.hash.replace('#', '').toLowerCase();
-      if (['terms', 'privacy', 'refund', 'shipping', 'new-arrivals', 'certifications', 'stories', 'shop', 'products', 'b2b', 'admin'].includes(hash)) {
+      if (hash && ['terms', 'privacy', 'refund', 'shipping', 'new-arrivals', 'certifications', 'stories', 'shop', 'products', 'b2b', 'admin', 'deals'].includes(hash)) {
         setActiveTab(hash);
-      } else if (!hash || hash === 'home') {
+      } else if (!pathname || pathname === '/' || hash === 'home') {
         setActiveTab('home');
       }
     };
@@ -232,20 +329,126 @@ const MainApp: React.FC = () => {
   // Handlers
   const handleSetActiveTab = (tab: string) => {
     setActiveTab(tab);
-    if (['search', 'select', 'init', 'confirm', 'status', 'track', 'cancel', 'update', 'rating', 'support'].includes(tab)) {
-      const targetPath = `/${tab}`;
-      if (window.location.pathname !== targetPath) {
-        window.history.pushState(null, '', targetPath + window.location.search);
-      }
-    } else if (tab === 'home') {
-      if (window.location.hash || window.location.pathname !== '/') {
-        window.history.pushState(null, '', '/' + window.location.search);
-      }
-    } else {
-      const targetHash = `#${tab}`;
-      if (window.location.hash !== targetHash) {
-        window.history.pushState(null, '', targetHash);
-      }
+    let targetPath = '/';
+
+    switch (tab) {
+      case 'home':
+        targetPath = '/';
+        break;
+      case 'products':
+        targetPath = '/products';
+        break;
+      case 'shop':
+        targetPath = '/shop';
+        break;
+      case 'deals':
+        targetPath = '/deals';
+        break;
+      case 'stories':
+      case 'success-stories':
+        targetPath = '/success-stories';
+        break;
+      case 'certifications':
+        targetPath = '/certifications';
+        break;
+      case 'certifications-compliance':
+        targetPath = '/certifications-compliance';
+        break;
+      case 'track':
+        targetPath = '/track';
+        break;
+      case 'support':
+        targetPath = '/support';
+        break;
+      case 'admin':
+        targetPath = '/admin';
+        break;
+      case 'gst-input-credit':
+        targetPath = '/gst-input-credit';
+        break;
+      case 'b2b':
+      case 'b2b-overview':
+        targetPath = '/b2b-overview';
+        setB2bTab('overview');
+        break;
+      case 'wholesale-catalog':
+        targetPath = '/wholesale-catalog';
+        setActiveTab('b2b');
+        setB2bTab('catalog');
+        break;
+      case 'rfq':
+        targetPath = '/rfq';
+        setActiveTab('b2b');
+        setB2bTab('rfq');
+        break;
+      case 'business-dashboard':
+        targetPath = '/business-dashboard';
+        setActiveTab('b2b');
+        setB2bTab('dashboard');
+        break;
+      case 'b2b-deals':
+        targetPath = '/b2b-deals';
+        setActiveTab('b2b');
+        setB2bTab('deals');
+        break;
+      case 'business-login':
+        targetPath = '/business-login';
+        handleOpenB2BAuth('login');
+        break;
+      case 'business-register':
+        targetPath = '/business-register';
+        handleOpenB2BAuth('register');
+        break;
+      case 'login':
+        targetPath = '/login';
+        handleOpenAuth('login');
+        break;
+      case 'search':
+      case 'select':
+      case 'init':
+      case 'confirm':
+      case 'status':
+      case 'cancel':
+      case 'update':
+      case 'rating':
+      case 'cart':
+      case 'checkout':
+      case 'orders':
+      case 'wishlist':
+      case 'account':
+      case 'terms':
+      case 'privacy':
+      case 'refund':
+      case 'shipping':
+        targetPath = `/${tab}`;
+        break;
+      default:
+        targetPath = tab.startsWith('/') ? tab : `/${tab}`;
+    }
+
+    if (typeof window !== 'undefined' && window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath + (tab === 'search' || tab === 'select' ? window.location.search : ''));
+    }
+  };
+
+  const handleSetB2bTab = (subtab: string) => {
+    setB2bTab(subtab);
+    setActiveTab('b2b');
+    let targetPath = '/b2b-overview';
+    if (subtab === 'catalog') targetPath = '/wholesale-catalog';
+    else if (subtab === 'rfq') targetPath = '/rfq';
+    else if (subtab === 'dashboard') targetPath = '/business-dashboard';
+    else if (subtab === 'deals') targetPath = '/b2b-deals';
+    else if (subtab === 'stories') {
+      setActiveTab('stories');
+      targetPath = '/success-stories';
+    } else if (subtab === 'certifications') {
+      setActiveTab('certifications');
+      targetPath = '/certifications-compliance';
+    }
+
+    if (typeof window !== 'undefined' && window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath);
     }
   };
 
@@ -291,7 +494,8 @@ const MainApp: React.FC = () => {
     setAuthModalOpen(true);
   };
 
-  const handleOpenB2BAuth = () => {
+  const handleOpenB2BAuth = (mode: 'login' | 'register' = 'login') => {
+    setB2bAuthMode(mode);
     setB2bAuthModalOpen(true);
   };
 
@@ -313,9 +517,10 @@ const MainApp: React.FC = () => {
       {activeTab === 'admin' ? null : activeTab === 'b2b' ? (
         <B2BNavbar
           b2bTab={b2bTab}
-          setB2bTab={setB2bTab}
-          onSwitchToB2C={() => setActiveTab('home')}
-          openB2BAuthModal={handleOpenB2BAuth}
+          setB2bTab={handleSetB2bTab}
+          setActiveTab={handleSetActiveTab}
+          onSwitchToB2C={() => handleSetActiveTab('home')}
+          openB2BAuthModal={(mode) => handleOpenB2BAuth(mode || 'login')}
         />
       ) : (
         <Navbar
@@ -380,6 +585,28 @@ const MainApp: React.FC = () => {
             onOpenProduct={handleOpenProduct}
             onBuyNow={handleBuyNow}
             isShopNowView={activeTab === 'shop'}
+          />
+        )}
+
+        {activeTab === 'deals' && (
+          <ProductListingPage
+            key="deals"
+            products={products}
+            categories={categories}
+            initialCategory="All"
+            initialSearch=""
+            onlyDeals={true}
+            onOpenProduct={handleOpenProduct}
+            onBuyNow={handleBuyNow}
+            isShopNowView={true}
+          />
+        )}
+
+        {activeTab === 'gst-input-credit' && (
+          <GstInputCreditPage
+            setActiveTab={handleSetActiveTab}
+            openB2BAuth={(m) => handleOpenB2BAuth(m || 'login')}
+            openAuth={(m) => handleOpenAuth(m || 'login')}
           />
         )}
 
@@ -565,8 +792,8 @@ const MainApp: React.FC = () => {
             {b2bTab === 'overview' && (
               <B2BHomePage
                 products={products}
-                setB2bTab={setB2bTab}
-                openB2BAuthModal={handleOpenB2BAuth}
+                setB2bTab={handleSetB2bTab}
+                openB2BAuthModal={() => handleOpenB2BAuth('login')}
                 onOpenProduct={handleOpenProduct}
                 onOpenStory={(story) => setSelectedStory(story)}
                 onOpenCertificate={(cert) => setSelectedCertificate(cert)}
@@ -578,7 +805,19 @@ const MainApp: React.FC = () => {
                 products={products}
                 categories={categories}
                 onOpenProduct={handleOpenProduct}
-                openB2BAuthModal={handleOpenB2BAuth}
+                openB2BAuthModal={() => handleOpenB2BAuth('login')}
+                onOpenRfqModal={handleOpenRfqModal}
+                onBuyNow={handleB2BBuyNow}
+              />
+            )}
+
+            {b2bTab === 'deals' && (
+              <B2BCatalogPage
+                products={products}
+                categories={categories}
+                onlyDeals={true}
+                onOpenProduct={handleOpenProduct}
+                openB2BAuthModal={() => handleOpenB2BAuth('login')}
                 onOpenRfqModal={handleOpenRfqModal}
                 onBuyNow={handleB2BBuyNow}
               />
@@ -589,8 +828,8 @@ const MainApp: React.FC = () => {
                 products={products}
                 selectedProduct={rfqTargetProduct}
                 onSuccess={refreshData}
-                setB2bTab={setB2bTab}
-                openB2BAuthModal={handleOpenB2BAuth}
+                setB2bTab={handleSetB2bTab}
+                openB2BAuthModal={() => handleOpenB2BAuth('login')}
               />
             )}
 
@@ -599,7 +838,8 @@ const MainApp: React.FC = () => {
                 b2bOrders={b2bOrders}
                 quotations={quotations}
                 onRefresh={refreshData}
-                setB2bTab={setB2bTab}
+                setB2bTab={handleSetB2bTab}
+                openB2BAuthModal={(m) => handleOpenB2BAuth(m || 'login')}
               />
             )}
 
@@ -764,7 +1004,7 @@ const MainApp: React.FC = () => {
       {activeTab !== 'admin' && (
         <Footer
           setActiveTab={handleSetActiveTab}
-          setB2bTab={setB2bTab}
+          setB2bTab={handleSetB2bTab}
           openPolicyModal={(type) => setPolicyModalType(type)}
           isB2B={activeTab === 'b2b'}
           onNavigateToShop={handleNavigateToShop}
@@ -809,11 +1049,12 @@ const MainApp: React.FC = () => {
 
       {b2bAuthModalOpen && (
         <B2BAuthModal
+          initialMode={b2bAuthMode}
           onClose={() => setB2bAuthModalOpen(false)}
           onSuccess={() => {
             refreshData();
             setActiveTab('b2b');
-            setB2bTab('dashboard');
+            handleSetB2bTab('dashboard');
           }}
         />
       )}
