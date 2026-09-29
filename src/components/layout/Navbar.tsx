@@ -234,7 +234,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-3">
             {/* Prominent B2B Portal Switch Button */}
             <button
-              onClick={() => setActiveTab('b2b-overview')}
+              onClick={() => setActiveTab('b2b')}
               className="btn btn-b2b btn-sm hide-on-mobile"
               style={{
                 borderRadius: 'var(--radius-full)',
@@ -603,10 +603,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Award size={14} className="text-emerald-600" /> Certifications
             </button>
             <button
-              onClick={() => setActiveTab('b2b-deals')}
+              onClick={() => setActiveTab('b2b')}
               style={{
-                color: activeTab === 'b2b-deals' ? '#2563EB' : 'var(--slate-900)',
-                borderBottom: activeTab === 'b2b-deals' ? '2px solid #2563EB' : '2px solid transparent',
+                color: activeTab === 'b2b' ? '#2563EB' : 'var(--slate-900)',
+                borderBottom: activeTab === 'b2b' ? '2px solid #2563EB' : '2px solid transparent',
                 paddingBottom: '0.3rem',
                 display: 'flex',
                 alignItems: 'center',
@@ -779,7 +779,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
           <button
             onClick={() => {
-              setActiveTab('b2b-deals');
+              setActiveTab('b2b');
               setMobileMenuOpen(false);
             }}
             className="btn btn-b2b"

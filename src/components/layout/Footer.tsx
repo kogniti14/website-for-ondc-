@@ -376,8 +376,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
               <li>
                 <button
                   onClick={() => {
-                    if (setB2bTab) setB2bTab('overview');
-                    else setActiveTab('b2b-overview');
+                    setActiveTab('b2b');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   style={{ color: '#60A5FA', fontWeight: 600 }}
@@ -412,8 +411,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
               <li>
                 <button
                   onClick={() => {
-                    if (setB2bTab) setB2bTab('deals');
-                    else setActiveTab('b2b-deals');
+                    setActiveTab('b2b');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   style={{ color: '#F59E0B', fontWeight: 600 }}

@@ -201,7 +201,7 @@ const MainApp: React.FC = () => {
       }
 
       // 2. B2B Portal Dedicated Routes
-      if (pathname === '/b2b-overview') {
+      if (pathname === '/b2b' || pathname === '/b2b-overview' || pathname === '/b2b-deals') {
         setActiveTab('b2b');
         setB2bTab('overview');
         return;
@@ -219,11 +219,6 @@ const MainApp: React.FC = () => {
       if (pathname === '/business-dashboard') {
         setActiveTab('b2b');
         setB2bTab('dashboard');
-        return;
-      }
-      if (pathname === '/b2b-deals') {
-        setActiveTab('b2b');
-        setB2bTab('deals');
         return;
       }
       if (pathname === '/business-login') {
@@ -346,52 +341,55 @@ const MainApp: React.FC = () => {
         break;
       case 'stories':
       case 'success-stories':
+        setActiveTab('stories');
         targetPath = '/success-stories';
         break;
       case 'certifications':
-        targetPath = '/certifications';
-        break;
       case 'certifications-compliance':
-        targetPath = '/certifications-compliance';
+        setActiveTab('certifications');
+        targetPath = tab === 'certifications-compliance' ? '/certifications-compliance' : '/certifications';
         break;
       case 'track':
+        setActiveTab('track');
         targetPath = '/track';
         break;
       case 'support':
+        setActiveTab('support');
         targetPath = '/support';
         break;
       case 'admin':
+        setActiveTab('admin');
         targetPath = '/admin';
         break;
       case 'gst-input-credit':
+        setActiveTab('gst-input-credit');
         targetPath = '/gst-input-credit';
         break;
       case 'b2b':
       case 'b2b-overview':
-        targetPath = '/b2b-overview';
+      case 'b2b-deals':
+        setActiveTab('b2b');
         setB2bTab('overview');
+        targetPath = '/b2b-overview';
         break;
       case 'wholesale-catalog':
-        targetPath = '/wholesale-catalog';
         setActiveTab('b2b');
         setB2bTab('catalog');
+        targetPath = '/wholesale-catalog';
         break;
       case 'rfq':
-        targetPath = '/rfq';
         setActiveTab('b2b');
         setB2bTab('rfq');
+        targetPath = '/rfq';
         break;
       case 'business-dashboard':
-        targetPath = '/business-dashboard';
         setActiveTab('b2b');
         setB2bTab('dashboard');
-        break;
-      case 'b2b-deals':
-        targetPath = '/b2b-deals';
-        setActiveTab('b2b');
-        setB2bTab('deals');
+        targetPath = '/business-dashboard';
         break;
       case 'business-login':
+        setActiveTab('b2b');
+        setB2bTab('overview');
         targetPath = '/business-login';
         handleOpenB2BAuth('login');
         break;
