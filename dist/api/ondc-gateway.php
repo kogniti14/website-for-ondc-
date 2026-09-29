@@ -276,7 +276,11 @@ if ($httpMethod !== 'POST') {
                     exit;
                 }
             }
+            header("Location: /", true, 302);
+            exit;
         }
+
+        // Only seller callback routes (on_search, on_select, etc.) redirect to Admin Workbench
         $slug = str_replace('_', '-', $action);
         header("Location: /admin/ondc/{$slug}", true, 302);
         exit;
