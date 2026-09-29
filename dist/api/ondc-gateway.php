@@ -260,11 +260,21 @@ if ($httpMethod !== 'POST') {
     if (stripos($acceptHeader, 'text/html') !== false) {
         $customerActions = ['search', 'select', 'init', 'confirm', 'status', 'track', 'cancel', 'update', 'rating', 'support'];
         if (in_array($action, $customerActions)) {
-            $spaPath = dirname(__DIR__, 2) . '/dist/index.html';
-            if (file_exists($spaPath)) {
-                header('Content-Type: text/html; charset=utf-8');
-                readfile($spaPath);
-                exit;
+            $spaCandidates = [
+                dirname(__DIR__, 2) . '/dist/index.html',
+                dirname(__DIR__) . '/dist/index.html',
+                __DIR__ . '/../../dist/index.html',
+                ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/dist/index.html',
+                dirname(__DIR__, 2) . '/index.html',
+                dirname(__DIR__) . '/index.html',
+                ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/index.html',
+            ];
+            foreach ($spaCandidates as $cand) {
+                if (!empty($cand) && file_exists($cand)) {
+                    header('Content-Type: text/html; charset=utf-8');
+                    readfile($cand);
+                    exit;
+                }
             }
         }
         $slug = str_replace('_', '-', $action);

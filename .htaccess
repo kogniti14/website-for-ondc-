@@ -102,13 +102,13 @@ DirectoryIndex dist/index.html index.html
 
   # 3. Dedicated ONDC RETeB2B 1.2.5 Protocol Routes (Hostinger LiteSpeed Native Execution - Zero 503 errors)
   # Direct browser navigation (GET with Accept: text/html) on callback routes: Redirect to dedicated interactive Admin SPA route
-  RewriteCond %{REQUEST_METHOD} GET
+  RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
   RewriteCond %{HTTP:Accept} text/html [NC]
   RewriteRule ^on_([a-z]+)$ /admin/ondc/on-$1 [R=302,L]
 
   # Direct browser navigation (GET with Accept: text/html) on customer routes:
   # Load the customer application interface (SPA routing)
-  RewriteCond %{REQUEST_METHOD} GET
+  RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
   RewriteCond %{HTTP:Accept} text/html [NC]
   RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support)$ dist/index.html [L]
 
