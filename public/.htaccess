@@ -1,3 +1,6 @@
+# Disable Directory Indexing / Browsing
+Options -Indexes -MultiViews
+
 <IfModule mod_env.c>
   PassEnv RESEND_API_KEY
   PassEnv VITE_RESEND_API_KEY
@@ -8,6 +11,8 @@
 
 <IfModule mod_mime.c>
   AddType application/pdf .pdf
+  AddType application/zip .zip
+  AddType application/json .json
   AddType image/webp .webp
   AddType image/png .png
   AddType image/jpeg .jpg .jpeg
@@ -23,11 +28,13 @@
 </IfModule>
 
 <IfModule mod_headers.c>
-  # Production SSL/TLS & Security Headers (Scoped without wildcard subdomains to prevent ERR_CERT_COMMON_NAME_INVALID)
+  # Production SSL/TLS & Complete Security Headers Suite
   Header always set Strict-Transport-Security "max-age=31536000"
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set X-XSS-Protection "1; mode=block"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(), camera=(), microphone=()"
 
   # HTML documents - Never cache index.html
   <FilesMatch "\.(html|htm)$">
@@ -47,6 +54,12 @@
     Header set Cache-Control "public, max-age=2592000, stale-while-revalidate=86400"
   </FilesMatch>
 </IfModule>
+
+# Block access to hidden files, git repos, environment variables, and source configs
+<FilesMatch "^\.(env|git|htaccess|htpasswd)|(\.(lock|sql|sh|bak|swp|yml|yaml)|package\.json|package-lock\.json|database\.rules\.json|tsconfig.*\.json|vite\.config\.ts)$">
+  Order Allow,Deny
+  Deny from all
+</FilesMatch>
 
 <IfModule LiteSpeed>
   CacheEngine on

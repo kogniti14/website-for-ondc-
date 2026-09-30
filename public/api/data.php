@@ -277,6 +277,49 @@ if ($method === 'GET') {
 $rawInput = file_get_contents('php://input');
 $body = json_decode($rawInput, true);
 
+// Enforce Access Control on Data Mutations (Protects against unauthenticated modifications)
+$adminOnlyCollections = [
+    'admin_users',
+    'settings',
+    'policies',
+    'policy_records',
+    'policy_versions',
+    'site_media',
+    'products',
+    'categories',
+    'certifications',
+    'certification_categories',
+    'stories',
+    'gallery_categories',
+    'coupons',
+    'testimonials',
+    'review_audit_logs'
+];
+
+if ($method === 'POST' || $method === 'PUT' || $method === 'DELETE') {
+    if (in_array($collection, $adminOnlyCollections, true) && !$isAdmin) {
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Unauthorized: Administrator authorization required to modify collection: ' . htmlspecialchars($collection)
+        ]);
+        exit;
+    }
+
+    if ($method === 'DELETE' && !$isAdmin) {
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Unauthorized: Record deletion requires verified administrative authorization.'
+        ]);
+        exit;
+    }
+
+    if ($collection === 'reviews' && !$isAdmin && is_array($body)) {
+        $body['status'] = 'pending'; // Unauthenticated customer reviews default to pending moderation
+    }
+}
+
 if ($method === 'POST' || $method === 'PUT') {
     if ($body === null || !is_array($body)) {
         http_response_code(400);

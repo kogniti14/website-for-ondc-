@@ -1,0 +1,28 @@
+# Kogniti Minds Private Limited - Production Uploads Directory Security Guard
+# Strictly disable script execution, CGI engines, and directory indexing
+
+Options -Indexes -ExecCGI
+<IfModule mod_php.c>
+  php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+  php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+  php_flag engine off
+</IfModule>
+
+# Remove script handlers so files cannot be executed by Apache or LiteSpeed
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .php8 .phps .cgi .pl .asp .aspx .exe .sh .py .rb .shtml
+
+# Deny direct access to all executable scripts and system files
+<FilesMatch "\.(php|phtml|php[0-9]|phps|cgi|pl|exe|sh|asp|aspx|jsp|py|rb|shtml|htaccess|htpasswd|env|json|sql|log)$">
+  Order Allow,Deny
+  Deny from all
+</FilesMatch>
+
+# Only allow safe static media files
+<FilesMatch "\.(pdf|png|jpe?g|webp|mp4|webm|ico)$">
+  Order Allow,Deny
+  Allow from all
+</FilesMatch>

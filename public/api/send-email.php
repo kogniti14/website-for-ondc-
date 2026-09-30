@@ -5,10 +5,26 @@
  * Never accepts secret keys from client headers or frontend requests.
  */
 
-// Handle CORS
-header('Access-Control-Allow-Origin: *');
+// 1. Strict Origin & CORS Controls (Prevents Open Mail Relay abuse)
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+$allowedOrigins = [
+    'https://kognitiminds.com',
+    'https://www.kognitiminds.com',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5173'
+];
+
+if (in_array($origin, $allowedOrigins, true)) {
+    header("Access-Control-Allow-Origin: $origin");
+} else {
+    header("Access-Control-Allow-Origin: https://www.kognitiminds.com");
+}
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: SAMEORIGIN');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -178,6 +194,24 @@ if (empty($apiKey)) {
     exit;
 }
 
+// 2. IP-based Rate Limiter (Max 8 email requests per minute per IP to prevent spam abuse)
+$clientIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+$rateFile = sys_get_temp_dir() . '/km_rate_' . md5($clientIp) . '.json';
+$now = time();
+$rateData = file_exists($rateFile) ? json_decode(@file_get_contents($rateFile), true) : ['count' => 0, 'first_seen' => $now];
+if (!is_array($rateData) || ($now - ($rateData['first_seen'] ?? 0)) > 60) {
+    $rateData = ['count' => 1, 'first_seen' => $now];
+} else {
+    $rateData['count'] = ($rateData['count'] ?? 0) + 1;
+}
+@file_put_contents($rateFile, json_encode($rateData), LOCK_EX);
+
+if (($rateData['count'] ?? 1) > 8) {
+    http_response_code(429);
+    echo json_encode(['success' => false, 'error' => 'Rate limit exceeded. Please wait a minute before requesting another code.']);
+    exit;
+}
+
 $rawInput = file_get_contents('php://input');
 $data = json_decode($rawInput, true) ?: [];
 
@@ -186,13 +220,26 @@ if (is_string($to)) {
     $to = [$to];
 }
 
-if (empty($to) || !is_array($to) || empty($to[0])) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Recipient email is required']);
-    exit;
+// 3. Strict RFC 5322 Email Validation & CRLF Injection Prevention
+$cleanTo = [];
+if (is_array($to)) {
+    foreach ($to as $addr) {
+        $cleanAddr = str_replace(["\r", "\n", "\0"], '', trim((string)$addr));
+        if (filter_var($cleanAddr, FILTER_VALIDATE_EMAIL)) {
+            $cleanTo[] = $cleanAddr;
+        }
+    }
 }
 
-$subject = $data['subject'] ?? 'Kogniti Minds Verification Code';
+if (empty($cleanTo)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'error' => 'A valid recipient email address is required']);
+    exit;
+}
+$to = $cleanTo;
+
+$rawSubject = $data['subject'] ?? 'Kogniti Minds Verification Code';
+$subject = str_replace(["\r", "\n", "\0"], '', trim($rawSubject));
 $html = $data['html'] ?? '';
 $text = $data['text'] ?? '';
 

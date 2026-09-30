@@ -26,11 +26,14 @@ dist-ssr
 *.sw?
 scratch/
 
-# Persistent Production Data & Uploads (Never overwritten by Git pulls)
+# Persistent Production Data & Uploads (Never overwritten by Git pulls, but security .htaccess is enforced)
 data/storage/
 persistent/
-uploads/
-public/uploads/
-dist/uploads/
+uploads/*
+!uploads/.htaccess
+public/uploads/*
+!public/uploads/.htaccess
+dist/uploads/*
+!dist/uploads/.htaccess
 *.sqlite
 *.db
