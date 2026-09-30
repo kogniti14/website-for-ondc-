@@ -1,0 +1,82 @@
+[
+  {
+    "id": "cat_success",
+    "name": "Success Stories",
+    "slug": "success-stories",
+    "displayOrder": 1,
+    "isActive": true,
+    "description": "Client transformations, brand migrations, and circular economy adoption milestones."
+  },
+  {
+    "id": "cat_achieve",
+    "name": "Achievements",
+    "slug": "achievements",
+    "displayOrder": 2,
+    "isActive": true,
+    "description": "Company milestones, ESG certifications, and sustainable packaging breakthroughs."
+  },
+  {
+    "id": "cat_events",
+    "name": "Company Events",
+    "slug": "company-events",
+    "displayOrder": 3,
+    "isActive": true,
+    "description": "Symposiums, stakeholder meets, and agro-farmer partner summits."
+  },
+  {
+    "id": "cat_prod",
+    "name": "Products",
+    "slug": "products",
+    "displayOrder": 4,
+    "isActive": true,
+    "description": "Showcase of 100% tree-free circular paper, courier bags, and molded pulp tableware."
+  },
+  {
+    "id": "cat_mfg",
+    "name": "Manufacturing",
+    "slug": "manufacturing",
+    "displayOrder": 5,
+    "isActive": true,
+    "description": "Inside our zero-effluent agri-waste processing and automated conversion units."
+  },
+  {
+    "id": "cat_team",
+    "name": "Team",
+    "slug": "team",
+    "displayOrder": 6,
+    "isActive": true,
+    "description": "R&D scientists, production engineers, and visionary changemakers at Kogniti Minds."
+  },
+  {
+    "id": "cat_exhib",
+    "name": "Exhibitions",
+    "slug": "exhibitions",
+    "displayOrder": 7,
+    "isActive": true,
+    "description": "National packaging expos, ONDC seller pavilions, and global sustainability forums."
+  },
+  {
+    "id": "cat_awards",
+    "name": "Awards",
+    "slug": "awards",
+    "displayOrder": 8,
+    "isActive": true,
+    "description": "National Cleantech honors, Circular Packaging Innovation awards, and Green MSME recognitions."
+  },
+  {
+    "id": "cat_partners",
+    "name": "Partnerships",
+    "slug": "partnerships",
+    "displayOrder": 9,
+    "isActive": true,
+    "description": "Institutional alliances, state farmer collectives, and enterprise logistics adopters."
+  },
+  {
+    "id": "cat_other",
+    "name": "Other",
+    "slug": "other",
+    "displayOrder": 10,
+    "isActive": true,
+    "description": "Press features, community outreach, and future circular packaging initiatives."
+  }
+]
