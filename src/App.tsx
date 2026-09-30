@@ -201,9 +201,14 @@ const MainApp: React.FC = () => {
       }
 
       // 2. B2B Portal Dedicated Routes
-      if (pathname === '/b2b' || pathname === '/b2b-overview' || pathname === '/b2b-deals') {
+      if (pathname === '/b2b' || pathname === '/b2b-overview') {
         setActiveTab('b2b');
         setB2bTab('overview');
+        return;
+      }
+      if (pathname === '/b2b-deals') {
+        setActiveTab('b2b');
+        setB2bTab('deals');
         return;
       }
       if (pathname === '/wholesale-catalog') {
@@ -367,10 +372,14 @@ const MainApp: React.FC = () => {
         break;
       case 'b2b':
       case 'b2b-overview':
-      case 'b2b-deals':
         setActiveTab('b2b');
         setB2bTab('overview');
-        targetPath = tab === 'b2b-deals' ? '/b2b-deals' : '/b2b-overview';
+        targetPath = '/b2b-overview';
+        break;
+      case 'b2b-deals':
+        setActiveTab('b2b');
+        setB2bTab('deals');
+        targetPath = '/b2b-deals';
         break;
       case 'wholesale-catalog':
         setActiveTab('b2b');

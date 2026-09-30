@@ -411,7 +411,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, setB2bTab, openPol
               <li>
                 <button
                   onClick={() => {
-                    setActiveTab('b2b');
+                    setActiveTab('b2b-deals');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   style={{ color: '#F59E0B', fontWeight: 600 }}
