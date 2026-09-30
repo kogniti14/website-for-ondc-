@@ -11,6 +11,7 @@ export const OndcNetworkModal: React.FC<OndcNetworkModalProps> = ({ isOpen, onCl
   const [healthStatus, setHealthStatus] = useState<'checking' | 'healthy' | 'offline'>('checking');
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [copiedEndpoint, setCopiedEndpoint] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<'callbacks' | 'inbound' | 'all'>('callbacks');
 
   const checkHealth = async () => {
     setHealthStatus('checking');
@@ -43,8 +44,6 @@ export const OndcNetworkModal: React.FC<OndcNetworkModalProps> = ({ isOpen, onCl
     setCopiedEndpoint(id);
     setTimeout(() => setCopiedEndpoint(null), 2000);
   };
-
-  const [activeCategory, setActiveCategory] = useState<'callbacks' | 'inbound' | 'all'>('callbacks');
 
   const SELLER_CALLBACKS = [
     { method: 'POST', path: 'https://kognitiminds.com/on_search', desc: 'Outbound / Inbound Catalog Discovery Callback' },

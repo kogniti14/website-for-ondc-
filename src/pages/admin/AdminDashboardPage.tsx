@@ -2213,7 +2213,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     const currentPerms: AdminPermissions = staff.permissions || {};
     staff.permissions = {
       ...currentPerms,
-      [permKey]: !Boolean(currentPerms[permKey]),
+      [permKey]: !currentPerms[permKey],
     };
     storageService.saveAdminUser(staff);
     refreshAdminUsers();
