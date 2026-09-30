@@ -75,7 +75,7 @@ DirectoryIndex dist/index.html index.html
 
   # Strip tracking query parameters (e.g. srsltid from Google Search/Merchant)
   RewriteCond %{QUERY_STRING} (?:^|&)srsltid=[^&]* [NC]
-  RewriteRule ^(.*)$ https://kognitiminds.com/$1? [R=301,L]
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1? [R=301,L]
 
   # 1. Existing Physical Files & Directories (Serve immediately with zero overhead)
   RewriteCond %{REQUEST_FILENAME} -f [OR]
