@@ -200,12 +200,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span
                   style={{
                     fontSize: '0.62rem',
-                    background: 'rgba(91, 44, 72, 0.08)',
-                    color: '#5B2C48',
+                    background: 'var(--km-light-cyan)',
+                    color: 'var(--km-blue)',
                     padding: '0.1rem 0.35rem',
                     borderRadius: '4px',
                     fontWeight: 700,
-                    border: '1px solid rgba(91, 44, 72, 0.2)',
+                    border: '1px solid var(--km-border)',
                   }}
                 >
                   PVT LTD
@@ -342,7 +342,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           width: '24px',
                           height: '24px',
                           borderRadius: '50%',
-                          background: '#5B2C48',
+                          background: 'linear-gradient(135deg, var(--km-blue) 0%, var(--km-cyan) 100%)',
                           color: '#FFFFFF',
                           fontSize: '0.75rem',
                           fontWeight: 700,

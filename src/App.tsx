@@ -12,6 +12,7 @@ import { ShieldCheck, Lock } from 'lucide-react';
 import { Navbar } from './components/layout/Navbar';
 import { B2BNavbar } from './components/layout/B2BNavbar';
 import { Footer } from './components/layout/Footer';
+import { PartnerCarousel } from './components/layout/PartnerCarousel';
 import { PolicyModal } from './components/common/PolicyModal';
 import { WhatsAppFloatingButton } from './components/common/WhatsAppFloatingButton';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
@@ -1006,6 +1007,11 @@ const MainApp: React.FC = () => {
         )}
         </ErrorBoundary>
       </main>
+
+      {/* 2.5. Official Platforms & Ecosystem Partners Section (Immediately Above Main Footer) */}
+      {activeTab !== 'admin' && (
+        <PartnerCarousel />
+      )}
 
       {/* 3. Footer Rendering */}
       {activeTab !== 'admin' && (
