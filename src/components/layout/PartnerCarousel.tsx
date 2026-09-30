@@ -36,13 +36,13 @@ const OFFICIAL_PARTNERS: PartnerItem[] = [
   },
   {
     id: 'msme-udyam',
-    name: 'MSME / Udyam',
+    name: 'Ministry of MSME',
     category: 'BUSINESS & GOVERNMENT ECOSYSTEM',
     categoryBadgeClass: 'km-partner-badge-gov',
     logoSrc: '/msme-udyam-logo.png',
-    altText: 'MSME / Udyam - Ministry of Micro, Small and Medium Enterprises, Govt. of India',
-    description: 'Ministry of MSME & Udyam Registration (Govt. of India)',
-    verifiedUrl: 'https://udyamregistration.gov.in/',
+    altText: 'Ministry of Micro, Small and Medium Enterprises, Govt. of India',
+    description: 'सूक्ष्म, लघु और मध्यम उद्यम मंत्रालय (Govt. of India)',
+    verifiedUrl: 'https://msme.gov.in/',
   },
   {
     id: 'make-in-india',
@@ -50,8 +50,8 @@ const OFFICIAL_PARTNERS: PartnerItem[] = [
     category: 'BUSINESS & GOVERNMENT ECOSYSTEM',
     categoryBadgeClass: 'km-partner-badge-gov',
     logoSrc: '/make-in-india-logo.png',
-    altText: 'Make in India - National Initiative by DPIIT, Govt. of India',
-    description: 'Promoting 100% Indigenous Sustainable Paper Manufacturing',
+    altText: 'Make in India - Atmanirbhar Bharat, Self-Reliant India Initiative',
+    description: 'आत्मनिर्भर भारत • Self-Reliant India Initiative (Govt. of India)',
     verifiedUrl: 'https://www.makeinindia.com/',
   },
   {
