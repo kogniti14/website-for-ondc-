@@ -264,10 +264,20 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Action Group: Wishlist, Cart, Account, Hamburger */}
           <div className="km-header-actions-group">
+            {/* Mobile Search Button */}
+            <button
+              onClick={() => handleNavClick('search', '/search')}
+              className="km-action-btn-icon hide-on-desktop"
+              title="Search Products"
+              aria-label="Search"
+            >
+              <Search size={18} color="#475569" />
+            </button>
+
             {/* Wishlist Button */}
             <button
               onClick={() => handleNavClick('wishlist', '/wishlist')}
-              className="km-action-btn-icon hide-on-mobile"
+              className="km-action-btn-icon"
               title="Your Wishlist"
               aria-label="Wishlist"
             >
@@ -483,11 +493,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               ) : (
                 <button
                   onClick={() => openAuthModal('login')}
-                  className="km-user-pill-btn hide-on-mobile"
+                  className="km-user-pill-btn"
                   aria-label="Sign In"
                 >
                   <User size={16} />
-                  <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>Sign In</span>
+                  <span className="hide-on-mobile" style={{ fontSize: '0.82rem', fontWeight: 600 }}>Sign In</span>
                 </button>
               )}
             </div>
@@ -512,7 +522,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Tier 3: Secondary Navigation Bar (Exact 11 Items in Order) */}
-      <nav className="km-subnav-bar hide-on-mobile" aria-label="Main Navigation">
+      <nav className="km-subnav-bar" aria-label="Main Navigation">
         <div className="km-subnav-container">
           <div className="km-subnav-group-left">
             {/* 1. Home */}

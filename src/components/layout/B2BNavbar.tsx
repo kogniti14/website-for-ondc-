@@ -431,6 +431,146 @@ export const B2BNavbar: React.FC<B2BNavbarProps> = ({
         </div>
       </div>
 
+      {/* Mobile Horizontal Subnav Strip for B2B */}
+      <div
+        className="hide-on-desktop"
+        style={{
+          background: 'rgba(15, 23, 42, 0.95)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          padding: '0.4rem 0.75rem',
+          overflowX: 'auto',
+          whiteSpace: 'nowrap',
+          display: 'flex',
+          gap: '0.4rem',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
+        <button
+          onClick={() => setB2bTab('overview')}
+          style={{
+            fontSize: '0.76rem',
+            padding: '0.28rem 0.65rem',
+            borderRadius: '6px',
+            background: b2bTab === 'overview' ? '#2563EB' : 'rgba(255, 255, 255, 0.08)',
+            color: '#FFFFFF',
+            fontWeight: 600,
+            border: 'none',
+            flexShrink: 0,
+          }}
+        >
+          Overview
+        </button>
+        <button
+          onClick={() => setB2bTab('catalog')}
+          style={{
+            fontSize: '0.76rem',
+            padding: '0.28rem 0.65rem',
+            borderRadius: '6px',
+            background: b2bTab === 'catalog' ? '#2563EB' : 'rgba(255, 255, 255, 0.08)',
+            color: '#FFFFFF',
+            fontWeight: 600,
+            border: 'none',
+            flexShrink: 0,
+          }}
+        >
+          Wholesale Catalog
+        </button>
+        <button
+          onClick={() => setB2bTab('deals')}
+          style={{
+            fontSize: '0.76rem',
+            padding: '0.28rem 0.65rem',
+            borderRadius: '6px',
+            background: b2bTab === 'deals' ? '#F59E0B' : 'rgba(255, 255, 255, 0.08)',
+            color: b2bTab === 'deals' ? '#0F172A' : '#FBBF24',
+            fontWeight: 700,
+            border: 'none',
+            flexShrink: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+          }}
+        >
+          <Tag size={12} /> B2B Deals
+        </button>
+        <button
+          onClick={() => setB2bTab('rfq')}
+          style={{
+            fontSize: '0.76rem',
+            padding: '0.28rem 0.65rem',
+            borderRadius: '6px',
+            background: b2bTab === 'rfq' ? '#2563EB' : 'rgba(255, 255, 255, 0.08)',
+            color: '#FFFFFF',
+            fontWeight: 600,
+            border: 'none',
+            flexShrink: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+          }}
+        >
+          <FileText size={12} /> RFQ
+        </button>
+        <button
+          onClick={() => setB2bTab('dashboard')}
+          style={{
+            fontSize: '0.76rem',
+            padding: '0.28rem 0.65rem',
+            borderRadius: '6px',
+            background: b2bTab === 'dashboard' ? '#2563EB' : 'rgba(255, 255, 255, 0.08)',
+            color: '#FFFFFF',
+            fontWeight: 600,
+            border: 'none',
+            flexShrink: 0,
+          }}
+        >
+          Dashboard
+        </button>
+        <button
+          onClick={() => {
+            if (setActiveTab) setActiveTab('gst-input-credit');
+            else setB2bTab('gst');
+          }}
+          style={{
+            fontSize: '0.76rem',
+            padding: '0.28rem 0.65rem',
+            borderRadius: '6px',
+            background: 'rgba(255, 255, 255, 0.08)',
+            color: '#34D399',
+            fontWeight: 600,
+            border: 'none',
+            flexShrink: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+          }}
+        >
+          <ShieldCheck size={12} /> GST Credit
+        </button>
+        <button
+          onClick={() => {
+            if (setActiveTab) setActiveTab('certifications-compliance');
+            else setB2bTab('certifications');
+          }}
+          style={{
+            fontSize: '0.76rem',
+            padding: '0.28rem 0.65rem',
+            borderRadius: '6px',
+            background: 'rgba(255, 255, 255, 0.08)',
+            color: '#34D399',
+            fontWeight: 600,
+            border: 'none',
+            flexShrink: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.25rem',
+          }}
+        >
+          <Award size={12} /> Compliance
+        </button>
+      </div>
+
       {/* Mobile Drawer Navigation for B2B */}
       {mobileMenuOpen && (
         <div
