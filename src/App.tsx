@@ -370,7 +370,7 @@ const MainApp: React.FC = () => {
       case 'b2b-deals':
         setActiveTab('b2b');
         setB2bTab('overview');
-        targetPath = '/b2b-overview';
+        targetPath = tab === 'b2b-deals' ? '/b2b-deals' : '/b2b-overview';
         break;
       case 'wholesale-catalog':
         setActiveTab('b2b');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Search,
   ShoppingCart,
@@ -6,16 +6,21 @@ import {
   User,
   Menu,
   X,
-  Briefcase,
   ChevronDown,
-  Phone,
-  Truck,
-  ShieldCheck,
-  Building2,
   LogOut,
   Package,
   Sparkles,
-  Award,
+  ShieldCheck,
+  Building2,
+  Truck,
+  Briefcase,
+  Headphones,
+  Receipt,
+  Shield,
+  Layers,
+  ShoppingBag,
+  BookOpen,
+  Home,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
@@ -23,7 +28,6 @@ import { useWishlist } from '../../context/WishlistContext';
 import { storageService } from '../../services/storageService';
 import { dataSyncBus } from '../../services/dataSyncBus';
 import { SiteMedia } from '../../types';
-import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
 import { ondcClientService } from '../../services/ondcClientService';
 
 interface NavbarProps {
@@ -50,6 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [siteMedia, setSiteMedia] = useState<SiteMedia>(() => storageService.getSiteMedia());
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const unsub = dataSyncBus.subscribe('site_media', (m) => {
@@ -58,7 +63,48 @@ export const Navbar: React.FC<NavbarProps> = ({
     return unsub;
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    if (userDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [userDropdownOpen]);
+
   const calculations = getB2CCalculations();
+
+  const handleNavClick = (tab: string, path: string) => {
+    if (tab === 'shop' && onNavigateToShop) {
+      onNavigateToShop();
+    } else if (tab === 'admin') {
+      if (isAdmin) {
+        setActiveTab('admin');
+        if (typeof window !== 'undefined' && window.location.pathname !== '/admin') {
+          window.history.pushState(null, '', '/admin');
+        }
+      } else if (openAdminAuthModal) {
+        openAdminAuthModal();
+      } else {
+        setActiveTab('admin');
+        if (typeof window !== 'undefined' && window.location.pathname !== '/admin') {
+          window.history.pushState(null, '', '/admin');
+        }
+      }
+    } else {
+      setActiveTab(tab);
+      if (typeof window !== 'undefined' && window.location.pathname !== path) {
+        window.history.pushState(null, '', path);
+      }
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setMobileMenuOpen(false);
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,62 +116,66 @@ export const Navbar: React.FC<NavbarProps> = ({
       onSearchQuery(query);
     }
     const searchUrl = query ? `/search?q=${encodeURIComponent(query)}` : '/search';
-    window.history.pushState(null, '', searchUrl);
+    if (typeof window !== 'undefined') {
+      window.history.pushState(null, '', searchUrl);
+    }
     setActiveTab('search');
+    setMobileMenuOpen(false);
   };
 
   return (
-    <header className="header-sticky">
-      {/* Top Announcement Bar */}
-      <div className="announcement-bar">
-        <span className="flex items-center gap-1.5">
-          <Truck size={14} className="text-emerald-400" />
-          <span>FREE PAN-INDIA DELIVERY on Orders Above ₹1,999</span>
-        </span>
-        <span className="hide-on-mobile flex items-center gap-1.5">
-          <ShieldCheck size={14} className="text-amber-400" />
-          <span>100% GENUINE PRODUCTS | GST Invoice Available</span>
-        </span>
-        <span className="flex items-center gap-1.5">
-          <Building2 size={14} className="text-blue-400" />
-          <span>
-            B2B & INSTITUTIONAL ENQUIRIES:{' '}
-            <a
-              href="/support?method=phone"
-              onClick={(e) => {
-                e.preventDefault();
-                window.history.pushState(null, '', '/support?method=phone');
-                setActiveTab('support');
-              }}
-              style={{ color: '#93C5FD', fontWeight: 700, textDecoration: 'underline' }}
-            >
-              +91 9931648595
-            </a>
-            {' | '}
-            <a
-              href="/support?method=whatsapp"
-              onClick={(e) => {
-                e.preventDefault();
-                window.history.pushState(null, '', '/support?method=whatsapp');
-                setActiveTab('support');
-              }}
-              style={{ color: '#86EFAC', fontWeight: 700, textDecoration: 'underline' }}
-              title="Chat with us on WhatsApp"
-            >
-              WhatsApp
-            </a>
+    <header className="km-header-wrapper" id="site-header">
+      {/* Tier 1: Upper Utility / Announcement Bar */}
+      <div className="km-top-utility-bar">
+        <div className="km-header-container flex items-center justify-between">
+          <span className="km-top-utility-item">
+            <Truck size={14} className="text-emerald-400" />
+            <span>FREE PAN-INDIA DELIVERY on Orders Above ₹1,999</span>
           </span>
-        </span>
+          <span className="hide-on-mobile km-top-utility-item">
+            <ShieldCheck size={14} className="text-amber-400" />
+            <span>100% GENUINE PRODUCTS | GST Invoice Available</span>
+          </span>
+          <span className="km-top-utility-item">
+            <Building2 size={14} className="text-blue-400" />
+            <span>
+              B2B & INSTITUTIONAL ENQUIRIES:{' '}
+              <a
+                href="/support?method=phone"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavClick('support', '/support?method=phone');
+                }}
+                style={{ color: '#93C5FD', fontWeight: 700, textDecoration: 'underline' }}
+              >
+                +91 9931648595
+              </a>
+              {' | '}
+              <a
+                href="/support?method=whatsapp"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleNavClick('support', '/support?method=whatsapp');
+                }}
+                style={{ color: '#86EFAC', fontWeight: 700, textDecoration: 'underline' }}
+                title="Chat with us on WhatsApp"
+              >
+                WhatsApp
+              </a>
+            </span>
+          </span>
+        </div>
       </div>
 
-      {/* Main Navbar */}
-      <div className="container" style={{ padding: '0.75rem 1.25rem' }}>
-        <div className="flex items-center justify-between gap-4">
-          {/* Brand Logo */}
+      {/* Tier 2: Main Header Row (Brand Logo, Search & Action Controls) */}
+      <div className="km-header-container">
+        <div className="km-main-header-row">
+          {/* Brand Logo & Tagline */}
           <div
             className="flex items-center gap-3 brand-logo-container"
-            style={{ cursor: 'pointer' }}
-            onClick={() => setActiveTab('home')}
+            style={{ cursor: 'pointer', flexShrink: 0 }}
+            onClick={() => handleNavClick('home', '/')}
+            title="KOGNITI MINDS PVT LTD - Home"
           >
             <img
               key={siteMedia?.logo || '/logo.png'}
@@ -138,9 +188,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 style={{
                   fontFamily: 'var(--font-heading)',
                   fontWeight: 800,
-                  fontSize: '1.25rem',
+                  fontSize: '1.22rem',
                   lineHeight: '1.1',
-                  color: 'var(--slate-900)',
+                  color: '#0F172A',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.4rem',
@@ -149,12 +199,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                 KOGNITI MINDS
                 <span
                   style={{
-                    fontSize: '0.65rem',
-                    background: 'var(--primary-light)',
-                    color: 'var(--primary)',
-                    padding: '0.1rem 0.4rem',
+                    fontSize: '0.62rem',
+                    background: 'rgba(91, 44, 72, 0.08)',
+                    color: '#5B2C48',
+                    padding: '0.1rem 0.35rem',
                     borderRadius: '4px',
                     fontWeight: 700,
+                    border: '1px solid rgba(91, 44, 72, 0.2)',
                   }}
                 >
                   PVT LTD
@@ -164,7 +215,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="hide-on-mobile"
                 style={{
                   fontSize: '0.72rem',
-                  color: 'var(--slate-500)',
+                  color: '#64748B',
                   fontWeight: 500,
                   letterSpacing: '0.01em',
                 }}
@@ -177,115 +228,56 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Search Bar */}
           <form
             onSubmit={handleSearchSubmit}
-            className="flex-1 hide-on-mobile"
-            style={{ maxWidth: '460px', margin: '0 1rem' }}
+            className="km-header-search-form hide-on-mobile"
+            role="search"
           >
-            <div
-              style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-              }}
-            >
+            <div className="km-header-search-wrapper">
               <Search
-                size={18}
+                size={17}
                 style={{
                   position: 'absolute',
-                  left: '12px',
-                  color: 'var(--slate-400)',
+                  left: '13px',
+                  color: '#94A3B8',
                   pointerEvents: 'none',
                 }}
               />
               <input
                 type="text"
-                placeholder="Search sustainable paper, printing paper, notebooks, journals, stationery & more..."
+                placeholder="Search sustainable paper, printing paper, notebooks, stationery & more..."
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   if (onSearchQuery) onSearchQuery(e.target.value);
                 }}
-                className="form-input"
-                style={{
-                  paddingLeft: '38px',
-                  paddingRight: '80px',
-                  fontSize: '0.88rem',
-                  borderRadius: 'var(--radius-full)',
-                  borderColor: 'var(--slate-200)',
-                  background: 'var(--slate-50)',
-                }}
+                className="km-header-search-input"
+                aria-label="Search products"
               />
               <button
                 type="submit"
-                className="btn btn-primary btn-sm"
-                style={{
-                  position: 'absolute',
-                  right: '4px',
-                  borderRadius: 'var(--radius-full)',
-                  padding: '0.35rem 0.85rem',
-                  fontSize: '0.8rem',
-                }}
+                className="km-header-search-btn"
+                aria-label="Submit Search"
               >
                 Search
               </button>
             </div>
           </form>
 
-          {/* Nav Items & Actions */}
-          <div className="flex items-center gap-3">
-            {/* Prominent B2B Portal Switch Button */}
+          {/* Action Group: Wishlist, Cart, Account, Hamburger */}
+          <div className="km-header-actions-group">
+            {/* Wishlist Button */}
             <button
-              onClick={() => setActiveTab('b2b')}
-              className="btn btn-b2b btn-sm hide-on-mobile"
-              style={{
-                borderRadius: 'var(--radius-full)',
-                padding: '0.45rem 1rem',
-                border: '1.5px solid rgba(255, 255, 255, 0.2)',
-                background: 'linear-gradient(135deg, #0A0F1D 0%, #1E293B 100%)',
-              }}
-            >
-              <Briefcase size={16} className="text-amber-400" />
-              <div style={{ textAlign: 'left', lineHeight: '1.1' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, display: 'block', color: '#fff' }}>
-                  B2B Portal
-                </span>
-                <span style={{ fontSize: '0.62rem', color: '#94A3B8', textTransform: 'uppercase' }}>
-                  Wholesale & RFQ
-                </span>
-              </div>
-            </button>
-
-            {/* Wishlist */}
-            <button
-              onClick={() => setActiveTab('wishlist')}
-              className="btn btn-outline btn-sm hide-on-mobile"
-              style={{
-                position: 'relative',
-                borderRadius: 'var(--radius-full)',
-                padding: '0.5rem',
-                width: '40px',
-                height: '40px',
-              }}
+              onClick={() => handleNavClick('wishlist', '/wishlist')}
+              className="km-action-btn-icon hide-on-mobile"
               title="Your Wishlist"
+              aria-label="Wishlist"
             >
-              <Heart size={19} color={wishlist.length > 0 ? '#E11D48' : 'var(--slate-600)'} />
+              <Heart
+                size={18}
+                color={wishlist.length > 0 ? '#E11D48' : '#475569'}
+                fill={wishlist.length > 0 ? '#E11D48' : 'none'}
+              />
               {wishlist.length > 0 && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '-3px',
-                    right: '-3px',
-                    background: 'var(--rose-600)',
-                    color: '#fff',
-                    borderRadius: '50%',
-                    width: '18px',
-                    height: '18px',
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
+                <span className="km-action-badge">
                   {wishlist.length}
                 </span>
               )}
@@ -293,58 +285,35 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Cart Button */}
             <button
-              onClick={() => setActiveTab('cart')}
-              className="btn btn-primary btn-sm"
-              style={{
-                borderRadius: 'var(--radius-full)',
-                padding: '0.5rem 1rem',
-                gap: '0.6rem',
-              }}
+              onClick={() => handleNavClick('cart', '/cart')}
+              className="km-cart-pill-btn"
+              title="View Shopping Cart"
+              aria-label="Shopping Cart"
             >
-              <div style={{ position: 'relative' }}>
-                <ShoppingCart size={18} />
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <ShoppingCart size={17} />
                 {b2cCount > 0 && (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: '-7px',
-                      right: '-8px',
-                      background: '#F59E0B',
-                      color: '#0A0F1D',
-                      borderRadius: '50%',
-                      width: '18px',
-                      height: '18px',
-                      fontSize: '0.7rem',
-                      fontWeight: 800,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '2px solid #fff',
-                    }}
-                  >
+                  <span className="km-cart-badge">
                     {b2cCount}
                   </span>
                 )}
               </div>
-              <span className="hide-on-mobile" style={{ fontSize: '0.85rem' }}>
+              <span className="hide-on-mobile" style={{ fontSize: '0.82rem', fontWeight: 600 }}>
                 {calculations.total > 0
                   ? `₹${calculations.total.toLocaleString('en-IN')}`
                   : 'Cart'}
               </span>
             </button>
 
-            {/* Account / User Menu */}
-            <div style={{ position: 'relative' }}>
+            {/* Account / User Profile Dropdown */}
+            <div style={{ position: 'relative' }} ref={dropdownRef}>
               {role === 'b2c' && b2cUser ? (
-                <div style={{ position: 'relative' }}>
+                <div>
                   <button
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                    className="btn btn-outline btn-sm"
-                    style={{
-                      borderRadius: 'var(--radius-full)',
-                      padding: '0.45rem 0.85rem',
-                      gap: '0.4rem',
-                    }}
+                    className="km-user-pill-btn"
+                    aria-expanded={userDropdownOpen}
+                    aria-label="User Account"
                   >
                     {b2cUser.avatarUrl ? (
                       <img
@@ -363,8 +332,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                           width: '24px',
                           height: '24px',
                           borderRadius: '50%',
-                          background: 'var(--primary)',
-                          color: '#fff',
+                          background: '#5B2C48',
+                          color: '#FFFFFF',
                           fontSize: '0.75rem',
                           fontWeight: 700,
                           display: 'flex',
@@ -377,11 +346,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                     )}
                     <span
                       className="hide-on-mobile"
-                      style={{ fontSize: '0.82rem', fontWeight: 600, maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      style={{
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        maxWidth: '105px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
                     >
                       {b2cUser.name}
                     </span>
-                    <ChevronDown size={14} />
+                    <ChevronDown size={14} className="text-slate-400" />
                   </button>
 
                   {userDropdownOpen && (
@@ -390,32 +366,42 @@ export const Navbar: React.FC<NavbarProps> = ({
                         position: 'absolute',
                         right: 0,
                         top: '115%',
-                        width: '210px',
-                        background: '#ffffff',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: 'var(--radius-md)',
-                        boxShadow: 'var(--shadow-xl)',
+                        width: '220px',
+                        background: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '10px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
                         zIndex: 150,
                         padding: '0.5rem 0',
-                        animation: 'fadeIn 0.2s ease-out',
+                        animation: 'fadeIn 0.15s ease-out',
                       }}
                     >
-                      <div style={{ padding: '0.5rem 1rem', borderBottom: '1px solid var(--border-color)' }}>
+                      <div style={{ padding: '0.6rem 1rem', borderBottom: '1px solid #F1F5F9' }}>
                         <div className="flex items-center justify-between">
-                          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--slate-900)' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#0F172A' }}>
                             {b2cUser.name}
                           </div>
                           {b2cUser.authProvider === 'firebase_google' && (
-                            <span className="badge badge-blue" style={{ fontSize: '0.62rem' }}>Google</span>
+                            <span className="badge badge-blue" style={{ fontSize: '0.62rem', padding: '0.1rem 0.35rem' }}>
+                              Google
+                            </span>
                           )}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>
+                        <div
+                          style={{
+                            fontSize: '0.74rem',
+                            color: '#64748B',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {b2cUser.email}
                         </div>
                       </div>
                       <button
                         onClick={() => {
-                          setActiveTab('account');
+                          handleNavClick('account', '/account');
                           setUserDropdownOpen(false);
                         }}
                         className="flex items-center gap-2"
@@ -423,15 +409,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                           width: '100%',
                           padding: '0.6rem 1rem',
                           textAlign: 'left',
-                          fontSize: '0.85rem',
-                          color: 'var(--slate-700)',
+                          fontSize: '0.84rem',
+                          color: '#334155',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
                         }}
                       >
-                        <User size={15} /> My Profile & Addresses
+                        <User size={15} className="text-slate-400" /> My Profile & Addresses
                       </button>
                       <button
                         onClick={() => {
-                          setActiveTab('orders');
+                          handleNavClick('orders', '/orders');
                           setUserDropdownOpen(false);
                         }}
                         className="flex items-center gap-2"
@@ -439,15 +428,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                           width: '100%',
                           padding: '0.6rem 1rem',
                           textAlign: 'left',
-                          fontSize: '0.85rem',
-                          color: 'var(--slate-700)',
+                          fontSize: '0.84rem',
+                          color: '#334155',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
                         }}
                       >
-                        <Package size={15} /> My Orders & Invoices
+                        <Package size={15} className="text-slate-400" /> My Orders & Invoices
                       </button>
                       <button
                         onClick={() => {
-                          setActiveTab('wishlist');
+                          handleNavClick('wishlist', '/wishlist');
                           setUserDropdownOpen(false);
                         }}
                         className="flex items-center gap-2"
@@ -455,13 +447,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                           width: '100%',
                           padding: '0.6rem 1rem',
                           textAlign: 'left',
-                          fontSize: '0.85rem',
-                          color: 'var(--slate-700)',
+                          fontSize: '0.84rem',
+                          color: '#334155',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
                         }}
                       >
-                        <Heart size={15} /> Wishlist ({wishlist.length})
+                        <Heart size={15} className="text-slate-400" /> Wishlist ({wishlist.length})
                       </button>
-                      <div style={{ borderTop: '1px solid var(--border-color)', margin: '0.3rem 0' }} />
+                      <div style={{ borderTop: '1px solid #F1F5F9', margin: '0.35rem 0' }} />
                       <button
                         onClick={() => {
                           logout();
@@ -472,8 +467,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                           width: '100%',
                           padding: '0.6rem 1rem',
                           textAlign: 'left',
-                          fontSize: '0.85rem',
-                          color: 'var(--rose-600)',
+                          fontSize: '0.84rem',
+                          color: '#E11D48',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontWeight: 600,
                         }}
                       >
                         <LogOut size={15} /> Sign Out
@@ -484,388 +483,384 @@ export const Navbar: React.FC<NavbarProps> = ({
               ) : (
                 <button
                   onClick={() => openAuthModal('login')}
-                  className="btn btn-outline btn-sm hide-on-mobile"
-                  style={{ borderRadius: 'var(--radius-full)' }}
+                  className="km-user-pill-btn hide-on-mobile"
+                  aria-label="Sign In"
                 >
-                  <User size={16} /> Sign In
+                  <User size={16} />
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>Sign In</span>
                 </button>
               )}
             </div>
 
-            {/* Mobile Menu Toggle */}
+            {/* Mobile Hamburger Menu Toggle Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="btn btn-outline btn-sm"
-              style={{ padding: '0.45rem', borderRadius: '8px' }}
+              className="btn btn-outline btn-sm hide-on-desktop"
               id="mobile-nav-toggle"
               aria-label="Toggle navigation menu"
+              style={{
+                padding: '0.45rem',
+                borderRadius: '8px',
+                borderColor: '#CBD5E1',
+                color: '#0F172A',
+              }}
             >
               {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Secondary Navigation Links */}
-        <div
-          className="flex items-center justify-between hide-on-mobile"
-          style={{
-            paddingTop: '0.65rem',
-            marginTop: '0.5rem',
-            borderTop: '1px solid var(--border-subtle)',
-            fontSize: '0.88rem',
-            fontWeight: 600,
-          }}
-        >
-          <div className="flex items-center gap-6">
+      {/* Tier 3: Secondary Navigation Bar (Exact 11 Items in Order) */}
+      <nav className="km-subnav-bar hide-on-mobile" aria-label="Main Navigation">
+        <div className="km-subnav-container">
+          <div className="km-subnav-group-left">
+            {/* 1. Home */}
             <button
-              onClick={() => setActiveTab('home')}
-              style={{
-                color: activeTab === 'home' ? 'var(--primary)' : 'var(--slate-700)',
-                borderBottom: activeTab === 'home' ? '2px solid var(--primary)' : '2px solid transparent',
-                paddingBottom: '0.3rem',
-              }}
+              type="button"
+              id="nav-home"
+              onClick={() => handleNavClick('home', '/')}
+              className={`km-nav-item ${activeTab === 'home' ? 'active' : ''}`}
+              title="Return to Home"
             >
-              Home
+              <Home size={14} />
+              <span>Home</span>
             </button>
+
+            {/* 2. All Products */}
             <button
-              onClick={() => {
-                setActiveTab('products');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              style={{
-                color: (activeTab === 'products' || activeTab === 'new-arrivals') ? 'var(--primary)' : 'var(--slate-700)',
-                borderBottom: (activeTab === 'products' || activeTab === 'new-arrivals') ? '2px solid var(--primary)' : '2px solid transparent',
-                paddingBottom: '0.3rem',
-              }}
+              type="button"
+              id="nav-products"
+              onClick={() => handleNavClick('products', '/products')}
+              className={`km-nav-item ${activeTab === 'products' || activeTab === 'new-arrivals' ? 'active' : ''}`}
+              title="Explore all sustainable products"
             >
-              All Products
+              <Layers size={14} />
+              <span>All Products</span>
             </button>
+
+            {/* 3. Shop Now */}
             <button
-              onClick={() => {
-                if (onNavigateToShop) onNavigateToShop();
-                else {
-                  setActiveTab('shop');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }
-              }}
-              style={{
-                color: activeTab === 'shop' ? 'var(--primary)' : 'var(--slate-700)',
-                borderBottom: activeTab === 'shop' ? '2px solid var(--primary)' : '2px solid transparent',
-                paddingBottom: '0.3rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-              }}
+              type="button"
+              id="nav-shop"
+              onClick={() => handleNavClick('shop', '/shop')}
+              className={`km-nav-item km-nav-item-shop ${activeTab === 'shop' ? 'active' : ''}`}
+              title="Instant Eco-friendly Shopping Catalogue"
             >
-              Shop Now
+              <ShoppingBag size={14} />
+              <span>Shop Now</span>
             </button>
+
+            {/* 4. Deals */}
             <button
-              onClick={() => {
-                setActiveTab('deals');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              style={{
-                color: activeTab === 'deals' ? 'var(--primary)' : '#D97706',
-                borderBottom: activeTab === 'deals' ? '2px solid #D97706' : '2px solid transparent',
-                paddingBottom: '0.3rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-                fontWeight: 700,
-              }}
+              type="button"
+              id="nav-deals"
+              onClick={() => handleNavClick('deals', '/deals')}
+              className={`km-nav-item km-nav-item-deals ${activeTab === 'deals' ? 'active' : ''}`}
+              title="Exclusive Deals & Offers"
             >
-              <Sparkles size={14} className="text-amber-500" /> DEALS
+              <Sparkles size={14} />
+              <span>Deals</span>
+              <span className="km-badge-deals">Offers</span>
             </button>
+
+            {/* 5. Success Stories */}
             <button
-              onClick={() => setActiveTab('success-stories')}
-              style={{
-                color: (activeTab === 'stories' || activeTab === 'success-stories') ? 'var(--primary)' : 'var(--slate-700)',
-                borderBottom: (activeTab === 'stories' || activeTab === 'success-stories') ? '2px solid var(--primary)' : '2px solid transparent',
-                paddingBottom: '0.3rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-              }}
+              type="button"
+              id="nav-success-stories"
+              onClick={() => handleNavClick('stories', '/success-stories')}
+              className={`km-nav-item ${activeTab === 'stories' || activeTab === 'success-stories' ? 'active' : ''}`}
+              title="Customer Impact & Environmental Stories"
             >
-              Success Stories
+              <BookOpen size={14} />
+              <span>Success Stories</span>
             </button>
+
+            {/* 6. Certifications */}
             <button
-              onClick={() => setActiveTab('certifications')}
-              style={{
-                color: (activeTab === 'certifications' || activeTab === 'certifications-compliance') ? 'var(--primary)' : 'var(--slate-700)',
-                borderBottom: (activeTab === 'certifications' || activeTab === 'certifications-compliance') ? '2px solid var(--primary)' : '2px solid transparent',
-                paddingBottom: '0.3rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-              }}
+              type="button"
+              id="nav-certifications"
+              onClick={() => handleNavClick('certifications', '/certifications')}
+              className={`km-nav-item km-nav-item-cert ${
+                activeTab === 'certifications' || activeTab === 'certifications-compliance' ? 'active' : ''
+              }`}
+              title="Eco Certifications, ISO & Compliance"
             >
-              <Award size={14} className="text-emerald-600" /> Certifications
+              <ShieldCheck size={14} />
+              <span>Certifications</span>
             </button>
+
+            {/* 7. B2B Deals & Wholesale */}
             <button
-              onClick={() => setActiveTab('b2b')}
-              style={{
-                color: activeTab === 'b2b' ? '#2563EB' : 'var(--slate-900)',
-                borderBottom: activeTab === 'b2b' ? '2px solid #2563EB' : '2px solid transparent',
-                paddingBottom: '0.3rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.3rem',
-                fontWeight: 700,
-              }}
+              type="button"
+              id="nav-b2b"
+              onClick={() => handleNavClick('b2b-deals', '/b2b-deals')}
+              className={`km-nav-item km-nav-item-b2b ${
+                activeTab === 'b2b' ||
+                activeTab === 'b2b-deals' ||
+                activeTab === 'b2b-overview' ||
+                activeTab === 'wholesale-catalog' ||
+                activeTab === 'rfq' ||
+                activeTab === 'business-dashboard'
+                  ? 'active'
+                  : ''
+              }`}
+              title="B2B Wholesale Pricing, RFQ & Custom Quotes"
             >
-              <Briefcase size={14} className="text-blue-600" /> B2B Deals & Wholesale
+              <Briefcase size={14} />
+              <span>B2B Deals & Wholesale</span>
             </button>
+
+            {/* 8. Track Orders */}
             <button
-              onClick={() => {
-                setActiveTab('track');
-              }}
-              style={{
-                color: activeTab === 'track' ? 'var(--primary)' : 'var(--slate-700)',
-                borderBottom: activeTab === 'track' ? '2px solid var(--primary)' : '2px solid transparent',
-                paddingBottom: '0.3rem',
-              }}
+              type="button"
+              id="nav-track"
+              onClick={() => handleNavClick('track', '/track')}
+              className={`km-nav-item ${activeTab === 'track' ? 'active' : ''}`}
+              title="Real-time Dispatch & Delivery Tracking"
             >
-              Track Orders
+              <Truck size={14} />
+              <span>Track Orders</span>
             </button>
+
+            {/* 9. Support */}
             <button
-              onClick={() => {
-                setActiveTab('support');
-              }}
-              style={{
-                color: activeTab === 'support' ? 'var(--primary)' : 'var(--slate-700)',
-                borderBottom: activeTab === 'support' ? '2px solid var(--primary)' : '2px solid transparent',
-                paddingBottom: '0.3rem',
-              }}
+              type="button"
+              id="nav-support"
+              onClick={() => handleNavClick('support', '/support')}
+              className={`km-nav-item ${activeTab === 'support' ? 'active' : ''}`}
+              title="Dedicated Customer Support & Helpdesk"
             >
-              Support
+              <Headphones size={14} />
+              <span>Support</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-4 text-slate-500" style={{ fontSize: '0.8rem' }}>
+          <div className="km-subnav-group-right">
+            {/* 10. GST Input Credit */}
             <button
-              onClick={() => setActiveTab('gst-input-credit')}
-              className="text-slate-500 hover:text-blue-600"
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: 0,
-                cursor: 'pointer',
-                font: 'inherit',
-                fontSize: '0.8rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                color: activeTab === 'gst-input-credit' ? '#2563EB' : undefined,
-                fontWeight: activeTab === 'gst-input-credit' ? 700 : undefined,
-              }}
-              title="Claim GST Input Tax Credit on B2B Orders"
+              type="button"
+              id="nav-gst"
+              onClick={() => handleNavClick('gst-input-credit', '/gst-input-credit')}
+              className={`km-nav-item km-nav-item-gst ${activeTab === 'gst-input-credit' ? 'active' : ''}`}
+              title="Claim 100% Verified GST Input Tax Credit on Invoices"
             >
-              GST Input Credit for Businesses
+              <Receipt size={14} />
+              <span>GST Input Credit</span>
+              <span className="km-badge-business">For Businesses</span>
             </button>
-            <span style={{ color: 'var(--slate-300)' }}>|</span>
+
+            {/* Subtle Vertical Divider */}
+            <div className="km-nav-divider" role="separator" />
+
+            {/* 11. Admin Portal */}
             <button
-              onClick={() => {
-                if (isAdmin) {
-                  setActiveTab('admin');
-                } else if (openAdminAuthModal) {
-                  openAdminAuthModal();
-                } else {
-                  setActiveTab('admin');
-                }
-              }}
-              className="text-slate-500 hover:text-slate-900 flex items-center gap-1"
-              style={{ fontWeight: 600, fontSize: '0.78rem' }}
+              type="button"
+              id="nav-admin"
+              onClick={() => handleNavClick('admin', '/admin')}
+              className={`km-nav-item km-nav-item-admin ${activeTab === 'admin' ? 'active' : ''}`}
+              title="Restricted Staff & Admin Management Portal"
             >
-              <ShieldCheck size={13} className="text-purple-600" /> Admin Portal
+              <Shield size={13} />
+              <span>Admin Portal</span>
             </button>
           </div>
         </div>
-      </div>
+      </nav>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Responsive Mobile / Tablet Drawer */}
       {mobileMenuOpen && (
-        <div
-          style={{
-            background: '#ffffff',
-            borderTop: '1px solid var(--border-color)',
-            padding: '1rem 1.25rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
-            animation: 'fadeIn 0.2s ease-out',
-          }}
-        >
-          {/* Mobile Search */}
-          <form onSubmit={handleSearchSubmit}>
-            <input
-              type="text"
-              placeholder="Search sustainable paper, printing paper, notebooks, journals, stationery & more..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                if (onSearchQuery) onSearchQuery(e.target.value);
-              }}
-              className="form-input"
-              style={{ fontSize: '0.9rem' }}
-            />
+        <div className="km-mobile-menu-drawer hide-on-desktop">
+          {/* Mobile Search Input */}
+          <form onSubmit={handleSearchSubmit} style={{ marginBottom: '0.4rem' }}>
+            <div className="km-header-search-wrapper">
+              <Search
+                size={17}
+                style={{
+                  position: 'absolute',
+                  left: '13px',
+                  color: '#94A3B8',
+                  pointerEvents: 'none',
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Search products, paper, stationery..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  if (onSearchQuery) onSearchQuery(e.target.value);
+                }}
+                className="km-header-search-input"
+                style={{ paddingRight: '80px' }}
+              />
+              <button type="submit" className="km-header-search-btn">
+                Search
+              </button>
+            </div>
           </form>
 
+          {/* 1. Home */}
           <button
-            onClick={() => {
-              setActiveTab('home');
-              setMobileMenuOpen(false);
-            }}
-            className="btn btn-secondary"
-            style={{ justifyContent: 'flex-start' }}
+            onClick={() => handleNavClick('home', '/')}
+            className={`km-mobile-nav-item ${activeTab === 'home' ? 'active' : ''}`}
           >
-            Home
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('products');
-              setMobileMenuOpen(false);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className="btn btn-secondary"
-            style={{ justifyContent: 'flex-start' }}
-          >
-            All Products
-          </button>
-          <button
-            onClick={() => {
-              if (onNavigateToShop) onNavigateToShop();
-              else {
-                setActiveTab('shop');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }
-              setMobileMenuOpen(false);
-            }}
-            className="btn btn-secondary"
-            style={{ justifyContent: 'flex-start' }}
-          >
-            Shop Now
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('deals');
-              setMobileMenuOpen(false);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            className="btn btn-secondary"
-            style={{ justifyContent: 'flex-start', color: '#D97706', fontWeight: 700 }}
-          >
-            <Sparkles size={16} className="text-amber-500" /> DEALS
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('success-stories');
-              setMobileMenuOpen(false);
-            }}
-            className="btn btn-secondary"
-            style={{ justifyContent: 'flex-start' }}
-          >
-            Success Stories
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('certifications');
-              setMobileMenuOpen(false);
-            }}
-            className="btn btn-secondary"
-            style={{ justifyContent: 'flex-start' }}
-          >
-            <Award size={16} className="text-emerald-600" /> Certifications & Compliance
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('b2b');
-              setMobileMenuOpen(false);
-            }}
-            className="btn btn-b2b"
-            style={{ justifyContent: 'flex-start' }}
-          >
-            <Briefcase size={16} className="text-amber-400" /> B2B Deals & Wholesale
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('gst-input-credit');
-              setMobileMenuOpen(false);
-            }}
-            className="btn btn-secondary"
-            style={{ justifyContent: 'flex-start' }}
-          >
-            <Building2 size={16} className="text-blue-600" /> GST Input Credit for Businesses
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('orders');
-              setMobileMenuOpen(false);
-            }}
-            className="btn btn-secondary"
-            style={{ justifyContent: 'flex-start' }}
-          >
-            <Package size={16} /> My Orders
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('track');
-              setMobileMenuOpen(false);
-            }}
-            className="btn btn-secondary"
-            style={{ justifyContent: 'flex-start' }}
-          >
-            <Truck size={16} /> Track Orders
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('support');
-              setMobileMenuOpen(false);
-            }}
-            className="btn btn-secondary"
-            style={{ justifyContent: 'flex-start' }}
-          >
-            <Phone size={16} /> Customer Support
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('wishlist');
-              setMobileMenuOpen(false);
-            }}
-            className="btn btn-secondary"
-            style={{ justifyContent: 'flex-start' }}
-          >
-            <Heart size={16} /> Wishlist ({wishlist.length})
+            <span className="flex items-center gap-2">
+              <Home size={16} /> Home
+            </span>
           </button>
 
+          {/* 2. All Products */}
           <button
-            onClick={() => {
-              setMobileMenuOpen(false);
-              if (isAdmin) {
-                setActiveTab('admin');
-              } else if (openAdminAuthModal) {
-                openAdminAuthModal();
-              } else {
-                setActiveTab('admin');
-              }
-            }}
-            className="btn btn-secondary"
-            style={{ justifyContent: 'flex-start', color: '#9333EA', borderColor: 'rgba(147, 51, 234, 0.3)' }}
+            onClick={() => handleNavClick('products', '/products')}
+            className={`km-mobile-nav-item ${activeTab === 'products' || activeTab === 'new-arrivals' ? 'active' : ''}`}
           >
-            <ShieldCheck size={16} /> Admin Portal & Staff Access
+            <span className="flex items-center gap-2">
+              <Layers size={16} /> All Products
+            </span>
           </button>
 
-          {role === 'b2c' ? (
-            <button
-              onClick={() => {
-                logout();
-                setMobileMenuOpen(false);
-              }}
-              className="btn btn-outline"
-              style={{ color: 'var(--rose-600)', justifyContent: 'flex-start' }}
-            >
-              <LogOut size={16} /> Sign Out ({b2cUser?.name})
-            </button>
+          {/* 3. Shop Now */}
+          <button
+            onClick={() => handleNavClick('shop', '/shop')}
+            className={`km-mobile-nav-item ${activeTab === 'shop' ? 'active' : ''}`}
+          >
+            <span className="flex items-center gap-2">
+              <ShoppingBag size={16} /> Shop Now
+            </span>
+          </button>
+
+          {/* 4. Deals */}
+          <button
+            onClick={() => handleNavClick('deals', '/deals')}
+            className={`km-mobile-nav-item ${activeTab === 'deals' ? 'active' : ''}`}
+          >
+            <span className="flex items-center gap-2 text-amber-600 font-semibold">
+              <Sparkles size={16} /> Deals
+            </span>
+            <span className="km-badge-deals">Offers</span>
+          </button>
+
+          {/* 5. Success Stories */}
+          <button
+            onClick={() => handleNavClick('stories', '/success-stories')}
+            className={`km-mobile-nav-item ${activeTab === 'stories' || activeTab === 'success-stories' ? 'active' : ''}`}
+          >
+            <span className="flex items-center gap-2">
+              <BookOpen size={16} /> Success Stories
+            </span>
+          </button>
+
+          {/* 6. Certifications */}
+          <button
+            onClick={() => handleNavClick('certifications', '/certifications')}
+            className={`km-mobile-nav-item ${activeTab === 'certifications' || activeTab === 'certifications-compliance' ? 'active' : ''}`}
+          >
+            <span className="flex items-center gap-2">
+              <ShieldCheck size={16} className="text-emerald-600" /> Certifications
+            </span>
+          </button>
+
+          {/* 7. B2B Deals & Wholesale */}
+          <button
+            onClick={() => handleNavClick('b2b-deals', '/b2b-deals')}
+            className={`km-mobile-nav-item ${
+              activeTab === 'b2b' ||
+              activeTab === 'b2b-deals' ||
+              activeTab === 'b2b-overview' ||
+              activeTab === 'wholesale-catalog' ||
+              activeTab === 'rfq' ||
+              activeTab === 'business-dashboard'
+                ? 'active'
+                : ''
+            }`}
+            style={{ background: '#EFF6FF', borderColor: '#BFDBFE', color: '#1D4ED8' }}
+          >
+            <span className="flex items-center gap-2 font-semibold">
+              <Briefcase size={16} className="text-blue-600" /> B2B Deals & Wholesale
+            </span>
+          </button>
+
+          {/* 8. Track Orders */}
+          <button
+            onClick={() => handleNavClick('track', '/track')}
+            className={`km-mobile-nav-item ${activeTab === 'track' ? 'active' : ''}`}
+          >
+            <span className="flex items-center gap-2">
+              <Truck size={16} /> Track Orders
+            </span>
+          </button>
+
+          {/* 9. Support */}
+          <button
+            onClick={() => handleNavClick('support', '/support')}
+            className={`km-mobile-nav-item ${activeTab === 'support' ? 'active' : ''}`}
+          >
+            <span className="flex items-center gap-2">
+              <Headphones size={16} /> Support
+            </span>
+          </button>
+
+          {/* 10. GST Input Credit */}
+          <button
+            onClick={() => handleNavClick('gst-input-credit', '/gst-input-credit')}
+            className={`km-mobile-nav-item ${activeTab === 'gst-input-credit' ? 'active' : ''}`}
+          >
+            <span className="flex items-center gap-2">
+              <Receipt size={16} /> GST Input Credit
+            </span>
+            <span className="km-badge-business">For Businesses</span>
+          </button>
+
+          {/* 11. Admin Portal */}
+          <button
+            onClick={() => handleNavClick('admin', '/admin')}
+            className={`km-mobile-nav-item ${activeTab === 'admin' ? 'active' : ''}`}
+            style={{ color: '#7E22CE', borderColor: 'rgba(147, 51, 234, 0.25)', background: '#FAF5FF' }}
+          >
+            <span className="flex items-center gap-2 font-semibold">
+              <Shield size={16} /> Admin Portal
+            </span>
+          </button>
+
+          {/* Additional mobile quick links */}
+          <div style={{ borderTop: '1px solid #E2E8F0', margin: '0.6rem 0 0.4rem' }} />
+
+          <button
+            onClick={() => handleNavClick('wishlist', '/wishlist')}
+            className="km-mobile-nav-item"
+          >
+            <span className="flex items-center gap-2">
+              <Heart size={16} color={wishlist.length > 0 ? '#E11D48' : '#64748B'} /> Wishlist
+            </span>
+            {wishlist.length > 0 && (
+              <span className="badge badge-rose">{wishlist.length}</span>
+            )}
+          </button>
+
+          {role === 'b2c' && b2cUser ? (
+            <>
+              <button
+                onClick={() => handleNavClick('orders', '/orders')}
+                className="km-mobile-nav-item"
+              >
+                <span className="flex items-center gap-2">
+                  <Package size={16} /> My Orders
+                </span>
+              </button>
+              <button
+                onClick={() => {
+                  logout();
+                  setMobileMenuOpen(false);
+                }}
+                className="km-mobile-nav-item"
+                style={{ color: '#E11D48' }}
+              >
+                <span className="flex items-center gap-2 font-semibold">
+                  <LogOut size={16} /> Sign Out ({b2cUser.name})
+                </span>
+              </button>
+            </>
           ) : (
             <button
               onClick={() => {
@@ -873,8 +868,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setMobileMenuOpen(false);
               }}
               className="btn btn-primary"
+              style={{ marginTop: '0.5rem', justifyContent: 'center' }}
             >
-              Sign In / Register
+              <User size={16} /> Sign In / Register
             </button>
           )}
         </div>
