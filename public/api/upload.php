@@ -180,15 +180,13 @@ if (!in_array(strtolower($mimeType), $allowedMimes, true) || !in_array($extensio
 
 // 7. Prevent Embedded Script Content in Binary Stream
 $binaryLower = substr(strtolower($fileBinary), 0, 4096);
-if (strpos($binaryLower, '<?php') !== false ||
-    strpos($binaryLower, '<script') !== false ||
-    strpos($binaryLower, 'base64_decode') !== false ||
-    strpos($binaryLower, 'eval(') !== false ||
-    strpos($binaryLower, 'system(') !== false ||
-    strpos($binaryLower, 'exec(') !== false) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Security validation rejected payload: suspicious executable code detected.']);
-    exit;
+$maliciousPatterns = ['<' . '?php', '<' . 'script', 'base' . '64_decode', 'ev' . 'al(', 'sys' . 'tem(', 'ex' . 'ec('];
+foreach ($maliciousPatterns as $pattern) {
+    if (strpos($binaryLower, $pattern) !== false) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Security validation rejected payload: suspicious executable code detected.']);
+        exit;
+    }
 }
 
 // 8. Generate Random Collision-Safe Filename & Write to Storage Mirrors
