@@ -56,7 +56,7 @@ export interface AuthContextType {
     identifier: string,
     password: string
   ) => Promise<{ success: boolean; message: string; user?: AdminUser; isPending?: boolean }>;
-  loginWithGoogle: (portal: 'b2c' | 'b2b') => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: (portal: 'b2c' | 'b2b', preferRedirect?: boolean) => Promise<{ success: boolean; error?: string }>;
   sendFirebasePasswordReset: (email: string) => Promise<{ success: boolean; message: string }>;
 
   // Production Email OTP Verification System
@@ -167,6 +167,115 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Sync Super Admin in background with production databases
     adminDbService.ensureSuperAdminInDatabase().catch(() => {});
+
+    // Handle returning Google OAuth redirect results
+    firebaseAuthService.handleRedirectResult().then((res) => {
+      if (res && res.success && res.user) {
+        const portal = (localStorage.getItem('km_pending_google_portal') as 'b2c' | 'b2b') || 'b2c';
+        localStorage.removeItem('km_pending_google_portal');
+        const email = res.user.email || 'user@kognitiminds.com';
+        const name = res.user.displayName || email.split('@')[0];
+        const photoURL = res.user.photoURL || undefined;
+
+        if (portal === 'b2c') {
+          const users = storageService.getB2CUsers();
+          let user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+          if (!user) {
+            user = {
+              id: `usr_${Date.now()}`,
+              name,
+              email,
+              phone: res.user.phoneNumber || '+91 98765 00000',
+              firebaseUid: res.user.uid,
+              authProvider: 'firebase_google',
+              avatarUrl: photoURL,
+              createdAt: new Date().toISOString(),
+              addresses: [],
+            };
+          } else {
+            user.firebaseUid = res.user.uid;
+            user.authProvider = 'firebase_google';
+            if (photoURL) user.avatarUrl = photoURL;
+          }
+          storageService.saveB2CUser(user);
+          setB2cUser(user);
+          setB2bBusiness(null);
+          setCurrentAdminUser(null);
+          setIsAdmin(false);
+          setRole('b2c');
+          localStorage.setItem('km_active_role', 'b2c');
+          localStorage.setItem('km_active_entity_id', user.id);
+          localStorage.removeItem('km_active_admin_id');
+        } else {
+          const businesses = storageService.getB2BBusinesses();
+          let biz = businesses.find((b) => b.businessEmail.toLowerCase() === email.toLowerCase());
+          if (!biz) {
+            const domain = email.split('@')[1] || 'enterprise.com';
+            const companyGuess = domain.split('.')[0].toUpperCase() + ' Pvt Ltd';
+            biz = {
+              id: `biz_${Date.now()}`,
+              companyName: companyGuess,
+              contactPerson: name,
+              businessEmail: email,
+              mobile: res.user.phoneNumber || '+91 98000 00000',
+              gstin: '09AALCK4750F1ZC',
+              pan: 'AALCK4750F',
+              businessType: 'Corporate Office',
+              status: 'pending',
+              statusReason: 'Signed in via Google Workspace. Complete verification profile.',
+              creditLimit: 0,
+              paymentTerms: 'Prepaid',
+              registeredAt: new Date().toISOString(),
+              firebaseUid: res.user.uid,
+              authProvider: 'firebase_google',
+              avatarUrl: photoURL,
+              accountManager: {
+                name: 'Rohan Saxena',
+                email: 'rohan.saxena@kognitiminds.com',
+                phone: '+91 99100 88221',
+                designation: 'Institutional Onboarding Lead',
+              },
+              billingAddress: {
+                id: `baddr_${Date.now()}`,
+                fullName: companyGuess,
+                phone: '+91 98000 00000',
+                street: 'Commercial Zone',
+                city: 'Noida',
+                state: 'Uttar Pradesh',
+                pincode: '201306',
+                addressType: 'work',
+                isDefault: true,
+              },
+              shippingAddress: {
+                id: `saddr_${Date.now()}`,
+                fullName: companyGuess,
+                phone: '+91 98000 00000',
+                street: 'Commercial Zone',
+                city: 'Noida',
+                state: 'Uttar Pradesh',
+                pincode: '201306',
+                addressType: 'work',
+                isDefault: true,
+              },
+              documents: [],
+            };
+          } else {
+            biz.firebaseUid = res.user.uid;
+            biz.authProvider = 'firebase_google';
+            if (photoURL) biz.avatarUrl = photoURL;
+          }
+          storageService.saveB2BBusiness(biz);
+          setB2bBusiness(biz);
+          setB2cUser(null);
+          setCurrentAdminUser(null);
+          setIsAdmin(false);
+          setRole('b2b');
+          localStorage.setItem('km_active_role', 'b2b');
+          localStorage.setItem('km_active_entity_id', biz.id);
+          localStorage.removeItem('km_active_admin_id');
+        }
+      }
+    }).catch(() => {});
   }, []);
 
   const refreshUserData = () => {
@@ -757,12 +866,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginWithGoogle = async (
-    portal: 'b2c' | 'b2b'
+    portal: 'b2c' | 'b2b',
+    preferRedirect = false
   ): Promise<{ success: boolean; error?: string }> => {
-    const res = await firebaseAuthService.signInWithGoogle();
-    if (!res.success || !res.user) {
+    localStorage.setItem('km_pending_google_portal', portal);
+    const res = await firebaseAuthService.signInWithGoogle(preferRedirect);
+    if (!res.success) {
+      localStorage.removeItem('km_pending_google_portal');
       return { success: false, error: res.error || 'Google Sign-In failed.' };
     }
+    if (!res.user) {
+      return { success: true };
+    }
+    localStorage.removeItem('km_pending_google_portal');
 
     const email = res.user.email || 'user@kognitiminds.com';
     const name = res.user.displayName || email.split('@')[0];

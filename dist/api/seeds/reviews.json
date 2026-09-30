@@ -1,0 +1,96 @@
+[
+    {
+        "id": "rev_seed_004",
+        "productId": "km-notebook-spiral-a5",
+        "productName": "Kogniti EcoScribe A5 Wirebound Notebook",
+        "productImage": "\/images\/spiral-notebook.png",
+        "productSku": "KM-NB-SP-A5",
+        "orderNumber": "KM-B2C-62819",
+        "customerType": "b2c",
+        "customerName": "Ananya Kulkarni",
+        "companyName": "",
+        "rating": 5,
+        "title": "Best notebook for fountain pens and daily journaling",
+        "text": "The binding is sturdy, lays completely flat on desk, and the ink does not bleed or feather. The recycled textured cover looks elegant and minimalist. Will definitely purchase again.",
+        "media": [
+            {
+                "id": "med_seed_02",
+                "mediaType": "image",
+                "url": "https:\/\/images.unsplash.com\/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=80",
+                "fileName": "notebook_desk_view.jpg",
+                "mimeType": "image\/jpeg",
+                "fileSize": 289000
+            }
+        ],
+        "status": "approved",
+        "isVerifiedPurchase": true,
+        "createdAt": "2026-09-20T16:20:00.000Z",
+        "updatedAt": "2026-09-24T19:16:51+00:00"
+    },
+    {
+        "id": "rev_seed_003",
+        "productId": "km-agri-a4-80",
+        "productName": "Kogniti AgroPrint 80 GSM A4 Premium Copier Paper (500 Sheets)",
+        "productImage": "\/images\/copier-paper.png",
+        "productSku": "KM-PAP-AG80",
+        "orderNumber": "KM-B2B-90145",
+        "customerType": "b2b",
+        "customerName": "Vikram Malhotra",
+        "companyName": "Nova Edutech Group",
+        "rating": 5,
+        "title": "Superior 80 GSM Heavyweight Paper for Reports & Presentations",
+        "text": "The 80 GSM variant provides a substantial, luxurious hand-feel. Two-sided duplex printing has zero show-through. Prompt delivery and seamless GST input credit verification.",
+        "media": [],
+        "status": "approved",
+        "isVerifiedPurchase": true,
+        "createdAt": "2026-09-17T09:45:00.000Z",
+        "updatedAt": "2026-09-24T19:16:50+00:00"
+    },
+    {
+        "id": "rev_seed_002",
+        "productId": "km-agri-a4-75",
+        "productName": "Kogniti AgroPrint 75 GSM A4 Sustainable Copier Paper (500 Sheets)",
+        "productImage": "\/images\/copier-paper.png",
+        "productSku": "KM-PAP-AG75",
+        "orderNumber": "KM-B2C-51204",
+        "customerType": "b2c",
+        "customerName": "Pooja Verma",
+        "companyName": "",
+        "rating": 5,
+        "title": "Clean, bright sheets with zero paper dust",
+        "text": "Extremely impressed with the agricultural residue paper. It feels just like premium virgin wood paper but knowing it is 100% tree-free makes it even better. Fast dispatch and received in mint condition with a proper GST invoice.",
+        "media": [],
+        "status": "approved",
+        "isVerifiedPurchase": true,
+        "createdAt": "2026-09-19T14:15:00.000Z",
+        "updatedAt": "2026-09-24T19:16:50+00:00"
+    },
+    {
+        "id": "rev_seed_001",
+        "productId": "km-agri-a4-75",
+        "productName": "Kogniti AgroPrint 75 GSM A4 Sustainable Copier Paper (500 Sheets)",
+        "productImage": "\/images\/copier-paper.png",
+        "productSku": "KM-PAP-AG75",
+        "orderNumber": "KM-B2B-89421",
+        "customerType": "b2b",
+        "customerName": "Rahul Sharma",
+        "companyName": "Apex Global Solutions Pvt. Ltd.",
+        "rating": 5,
+        "title": "Outstanding Copier Paper Quality for High-Volume Printing",
+        "text": "We switched our entire Bangalore regional office to Kogniti AgroPrint 75 GSM paper three months ago. The paper runs flawlessly through our high-speed multi-function xerox copiers without single misfeed or paper jam. Excellent crispness, high opacity, and true eco-friendly credentials.",
+        "media": [
+            {
+                "id": "med_seed_01",
+                "mediaType": "image",
+                "url": "https:\/\/images.unsplash.com\/photo-1586075010923-2dd4570fb338?w=800&auto=format&fit=crop&q=80",
+                "fileName": "copier_paper_stack.jpg",
+                "mimeType": "image\/jpeg",
+                "fileSize": 342000
+            }
+        ],
+        "status": "approved",
+        "isVerifiedPurchase": true,
+        "createdAt": "2026-09-18T10:30:00.000Z",
+        "updatedAt": "2026-09-24T19:16:50+00:00"
+    }
+]

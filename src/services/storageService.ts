@@ -349,7 +349,14 @@ class StorageService {
           const serverData = await res.json();
           if (item.isArray && Array.isArray(serverData)) {
             // Server database is authoritative: replace local store without resurrecting deleted items
-            const finalData = item.collection === 'products' ? this.normalizeProducts(serverData) : serverData;
+            let finalData = item.collection === 'products' ? this.normalizeProducts(serverData) : serverData;
+            if (item.collection === 'products' && Array.isArray(finalData) && finalData.length < 13) {
+              const existingIds = new Set(finalData.map((p: any) => p.id));
+              const missingMocks = MOCK_PRODUCTS.filter((p: any) => !existingIds.has(p.id));
+              if (missingMocks.length > 0) {
+                finalData = [...finalData, ...missingMocks];
+              }
+            }
             this.setItem(item.key, finalData);
             dataSyncBus.emit(item.collection, finalData);
           } else if (!item.isArray) {

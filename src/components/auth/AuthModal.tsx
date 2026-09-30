@@ -1135,6 +1135,49 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialMode = 'login', onC
           <span>{loading ? 'Authenticating with Google...' : 'Continue with Google'}</span>
         </button>
 
+        {error && (error.includes('Google') || error.includes('Authorized Domains') || error.includes('kognitiminds.com') || error.includes('Email OTP')) && (
+          <div
+            style={{
+              marginTop: '0.85rem',
+              padding: '0.75rem 0.95rem',
+              background: '#F0FDF4',
+              border: '1px solid #BBF7D0',
+              borderRadius: '8px',
+              fontSize: '0.8rem',
+              color: '#166534',
+              lineHeight: '1.4',
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>
+              ⚡ Instant Alternative: Sign In via Email OTP
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#15803D', marginBottom: '0.5rem' }}>
+              No password needed! Enter your email in the box above and click <strong>"Send One-Time Passcode (OTP)"</strong> to sign in securely in seconds.
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setLoginMethod('email_otp');
+                const emailInput = document.getElementById('b2c-login-email');
+                if (emailInput) emailInput.focus();
+              }}
+              style={{
+                padding: '0.35rem 0.75rem',
+                background: '#16A34A',
+                color: '#FFFFFF',
+                borderRadius: '6px',
+                border: 'none',
+                fontWeight: 600,
+                fontSize: '0.78rem',
+                cursor: 'pointer',
+              }}
+            >
+              Switch to Email OTP Login
+            </button>
+          </div>
+        )}
+
         {/* Firebase Authentication Trust Badge */}
         <div
           style={{

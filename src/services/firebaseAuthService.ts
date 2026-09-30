@@ -2,6 +2,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   sendPasswordResetEmail,
   sendEmailVerification,
   signOut,
@@ -32,7 +34,7 @@ const mapFirebaseError = (error: any): string => {
     case 'auth/user-disabled':
       return 'This account has been disabled. Please contact support.';
     case 'auth/user-not-found':
-      return 'No registered account found with this email address. Please register first.';
+      return 'No registered account found with this email address. Please register first or sign in via Email OTP.';
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
       return 'Invalid email or password. Please verify your credentials or sign in via Email OTP.';
@@ -44,14 +46,20 @@ const mapFirebaseError = (error: any): string => {
       return 'Google sign-in popup was closed before completion.';
     case 'auth/cancelled-popup-request':
       return 'Another sign-in window is already active.';
+    case 'auth/popup-blocked':
+      return 'The sign-in popup was blocked by your browser. Please allow popups for this site or sign in using Instant Email OTP.';
+    case 'auth/unauthorized-domain':
+      return 'Domain authorization required: Please add "www.kognitiminds.com" to Firebase Console -> Authentication -> Settings -> Authorized domains. You can also sign in instantly using Email OTP.';
+    case 'auth/internal-error':
+      return 'Google Sign-In configuration notice: "www.kognitiminds.com" must be added to Authorized Domains in Firebase Console (Settings > Authorized domains) and Google provider enabled. In the meantime, you can sign in instantly with Email OTP or Password.';
     case 'auth/operation-not-allowed':
-      return 'This sign-in provider is not enabled in the Firebase Console. Please enable Email/Password or Google in Firebase Console.';
+      return 'Google Sign-In is not enabled in the Firebase Console. Please enable Google in Firebase Console -> Authentication -> Sign-in method, or sign in using Email OTP / Password.';
     case 'auth/too-many-requests':
       return 'Access to this account has been temporarily disabled due to many failed attempts. Please try again later or reset your password.';
     case 'auth/network-request-failed':
       return 'Network error communicating with Firebase. Please check your internet connection.';
     default:
-      return error?.message || 'Authentication encountered an error. Please try again.';
+      return error?.message || 'Authentication encountered an error. Please try again or use Email OTP.';
   }
 };
 
@@ -143,9 +151,35 @@ export const firebaseAuthService = {
   },
 
   /**
-   * Sign in or Register using Google Popup
+   * Check if returning from a Google redirect authentication
    */
-  async signInWithGoogle(): Promise<FirebaseAuthResult> {
+  async handleRedirectResult(): Promise<FirebaseAuthResult | null> {
+    const isLive = isFirebaseConfigured();
+    if (!isLive || typeof window === 'undefined') return null;
+    try {
+      const result = await getRedirectResult(auth);
+      if (result && result.user) {
+        return {
+          success: true,
+          user: result.user,
+          isLive: true,
+        };
+      }
+      return null;
+    } catch (err: any) {
+      console.warn('[FirebaseAuth] getRedirectResult notice:', err?.code, err?.message);
+      return {
+        success: false,
+        error: mapFirebaseError(err),
+        isLive: true,
+      };
+    }
+  },
+
+  /**
+   * Sign in or Register using Google Popup (with automatic Redirect fallback for mobile/blocked popups)
+   */
+  async signInWithGoogle(preferRedirect = false): Promise<FirebaseAuthResult> {
     const isLive = isFirebaseConfigured();
     if (!isLive) {
       return {
@@ -153,6 +187,19 @@ export const firebaseAuthService = {
         error: 'Firebase Authentication is not configured. Please supply your live VITE_FIREBASE_API_KEY in .env.',
         isLive: false,
       };
+    }
+
+    if (preferRedirect) {
+      try {
+        await signInWithRedirect(auth, googleProvider);
+        return { success: true, isLive: true };
+      } catch (err: any) {
+        return {
+          success: false,
+          error: mapFirebaseError(err),
+          isLive: true,
+        };
+      }
     }
 
     try {
@@ -163,6 +210,20 @@ export const firebaseAuthService = {
         isLive: true,
       };
     } catch (err: any) {
+      console.warn('[FirebaseAuth] Google signInWithPopup notice:', err?.code, err?.message);
+      const isMobile = typeof window !== 'undefined' && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile && (err?.code === 'auth/popup-blocked' || err?.code === 'auth/cancelled-popup-request')) {
+        try {
+          await signInWithRedirect(auth, googleProvider);
+          return { success: true, isLive: true };
+        } catch (redirectErr: any) {
+          return {
+            success: false,
+            error: mapFirebaseError(redirectErr),
+            isLive: true,
+          };
+        }
+      }
       return {
         success: false,
         error: mapFirebaseError(err),

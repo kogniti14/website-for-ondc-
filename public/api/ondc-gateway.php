@@ -410,8 +410,20 @@ function getAuthoritativeProductsCatalog($storageDir) {
         $content = @file_get_contents($productsFile);
         if ($content) {
             $prods = json_decode($content, true);
-            if (is_array($prods) && count($prods) > 0) {
+            if (is_array($prods) && count($prods) >= 10) {
                 return $prods;
+            }
+        }
+    }
+    // Check seed file
+    $seedFile = __DIR__ . '/seeds/products.json';
+    if (file_exists($seedFile)) {
+        $seedContent = @file_get_contents($seedFile);
+        if ($seedContent) {
+            $seedProds = json_decode($seedContent, true);
+            if (is_array($seedProds) && count($seedProds) > 0) {
+                @file_put_contents($productsFile, json_encode($seedProds, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
+                return $seedProds;
             }
         }
     }

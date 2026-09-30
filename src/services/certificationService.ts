@@ -449,6 +449,13 @@ class CertificationService {
             }
           }
 
+          // Ensure all official company certifications are retained if server returned a partial list
+          for (const initCert of INITIAL_CERTIFICATIONS) {
+            if (!cleanedCerts.some(c => c.id === initCert.id || c.certificateNumber === initCert.certificateNumber || c.slug === initCert.slug)) {
+              cleanedCerts.push(initCert);
+            }
+          }
+
           if (cleanedCerts.length > 0) {
             cleanedCerts.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
             this.saveLocalCertificates(cleanedCerts);

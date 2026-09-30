@@ -1,0 +1,22 @@
+[
+    {
+        "id": "cat_1789978231868",
+        "name": "Startup India – DPIIT Recognition",
+        "slug": "https:\/\/www.startupindia.gov.in\/",
+        "description": "Official recognition of KOGNITI MINDS PRIVATE LIMITED as a Startup under the Startup India initiative by the Department for Promotion of Industry and Internal Trade (DPIIT), Ministry of Commerce and Industry, Government of India.",
+        "displayOrder": 1,
+        "isActive": true,
+        "createdAt": "2026-09-21T08:10:31.868Z",
+        "updatedAt": "2026-09-21T08:10:31+00:00"
+    },
+    {
+        "id": "cat_1789977660753",
+        "name": "State Startup Recognition – Uttar Pradesh",
+        "slug": "https:\/\/startupmission.up.gov.in\/en",
+        "description": "Official startup recognition and registration under the Startup ecosystem of the Government of Uttar Pradesh, covering startup recognition issued by the Department of IT & Electronics, Government of Uttar Pradesh, through its designated nodal agency Uttar Pradesh Electronics Corporation Ltd. (UPLC).",
+        "displayOrder": 2,
+        "isActive": true,
+        "createdAt": "2026-09-21T08:01:00.753Z",
+        "updatedAt": "2026-09-21T08:01:01+00:00"
+    }
+]

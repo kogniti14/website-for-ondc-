@@ -133,6 +133,71 @@ function writeStore($filePath, $data, $isObject = false) {
 if ($method === 'GET') {
     $data = readStore($filePath, $isObjectCollection);
 
+    // Automatic self-healing seed loader for production hosting
+    $seedFilePath = __DIR__ . '/seeds/' . $collection . '.json';
+    if (file_exists($seedFilePath)) {
+        $seedRaw = @file_get_contents($seedFilePath);
+        $seedData = json_decode($seedRaw, true);
+        if (is_array($seedData) && !empty($seedData)) {
+            if ($isObjectCollection) {
+                if (empty($data)) {
+                    $data = $seedData;
+                    writeStore($filePath, $data, true);
+                }
+            } else {
+                if (empty($data)) {
+                    $data = $seedData;
+                    writeStore($filePath, $data, false);
+                } else if ($collection === 'products' && count($data) < 13) {
+                    $existingIds = array_column($data, 'id');
+                    $merged = $data;
+                    $changed = false;
+                    foreach ($seedData as $seedItem) {
+                        if (!in_array($seedItem['id'], $existingIds)) {
+                            $merged[] = $seedItem;
+                            $changed = true;
+                        }
+                    }
+                    if ($changed) {
+                        $data = $merged;
+                        writeStore($filePath, $data, false);
+                    }
+                } else if ($collection === 'certifications' && count($data) < count($seedData)) {
+                    $existingIds = array_column($data, 'id');
+                    $existingSlugs = array_column($data, 'slug');
+                    $merged = $data;
+                    $changed = false;
+                    foreach ($seedData as $seedItem) {
+                        $hasId = isset($seedItem['id']) && in_array($seedItem['id'], $existingIds);
+                        $hasSlug = isset($seedItem['slug']) && in_array($seedItem['slug'], $existingSlugs);
+                        if (!$hasId && !$hasSlug) {
+                            $merged[] = $seedItem;
+                            $changed = true;
+                        }
+                    }
+                    if ($changed) {
+                        $data = $merged;
+                        writeStore($filePath, $data, false);
+                    }
+                } else if (in_array($collection, ['categories', 'certification_categories', 'testimonials']) && count($data) < count($seedData)) {
+                    $existingIds = array_column($data, 'id');
+                    $merged = $data;
+                    $changed = false;
+                    foreach ($seedData as $seedItem) {
+                        if (!in_array($seedItem['id'], $existingIds)) {
+                            $merged[] = $seedItem;
+                            $changed = true;
+                        }
+                    }
+                    if ($changed) {
+                        $data = $merged;
+                        writeStore($filePath, $data, false);
+                    }
+                }
+            }
+        }
+    }
+
     if ($isObjectCollection) {
         $out = (!empty($data) && is_array($data)) ? (object)$data : new stdClass();
         echo json_encode($out, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);

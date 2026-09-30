@@ -1056,6 +1056,47 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess, 
               </svg>
               <span>Sign in with Google Workspace</span>
             </button>
+
+            {error && (error.includes('Google') || error.includes('Authorized Domains') || error.includes('kognitiminds.com') || error.includes('Email OTP')) && (
+              <div
+                style={{
+                  marginTop: '0.85rem',
+                  padding: '0.75rem 0.95rem',
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  border: '1px solid rgba(245, 158, 11, 0.35)',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
+                  color: '#FDE68A',
+                  lineHeight: '1.4',
+                }}
+              >
+                <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>
+                  ⚡ Instant Alternative: Sign In via Business Email OTP
+                </div>
+                <div style={{ fontSize: '0.76rem', color: '#FCD34D', marginBottom: '0.5rem' }}>
+                  Enter your official work email above and click <strong>"Send One-Time Passcode (OTP)"</strong> to verify and enter the B2B portal directly.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setLoginMethod('email_otp');
+                  }}
+                  style={{
+                    padding: '0.35rem 0.75rem',
+                    background: '#F59E0B',
+                    color: '#000000',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Switch to Business Email OTP
+                </button>
+              </div>
+            )}
           </div>
         ) : tab === 'forgot' ? (
           /* Forgot Password via Email OTP Form for B2B */
