@@ -344,9 +344,63 @@ export const Footer: React.FC<FooterProps> = ({
               <span>From Farm Waste to Future-Ready Paper.</span>
             </div>
 
-            <p style={{ fontSize: '0.84rem', lineHeight: '1.6', marginBottom: '1.25rem', color: '#CBD5E1' }}>
+            <p style={{ fontSize: '0.84rem', lineHeight: '1.6', marginBottom: '1rem', color: '#CBD5E1' }}>
               Kogniti Minds Private Limited is an Indian sustainable paper manufacturing enterprise pioneering the conversion of agricultural waste (crop residue) into premium, 100% tree-free paper products for individuals, businesses, and institutions across India.
             </p>
+
+            {/* Official Business & Government Ecosystem Badges */}
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
+                marginBottom: '1.25rem',
+              }}
+              aria-label="Government and Business Ecosystem Recognition"
+            >
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  padding: '0.3rem 0.6rem',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  fontSize: '0.74rem',
+                  color: '#FFFFFF',
+                  fontWeight: 600,
+                }}
+              >
+                <img
+                  src="/make-in-india-logo.png"
+                  alt="Make in India"
+                  style={{ height: '14px', width: 'auto', display: 'block' }}
+                />
+                <span>Make in India</span>
+              </div>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  padding: '0.3rem 0.6rem',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  fontSize: '0.74rem',
+                  color: '#FFFFFF',
+                  fontWeight: 600,
+                }}
+              >
+                <img
+                  src="/msme-udyam-logo.png"
+                  alt="MSME / Udyam"
+                  style={{ height: '14px', width: 'auto', display: 'block' }}
+                />
+                <span>MSME / Udyam</span>
+              </div>
+            </div>
 
             {/* Official Social Media & Helpline Links */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.8rem' }}>
@@ -812,6 +866,8 @@ export const Footer: React.FC<FooterProps> = ({
             <span>PAN: <code style={{ color: '#FDE047', fontWeight: 600 }}>{companyMaster.pan}</code></span>
             <span style={{ color: '#475569' }}>•</span>
             <span>GSTIN: <code style={{ color: '#86EFAC', fontWeight: 600 }}>{companyMaster.gstin}</code> ({companyMaster.gst_state})</span>
+            <span style={{ color: '#475569' }}>•</span>
+            <span>MSME / Udyam: <code style={{ color: '#38BDF8', fontWeight: 600 }}>Registered MSE</code></span>
           </div>
           <div style={{ color: '#94A3B8', fontSize: '0.74rem' }}>
             Registered Office: {companyMaster.address_line_1}, {companyMaster.address_line_2}, {companyMaster.city}, {companyMaster.state}, {companyMaster.country} - {companyMaster.pincode}
@@ -843,7 +899,11 @@ export const Footer: React.FC<FooterProps> = ({
             </span>
             <span>•</span>
             <span className="flex items-center gap-1">
-              <FileText size={12} className="text-cyan-400" /> GST Invoices & 18% ITC
+              <Award size={12} className="text-amber-400" /> Make in India &amp; MSME
+            </span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <FileText size={12} className="text-cyan-400" /> GST Invoices &amp; 18% ITC
             </span>
             <span>•</span>
             <span className="flex items-center gap-1">

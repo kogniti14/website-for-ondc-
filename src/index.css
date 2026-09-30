@@ -1448,6 +1448,12 @@ input, select, textarea {
   border: 1px solid rgba(29, 78, 216, 0.2);
 }
 
+.km-partner-badge-gov {
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid rgba(5, 150, 105, 0.3);
+}
+
 .km-partner-logo-box {
   height: 56px;
   width: 100%;

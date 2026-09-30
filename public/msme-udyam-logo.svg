@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 110" width="380" height="110" fill="none">
+  <!-- Tri-color accent bar -->
+  <rect x="15" y="14" width="4" height="24" rx="2" fill="#FF9933" />
+  <rect x="15" y="42" width="4" height="24" rx="2" fill="#0A3871" />
+  <rect x="15" y="70" width="4" height="24" rx="2" fill="#138808" />
+
+  <!-- MSME Circular Emblem / Gears Motif -->
+  <g transform="translate(30, 15)">
+    <!-- Outer Gear Wheel -->
+    <circle cx="40" cy="40" r="36" fill="#F0F7FF" stroke="#003366" stroke-width="2.5" />
+    
+    <!-- Cog notches around outer rim -->
+    <path d="M40 0 L40 6 M68 12 L64 16 M80 40 L74 40 M68 68 L64 64 M40 80 L40 74 M12 68 L16 64 M0 40 L6 40 M12 12 L16 16" stroke="#003366" stroke-width="4" stroke-linecap="round" />
+    
+    <!-- Tricolor Ring Sector -->
+    <circle cx="40" cy="40" r="28" fill="none" stroke="#FF9933" stroke-width="3" stroke-dasharray="44 100" />
+    <circle cx="40" cy="40" r="28" fill="none" stroke="#138808" stroke-width="3" stroke-dasharray="44 100" stroke-dashoffset="-88" />
+    <circle cx="40" cy="40" r="28" fill="none" stroke="#003366" stroke-width="3" stroke-dasharray="44 100" stroke-dashoffset="-44" />
+    
+    <!-- Inner Core & Ashoka / Industry Spark -->
+    <circle cx="40" cy="40" r="16" fill="#003366" />
+    <!-- 8-Spoke White Center -->
+    <circle cx="40" cy="40" r="12" fill="#FFFFFF" />
+    <circle cx="40" cy="40" r="4" fill="#003366" />
+    <path d="M40 28 L40 52 M28 40 L52 40 M31.5 31.5 L48.5 48.5 M31.5 48.5 L48.5 31.5" stroke="#003366" stroke-width="1.2" />
+  </g>
+
+  <!-- Typography: Ministry Header -->
+  <text x="125" y="27" font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="700" fill="#0A3871" letter-spacing="0.5">
+    सूक्ष्म, लघु एवं मध्यम उद्यम मंत्रालय
+  </text>
+  <text x="125" y="39" font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="8.5" font-weight="600" fill="#475569" letter-spacing="0.2">
+    MINISTRY OF MICRO, SMALL &amp; MEDIUM ENTERPRISES
+  </text>
+
+  <!-- Main Primary Brand: MSME / UDYAM -->
+  <g transform="translate(125, 46)">
+    <text x="0" y="26" font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="28" font-weight="900" fill="#003366" letter-spacing="-0.5">
+      MSME
+    </text>
+    <rect x="86" y="8" width="2" height="20" fill="#CBD5E1" rx="1" />
+    <text x="96" y="26" font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="23" font-weight="800" fill="#0284C7" letter-spacing="0.2">
+      UDYAM
+    </text>
+  </g>
+
+  <!-- Government of India Tagline Badge -->
+  <rect x="125" y="79" width="168" height="18" rx="4" fill="#F0FDF4" stroke="#86EFAC" stroke-width="1" />
+  <circle cx="134" cy="88" r="3" fill="#16A34A" />
+  <text x="142" y="91.5" font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="8.5" font-weight="700" fill="#15803D" letter-spacing="0.4">
+    GOVERNMENT OF INDIA REGISTRATION
+  </text>
+</svg>

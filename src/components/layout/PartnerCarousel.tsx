@@ -4,7 +4,7 @@ import { ExternalLink, ShieldCheck, Sparkles, Building2 } from 'lucide-react';
 interface PartnerItem {
   id: string;
   name: string;
-  category: 'AVAILABLE ON OFFICIAL PLATFORMS' | 'INCUBATION PARTNER' | 'STARTUP ECOSYSTEM';
+  category: 'AVAILABLE ON OFFICIAL PLATFORMS' | 'INCUBATION PARTNER' | 'STARTUP ECOSYSTEM' | 'BUSINESS & GOVERNMENT ECOSYSTEM';
   categoryBadgeClass: string;
   logoSrc: string;
   altText: string;
@@ -33,6 +33,26 @@ const OFFICIAL_PARTNERS: PartnerItem[] = [
     altText: 'ONDC - Open Network for Digital Commerce Official Protocol',
     description: 'Open Network for Digital Commerce (Node: kogniti-minds-bpp)',
     verifiedUrl: 'https://ondc.org/',
+  },
+  {
+    id: 'msme-udyam',
+    name: 'MSME / Udyam',
+    category: 'BUSINESS & GOVERNMENT ECOSYSTEM',
+    categoryBadgeClass: 'km-partner-badge-gov',
+    logoSrc: '/msme-udyam-logo.png',
+    altText: 'MSME / Udyam - Ministry of Micro, Small and Medium Enterprises, Govt. of India',
+    description: 'Ministry of MSME & Udyam Registration (Govt. of India)',
+    verifiedUrl: 'https://udyamregistration.gov.in/',
+  },
+  {
+    id: 'make-in-india',
+    name: 'Make in India',
+    category: 'BUSINESS & GOVERNMENT ECOSYSTEM',
+    categoryBadgeClass: 'km-partner-badge-gov',
+    logoSrc: '/make-in-india-logo.png',
+    altText: 'Make in India - National Initiative by DPIIT, Govt. of India',
+    description: 'Promoting 100% Indigenous Sustainable Paper Manufacturing',
+    verifiedUrl: 'https://www.makeinindia.com/',
   },
   {
     id: 'gic-rise',
@@ -76,10 +96,10 @@ export const PartnerCarousel: React.FC = () => {
         {/* Section Header */}
         <div className="km-partner-header">
           <h2 id="km-partner-section-title" className="km-partner-title">
-            OUR OFFICIAL PLATFORMS & ECOSYSTEM PARTNERS
+            OUR OFFICIAL PLATFORMS, BUSINESS &amp; GOVERNMENT ECOSYSTEM
           </h2>
           <p className="km-partner-subtitle">
-            Connected with recognised business platforms, startup initiatives and our incubation ecosystem.
+            Connected with recognised national initiatives, Make in India, MSME / Udyam, public procurement platforms, and our incubation ecosystem.
           </p>
           <div className="km-partner-divider" aria-hidden="true" />
         </div>
