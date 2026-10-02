@@ -1455,7 +1455,7 @@ input, select, textarea {
 }
 
 .km-partner-logo-box {
-  height: 56px;
+  height: 64px;
   width: 100%;
   display: flex;
   align-items: center;
@@ -1465,8 +1465,8 @@ input, select, textarea {
 }
 
 .km-partner-logo-img {
-  max-height: 48px;
-  max-width: 150px;
+  max-height: 52px;
+  max-width: 165px;
   width: auto;
   height: auto;
   object-fit: contain;

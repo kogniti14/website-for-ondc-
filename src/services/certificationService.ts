@@ -63,9 +63,9 @@ Key Highlights:
     expiryDate: null,
     noExpiry: true,
     verificationUrl: 'https://udyamregistration.gov.in/Udyam_Verify.aspx',
-    fileUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80',
-    fileType: 'application/pdf',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80',
+    fileUrl: '/msme-udyam-logo.png',
+    fileType: 'image/png',
+    thumbnailUrl: '/msme-udyam-logo.png',
     visibility: 'both',
     status: 'published',
     featured: true,
@@ -308,6 +308,39 @@ Membership Rights & Standing:
     updatedAt: '2026-09-07T10:00:00Z',
     createdBy: 'adm_super_01',
     publishedAt: '2026-09-07T10:00:00Z',
+  },
+  {
+    id: 'cert_make_in_india_09',
+    name: 'Make in India & Atmanirbhar Bharat National Recognition',
+    slug: 'make-in-india-atmanirbhar-bharat-recognition',
+    shortDescription: 'National recognition under Make in India and Atmanirbhar Bharat initiatives for 100% indigenous circular sustainable paper manufacturing.',
+    fullDescription: `The Department for Promotion of Industry and Internal Trade (DPIIT), Ministry of Commerce and Industry, Government of India, honors Kogniti Minds Private Limited for advancing the 'Make in India' and 'Atmanirbhar Bharat' (Self-Reliant India) missions.
+
+Operational Highlights:
+• 100% indigenous procurement of agricultural residues (bagasse, straw, stubbles) from Indian farmers.
+• Complete elimination of imported virgin wood pulp and forest degradation.
+• Contributing to national self-reliance in eco-friendly copier paper and commercial packaging.`,
+    category: 'Startup Certification',
+    issuingAuthority: 'Department for Promotion of Industry and Internal Trade (DPIIT), Govt. of India',
+    certificateNumber: 'MII-AB-2025-IND',
+    issueDate: '2024-01-26',
+    expiryDate: null,
+    noExpiry: true,
+    verificationUrl: 'https://www.makeinindia.com/',
+    fileUrl: '/make-in-india-logo.png',
+    fileType: 'image/png',
+    thumbnailUrl: '/make-in-india-logo.png',
+    visibility: 'both',
+    status: 'published',
+    featured: true,
+    allowDownload: true,
+    displayOrder: 9,
+    metaTitle: 'Make in India Recognition | Kogniti Minds Private Limited',
+    metaDescription: 'Official Make in India & Atmanirbhar Bharat recognition for Kogniti Minds sustainable paper manufacturing.',
+    createdAt: '2026-09-05T10:00:00Z',
+    updatedAt: '2026-09-05T10:00:00Z',
+    createdBy: 'adm_super_01',
+    publishedAt: '2026-09-05T10:00:00Z',
   },
 ];
 
