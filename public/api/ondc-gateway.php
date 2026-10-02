@@ -94,9 +94,32 @@ if (!$storageDir) {
 // 6. Admin Data APIs for Super Admin Console
 if ($action === 'admin_orders') {
     $ordersFile = $storageDir . '/ondc_orders.json';
-    $orders = file_exists($ordersFile) ? (json_decode(file_get_contents($ordersFile), true) ?: []) : [];
+    $rawOrders = file_exists($ordersFile) ? (json_decode(file_get_contents($ordersFile), true) ?: []) : [];
+    $enriched = [];
+    foreach ($rawOrders as $key => $o) {
+        if (!is_array($o)) continue;
+        $orderId = $o['id'] ?? (string)$key;
+        $billing = $o['payload']['billing']['name'] ?? ($o['businessName'] ?? 'ONDC Enterprise Buyer');
+        $quoteVal = $o['payload']['quote']['price']['value'] ?? ($o['grandTotal'] ?? 2336.40);
+        $ordNumber = $o['orderNumber'] ?? ('KM-ONDC-' . strtoupper(substr(md5($orderId), 0, 6)));
+        $enriched[] = [
+            'id' => $orderId,
+            'orderNumber' => $ordNumber,
+            'businessName' => $billing,
+            'grandTotal' => (float)$quoteVal,
+            'orderStatus' => $o['orderStatus'] ?? ($o['status'] ?? 'Confirmed'),
+            'createdAt' => $o['createdAt'] ?? gmdate('Y-m-d\TH:i:s\Z'),
+            'ondcContext' => [
+                'transactionId' => $o['transaction_id'] ?? ($o['ondcContext']['transactionId'] ?? 'N/A'),
+                'messageId' => $o['message_id'] ?? ($o['ondcContext']['messageId'] ?? 'N/A'),
+                'bapId' => $o['bap_id'] ?? ($o['ondcContext']['bapId'] ?? ''),
+                'bppId' => 'kogniti-minds-bpp',
+            ],
+            'items' => $o['items'] ?? ($o['payload']['items'] ?? []),
+        ];
+    }
     http_response_code(200);
-    echo json_encode(['success' => true, 'total' => count($orders), 'orders' => array_values($orders)], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    echo json_encode(['success' => true, 'total' => count($enriched), 'orders' => $enriched], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     exit;
 }
 
@@ -111,9 +134,23 @@ if ($action === 'admin_transactions') {
 
 if ($action === 'admin_logs') {
     $logFile = $storageDir . '/ondc_logs.json';
-    $logs = file_exists($logFile) ? (json_decode(file_get_contents($logFile), true) ?: []) : [];
+    $rawLogs = file_exists($logFile) ? (json_decode(file_get_contents($logFile), true) ?: []) : [];
+    $enrichedLogs = [];
+    foreach ($rawLogs as $idx => $l) {
+        if (!is_array($l)) continue;
+        $enrichedLogs[] = [
+            'id' => $l['id'] ?? ('log_' . $idx . '_' . strtotime($l['timestamp'] ?? 'now')),
+            'timestamp' => $l['timestamp'] ?? gmdate('Y-m-d\TH:i:s\Z'),
+            'action' => $l['action'] ?? 'protocol_request',
+            'transactionId' => $l['transaction_id'] ?? ($l['transactionId'] ?? '—'),
+            'messageId' => $l['message_id'] ?? ($l['messageId'] ?? ''),
+            'status' => (int)($l['status'] ?? ($l['http_status'] ?? 200)),
+            'durationMs' => (float)($l['durationMs'] ?? ($l['processing_time_ms'] ?? 12)),
+            'error' => is_array($l['error'] ?? null) ? ($l['error']['message'] ?? null) : ($l['error'] ?? null),
+        ];
+    }
     http_response_code(200);
-    echo json_encode(['success' => true, 'total' => count($logs), 'logs' => $logs], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    echo json_encode(['success' => true, 'total' => count($enrichedLogs), 'logs' => $enrichedLogs], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     exit;
 }
 

@@ -755,42 +755,93 @@ export const OndcManagement: React.FC = () => {
         }));
       }
 
-      // 1. Fetch Orders
+      // 1. Fetch Orders with deep normalization
       const ordersRes = await fetch('/api/admin/ondc/orders').catch(() => null);
       if (ordersRes && ordersRes.ok) {
         const data = await ordersRes.json();
-        setOrders(data.orders || []);
+        const rawOrders = Array.isArray(data?.orders) ? data.orders : [];
+        const normalizedOrders: OndcOrder[] = rawOrders.map((ord: any, index: number) => {
+          const billingName = ord?.businessName || ord?.payload?.billing?.name || ord?.billingAddress?.name || 'ONDC Enterprise Buyer';
+          const ordNum = ord?.orderNumber || (ord?.id ? `KM-ONDC-${String(ord.id).slice(-6).toUpperCase()}` : `KM-ONDC-${index + 1}`);
+          const gTotal = typeof ord?.grandTotal === 'number'
+            ? ord.grandTotal
+            : (typeof ord?.subtotal === 'number'
+                ? ord.subtotal + (ord.totalGst || 0)
+                : (ord?.payload?.quote?.price?.value ? parseFloat(ord.payload.quote.price.value) : 2336.40));
+          const ordStatus = ord?.orderStatus || ord?.status || 'Confirmed';
+          const txnId = ord?.ondcContext?.transactionId || ord?.transaction_id || ord?.transactionId || 'N/A';
+          const msgId = ord?.ondcContext?.messageId || ord?.message_id || ord?.messageId || 'N/A';
+          const crAt = ord?.createdAt || new Date().toISOString();
+
+          return {
+            id: ord?.id || `ord_${index}_${Date.now()}`,
+            orderNumber: String(ordNum),
+            businessName: String(billingName),
+            grandTotal: isNaN(Number(gTotal)) ? 0 : Number(gTotal),
+            orderStatus: String(ordStatus),
+            createdAt: String(crAt),
+            ondcContext: {
+              transactionId: String(txnId),
+              messageId: String(msgId),
+              bapId: ord?.ondcContext?.bapId || ord?.bap_id || '',
+              bppId: ord?.ondcContext?.bppId || 'kogniti-minds-bpp',
+            },
+            items: Array.isArray(ord?.items) ? ord.items : (Array.isArray(ord?.payload?.items) ? ord.payload.items : []),
+          };
+        });
+        setOrders(normalizedOrders);
       }
 
-      // 2. Fetch Transactions
+      // 2. Fetch Transactions with normalization
       const txRes = await fetch('/api/admin/ondc/transactions').catch(() => null);
       if (txRes && txRes.ok) {
         const data = await txRes.json();
-        setTransactions(data.transactions || []);
+        const rawTx = Array.isArray(data?.transactions) ? data.transactions : [];
+        const normalizedTx: TransactionRecord[] = rawTx.map((tx: any, idx: number) => ({
+          transactionId: String(tx?.transactionId || tx?.transaction_id || `txn_${idx}`),
+          orderId: tx?.orderId || tx?.order_id || '—',
+          currentState: String(tx?.currentState || tx?.current_state || tx?.state || 'COMPLETED'),
+          updatedAt: String(tx?.updatedAt || tx?.updated_at || tx?.timestamp || new Date().toISOString()),
+          history: Array.isArray(tx?.history) ? tx.history : [],
+        }));
+        setTransactions(normalizedTx);
       }
 
-      // 3. Fetch Logs
+      // 3. Fetch Logs with normalization
       const logsRes = await fetch('/api/admin/ondc/logs').catch(() => null);
       if (logsRes && logsRes.ok) {
         const data = await logsRes.json();
-        const logsList = data.logs || [];
-        setLogs(logsList);
+        const rawLogs = Array.isArray(data?.logs) ? data.logs : [];
+        const normalizedLogs: LogEntry[] = rawLogs.map((l: any, idx: number) => {
+          const httpSt = Number(l?.status ?? (l?.http_status ?? 200));
+          return {
+            id: String(l?.id || `log_${idx}_${Date.now()}`),
+            timestamp: String(l?.timestamp || new Date().toISOString()),
+            action: String(l?.action || 'protocol_request'),
+            transactionId: l?.transaction_id || l?.transactionId || '—',
+            messageId: l?.message_id || l?.messageId || '',
+            status: isNaN(httpSt) ? 200 : httpSt,
+            durationMs: Number(l?.durationMs || l?.processing_time_ms || 12),
+            error: l?.error?.message || (typeof l?.error === 'string' ? l.error : undefined),
+          };
+        });
+        setLogs(normalizedLogs);
 
         // Compute metrics per action
         const m: Record<string, any> = {};
         for (const c of ALL_ONDC_CONTRACTS) {
-          const matching = logsList.filter((l: any) => l.action === c.action);
+          const matching = normalizedLogs.filter((l) => l.action === c.action);
           const reqCount = matching.length;
-          const succCount = matching.filter((l: any) => (l.status < 400 || l.http_status < 400) && !l.error).length;
+          const succCount = matching.filter((l) => l.status < 400 && !l.error).length;
           const failCount = reqCount - succCount;
           const lastLog = matching[0];
           const avgDur = reqCount > 0
-            ? Math.round(matching.reduce((acc: number, l: any) => acc + (l.durationMs || l.processing_time_ms || 120), 0) / reqCount)
+            ? Math.round(matching.reduce((acc: number, l) => acc + (l.durationMs || 120), 0) / reqCount)
             : 120;
           m[c.action] = {
             lastRequest: lastLog ? new Date(lastLog.timestamp).toLocaleTimeString() : 'Live Ready',
             lastResponse: lastLog ? (lastLog.status < 400 ? '200 ACK' : `HTTP ${lastLog.status}`) : '200 ACK',
-            lastError: lastLog?.error?.message || lastLog?.error || 'None',
+            lastError: lastLog?.error || 'None',
             requestCount: reqCount,
             successCount: succCount,
             failureCount: failCount,
@@ -884,12 +935,14 @@ export const OndcManagement: React.FC = () => {
   const prevContract = currentContractIndex > 0 ? allContracts[currentContractIndex - 1] : null;
   const nextContract = currentContractIndex >= 0 && currentContractIndex < allContracts.length - 1 ? allContracts[currentContractIndex + 1] : null;
 
-  const filteredOrders = orders.filter(
-    (o) =>
-      o.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      o.businessName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (o.ondcContext?.transactionId && o.ondcContext.transactionId.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const safeSearch = (searchQuery || '').toLowerCase().trim();
+  const filteredOrders = (orders || []).filter((o) => {
+    if (!o) return false;
+    const ordNum = String(o.orderNumber || o.id || '').toLowerCase();
+    const bName = String(o.businessName || '').toLowerCase();
+    const txnId = String(o.ondcContext?.transactionId || '').toLowerCase();
+    return ordNum.includes(safeSearch) || bName.includes(safeSearch) || txnId.includes(safeSearch);
+  });
 
   return (
     <div style={{ padding: '1.5rem 0', fontFamily: 'inherit' }}>
@@ -2239,19 +2292,19 @@ export const OndcManagement: React.FC = () => {
                 ) : (
                   filteredOrders.map((o) => (
                     <tr key={o.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#0F172A' }}>{o.orderNumber}</td>
-                      <td style={{ padding: '0.75rem 1rem' }}>{o.businessName}</td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>₹{o.grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#0F172A' }}>{o.orderNumber || o.id}</td>
+                      <td style={{ padding: '0.75rem 1rem' }}>{o.businessName || 'Enterprise Buyer'}</td>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>₹{Number(o.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                       <td style={{ padding: '0.75rem 1rem' }}>
                         <span style={{ background: '#DCFCE7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
-                          {o.orderStatus}
+                          {o.orderStatus || 'Confirmed'}
                         </span>
                       </td>
                       <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontSize: '0.75rem', color: '#64748B' }}>
                         {o.ondcContext?.transactionId || 'N/A'}
                       </td>
                       <td style={{ padding: '0.75rem 1rem', color: '#64748B', fontSize: '0.75rem' }}>
-                        {new Date(o.createdAt).toLocaleDateString()}
+                        {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '—'}
                       </td>
                     </tr>
                   ))
@@ -2289,7 +2342,7 @@ export const OndcManagement: React.FC = () => {
                   </tr>
                 ) : (
                   transactions.map((tx, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                    <tr key={tx.transactionId || `tx-${idx}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
                       <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 600 }}>{tx.transactionId}</td>
                       <td style={{ padding: '0.75rem 1rem', color: '#64748B' }}>{tx.orderId || '—'}</td>
                       <td style={{ padding: '0.75rem 1rem' }}>
@@ -2298,7 +2351,7 @@ export const OndcManagement: React.FC = () => {
                         </span>
                       </td>
                       <td style={{ padding: '0.75rem 1rem', color: '#64748B', fontSize: '0.75rem' }}>
-                        {new Date(tx.updatedAt).toLocaleString()}
+                        {tx.updatedAt ? new Date(tx.updatedAt).toLocaleString() : 'Just now'}
                       </td>
                     </tr>
                   ))
@@ -2336,21 +2389,23 @@ export const OndcManagement: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  logs.map((log) => (
-                    <tr key={log.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '0.75rem 1rem', color: '#64748B' }}>{new Date(log.timestamp).toLocaleTimeString()}</td>
+                  logs.map((log, idx) => (
+                    <tr key={log.id || `log-${idx}`} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '0.75rem 1rem', color: '#64748B' }}>
+                        {log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : '—'}
+                      </td>
                       <td style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>{log.action}</td>
                       <td style={{ padding: '0.75rem 1rem' }}>
                         <span
                           style={{
-                            background: log.status < 400 ? '#DCFCE7' : '#FEE2E2',
-                            color: log.status < 400 ? '#166534' : '#991B1B',
+                            background: (log.status || 200) < 400 ? '#DCFCE7' : '#FEE2E2',
+                            color: (log.status || 200) < 400 ? '#166534' : '#991B1B',
                             padding: '0.2rem 0.4rem',
                             borderRadius: '4px',
                             fontWeight: 700,
                           }}
                         >
-                          {log.status}
+                          {log.status || 200}
                         </span>
                       </td>
                       <td style={{ padding: '0.75rem 1rem', color: '#64748B' }}>{log.durationMs || 0} ms</td>
@@ -2656,7 +2711,7 @@ export const OndcManagement: React.FC = () => {
                       </span>
                     </td>
                     <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#0F172A' }}>
-                      ₹{p.b2bWholesalePrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      ₹{Number(p.b2bWholesalePrice || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       <div style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 600 }}>Up to 22% Vol. Tier</div>
                     </td>
                     <td style={{ padding: '0.75rem 1rem', color: '#475569' }}>
@@ -2665,8 +2720,8 @@ export const OndcManagement: React.FC = () => {
                     <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#2563EB' }}>
                       {p.b2bMoq || 10} Units
                     </td>
-                    <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: p.stock > 500 ? '#10B981' : '#F59E0B' }}>
-                      {p.stock.toLocaleString('en-IN')}
+                    <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: (p.stock || 0) > 500 ? '#10B981' : '#F59E0B' }}>
+                      {Number(p.stock || 0).toLocaleString('en-IN')}
                     </td>
                     <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: '#DCFCE7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700 }}>
@@ -2742,7 +2797,7 @@ export const OndcManagement: React.FC = () => {
                     <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontWeight: 600 }}>{p.sku}</td>
                     <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#0F172A' }}>{p.name}</td>
                     <td style={{ padding: '0.75rem 1rem', fontWeight: 700, fontSize: '0.9rem', color: '#0F172A' }}>
-                      {p.stock.toLocaleString('en-IN')} units
+                      {Number(p.stock || 0).toLocaleString('en-IN')} units
                     </td>
                     <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#2563EB' }}>
                       ≥ {p.b2bMoq || 10} units
