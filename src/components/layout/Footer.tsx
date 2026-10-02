@@ -373,9 +373,9 @@ export const Footer: React.FC<FooterProps> = ({
                 }}
               >
                 <img
-                  src="/make-in-india-logo.png"
+                  src="/official-make-in-india-seal.png?v=20261002"
                   alt="Make in India"
-                  style={{ height: '14px', width: 'auto', display: 'block' }}
+                  style={{ height: '20px', width: 'auto', display: 'block' }}
                 />
                 <span>Make in India</span>
               </div>
@@ -394,9 +394,9 @@ export const Footer: React.FC<FooterProps> = ({
                 }}
               >
                 <img
-                  src="/msme-udyam-logo.png"
-                  alt="MSME / Udyam"
-                  style={{ height: '14px', width: 'auto', display: 'block' }}
+                  src="/official-msme-gov-logo.png?v=20261002"
+                  alt="Ministry of MSME / Udyam"
+                  style={{ height: '18px', width: 'auto', display: 'block' }}
                 />
                 <span>MSME / Udyam</span>
               </div>

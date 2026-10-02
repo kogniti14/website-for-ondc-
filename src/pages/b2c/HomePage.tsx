@@ -335,6 +335,69 @@ export const HomePage: React.FC<HomePageProps> = ({
                     className="official-platform-banner-img"
                   />
                 </div>
+
+                {/* Official Accredited Government Ecosystem Strip */}
+                <div
+                  style={{
+                    marginTop: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <a
+                    href="https://msme.gov.in/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      background: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '8px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                      textDecoration: 'none',
+                      transition: 'transform 0.2s ease',
+                    }}
+                    title="Ministry of Micro, Small & Medium Enterprises, Govt. of India"
+                  >
+                    <img
+                      src="/official-msme-gov-logo.png?v=20261002"
+                      alt="Ministry of Micro, Small and Medium Enterprises, Govt. of India"
+                      style={{ height: '24px', width: 'auto', display: 'block' }}
+                    />
+                  </a>
+                  <a
+                    href="https://www.makeinindia.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      background: '#FFFFFF',
+                      border: '1px solid #E2E8F0',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '8px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                      textDecoration: 'none',
+                      transition: 'transform 0.2s ease',
+                    }}
+                    title="Make in India & Atmanirbhar Bharat National Initiative"
+                  >
+                    <img
+                      src="/official-make-in-india-seal.png?v=20261002"
+                      alt="Make in India / Atmanirbhar Bharat"
+                      style={{ height: '26px', width: 'auto', display: 'block' }}
+                    />
+                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0F172A', letterSpacing: '0.02em' }}>
+                      MAKE IN INDIA
+                    </span>
+                  </a>
+                </div>
               </div>
             </div>
           </div>
