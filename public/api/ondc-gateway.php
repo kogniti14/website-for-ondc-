@@ -499,16 +499,34 @@ function logOndcEvent($storageDir, $event, $data = []) {
 
 // Helper: Send standard ONDC ACK
 function sendAckResponse($logParams = []) {
-    http_response_code(200);
-    echo json_encode([
+    $body = json_encode([
         'message' => [
             'ack' => [
                 'status' => 'ACK'
             ]
         ]
     ]);
-    if (function_exists('fastcgi_finish_request')) {
+
+    // Clean active buffers
+    while (ob_get_level() > 0) {
+        @ob_end_clean();
+    }
+
+    ignore_user_abort(true);
+    http_response_code(200);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Connection: close');
+    header('Content-Length: ' . strlen($body));
+    echo $body;
+
+    if (function_exists('litespeed_finish_request')) {
+        litespeed_finish_request();
+    } elseif (function_exists('fastcgi_finish_request')) {
         fastcgi_finish_request();
+    }
+    flush();
+    if (function_exists('ob_flush')) {
+        @ob_flush();
     }
 }
 
@@ -1483,6 +1501,9 @@ sendAckResponse();
 
 // 17. Asynchronously Dispatch Outbound Callback to BAP
 if ($callbackPayload && !empty($context['bap_uri'])) {
+    // Grace period (1.2s): Allows calling BAP/Workbench to receive ACK and commit the request to flow history before callback arrives
+    usleep(1200000);
+
     if ($callbackAction === 'on_select') {
         logOndcEvent($storageDir, 'ON_SELECT_SENT', array_merge($callbackMeta ?? [], [
             'target_url' => rtrim($context['bap_uri'], '/') . '/on_select'

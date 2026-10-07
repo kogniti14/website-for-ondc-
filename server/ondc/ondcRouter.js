@@ -435,7 +435,7 @@ ondcRouter.post(['/search', '/ondc/search'], validateOndcRequest, async (req, re
 
   sendAck(res);
 
-  setImmediate(async () => {
+  setTimeout(async () => {
     try {
       const catalog = buildOndcCatalog(message?.intent || {});
       const callbackPayload = {
@@ -723,7 +723,7 @@ ondcRouter.post(['/select', '/ondc/select'], validateOndcRequest, async (req, re
   sendAck(res);
 
   // 10. Automatically dispatch asynchronous on_select callback to BAP
-  setImmediate(async () => {
+  setTimeout(async () => {
     try {
       stateManager.addLog({
         action: 'on_select',
