@@ -85,6 +85,18 @@
         ".write": "auth != null"
       }
     },
+    "ondc_orders": {
+      ".indexOn": [
+        "orderNumber",
+        "orderStatus",
+        "createdAt"
+      ],
+      ".read": "auth != null",
+      "$orderId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
     "b2b_quotations": {
       ".indexOn": [
         "businessId",

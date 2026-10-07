@@ -20,6 +20,8 @@ import {
   getAuthoritativeProducts,
   PRODUCTS_CATALOG,
   generateCompleteOnSearchPayload,
+  findProductById,
+  isProductActive,
 } from './catalogMapper.js';
 import {
   calculateQuote,
@@ -155,6 +157,11 @@ export function sendNack(res, code, message, path = '') {
  * Helper to build standard ONDC context for outgoing callbacks
  */
 function buildCallbackContext(incomingContext, action) {
+  // In ONDC RETeB2B 1.2.5, on_select requires matching incoming select message_id
+  const msgId = (action === 'on_select' && incomingContext.message_id)
+    ? incomingContext.message_id
+    : (crypto.randomUUID ? crypto.randomUUID() : `msg_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+
   return {
     domain: incomingContext.domain || ondcConfig.domain,
     country: incomingContext.country || ondcConfig.country,
@@ -163,10 +170,10 @@ function buildCallbackContext(incomingContext, action) {
     core_version: incomingContext.core_version || ondcConfig.coreVersion || '1.2.5',
     bap_id: incomingContext.bap_id || 'workbench.ondc.tech',
     bap_uri: incomingContext.bap_uri || ondcConfig.buyerBaseUrl || 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer',
-    bpp_id: ondcConfig.subscriberId,
-    bpp_uri: ondcConfig.subscriberUri,
+    bpp_id: incomingContext.bpp_id || ondcConfig.subscriberId,
+    bpp_uri: incomingContext.bpp_uri || ondcConfig.subscriberUri,
     transaction_id: incomingContext.transaction_id,
-    message_id: crypto.randomUUID ? crypto.randomUUID() : `msg_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    message_id: msgId,
     timestamp: new Date().toISOString(),
     ttl: 'PT30S',
   };
@@ -179,7 +186,7 @@ async function dispatchCallback(bapUri, action, payload) {
   const targetUri = bapUri || ondcConfig.buyerBaseUrl || 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer';
   if (!targetUri) {
     ondcLogger.warn(action, 'No bap_uri provided in request context; skipping HTTP dispatch');
-    return;
+    return { status: 0, error: 'No bap_uri provided' };
   }
 
   // Format destination URL: e.g. https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer/<action>
@@ -231,11 +238,13 @@ async function dispatchCallback(bapUri, action, payload) {
       bapUri,
       status: response.status,
     });
+    return { status: response.status, ok: response.ok };
   } catch (err) {
     ondcLogger.warn(action, `Callback dispatch notice for ${url}: ${err.message}`, {
       bapUri,
       error: err.message,
     });
+    return { status: 500, error: err.message };
   }
 }
 
@@ -448,51 +457,298 @@ ondcRouter.post(['/search', '/ondc/search'], validateOndcRequest, async (req, re
  */
 ondcRouter.post(['/select', '/ondc/select'], validateOndcRequest, async (req, res) => {
   const { context, message } = req.body;
-  ondcLogger.info('select', 'Received select request', {
+  const providerId = message?.order?.provider?.id;
+  const items = message?.order?.items || [];
+  const firstItemId = items[0]?.id || '';
+
+  // 1. Structured Log: SELECT_RECEIVED
+  stateManager.addLog({
+    action: 'select',
+    event: 'SELECT_RECEIVED',
     transactionId: context.transaction_id,
-    itemsCount: message?.order?.items?.length || 0,
+    messageId: context.message_id,
+    itemId: firstItemId,
+    providerId: providerId || ondcConfig.seller.id,
+    metadata: { itemsCount: items.length },
   });
 
+  ondcLogger.info('select', 'Received select request', {
+    transactionId: context.transaction_id,
+    itemsCount: items.length,
+    providerId,
+  });
+
+  // 2. Validate select request structure
+  if (!Array.isArray(items) || items.length === 0) {
+    stateManager.addLog({
+      action: 'select',
+      event: 'ON_SELECT_ERROR',
+      transactionId: context.transaction_id,
+      messageId: context.message_id,
+      itemId: null,
+      providerId: providerId || ondcConfig.seller.id,
+      status: 400,
+      errorCode: '10000',
+      error: { code: '10000', message: 'No items specified in select order request.' },
+    });
+    return sendNack(res, '10000', 'No items specified in select order request.');
+  }
+
+  // 2b. Structured Log: SELECT_VALIDATED
+  stateManager.addLog({
+    action: 'select',
+    event: 'SELECT_VALIDATED',
+    transactionId: context.transaction_id,
+    messageId: context.message_id,
+    itemId: firstItemId,
+    providerId: providerId || ondcConfig.seller.id,
+  });
+
+  // 3. Find and validate provider
+  const validProviders = [ondcConfig.seller.id, ondcConfig.subscriberId, 'kogniti-minds-bpp', 'kognitiminds.com', 'kogniti-minds', 'km-bpp-01'];
+  if (providerId && !validProviders.some((p) => p.toLowerCase() === providerId.toLowerCase())) {
+    stateManager.addLog({
+      action: 'select',
+      event: 'ON_SELECT_ERROR',
+      transactionId: context.transaction_id,
+      messageId: context.message_id,
+      itemId: firstItemId,
+      providerId,
+      status: 400,
+      errorCode: '30001',
+      error: { code: '30001', message: `Provider '${providerId}' not found or invalid.` },
+    });
+    return sendNack(res, '30001', `Provider '${providerId}' not found or invalid.`);
+  }
+
+  const effectiveProviderId = providerId || ondcConfig.seller.id;
+  stateManager.addLog({
+    action: 'select',
+    event: 'PROVIDER_FOUND',
+    transactionId: context.transaction_id,
+    messageId: context.message_id,
+    itemId: firstItemId,
+    providerId: effectiveProviderId,
+  });
+
+  // 4. Validate all requested items against authoritative catalogue
+  for (const reqItem of items) {
+    const prod = findProductById(reqItem.id);
+    if (!prod) {
+      stateManager.addLog({
+        action: 'select',
+        event: 'ON_SELECT_ERROR',
+        transactionId: context.transaction_id,
+        messageId: context.message_id,
+        itemId: reqItem.id,
+        providerId: effectiveProviderId,
+        status: 400,
+        errorCode: '30004',
+        error: { code: '30004', message: `Item '${reqItem.id}' not found in Kogniti Minds catalogue.` },
+      });
+      return sendNack(res, '30004', `Item '${reqItem.id}' not found in Kogniti Minds catalogue.`);
+    }
+
+    if (!isProductActive(prod)) {
+      stateManager.addLog({
+        action: 'select',
+        event: 'ON_SELECT_ERROR',
+        transactionId: context.transaction_id,
+        messageId: context.message_id,
+        itemId: reqItem.id,
+        providerId: effectiveProviderId,
+        status: 400,
+        errorCode: '30005',
+        error: { code: '30005', message: `Product '${prod.name}' is currently inactive or not available on ONDC.` },
+      });
+      return sendNack(res, '30005', `Product '${prod.name}' is currently inactive or not available on ONDC.`);
+    }
+
+    stateManager.addLog({
+      action: 'select',
+      event: 'ITEM_FOUND',
+      transactionId: context.transaction_id,
+      messageId: context.message_id,
+      itemId: reqItem.id,
+      providerId: effectiveProviderId,
+      metadata: { name: prod.name, sku: prod.sku },
+    });
+
+    const qty = parseInt(reqItem.quantity?.count || reqItem.quantity || 1, 10);
+    if (qty <= 0) {
+      stateManager.addLog({
+        action: 'select',
+        event: 'ON_SELECT_ERROR',
+        transactionId: context.transaction_id,
+        messageId: context.message_id,
+        itemId: reqItem.id,
+        providerId: effectiveProviderId,
+        status: 400,
+        errorCode: '10000',
+        error: { code: '10000', message: `Quantity must be greater than 0 for item '${prod.name}'.` },
+      });
+      return sendNack(res, '10000', `Quantity must be greater than 0 for item '${prod.name}'.`);
+    }
+
+    const stock = parseInt(prod.stockQuantity !== undefined ? prod.stockQuantity : (prod.stock !== undefined ? prod.stock : 0), 10);
+    if (stock <= 0 || qty > stock) {
+      stateManager.addLog({
+        action: 'select',
+        event: 'ON_SELECT_ERROR',
+        transactionId: context.transaction_id,
+        messageId: context.message_id,
+        itemId: reqItem.id,
+        providerId: effectiveProviderId,
+        status: 400,
+        errorCode: '30006',
+        error: { code: '30006', message: `Requested quantity (${qty}) exceeds available stock (${stock}) for item '${prod.name}'.` },
+      });
+      return sendNack(res, '30006', `Requested quantity (${qty}) exceeds available stock (${stock}) for item '${prod.name}'.`);
+    }
+
+    stateManager.addLog({
+      action: 'select',
+      event: 'QUANTITY_VALIDATED',
+      transactionId: context.transaction_id,
+      messageId: context.message_id,
+      itemId: reqItem.id,
+      providerId: effectiveProviderId,
+      metadata: { requestedQuantity: qty, availableStock: stock },
+    });
+  }
+
+  // 5. Calculate quotation with central price engine
+  const deliveryAddress = message?.order?.fulfillments?.[0]?.end?.location?.address || {};
+  let quoteResult;
+  try {
+    quoteResult = calculateQuote(items, deliveryAddress);
+  } catch (err) {
+    stateManager.addLog({
+      action: 'select',
+      event: 'ON_SELECT_ERROR',
+      transactionId: context.transaction_id,
+      messageId: context.message_id,
+      itemId: firstItemId,
+      providerId: effectiveProviderId,
+      status: 400,
+      errorCode: '30004',
+      error: { message: err.message },
+    });
+    return sendNack(res, '30004', err.message);
+  }
+
+  // 6. Structured Log: PRICE_FETCHED
+  stateManager.addLog({
+    action: 'select',
+    event: 'PRICE_FETCHED',
+    transactionId: context.transaction_id,
+    messageId: context.message_id,
+    itemId: firstItemId,
+    providerId: effectiveProviderId,
+    metadata: {
+      subtotal: quoteResult.subtotal,
+      bulkDiscountTotal: quoteResult.bulkDiscountTotal,
+      taxableAmount: quoteResult.taxableAmount,
+    },
+  });
+
+  // 7. Structured Log: QUOTE_GENERATED
+  stateManager.addLog({
+    action: 'select',
+    event: 'QUOTE_GENERATED',
+    transactionId: context.transaction_id,
+    messageId: context.message_id,
+    itemId: firstItemId,
+    providerId: effectiveProviderId,
+    metadata: {
+      grandTotal: quoteResult.grandTotal,
+      taxableAmount: quoteResult.taxableAmount,
+      totalGst: quoteResult.totalGst,
+      shippingFee: quoteResult.shippingFee,
+    },
+  });
+
+  // 8. Prepare ONDC RETeB2B 1.2.5 compliant on_select payload
+  const callbackPayload = {
+    context: buildCallbackContext(context, 'on_select'),
+    message: {
+      order: {
+        provider: {
+          id: effectiveProviderId,
+          locations: [{ id: 'L1' }],
+        },
+        items: quoteResult.items.map((it) => ({
+          id: it.id,
+          fulfillment_id: 'F1',
+          quantity: { count: it.quantity },
+        })),
+        fulfillments: [
+          {
+            id: 'F1',
+            type: 'Delivery',
+            tracking: true,
+            state: {
+              descriptor: {
+                code: 'Serviceable',
+              },
+            },
+          },
+        ],
+        quote: quoteResult.ondcQuote,
+      },
+    },
+  };
+
+  // Structured Log: ON_SELECT_GENERATED
+  stateManager.addLog({
+    action: 'on_select',
+    event: 'ON_SELECT_GENERATED',
+    transactionId: context.transaction_id,
+    messageId: context.message_id,
+    itemId: firstItemId,
+    providerId: effectiveProviderId,
+    metadata: { quoteValue: quoteResult.grandTotal },
+  });
+
+  // 9. Return synchronous ACK response to buyer immediately
   sendAck(res);
 
+  // 10. Automatically dispatch asynchronous on_select callback to BAP
   setImmediate(async () => {
     try {
-      const items = message?.order?.items || [];
-      const deliveryAddress = message?.order?.fulfillments?.[0]?.end?.location?.address || {};
-      const quoteResult = calculateQuote(items, deliveryAddress);
+      stateManager.addLog({
+        action: 'on_select',
+        event: 'ON_SELECT_SENT',
+        transactionId: context.transaction_id,
+        messageId: context.message_id,
+        itemId: firstItemId,
+        providerId: effectiveProviderId,
+        metadata: { targetUrl: `${context.bap_uri}/on_select` },
+      });
 
-      const callbackPayload = {
-        context: buildCallbackContext(context, 'on_select'),
-        message: {
-          order: {
-            provider: {
-              id: ondcConfig.seller.id,
-            },
-            items: quoteResult.items.map((it) => ({
-              id: it.id,
-              fulfillment_id: 'F1',
-              quantity: { count: it.quantity },
-            })),
-            fulfillments: [
-              {
-                id: 'F1',
-                type: 'Delivery',
-                tracking: true,
-                state: {
-                  descriptor: {
-                    code: 'Serviceable',
-                  },
-                },
-              },
-            ],
-            quote: quoteResult.ondcQuote,
-          },
-        },
-      };
+      const response = await dispatchCallback(context.bap_uri, 'on_select', callbackPayload);
 
-      await dispatchCallback(context.bap_uri, 'on_select', callbackPayload);
+      stateManager.addLog({
+        action: 'on_select',
+        event: 'ON_SELECT_RESPONSE',
+        transactionId: context.transaction_id,
+        messageId: context.message_id,
+        itemId: firstItemId,
+        providerId: effectiveProviderId,
+        metadata: { status: response?.status || 200 },
+      });
     } catch (err) {
-      ondcLogger.error('on_select', 'Error preparing on_select payload', err);
+      stateManager.addLog({
+        action: 'on_select',
+        event: 'ON_SELECT_ERROR',
+        transactionId: context.transaction_id,
+        messageId: context.message_id,
+        itemId: firstItemId,
+        providerId: effectiveProviderId,
+        status: 500,
+        error: { message: err.message },
+      });
+      ondcLogger.error('on_select', 'Error preparing/dispatching on_select payload', err);
     }
   });
 });
@@ -869,6 +1125,18 @@ for (const cbAction of INBOUND_CALLBACK_ACTIONS) {
       action: cbAction,
       orderId: req.body.message?.order?.id || null,
     });
+
+    if (cbAction === 'on_select') {
+      const firstItemId = req.body.message?.order?.items?.[0]?.id || null;
+      stateManager.addLog({
+        action: 'on_select',
+        event: 'ON_SELECT_RECEIVED',
+        transactionId: context.transaction_id,
+        messageId: context.message_id,
+        itemId: firstItemId,
+        providerId: req.body.message?.order?.provider?.id || ondcConfig.seller.id,
+      });
+    }
 
     ondcLogger.info(cbAction, `Inbound callback received from ${context.bap_id || 'network'}`, {
       transactionId: context.transaction_id,

@@ -218,8 +218,11 @@ class OndcStateManager {
    */
   addLog({
     action,
+    event = null,
     transactionId = null,
     messageId = null,
+    itemId = null,
+    providerId = null,
     httpMethod = 'POST',
     status = 200,
     durationMs = 0,
@@ -233,8 +236,11 @@ class OndcStateManager {
       id: `log_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       timestamp: new Date().toISOString(),
       action,
+      event: event || action,
       transaction_id: transactionId,
       message_id: messageId,
+      item_id: itemId,
+      provider_id: providerId || 'kogniti-minds-bpp',
       http_method: httpMethod,
       http_status: status,
       processing_time_ms: durationMs,
@@ -244,6 +250,8 @@ class OndcStateManager {
       // Backwards-compatible aliases for admin dashboard UI
       transactionId,
       messageId,
+      itemId,
+      providerId: providerId || 'kogniti-minds-bpp',
       status,
       durationMs,
       error: error ? (error.message || String(error)) : null,

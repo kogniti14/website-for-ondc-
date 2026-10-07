@@ -46,6 +46,7 @@ export function getAuthoritativeProducts() {
 
 /**
  * Find product by ID or SKU across authoritative and canonical catalogs
+ * Supports exact and case-insensitive matching.
  * @param {string} id - Product ID or SKU
  * @returns {object|undefined}
  */
@@ -53,9 +54,44 @@ export function findProductById(id) {
   if (!id) return undefined;
   const products = getAuthoritativeProducts();
   const cleanId = String(id).trim();
-  const found = products.find((p) => p.id === cleanId || p.sku === cleanId);
+  const lowerId = cleanId.toLowerCase();
+
+  const found = products.find(
+    (p) =>
+      p.id === cleanId ||
+      p.sku === cleanId ||
+      (p.id && p.id.toLowerCase() === lowerId) ||
+      (p.sku && p.sku.toLowerCase() === lowerId)
+  );
   if (found) return found;
-  return PRODUCTS_CATALOG.find((p) => p.id === cleanId || p.sku === cleanId);
+
+  return PRODUCTS_CATALOG.find(
+    (p) =>
+      p.id === cleanId ||
+      p.sku === cleanId ||
+      (p.id && p.id.toLowerCase() === lowerId) ||
+      (p.sku && p.sku.toLowerCase() === lowerId)
+  );
+}
+
+/**
+ * Check if a product is active, available, and enabled for ONDC
+ * @param {object} product
+ * @returns {boolean}
+ */
+export function isProductActive(product) {
+  if (!product) return false;
+  if (product.isActive === false) return false;
+  if (product.status && ['inactive', 'disabled', 'archived', 'deleted'].includes(String(product.status).toLowerCase())) {
+    return false;
+  }
+  if (product.stockStatus && String(product.stockStatus).toLowerCase() === 'out_of_stock') {
+    return false;
+  }
+  if (product.ondcEnabled === false || product.isOndcEnabled === false) {
+    return false;
+  }
+  return true;
 }
 
 /**

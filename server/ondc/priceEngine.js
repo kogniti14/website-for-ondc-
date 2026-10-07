@@ -186,6 +186,8 @@ export function calculateFullQuotation(requestedItems = [], deliveryAddress = {}
       dimensions: product.dimensions || '21cm x 29.7cm x 5.2cm',
     });
 
+    const itemStock = Number(product.stockQuantity !== undefined ? product.stockQuantity : (product.stock !== undefined ? product.stock : 500));
+
     // 1. Item line entry in ONDC Quote Breakup
     quoteBreakup.push({
       '@ondc/org/item_id': product.id,
@@ -198,8 +200,8 @@ export function calculateFullQuotation(requestedItems = [], deliveryAddress = {}
       },
       item: {
         quantity: {
-          available: { count: String(product.stock || 500) },
-          maximum: { count: String(Math.min(product.stock || 500, 500)) },
+          available: { count: String(itemStock) },
+          maximum: { count: String(Math.min(itemStock, 500)) },
         },
         price: {
           currency: 'INR',

@@ -95,6 +95,8 @@ Options -Indexes -MultiViews
   RewriteRule ^api/admin/ondc/workbench/files/?$ api/download-workbench.php [QSA,L]
   RewriteRule ^api/admin/ondc/workbench/simulate/?$ api/ondc-gateway.php?action=admin_simulate [QSA,L]
   RewriteRule ^api/admin/ondc/orders/?$ api/ondc-gateway.php?action=admin_orders [QSA,L]
+  RewriteRule ^api/admin/ondc/orders/update/?$ api/ondc-gateway.php?action=admin_order_update [QSA,L]
+  RewriteRule ^api/admin/ondc/orders/delete/?$ api/ondc-gateway.php?action=admin_order_delete [QSA,L]
   RewriteRule ^api/admin/ondc/transactions/?$ api/ondc-gateway.php?action=admin_transactions [QSA,L]
   RewriteRule ^api/admin/ondc/logs/?$ api/ondc-gateway.php?action=admin_logs [QSA,L]
   RewriteRule ^api/admin/ondc/stats/?$ api/ondc-gateway.php?action=admin_stats [QSA,L]

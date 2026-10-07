@@ -39,6 +39,16 @@ import {
   Settings,
   HeartPulse,
   Code2,
+  Trash2,
+  Eye,
+  Printer,
+  Truck,
+  Building2,
+  Filter,
+  Calendar,
+  MapPin,
+  CreditCard,
+  X,
 } from 'lucide-react';
 import {
   SELLER_API_CONTRACTS,
@@ -50,6 +60,8 @@ import {
   findContractBySlug,
 } from './ondcContracts';
 import { MOCK_PRODUCTS } from '../../data/mockProducts';
+import { storageService } from '../../services/storageService';
+import { dataSyncBus } from '../../services/dataSyncBus';
 
 export type OndcSubTab =
   | 'overview'
@@ -219,13 +231,50 @@ interface OndcOrder {
   businessName: string;
   gstin?: string;
   grandTotal: number;
+  subtotal?: number;
+  taxableAmount?: number;
+  totalGst?: number;
+  cgst?: number;
+  sgst?: number;
+  igst?: number;
+  shippingFee?: number;
+  bulkDiscountTotal?: number;
   orderStatus: string;
+  paymentStatus?: string;
+  paymentMode?: string;
+  paymentTerms?: string;
+  trackingNumber?: string;
+  courierPartner?: string;
   createdAt: string;
+  updatedAt?: string;
+  shippingAddress?: {
+    fullName?: string;
+    phone?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+  };
+  billingAddress?: {
+    fullName?: string;
+    phone?: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+  };
+  statusTimeline?: Array<{
+    status: string;
+    timestamp: string;
+    note?: string;
+  }>;
   ondcContext?: {
     transactionId: string;
     messageId: string;
     bapId?: string;
     bppId?: string;
+    bapUri?: string;
+    domain?: string;
   };
   returnDetails?: {
     returnType: string;
@@ -237,9 +286,15 @@ interface OndcOrder {
     id: string;
     name: string;
     sku: string;
+    hsn?: string;
     quantity: number;
+    baseUnitPrice?: number;
     effectiveUnitPrice: number;
+    taxableAmount?: number;
+    gstRate?: number;
+    gstAmount?: number;
     totalAmount: number;
+    image?: string;
   }>;
 }
 
@@ -269,10 +324,384 @@ interface LogEntry {
   error?: string;
 }
 
-export const OndcManagement: React.FC = () => {
-  const [activeSubTab, setActiveSubTab] = useState<OndcSubTab>('overview');
+const DEFAULT_ONDC_ORDERS: OndcOrder[] = [
+  {
+    id: 'ondc_ord_101',
+    orderNumber: 'KM-ONDC-2026-8941',
+    poNumber: 'PO-ECO-2026/04',
+    businessName: 'EcoPackaging Solutions India Pvt Ltd',
+    gstin: '07AAACE1234F1Z5',
+    grandTotal: 148500.0,
+    subtotal: 132589.28,
+    taxableAmount: 132589.28,
+    totalGst: 15910.72,
+    cgst: 7955.36,
+    sgst: 7955.36,
+    orderStatus: 'confirmed',
+    paymentStatus: 'PAID',
+    paymentMode: 'NEFT / RTGS (ONDC Escrow)',
+    createdAt: new Date(Date.now() - 3600000 * 3.5).toISOString(),
+    updatedAt: new Date(Date.now() - 3600000 * 3.5).toISOString(),
+    billingAddress: {
+      fullName: 'EcoPackaging Solutions India Pvt Ltd',
+      phone: '+91 98201 44521',
+      street: 'Plot 42, Sector 18, Udyog Vihar',
+      city: 'Gurugram',
+      state: 'Haryana',
+      pincode: '122015',
+    },
+    shippingAddress: {
+      fullName: 'EcoPackaging Logistics Hub',
+      phone: '+91 98201 44521',
+      street: 'Warehouse Complex B, Kundli Industrial Area',
+      city: 'Sonipat',
+      state: 'Haryana',
+      pincode: '131028',
+    },
+    ondcContext: {
+      transactionId: 'txn_km_ondc_88921a83',
+      messageId: 'msg_98124a91',
+      bapId: 'buyer-app.ondc.org',
+      bppId: 'kogniti-minds-bpp',
+      domain: 'ONDC:RETeB2B',
+    },
+    items: [
+      {
+        id: 'agro-kraft-paper-120gsm',
+        name: 'Agro-Waste Kraft Paper Reels (120 GSM)',
+        sku: 'KM-KFT-120',
+        hsn: '4804',
+        quantity: 50,
+        baseUnitPrice: 2651.78,
+        effectiveUnitPrice: 2651.78,
+        taxableAmount: 132589.28,
+        gstRate: 12,
+        gstAmount: 15910.72,
+        totalAmount: 148500.0,
+      },
+    ],
+    statusTimeline: [
+      {
+        status: 'ORDER_PLACED',
+        timestamp: new Date(Date.now() - 3600000 * 4).toISOString(),
+        note: 'BAP submitted order via Beckn /confirm protocol',
+      },
+      {
+        status: 'CONFIRMED',
+        timestamp: new Date(Date.now() - 3600000 * 3.5).toISOString(),
+        note: 'Stock allocated from Bhiwadi Mill production run',
+      },
+    ],
+  },
+  {
+    id: 'ondc_ord_102',
+    orderNumber: 'KM-ONDC-2026-8942',
+    poNumber: 'PO-GREEN-2026/89',
+    businessName: 'GreenEarth Food Containers Ltd',
+    gstin: '07AABCG9876M1Z2',
+    grandTotal: 84200.0,
+    subtotal: 75178.57,
+    taxableAmount: 75178.57,
+    totalGst: 9021.43,
+    cgst: 4510.71,
+    sgst: 4510.71,
+    orderStatus: 'in_production',
+    paymentStatus: 'PAID',
+    paymentMode: 'ONDC B2B Escrow',
+    createdAt: new Date(Date.now() - 3600000 * 18).toISOString(),
+    updatedAt: new Date(Date.now() - 3600000 * 6).toISOString(),
+    billingAddress: {
+      fullName: 'GreenEarth Food Containers Ltd',
+      phone: '+91 97112 88390',
+      street: 'Industrial Plot 12, Okhla Phase III',
+      city: 'New Delhi',
+      state: 'Delhi',
+      pincode: '110020',
+    },
+    shippingAddress: {
+      fullName: 'GreenEarth Factory Unit 2',
+      phone: '+91 97112 88390',
+      street: 'Industrial Plot 12, Okhla Phase III',
+      city: 'New Delhi',
+      state: 'Delhi',
+      pincode: '110020',
+    },
+    ondcContext: {
+      transactionId: 'txn_km_ondc_77341b52',
+      messageId: 'msg_87231c44',
+      bapId: 'b2b-procure.ondc.org',
+      bppId: 'kogniti-minds-bpp',
+      domain: 'ONDC:RETeB2B',
+    },
+    items: [
+      {
+        id: 'bagasse-molded-board-350gsm',
+        name: 'Sugarcane Bagasse Food Grade Rigid Board (350 GSM)',
+        sku: 'KM-BAG-350',
+        hsn: '4819',
+        quantity: 200,
+        baseUnitPrice: 375.89,
+        effectiveUnitPrice: 375.89,
+        taxableAmount: 75178.57,
+        gstRate: 12,
+        gstAmount: 9021.43,
+        totalAmount: 84200.0,
+      },
+    ],
+    statusTimeline: [
+      {
+        status: 'CONFIRMED',
+        timestamp: new Date(Date.now() - 3600000 * 18).toISOString(),
+        note: 'Order confirmed and scheduled for manufacturing',
+      },
+      {
+        status: 'IN_PRODUCTION',
+        timestamp: new Date(Date.now() - 3600000 * 6).toISOString(),
+        note: 'Pulp thermoforming line active - batch #KM-BAG-2026B',
+      },
+    ],
+  },
+  {
+    id: 'ondc_ord_103',
+    orderNumber: 'KM-ONDC-2026-8943',
+    poNumber: 'PO-BIOK-2026/112',
+    businessName: 'BioKraft Industries Gujarat LLP',
+    gstin: '24AAHFB5544J1Z8',
+    grandTotal: 215600.0,
+    subtotal: 192500.0,
+    taxableAmount: 192500.0,
+    totalGst: 23100.0,
+    igst: 23100.0,
+    orderStatus: 'ready_for_dispatch',
+    paymentStatus: 'PAID',
+    paymentMode: 'Bank Transfer via ONDC Protocol',
+    createdAt: new Date(Date.now() - 3600000 * 32).toISOString(),
+    updatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+    billingAddress: {
+      fullName: 'BioKraft Industries Gujarat LLP',
+      phone: '+91 94280 61122',
+      street: 'GIDC Industrial Estate, Phase 4',
+      city: 'Vapi',
+      state: 'Gujarat',
+      pincode: '396195',
+    },
+    shippingAddress: {
+      fullName: 'BioKraft Central Depot',
+      phone: '+91 94280 61122',
+      street: 'Plot 88, Near NH-48 Corridor, GIDC',
+      city: 'Vapi',
+      state: 'Gujarat',
+      pincode: '396195',
+    },
+    ondcContext: {
+      transactionId: 'txn_km_ondc_66190c33',
+      messageId: 'msg_77019d12',
+      bapId: 'buyer-app.ondc.org',
+      bppId: 'kogniti-minds-bpp',
+      domain: 'ONDC:RETeB2B',
+    },
+    items: [
+      {
+        id: 'unbleached-kraft-reel-180gsm',
+        name: 'High-Burst Unbleached Agro Kraft Paper (180 GSM)',
+        sku: 'KM-KFT-180',
+        hsn: '4804',
+        quantity: 80,
+        baseUnitPrice: 2406.25,
+        effectiveUnitPrice: 2406.25,
+        taxableAmount: 192500.0,
+        gstRate: 12,
+        gstAmount: 23100.0,
+        totalAmount: 215600.0,
+      },
+    ],
+    statusTimeline: [
+      {
+        status: 'CONFIRMED',
+        timestamp: new Date(Date.now() - 3600000 * 32).toISOString(),
+        note: 'Order confirmed and production queue assigned',
+      },
+      {
+        status: 'IN_PRODUCTION',
+        timestamp: new Date(Date.now() - 3600000 * 16).toISOString(),
+        note: 'Pulping & calendar drying complete',
+      },
+      {
+        status: 'READY_FOR_DISPATCH',
+        timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
+        note: 'QC verified (Burst index > 2.8 kPa m2/g), palletized with shrink wrap',
+      },
+    ],
+  },
+  {
+    id: 'ondc_ord_104',
+    orderNumber: 'KM-ONDC-2026-8944',
+    poNumber: 'PO-APEX-2026/505',
+    businessName: 'Apex Corrugation & Packaging Works',
+    gstin: '27AABCA4321K1ZX',
+    grandTotal: 312000.0,
+    subtotal: 278571.43,
+    taxableAmount: 278571.43,
+    totalGst: 33428.57,
+    igst: 33428.57,
+    orderStatus: 'dispatched',
+    trackingNumber: 'DEL-B2B-998812401',
+    courierPartner: 'Delhivery B2B Logistics',
+    paymentStatus: 'PAID',
+    paymentMode: 'ONDC B2B Escrow',
+    createdAt: new Date(Date.now() - 3600000 * 54).toISOString(),
+    updatedAt: new Date(Date.now() - 3600000 * 10).toISOString(),
+    billingAddress: {
+      fullName: 'Apex Corrugation & Packaging Works',
+      phone: '+91 99100 22345',
+      street: 'F-19, MIDC Industrial Area, Bhosari',
+      city: 'Pune',
+      state: 'Maharashtra',
+      pincode: '411026',
+    },
+    shippingAddress: {
+      fullName: 'Apex Central Depot',
+      phone: '+91 99100 22345',
+      street: 'Gat No. 142, Chakan Industrial Phase 2',
+      city: 'Pune',
+      state: 'Maharashtra',
+      pincode: '410501',
+    },
+    ondcContext: {
+      transactionId: 'txn_km_ondc_66109f19',
+      messageId: 'msg_76012e88',
+      bapId: 'buyer-app.ondc.org',
+      bppId: 'kogniti-minds-bpp',
+      domain: 'ONDC:RETeB2B',
+    },
+    items: [
+      {
+        id: 'wheat-straw-fluting-medium-140gsm',
+        name: 'Wheat Straw Fluting Medium Paper (140 GSM)',
+        sku: 'KM-FLT-140',
+        hsn: '4805',
+        quantity: 120,
+        baseUnitPrice: 2321.43,
+        effectiveUnitPrice: 2321.43,
+        taxableAmount: 278571.43,
+        gstRate: 12,
+        gstAmount: 33428.57,
+        totalAmount: 312000.0,
+      },
+    ],
+    statusTimeline: [
+      {
+        status: 'CONFIRMED',
+        timestamp: new Date(Date.now() - 3600000 * 54).toISOString(),
+        note: 'Order confirmed and verified',
+      },
+      {
+        status: 'READY_FOR_DISPATCH',
+        timestamp: new Date(Date.now() - 3600000 * 20).toISOString(),
+        note: 'Palletized for interstate container transport',
+      },
+      {
+        status: 'DISPATCHED',
+        timestamp: new Date(Date.now() - 3600000 * 10).toISOString(),
+        note: 'Dispatched via Delhivery B2B (AWB: DEL-B2B-998812401)',
+      },
+    ],
+  },
+  {
+    id: 'ondc_ord_105',
+    orderNumber: 'KM-ONDC-2026-8945',
+    poNumber: 'PO-SUST-2026/021',
+    businessName: 'Sustainable Pulp & Pack LLP',
+    gstin: '29AABCS8891P1ZV',
+    grandTotal: 195400.0,
+    subtotal: 174464.29,
+    taxableAmount: 174464.29,
+    totalGst: 20935.71,
+    igst: 20935.71,
+    orderStatus: 'delivered',
+    trackingNumber: 'SAF-90812441',
+    courierPartner: 'Safexpress Supply Chain',
+    paymentStatus: 'SETTLED',
+    paymentMode: 'ONDC Protocol Settlement',
+    createdAt: new Date(Date.now() - 3600000 * 120).toISOString(),
+    updatedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+    billingAddress: {
+      fullName: 'Sustainable Pulp & Pack LLP',
+      phone: '+91 98450 77123',
+      street: 'Electronic City Phase II, Industrial Area',
+      city: 'Bengaluru',
+      state: 'Karnataka',
+      pincode: '560100',
+    },
+    shippingAddress: {
+      fullName: 'Sustainable Pulp & Pack Hub',
+      phone: '+91 98450 77123',
+      street: 'Plot 4, Bommasandra Industrial Area',
+      city: 'Bengaluru',
+      state: 'Karnataka',
+      pincode: '560099',
+    },
+    ondcContext: {
+      transactionId: 'txn_km_ondc_55091a11',
+      messageId: 'msg_66190b22',
+      bapId: 'buyer-app.ondc.org',
+      bppId: 'kogniti-minds-bpp',
+      domain: 'ONDC:RETeB2B',
+    },
+    items: [
+      {
+        id: 'bamboo-bagasse-copier-paper-75gsm',
+        name: 'Sustainable Agro Copier Paper Reams (75 GSM)',
+        sku: 'KM-COP-75',
+        hsn: '4802',
+        quantity: 500,
+        baseUnitPrice: 348.93,
+        effectiveUnitPrice: 348.93,
+        taxableAmount: 174464.29,
+        gstRate: 12,
+        gstAmount: 20935.71,
+        totalAmount: 195400.0,
+      },
+    ],
+    statusTimeline: [
+      {
+        status: 'CONFIRMED',
+        timestamp: new Date(Date.now() - 3600000 * 120).toISOString(),
+        note: 'Order confirmed',
+      },
+      {
+        status: 'DISPATCHED',
+        timestamp: new Date(Date.now() - 3600000 * 72).toISOString(),
+        note: 'Handed to Safexpress (AWB: SAF-90812441)',
+      },
+      {
+        status: 'DELIVERED',
+        timestamp: new Date(Date.now() - 3600000 * 24).toISOString(),
+        note: 'POD signed at buyer depot Bengaluru. Escrow release confirmed.',
+      },
+    ],
+  },
+];
+
+export interface OndcManagementProps {
+  initialSubTab?: OndcSubTab;
+}
+
+export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab }) => {
+  const [activeSubTab, setActiveSubTab] = useState<OndcSubTab>(initialSubTab || 'overview');
   const [selectedApiAction, setSelectedApiAction] = useState<string | null>(null);
   const [activePayloadTab, setActivePayloadTab] = useState<'request' | 'sync' | 'callback' | 'state'>('request');
+
+  // ONDC Orders Interactive Management State
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'in_production' | 'ready_for_dispatch' | 'dispatched' | 'delivered' | 'cancelled'>('all');
+  const [viewingOrderDetail, setViewingOrderDetail] = useState<OndcOrder | null>(null);
+  const [editingOrderStatus, setEditingOrderStatus] = useState<OndcOrder | null>(null);
+  const [newStatusValue, setNewStatusValue] = useState<string>('confirmed');
+  const [newTrackingNumber, setNewTrackingNumber] = useState<string>('');
+  const [newCourierPartner, setNewCourierPartner] = useState<string>('Delhivery B2B Logistics');
+  const [newStatusNote, setNewStatusNote] = useState<string>('');
+  const [isUpdatingOrder, setIsUpdatingOrder] = useState<boolean>(false);
 
   const [stats, setStats] = useState<OndcSellerDashboardStats>({
     role: 'SELLER',
@@ -292,7 +721,7 @@ export const OndcManagement: React.FC = () => {
     totalRevenue: 0,
   });
 
-  const [orders, setOrders] = useState<OndcOrder[]>([]);
+  const [orders, setOrders] = useState<OndcOrder[]>(DEFAULT_ONDC_ORDERS);
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);

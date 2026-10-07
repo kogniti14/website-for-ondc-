@@ -40,7 +40,8 @@ $allowedCollections = [
     'testimonials',
     'reviews',
     'review_audit_logs',
-    'cancellation_requests'
+    'cancellation_requests',
+    'ondc_orders'
 ];
 
 $objectCollections = [
@@ -293,7 +294,8 @@ $adminOnlyCollections = [
     'gallery_categories',
     'coupons',
     'testimonials',
-    'review_audit_logs'
+    'review_audit_logs',
+    'ondc_orders'
 ];
 
 if ($method === 'POST' || $method === 'PUT' || $method === 'DELETE') {

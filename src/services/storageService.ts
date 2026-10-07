@@ -75,6 +75,7 @@ const KEYS = {
   SITE_MEDIA: 'km_site_media_v2',
   COMPANY_SETTINGS: 'km_company_master_v1',
   CANCELLATION_REQUESTS: 'km_cancellation_requests_v1',
+  ONDC_ORDERS: 'km_ondc_orders_v1',
 };
 
 // Initial Seed Data - Production Level (Zero Dummy Accounts)
@@ -324,6 +325,7 @@ class StorageService {
       { collection: 'b2b_businesses', key: KEYS.B2B_BUSINESSES, defaultVal: [], isArray: true },
       { collection: 'b2c_orders', key: KEYS.B2C_ORDERS, defaultVal: [], isArray: true },
       { collection: 'b2b_orders', key: KEYS.B2B_ORDERS, defaultVal: [], isArray: true },
+      { collection: 'ondc_orders', key: KEYS.ONDC_ORDERS, defaultVal: [], isArray: true },
       { collection: 'b2b_quotations', key: KEYS.B2B_QUOTATIONS, defaultVal: SEED_B2B_QUOTATIONS, isArray: true },
       { collection: 'coupons', key: KEYS.COUPONS, defaultVal: MOCK_COUPONS, isArray: true },
       { collection: 'admin_users', key: KEYS.ADMIN_USERS, defaultVal: SEED_ADMIN_USERS, isArray: true },
@@ -1372,6 +1374,94 @@ class StorageService {
     this.setItem(KEYS.B2B_ORDERS, remaining);
     ids.forEach((id) => this.syncServer('b2b_orders', null, 'DELETE', id));
     dataSyncBus.emit('b2b_orders', remaining);
+    dataSyncBus.emit('orders_updated');
+    return initial.length - remaining.length;
+  }
+
+  // --- ONDC Network Orders (Beckn Protocol & B2B Network Orders) ---
+  getOndcOrders(): any[] {
+    return this.getItem<any[]>(KEYS.ONDC_ORDERS, []);
+  }
+
+  getOndcOrderById(id: string): any | undefined {
+    return this.getOndcOrders().find((o) => o.id === id);
+  }
+
+  saveOndcOrder(order: any): void {
+    const orders = this.getOndcOrders();
+    const existingIndex = orders.findIndex((o) => o.id === order.id);
+    if (existingIndex >= 0) {
+      orders[existingIndex] = order;
+    } else {
+      orders.unshift(order);
+    }
+    this.setItem(KEYS.ONDC_ORDERS, orders);
+    this.syncServer('ondc_orders', order);
+    // Also sync to backend ondc-gateway
+    fetch('/api/admin/ondc/orders/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(order)
+    }).catch(() => null);
+    dataSyncBus.emit('ondc_orders', orders);
+    dataSyncBus.emit('orders_updated');
+  }
+
+  async updateOndcOrderStatus(
+    id: string,
+    status: string,
+    note?: string,
+    tracking?: { trackingNumber?: string; courierPartner?: string }
+  ): Promise<void> {
+    const orders = this.getOndcOrders();
+    const order = orders.find((o) => o.id === id);
+    if (order) {
+      order.orderStatus = status;
+      if (tracking?.trackingNumber) order.trackingNumber = tracking.trackingNumber;
+      if (tracking?.courierPartner) order.courierPartner = tracking.courierPartner;
+      if (!Array.isArray(order.statusTimeline)) {
+        order.statusTimeline = [];
+      }
+      order.statusTimeline.push({
+        status: status.replace('_', ' ').toUpperCase(),
+        timestamp: new Date().toISOString(),
+        note: note || `Status updated to ${status.replace('_', ' ').toUpperCase()}`,
+      });
+      order.updatedAt = new Date().toISOString();
+      this.setItem(KEYS.ONDC_ORDERS, orders);
+      await this.syncServer('ondc_orders', order);
+      await fetch('/api/admin/ondc/orders/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(order)
+      }).catch(() => null);
+      dataSyncBus.emit('ondc_orders', orders);
+      dataSyncBus.emit('orders_updated');
+    }
+  }
+
+  deleteOndcOrder(id: string): boolean {
+    const orders = this.getOndcOrders();
+    const remaining = orders.filter((o) => o.id !== id);
+    this.setItem(KEYS.ONDC_ORDERS, remaining);
+    this.syncServer('ondc_orders', null, 'DELETE', id);
+    fetch(`/api/admin/ondc/orders/delete?id=${encodeURIComponent(id)}`, { method: 'POST' }).catch(() => null);
+    dataSyncBus.emit('ondc_orders', remaining);
+    dataSyncBus.emit('orders_updated');
+    return orders.length !== remaining.length;
+  }
+
+  deleteMultipleOndcOrders(ids: string[]): number {
+    if (!ids || ids.length === 0) return 0;
+    const idSet = new Set(ids);
+    const initial = this.getOndcOrders();
+    const remaining = initial.filter((o) => !idSet.has(o.id));
+    this.setItem(KEYS.ONDC_ORDERS, remaining);
+    ids.forEach((id) => {
+      this.syncServer('ondc_orders', null, 'DELETE', id);
+      fetch(`/api/admin/ondc/orders/delete?id=${encodeURIComponent(id)}`, { method: 'POST' }).catch(() => null);
+    });
+    dataSyncBus.emit('ondc_orders', remaining);
     dataSyncBus.emit('orders_updated');
     return initial.length - remaining.length;
   }

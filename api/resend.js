@@ -3,17 +3,29 @@
  * Securely uses process.env.RESEND_API_KEY. Never accepts secrets from client headers.
  */
 export default async function handler(req, res) {
+  const origin = req.headers.origin || '';
+  const allowedOrigins = [
+    'https://kognitiminds.com',
+    'https://www.kognitiminds.com',
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5173'
+  ];
+  const allowOrigin = allowedOrigins.includes(origin) ? origin : 'https://www.kognitiminds.com';
+  res.setHeader('Access-Control-Allow-Origin', allowOrigin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     return res.status(200).end();
   }
 
   // Safe internal diagnostic check: never prints or returns the secret
   if (req.method === 'GET') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
     const isConfigured = Boolean(process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim());
     return res.status(200).json({
       status: 'healthy',
@@ -23,7 +35,6 @@ export default async function handler(req, res) {
   }
 
   if (req.method !== 'POST') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(405).json({ success: false, message: 'Method Not Allowed' });
   }
 
@@ -43,7 +54,6 @@ export default async function handler(req, res) {
 
   if (!apiKey) {
     console.warn('[Resend Service] Resend configuration: missing (process.env.RESEND_API_KEY is not set)');
-    res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(500).json({
       success: false,
       message: 'Server configuration error: RESEND_API_KEY is not configured on the production server.',
@@ -63,11 +73,14 @@ export default async function handler(req, res) {
 
   // Support recipient parameters: to, email, or array
   const rawTo = payload.to || payload.email;
-  const toList = Array.isArray(rawTo) ? rawTo : [rawTo].filter(Boolean);
+  const rawList = Array.isArray(rawTo) ? rawTo : [rawTo].filter(Boolean);
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  const toList = rawList
+    .map(e => String(e).trim().replace(/[\r\n]/g, ''))
+    .filter(e => emailRegex.test(e));
 
   if (toList.length === 0) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    return res.status(400).json({ success: false, message: 'Recipient email address is required.' });
+    return res.status(400).json({ success: false, message: 'Valid recipient email address is required.' });
   }
 
   // Ensure 'from' address uses the verified domain (kognitiminds.com)
@@ -76,10 +89,12 @@ export default async function handler(req, res) {
     ? envFrom
     : 'Kogniti Minds Security <security@kognitiminds.com>';
 
+  const rawSubject = (payload.subject || 'Kogniti Minds Verification Code').trim().replace(/[\r\n]/g, '');
+
   const emailPayload = {
     from: verifiedFrom,
     to: toList,
-    subject: payload.subject || 'Kogniti Minds Verification Code',
+    subject: rawSubject,
     html: payload.html || (payload.otp ? `<p>Your verification code is: <strong>${payload.otp}</strong></p>` : '<p>Kogniti Minds notification</p>'),
   };
 
@@ -94,7 +109,6 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json().catch(() => ({}));
-    res.setHeader('Access-Control-Allow-Origin', '*');
 
     if (!response.ok) {
       const errMsg = data.message || data.error || `Resend HTTP ${response.status}`;
@@ -108,7 +122,6 @@ export default async function handler(req, res) {
       id: data.id,
     });
   } catch (err) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
     console.error('[Resend Service] Network dispatch exception:', err.message);
     return res.status(500).json({ success: false, message: err.message || 'Internal Server Error' });
   }
