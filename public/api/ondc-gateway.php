@@ -1157,16 +1157,16 @@ function processOndcSelect($storageDir, $context, $message) {
         $deliveryCharge = 0.0; // Institutional pallet free shipping
     }
 
-    if ($deliveryCharge > 0) {
-        $quoteBreakup[] = [
-            'title' => 'Delivery charges (Surface Logistics)',
-            '@ondc/org/title_type' => 'delivery',
-            'price' => [
-                'currency' => 'INR',
-                'value' => number_format($deliveryCharge, 2, '.', '')
-            ]
-        ];
-    }
+    $primaryFulfillmentId = $orderItems[0]['fulfillment_id'] ?? ($message['order']['fulfillments'][0]['id'] ?? 'F1');
+    $quoteBreakup[] = [
+        '@ondc/org/item_id' => $primaryFulfillmentId,
+        'title' => 'Delivery charges (Surface Logistics)',
+        '@ondc/org/title_type' => 'delivery',
+        'price' => [
+            'currency' => 'INR',
+            'value' => number_format($deliveryCharge, 2, '.', '')
+        ]
+    ];
 
     $grandTotal = $totalTaxable + $totalGst + $deliveryCharge;
 
@@ -1204,14 +1204,23 @@ function processOndcSelect($storageDir, $context, $message) {
                     'id' => $effectiveProviderId,
                     'locations' => [
                         [ 'id' => 'L1' ]
+                    ],
+                    'descriptor' => [
+                        'name' => 'KOGNITI MINDS PRIVATE LIMITED',
+                        'short_desc' => 'Sustainable Agri-Waste Paper & Copier Products Manufacturer',
+                        'long_desc' => 'Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.',
+                        'code' => $effectiveProviderId
                     ]
                 ],
                 'items' => $orderItems,
                 'fulfillments' => [
                     [
-                        'id' => 'F1',
+                        'id' => $primaryFulfillmentId,
                         'type' => 'Delivery',
-                        'tracking' => true,
+                        '@ondc/org/provider_name' => 'Kogniti Express Logistics',
+                        '@ondc/org/category' => 'Standard Delivery',
+                        '@ondc/org/TAT' => 'P2D',
+                        'tracking' => false,
                         'state' => [
                             'descriptor' => [
                                 'code' => 'Serviceable'

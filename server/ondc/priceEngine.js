@@ -226,16 +226,16 @@ export function calculateFullQuotation(requestedItems = [], deliveryAddress = {}
 
   // 3. Delivery fee entry
   const deliveryInfo = calculateDeliveryFee(processedItems, deliveryAddress);
-  if (deliveryInfo.deliveryCharge > 0) {
-    quoteBreakup.push({
-      title: 'Delivery charges (Surface Logistics)',
-      '@ondc/org/title_type': 'delivery',
-      price: {
-        currency: 'INR',
-        value: deliveryInfo.deliveryCharge.toFixed(2),
-      },
-    });
-  }
+  const primaryFulfillmentId = processedItems[0]?.fulfillment_id || 'F1';
+  quoteBreakup.push({
+    '@ondc/org/item_id': primaryFulfillmentId,
+    title: 'Delivery charges (Surface Logistics)',
+    '@ondc/org/title_type': 'delivery',
+    price: {
+      currency: 'INR',
+      value: deliveryInfo.deliveryCharge.toFixed(2),
+    },
+  });
 
   const grandTotal = Number((totalTaxable + totalGst + deliveryInfo.deliveryCharge).toFixed(2));
 

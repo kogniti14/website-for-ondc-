@@ -676,17 +676,26 @@ ondcRouter.post(['/select', '/ondc/select'], validateOndcRequest, async (req, re
         provider: {
           id: effectiveProviderId,
           locations: [{ id: 'L1' }],
+          descriptor: {
+            name: 'KOGNITI MINDS PRIVATE LIMITED',
+            short_desc: 'Sustainable Agri-Waste Paper & Copier Products Manufacturer',
+            long_desc: 'Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.',
+            code: effectiveProviderId,
+          },
         },
         items: quoteResult.items.map((it) => ({
           id: it.id,
-          fulfillment_id: 'F1',
+          fulfillment_id: it.fulfillment_id || 'F1',
           quantity: { count: it.quantity },
         })),
         fulfillments: [
           {
-            id: 'F1',
+            id: message?.order?.fulfillments?.[0]?.id || items[0]?.fulfillment_id || 'F1',
             type: 'Delivery',
-            tracking: true,
+            '@ondc/org/provider_name': 'Kogniti Express Logistics',
+            '@ondc/org/category': 'Standard Delivery',
+            '@ondc/org/TAT': 'P2D',
+            tracking: false,
             state: {
               descriptor: {
                 code: 'Serviceable',
