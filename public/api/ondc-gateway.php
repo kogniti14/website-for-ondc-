@@ -782,11 +782,14 @@ function getAuthoritativeProductsCatalog($storageDir) {
 }
 
 // 12. Helper to Build Outgoing Callback Context
-function buildCallbackContext($incomingContext, $callbackAction) {
-    // For on_select, RETeB2B 1.2.5 requires preserving exact message_id & transaction_id from incoming select request
-    $msgId = ($callbackAction === 'on_select' && !empty($incomingContext['message_id']))
-        ? $incomingContext['message_id']
-        : bin2hex(random_bytes(16));
+function buildCallbackContext($incomingContext, $callbackAction, $overrideMsgId = null) {
+    if ($overrideMsgId !== null) {
+        $msgId = $overrideMsgId;
+    } elseif (!empty($incomingContext['message_id']) && !str_starts_with($callbackAction, 'on_status_unsolicited')) {
+        $msgId = $incomingContext['message_id'];
+    } else {
+        $msgId = bin2hex(random_bytes(16));
+    }
 
     return [
         'domain' => $incomingContext['domain'] ?? 'ONDC:RETeB2B',
@@ -796,13 +799,33 @@ function buildCallbackContext($incomingContext, $callbackAction) {
         'core_version' => $incomingContext['core_version'] ?? '1.2.5',
         'bap_id' => $incomingContext['bap_id'] ?? 'workbench.ondc.tech',
         'bap_uri' => $incomingContext['bap_uri'] ?? 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer',
-        'bpp_id' => $incomingContext['bpp_id'] ?? 'kognitiminds.com',
-        'bpp_uri' => $incomingContext['bpp_uri'] ?? 'https://kognitiminds.com',
+        'bpp_id' => 'kognitiminds.com',
+        'bpp_uri' => 'https://kognitiminds.com',
         'transaction_id' => $incomingContext['transaction_id'] ?? '',
         'message_id' => $msgId,
         'timestamp' => gmdate('Y-m-d\TH:i:s\Z'),
         'ttl' => 'PT30S'
     ];
+}
+
+// 12b. Helper: Resolve scenario files across multiple possible root/public/dist directories
+function resolveWorkbenchScenarioFile($filename) {
+    $docRoot = $_SERVER['DOCUMENT_ROOT'] ?? '';
+    $candidates = [
+        dirname(__DIR__) . '/ondc-workbench/' . $filename,
+        dirname(__DIR__, 2) . '/ondc-workbench/' . $filename,
+        dirname(__DIR__) . '/public/ondc-workbench/' . $filename,
+        dirname(__DIR__) . '/dist/ondc-workbench/' . $filename,
+        $docRoot . '/ondc-workbench/' . $filename,
+        $docRoot . '/public/ondc-workbench/' . $filename,
+        $docRoot . '/dist/ondc-workbench/' . $filename,
+    ];
+    foreach ($candidates as $candidate) {
+        if (!empty($candidate) && file_exists($candidate)) {
+            return $candidate;
+        }
+    }
+    return null;
 }
 
 // 13. Helper: Dispatch Asynchronous HTTP Callback to BAP / Workbench
@@ -1209,8 +1232,8 @@ function processOndcSelect($storageDir, $context, $message) {
             'core_version' => $context['core_version'] ?? '1.2.5',
             'bap_id' => $bapId ?: 'workbench.ondc.tech',
             'bap_uri' => $bapUri ?: 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer',
-            'bpp_id' => $context['bpp_id'] ?? 'kognitiminds.com',
-            'bpp_uri' => $context['bpp_uri'] ?? 'https://kognitiminds.com',
+            'bpp_id' => 'kognitiminds.com',
+            'bpp_uri' => 'https://kognitiminds.com',
             'transaction_id' => $txnId,
             'message_id' => $msgId,
             'timestamp' => gmdate('Y-m-d\TH:i:s\Z'),
@@ -1283,14 +1306,14 @@ function processOndcSelect($storageDir, $context, $message) {
 $callbackPayload = null;
 $callbackAction = null;
 $callbackMeta = [];
+$additionalCallbacks = [];
 $requestAction = $context['action'] ?? $action;
 
 switch ($requestAction) {
     case 'search':
         $callbackAction = 'on_search';
-        // Check if pre-generated scenario file exists for exact RETeB2B 1.2.5 format
-        $scenarioFile = dirname(__DIR__) . '/ondc-workbench/01_on_search.json';
-        if (file_exists($scenarioFile)) {
+        $scenarioFile = resolveWorkbenchScenarioFile('01_on_search.json');
+        if ($scenarioFile && file_exists($scenarioFile)) {
             $basePayload = json_decode(file_get_contents($scenarioFile), true);
             $basePayload['context'] = buildCallbackContext($context, 'on_search');
             $callbackPayload = $basePayload;
@@ -1364,22 +1387,37 @@ switch ($requestAction) {
 
     case 'init':
         $callbackAction = 'on_init';
-        $scenarioFile = dirname(__DIR__) . '/ondc-workbench/03_on_init.json';
-        if (file_exists($scenarioFile)) {
+        $scenarioFile = resolveWorkbenchScenarioFile('03_on_init.json');
+        if ($scenarioFile && file_exists($scenarioFile)) {
             $basePayload = json_decode(file_get_contents($scenarioFile), true);
             $basePayload['context'] = buildCallbackContext($context, 'on_init');
+            if (!empty($message['order']['items'])) {
+                $basePayload['message']['order']['items'] = $message['order']['items'];
+            }
+            if (!empty($message['order']['billing'])) {
+                $basePayload['message']['order']['billing'] = $message['order']['billing'];
+            }
+            if (!empty($message['order']['fulfillments'])) {
+                $basePayload['message']['order']['fulfillments'] = $message['order']['fulfillments'];
+            }
             $callbackPayload = $basePayload;
         }
         break;
 
     case 'confirm':
         $callbackAction = 'on_confirm';
-        $orderId = $message['order']['id'] ?? ('ord_' . bin2hex(random_bytes(4)));
-        $scenarioFile = dirname(__DIR__) . '/ondc-workbench/04_on_confirm.json';
-        if (file_exists($scenarioFile)) {
+        $orderId = $message['order']['id'] ?? ('KM_ONDC_ORD_' . strtoupper(bin2hex(random_bytes(3))));
+        $scenarioFile = resolveWorkbenchScenarioFile('04_on_confirm.json');
+        if ($scenarioFile && file_exists($scenarioFile)) {
             $basePayload = json_decode(file_get_contents($scenarioFile), true);
             $basePayload['context'] = buildCallbackContext($context, 'on_confirm');
             $basePayload['message']['order']['id'] = $orderId;
+            if (!empty($message['order']['items'])) {
+                $basePayload['message']['order']['items'] = $message['order']['items'];
+            }
+            if (!empty($message['order']['billing'])) {
+                $basePayload['message']['order']['billing'] = $message['order']['billing'];
+            }
             $callbackPayload = $basePayload;
         }
 
@@ -1391,18 +1429,80 @@ switch ($requestAction) {
         }
         $orders[$orderId] = [
             'id' => $orderId,
-            'transaction_id' => $context['transaction_id'],
+            'transaction_id' => $context['transaction_id'] ?? '',
             'status' => 'Created',
             'createdAt' => gmdate('Y-m-d\TH:i:s\Z'),
             'payload' => $message['order'] ?? []
         ];
         @file_put_contents($ordersFile, json_encode($orders, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
+
+        // Schedule the 6 unsolicited on_status updates for Steps 7-12
+        // Lifecycle states: Packed, Order-picked-up, In-transit, At-destination-hub, Out-for-delivery, Order-delivered
+        $statusMilestones = [
+            ['code' => 'Packed', 'orderState' => 'Accepted'],
+            ['code' => 'Order-picked-up', 'orderState' => 'In-progress'],
+            ['code' => 'In-transit', 'orderState' => 'In-progress'],
+            ['code' => 'At-destination-hub', 'orderState' => 'In-progress'],
+            ['code' => 'Out-for-delivery', 'orderState' => 'In-progress'],
+            ['code' => 'Order-delivered', 'orderState' => 'Completed']
+        ];
+
+        $statusScenarioFile = resolveWorkbenchScenarioFile('05_on_status.json');
+        $baseStatusTemplate = ($statusScenarioFile && file_exists($statusScenarioFile))
+            ? json_decode(file_get_contents($statusScenarioFile), true)
+            : null;
+
+        foreach ($statusMilestones as $milestone) {
+            $statusContext = buildCallbackContext($context, 'on_status', bin2hex(random_bytes(16)));
+            if ($baseStatusTemplate) {
+                $statusPayload = $baseStatusTemplate;
+                $statusPayload['context'] = $statusContext;
+                $statusPayload['message']['order']['id'] = $orderId;
+                $statusPayload['message']['order']['state'] = $milestone['orderState'];
+                if (!empty($message['order']['items'])) {
+                    $statusPayload['message']['order']['items'] = $message['order']['items'];
+                }
+                if (!empty($statusPayload['message']['order']['fulfillments'][0])) {
+                    $statusPayload['message']['order']['fulfillments'][0]['state']['descriptor']['code'] = $milestone['code'];
+                    $statusPayload['message']['order']['fulfillments'][0]['tracking_url'] = 'https://kognitiminds.com/track/' . $orderId;
+                }
+                $statusPayload['message']['order']['updated_at'] = gmdate('Y-m-d\TH:i:s\Z');
+            } else {
+                $statusPayload = [
+                    'context' => $statusContext,
+                    'message' => [
+                        'order' => [
+                            'id' => $orderId,
+                            'state' => $milestone['orderState'],
+                            'provider' => [ 'id' => 'kogniti-minds-bpp' ],
+                            'items' => $message['order']['items'] ?? [['id' => 'km-agri-a4-75', 'quantity' => ['count' => 50]]],
+                            'fulfillments' => [
+                                [
+                                    'id' => 'F1',
+                                    'type' => 'Delivery',
+                                    'state' => [ 'descriptor' => [ 'code' => $milestone['code'] ] ],
+                                    'tracking' => true,
+                                    'tracking_url' => 'https://kognitiminds.com/track/' . $orderId
+                                ]
+                            ],
+                            'updated_at' => gmdate('Y-m-d\TH:i:s\Z')
+                        ]
+                    ]
+                ];
+            }
+
+            $additionalCallbacks[] = [
+                'action' => 'on_status',
+                'payload' => $statusPayload,
+                'delay_us' => 1000000 // 1.0s interval between lifecycle milestone updates
+            ];
+        }
         break;
 
     case 'status':
         $callbackAction = 'on_status';
-        $scenarioFile = dirname(__DIR__) . '/ondc-workbench/05_on_status.json';
-        if (file_exists($scenarioFile)) {
+        $scenarioFile = resolveWorkbenchScenarioFile('05_on_status.json');
+        if ($scenarioFile && file_exists($scenarioFile)) {
             $basePayload = json_decode(file_get_contents($scenarioFile), true);
             $basePayload['context'] = buildCallbackContext($context, 'on_status');
             $callbackPayload = $basePayload;
@@ -1411,18 +1511,88 @@ switch ($requestAction) {
 
     case 'update':
         $callbackAction = 'on_update';
-        $scenarioFile = dirname(__DIR__) . '/ondc-workbench/06_on_update_partial_return.json';
-        if (file_exists($scenarioFile)) {
-            $basePayload = json_decode(file_get_contents($scenarioFile), true);
-            $basePayload['context'] = buildCallbackContext($context, 'on_update');
-            $callbackPayload = $basePayload;
+        $txnId = $context['transaction_id'] ?? '';
+
+        // Track update calls for this transaction to handle multi-step return flows
+        $sessionsFile = $storageDir . '/return_sessions.json';
+        $sessions = [];
+        if (file_exists($sessionsFile)) {
+            $sessions = json_decode(@file_get_contents($sessionsFile), true) ?: [];
+        }
+        $updateCount = ($sessions[$txnId]['count'] ?? 0) + 1;
+        $sessions[$txnId] = [
+            'count' => $updateCount,
+            'lastUpdated' => gmdate('Y-m-d\TH:i:s\Z')
+        ];
+        @file_put_contents($sessionsFile, json_encode($sessions, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
+
+        $orderId = $message['order']['id'] ?? 'KM_ONDC_ORD_881290';
+
+        if ($updateCount === 1) {
+            // STEP 13 & 14: Partial Order Return -> Return_Approved
+            $scenarioFile = resolveWorkbenchScenarioFile('06_on_update_partial_return.json');
+            if ($scenarioFile && file_exists($scenarioFile)) {
+                $basePayload = json_decode(file_get_contents($scenarioFile), true);
+                $basePayload['context'] = buildCallbackContext($context, 'on_update');
+                $basePayload['message']['order']['id'] = $orderId;
+                $basePayload['message']['order']['updated_at'] = gmdate('Y-m-d\TH:i:s\Z');
+                $callbackPayload = $basePayload;
+
+                // STEP 15 (UNSOLICITED): Return_Picked
+                $pickedPayload = $basePayload;
+                $pickedPayload['context'] = buildCallbackContext($context, 'on_update', bin2hex(random_bytes(16)));
+                if (!empty($pickedPayload['message']['order']['fulfillments'])) {
+                    foreach ($pickedPayload['message']['order']['fulfillments'] as &$f) {
+                        if (($f['type'] ?? '') === 'Return' || str_starts_with($f['id'] ?? '', 'R_')) {
+                            $f['state']['descriptor']['code'] = 'Return_Picked';
+                            $f['state']['descriptor']['name'] = 'Return Package Picked Up by Logistics Partner';
+                        }
+                    }
+                    unset($f);
+                }
+                $pickedPayload['message']['order']['updated_at'] = gmdate('Y-m-d\TH:i:s\Z');
+                $additionalCallbacks[] = [
+                    'action' => 'on_update',
+                    'payload' => $pickedPayload,
+                    'delay_us' => 1000000
+                ];
+
+                // STEP 16 (UNSOLICITED): Return_Delivered
+                $deliveredPayload = $basePayload;
+                $deliveredPayload['context'] = buildCallbackContext($context, 'on_update', bin2hex(random_bytes(16)));
+                if (!empty($deliveredPayload['message']['order']['fulfillments'])) {
+                    foreach ($deliveredPayload['message']['order']['fulfillments'] as &$f) {
+                        if (($f['type'] ?? '') === 'Return' || str_starts_with($f['id'] ?? '', 'R_')) {
+                            $f['state']['descriptor']['code'] = 'Return_Delivered';
+                            $f['state']['descriptor']['name'] = 'Return Package Delivered & Inspected at Kogniti Facility';
+                        }
+                    }
+                    unset($f);
+                }
+                $deliveredPayload['message']['order']['updated_at'] = gmdate('Y-m-d\TH:i:s\Z');
+                $additionalCallbacks[] = [
+                    'action' => 'on_update',
+                    'payload' => $deliveredPayload,
+                    'delay_us' => 1000000
+                ];
+            }
+        } else {
+            // STEP 17 & 18: Full Order Return -> Return_Approved
+            $scenarioFile = resolveWorkbenchScenarioFile('07_on_update_full_return.json');
+            if ($scenarioFile && file_exists($scenarioFile)) {
+                $basePayload = json_decode(file_get_contents($scenarioFile), true);
+                $basePayload['context'] = buildCallbackContext($context, 'on_update');
+                $basePayload['message']['order']['id'] = $orderId;
+                $basePayload['message']['order']['updated_at'] = gmdate('Y-m-d\TH:i:s\Z');
+                $callbackPayload = $basePayload;
+            }
         }
         break;
 
     case 'cancel':
         $callbackAction = 'on_cancel';
-        $scenarioFile = dirname(__DIR__) . '/ondc-workbench/08_on_cancel.json';
-        if (file_exists($scenarioFile)) {
+        $scenarioFile = resolveWorkbenchScenarioFile('08_on_cancel.json');
+        if ($scenarioFile && file_exists($scenarioFile)) {
             $basePayload = json_decode(file_get_contents($scenarioFile), true);
             $basePayload['context'] = buildCallbackContext($context, 'on_cancel');
             $callbackPayload = $basePayload;
@@ -1455,8 +1625,8 @@ switch ($requestAction) {
 
     case 'support':
         $callbackAction = 'on_support';
-        $scenarioFile = dirname(__DIR__) . '/ondc-workbench/10_on_support.json';
-        if (file_exists($scenarioFile)) {
+        $scenarioFile = resolveWorkbenchScenarioFile('10_on_support.json');
+        if ($scenarioFile && file_exists($scenarioFile)) {
             $basePayload = json_decode(file_get_contents($scenarioFile), true);
             $basePayload['context'] = buildCallbackContext($context, 'on_support');
             $callbackPayload = $basePayload;
@@ -1510,4 +1680,17 @@ if ($callbackPayload && !empty($context['bap_uri'])) {
         ]));
     }
     dispatchAsyncCallback($context['bap_uri'], $callbackAction, $callbackPayload, $storageDir, $callbackMeta ?? []);
+
+    // Dispatch any chained unsolicited callbacks (e.g. on_status milestones, return progression)
+    if (!empty($additionalCallbacks)) {
+        foreach ($additionalCallbacks as $extraCb) {
+            if (!empty($extraCb['delay_us'])) {
+                usleep($extraCb['delay_us']);
+            }
+            dispatchAsyncCallback($context['bap_uri'], $extraCb['action'], $extraCb['payload'], $storageDir, [
+                'transaction_id' => $context['transaction_id'] ?? null,
+                'unsolicited' => true
+            ]);
+        }
+    }
 }
