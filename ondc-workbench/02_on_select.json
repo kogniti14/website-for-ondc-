@@ -17,7 +17,13 @@
   "message": {
     "order": {
       "provider": {
-        "id": "kogniti-minds-bpp"
+        "id": "kogniti-minds-bpp",
+        "descriptor": {
+          "name": "KOGNITI MINDS PRIVATE LIMITED",
+          "short_desc": "Sustainable Agri-Waste Paper & Copier Products Manufacturer",
+          "long_desc": "Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.",
+          "code": "kogniti-minds-bpp"
+        }
       },
       "items": [
         {
@@ -32,7 +38,10 @@
         {
           "id": "F1",
           "type": "Delivery",
-          "tracking": true,
+          "@ondc/org/provider_name": "Kogniti Express Logistics",
+          "@ondc/org/category": "Standard Delivery",
+          "@ondc/org/TAT": "P2D",
+          "tracking": false,
           "state": {
             "descriptor": {
               "code": "Serviceable"
@@ -82,6 +91,7 @@
             }
           },
           {
+            "@ondc/org/item_id": "F1",
             "title": "Delivery charges (Surface Logistics)",
             "@ondc/org/title_type": "delivery",
             "price": {
