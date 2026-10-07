@@ -30,7 +30,10 @@ $health = [
         'realtimeDatabase' => true,
         'authentication' => true,
         'storage' => true
-    ]
+    ],
+    'sapi' => php_sapi_name(),
+    'has_fastcgi_finish' => function_exists('fastcgi_finish_request'),
+    'has_litespeed_finish' => function_exists('litespeed_finish_request')
 ];
 
 echo json_encode($health, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
