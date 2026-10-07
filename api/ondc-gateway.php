@@ -320,9 +320,16 @@ if ($action === 'admin_transactions') {
     exit;
 }
 
-if ($action === 'admin_logs') {
+if ($action === 'admin_logs' || $action === 'admin_inspect') {
     $logFile = $storageDir . '/ondc_logs.json';
     $rawLogs = file_exists($logFile) ? (json_decode(file_get_contents($logFile), true) ?: []) : [];
+    
+    if ($action === 'admin_inspect') {
+        http_response_code(200);
+        echo json_encode(['success' => true, 'total' => count($rawLogs), 'logs' => array_slice($rawLogs, 0, 30)], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
     $enrichedLogs = [];
     foreach ($rawLogs as $idx => $l) {
         if (!is_array($l)) continue;
@@ -330,11 +337,17 @@ if ($action === 'admin_logs') {
             'id' => $l['id'] ?? ('log_' . $idx . '_' . strtotime($l['timestamp'] ?? 'now')),
             'timestamp' => $l['timestamp'] ?? gmdate('Y-m-d\TH:i:s\Z'),
             'action' => $l['action'] ?? 'protocol_request',
+            'event' => $l['event'] ?? null,
             'transactionId' => $l['transaction_id'] ?? ($l['transactionId'] ?? '—'),
             'messageId' => $l['message_id'] ?? ($l['messageId'] ?? ''),
             'status' => (int)($l['status'] ?? ($l['http_status'] ?? 200)),
             'durationMs' => (float)($l['durationMs'] ?? ($l['processing_time_ms'] ?? 12)),
             'error' => is_array($l['error'] ?? null) ? ($l['error']['message'] ?? null) : ($l['error'] ?? null),
+            'responseBody' => $l['response_body'] ?? null,
+            'httpStatus' => $l['http_status'] ?? null,
+            'targetUrl' => $l['target_url'] ?? null,
+            'itemId' => $l['item_id'] ?? null,
+            'providerId' => $l['provider_id'] ?? null,
         ];
     }
     http_response_code(200);
