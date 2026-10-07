@@ -838,6 +838,16 @@ function dispatchAsyncCallback($bapUri, $callbackAction, $payload, $storageDir =
 
     $jsonBody = json_encode($payload, JSON_UNESCAPED_SLASHES);
 
+    if ($storageDir) {
+        logOndcEvent($storageDir, strtoupper($callbackAction) . '_SENT', array_merge($meta, [
+            'action' => $callbackAction,
+            'target_url' => $targetUrl,
+            'transaction_id' => $payload['context']['transaction_id'] ?? null,
+            'message_id' => $payload['context']['message_id'] ?? null,
+            'payload_size' => strlen($jsonBody)
+        ]));
+    }
+
     // Asynchronous non-blocking HTTP dispatch using cURL
     $ch = curl_init($targetUrl);
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
@@ -859,9 +869,12 @@ function dispatchAsyncCallback($bapUri, $callbackAction, $payload, $storageDir =
     $curlErr = curl_error($ch);
     curl_close($ch);
 
-    if ($storageDir && !empty($meta) && $callbackAction === 'on_select') {
-        logOndcEvent($storageDir, 'ON_SELECT_RESPONSE', array_merge($meta, [
+    if ($storageDir) {
+        logOndcEvent($storageDir, strtoupper($callbackAction) . '_RESPONSE', array_merge($meta, [
+            'action' => $callbackAction,
             'http_status' => $httpCode,
+            'transaction_id' => $payload['context']['transaction_id'] ?? null,
+            'message_id' => $payload['context']['message_id'] ?? null,
             'response_body' => $responseBody ?: $curlErr
         ]));
     }
@@ -1289,6 +1302,17 @@ function processOndcSelect($storageDir, $context, $message) {
         'quote_value' => number_format($grandTotal, 2, '.', '')
     ]);
 
+    // Persist transaction session so subsequent on_init and on_confirm use exact matching quote & items
+    $sessionData = [
+        'transaction_id' => $txnId,
+        'effective_provider_id' => $effectiveProviderId,
+        'provider' => $onSelectPayload['message']['order']['provider'],
+        'items' => $orderItems,
+        'fulfillment' => $onSelectPayload['message']['order']['fulfillments'][0],
+        'quote' => $onSelectPayload['message']['order']['quote']
+    ];
+    @file_put_contents($storageDir . '/session_' . $txnId . '.json', json_encode($sessionData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
+
     return [
         'success' => true,
         'payload' => $onSelectPayload,
@@ -1387,39 +1411,221 @@ switch ($requestAction) {
 
     case 'init':
         $callbackAction = 'on_init';
-        $scenarioFile = resolveWorkbenchScenarioFile('03_on_init.json');
-        if ($scenarioFile && file_exists($scenarioFile)) {
-            $basePayload = json_decode(file_get_contents($scenarioFile), true);
-            $basePayload['context'] = buildCallbackContext($context, 'on_init');
-            if (!empty($message['order']['items'])) {
-                $basePayload['message']['order']['items'] = $message['order']['items'];
+        $txnId = $context['transaction_id'] ?? '';
+
+        $sessionFile = $storageDir . '/session_' . $txnId . '.json';
+        $sessionData = (file_exists($sessionFile)) ? json_decode(@file_get_contents($sessionFile), true) : null;
+
+        $orderReq = $message['order'] ?? [];
+        $billing = $orderReq['billing'] ?? [
+            'name' => 'Apex Educational Trust',
+            'address' => [
+                'street' => 'Knowledge Park II',
+                'city' => 'Greater Noida',
+                'state' => 'Uttar Pradesh',
+                'area_code' => '201310'
+            ],
+            'tax_number' => '07AAAAA0000A1Z5'
+        ];
+
+        $providerObj = $sessionData['provider'] ?? [
+            'id' => 'kogniti-minds-bpp',
+            'locations' => [ [ 'id' => 'L1' ] ],
+            'descriptor' => [
+                'name' => 'KOGNITI MINDS PRIVATE LIMITED',
+                'short_desc' => 'Sustainable Agri-Waste Paper & Copier Products Manufacturer',
+                'long_desc' => 'Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.',
+                'code' => 'kogniti-minds-bpp'
+            ]
+        ];
+
+        $items = $sessionData['items'] ?? $orderReq['items'] ?? [
+            [
+                'id' => 'km-agri-a4-75',
+                'fulfillment_id' => 'F1',
+                'quantity' => [ 'count' => 50 ]
+            ]
+        ];
+
+        $fulfillmentEnd = $orderReq['fulfillments'][0]['end'] ?? [
+            'location' => [
+                'address' => [
+                    'street' => 'Knowledge Park II',
+                    'city' => 'Greater Noida',
+                    'state' => 'Uttar Pradesh',
+                    'area_code' => '201310'
+                ]
+            ]
+        ];
+
+        $fulfillments = [
+            [
+                'id' => 'F1',
+                'type' => 'Delivery',
+                '@ondc/org/provider_name' => 'Kogniti Express Logistics',
+                '@ondc/org/category' => 'Standard Delivery',
+                '@ondc/org/TAT' => 'P2D',
+                'tracking' => false,
+                'state' => [
+                    'descriptor' => [
+                        'code' => 'Serviceable'
+                    ]
+                ],
+                'end' => $fulfillmentEnd
+            ]
+        ];
+
+        $quote = $sessionData['quote'] ?? null;
+        if (!$quote) {
+            $scenarioFile = resolveWorkbenchScenarioFile('03_on_init.json');
+            if ($scenarioFile && file_exists($scenarioFile)) {
+                $rawInit = json_decode(file_get_contents($scenarioFile), true);
+                $quote = $rawInit['message']['order']['quote'] ?? null;
             }
-            if (!empty($message['order']['billing'])) {
-                $basePayload['message']['order']['billing'] = $message['order']['billing'];
-            }
-            if (!empty($message['order']['fulfillments'])) {
-                $basePayload['message']['order']['fulfillments'] = $message['order']['fulfillments'];
-            }
-            $callbackPayload = $basePayload;
+        }
+
+        $paymentObj = [
+            'type' => 'ON-FULFILLMENT',
+            'status' => 'NOT-PAID',
+            '@ondc/org/buyer_app_finder_fee_type' => 'percent',
+            '@ondc/org/buyer_app_finder_fee_amount' => '3.0',
+            '@ondc/org/settlement_basis' => 'delivery',
+            '@ondc/org/settlement_window' => 'P1D',
+            '@ondc/org/withholding_amount' => '0.00',
+            '@ondc/org/settlement_details' => [
+                [
+                    'settlement_counterparty' => 'buyer',
+                    'settlement_phase' => 'sale-amount',
+                    'settlement_type' => 'neft',
+                    'beneficiary_name' => 'KOGNITI MINDS PRIVATE LIMITED',
+                    'settlement_bank_account_no' => '99990100012345',
+                    'settlement_ifsc_code' => 'HDFC0000001'
+                ]
+            ]
+        ];
+
+        $callbackPayload = [
+            'context' => buildCallbackContext($context, 'on_init'),
+            'message' => [
+                'order' => [
+                    'provider' => $providerObj,
+                    'items' => $items,
+                    'billing' => $billing,
+                    'fulfillments' => $fulfillments,
+                    'quote' => $quote,
+                    'payment' => $paymentObj
+                ]
+            ]
+        ];
+
+        if ($sessionData) {
+            $sessionData['billing'] = $billing;
+            $sessionData['fulfillment_end'] = $fulfillmentEnd;
+            @file_put_contents($sessionFile, json_encode($sessionData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
         }
         break;
 
     case 'confirm':
         $callbackAction = 'on_confirm';
+        $txnId = $context['transaction_id'] ?? '';
         $orderId = $message['order']['id'] ?? ('KM_ONDC_ORD_' . strtoupper(bin2hex(random_bytes(3))));
-        $scenarioFile = resolveWorkbenchScenarioFile('04_on_confirm.json');
-        if ($scenarioFile && file_exists($scenarioFile)) {
-            $basePayload = json_decode(file_get_contents($scenarioFile), true);
-            $basePayload['context'] = buildCallbackContext($context, 'on_confirm');
-            $basePayload['message']['order']['id'] = $orderId;
-            if (!empty($message['order']['items'])) {
-                $basePayload['message']['order']['items'] = $message['order']['items'];
+
+        $sessionFile = $storageDir . '/session_' . $txnId . '.json';
+        $sessionData = (file_exists($sessionFile)) ? json_decode(@file_get_contents($sessionFile), true) : null;
+
+        $providerObj = $sessionData['provider'] ?? [
+            'id' => 'kogniti-minds-bpp',
+            'locations' => [ [ 'id' => 'L1' ] ],
+            'descriptor' => [
+                'name' => 'KOGNITI MINDS PRIVATE LIMITED',
+                'short_desc' => 'Sustainable Agri-Waste Paper & Copier Products Manufacturer',
+                'long_desc' => 'Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.',
+                'code' => 'kogniti-minds-bpp'
+            ]
+        ];
+
+        $items = $sessionData['items'] ?? $message['order']['items'] ?? [
+            [
+                'id' => 'km-agri-a4-75',
+                'fulfillment_id' => 'F1',
+                'quantity' => [ 'count' => 50 ]
+            ]
+        ];
+
+        $billing = $sessionData['billing'] ?? $message['order']['billing'] ?? [
+            'name' => 'Apex Educational Trust',
+            'address' => [
+                'street' => 'Knowledge Park II',
+                'city' => 'Greater Noida',
+                'state' => 'Uttar Pradesh',
+                'area_code' => '201310'
+            ],
+            'tax_number' => '07AAAAA0000A1Z5'
+        ];
+
+        $fulfillments = [
+            [
+                'id' => 'F1',
+                'type' => 'Delivery',
+                '@ondc/org/provider_name' => 'Kogniti Express Logistics',
+                '@ondc/org/category' => 'Standard Delivery',
+                '@ondc/org/TAT' => 'P2D',
+                'tracking' => true,
+                'state' => [
+                    'descriptor' => [
+                        'code' => 'Order-picked-up'
+                    ]
+                ],
+                'tracking_url' => 'https://kognitiminds.com/track/' . $orderId
+            ]
+        ];
+
+        $quote = $sessionData['quote'] ?? null;
+        if (!$quote) {
+            $scenarioFile = resolveWorkbenchScenarioFile('04_on_confirm.json');
+            if ($scenarioFile && file_exists($scenarioFile)) {
+                $rawConfirm = json_decode(file_get_contents($scenarioFile), true);
+                $quote = $rawConfirm['message']['order']['quote'] ?? null;
             }
-            if (!empty($message['order']['billing'])) {
-                $basePayload['message']['order']['billing'] = $message['order']['billing'];
-            }
-            $callbackPayload = $basePayload;
         }
+
+        $paymentObj = [
+            'type' => 'ON-FULFILLMENT',
+            'status' => 'NOT-PAID',
+            '@ondc/org/buyer_app_finder_fee_type' => 'percent',
+            '@ondc/org/buyer_app_finder_fee_amount' => '3.0',
+            '@ondc/org/settlement_basis' => 'delivery',
+            '@ondc/org/settlement_window' => 'P1D',
+            '@ondc/org/withholding_amount' => '0.00',
+            '@ondc/org/settlement_details' => [
+                [
+                    'settlement_counterparty' => 'buyer',
+                    'settlement_phase' => 'sale-amount',
+                    'settlement_type' => 'neft',
+                    'beneficiary_name' => 'KOGNITI MINDS PRIVATE LIMITED',
+                    'settlement_bank_account_no' => '99990100012345',
+                    'settlement_ifsc_code' => 'HDFC0000001'
+                ]
+            ]
+        ];
+
+        $callbackPayload = [
+            'context' => buildCallbackContext($context, 'on_confirm'),
+            'message' => [
+                'order' => [
+                    'id' => $orderId,
+                    'state' => 'Created',
+                    'provider' => $providerObj,
+                    'items' => $items,
+                    'billing' => $billing,
+                    'fulfillments' => $fulfillments,
+                    'quote' => $quote,
+                    'payment' => $paymentObj,
+                    'created_at' => gmdate('Y-m-d\TH:i:s\Z'),
+                    'updated_at' => gmdate('Y-m-d\TH:i:s\Z')
+                ]
+            ]
+        ];
 
         // Save order to ondc_orders.json
         $ordersFile = $storageDir . '/ondc_orders.json';
@@ -1432,7 +1638,7 @@ switch ($requestAction) {
             'transaction_id' => $context['transaction_id'] ?? '',
             'status' => 'Created',
             'createdAt' => gmdate('Y-m-d\TH:i:s\Z'),
-            'payload' => $message['order'] ?? []
+            'payload' => $callbackPayload['message']['order']
         ];
         @file_put_contents($ordersFile, json_encode($orders, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
 
