@@ -530,7 +530,9 @@ function sendAckResponse($logParams = []) {
     header('Content-Type: application/json; charset=utf-8');
     header('Connection: close');
     header('Content-Length: ' . strlen($body));
+    header('X-LiteSpeed-Buffer: no');
     header('X-Accel-Buffering: no');
+    header('Content-Encoding: none');
     echo $body;
     flush();
 
@@ -645,9 +647,11 @@ if (empty($context['domain']) || empty($context['action']) || empty($context['tr
     ]);
 }
 
-// Validate ONDC Domain
-if ($context['domain'] !== 'ONDC:RETeB2B') {
-    sendNackResponse(400, '10001', "Invalid domain '{$context['domain']}'. Expected 'ONDC:RETeB2B'.", $storageDir, [
+// Validate ONDC Domain (Allow B2B and all Retail categories e.g. RET10-RET18)
+$inDomain = $context['domain'] ?? '';
+$validDomains = ['ONDC:RETeB2B', 'nic2004:52110'];
+if (!in_array($inDomain, $validDomains) && !str_starts_with($inDomain, 'ONDC:RET')) {
+    sendNackResponse(400, '10001', "Invalid domain '{$inDomain}'. Expected 'ONDC:RETeB2B' or retail domain.", $storageDir, [
         'action' => $context['action'],
         'transaction_id' => $context['transaction_id'],
         'message_id' => $context['message_id'],
@@ -657,7 +661,7 @@ if ($context['domain'] !== 'ONDC:RETeB2B') {
 }
 
 // Validate ONDC Version
-if (!empty($context['core_version']) && $context['core_version'] !== '1.2.5') {
+if (!empty($context['core_version']) && !in_array($context['core_version'], ['1.2.0', '1.2.5', '2.0.0'])) {
     sendNackResponse(400, '10002', "Unsupported core_version '{$context['core_version']}'. Expected '1.2.5'.", $storageDir, [
         'action' => $context['action'],
         'transaction_id' => $context['transaction_id'],
@@ -1898,7 +1902,7 @@ switch ($requestAction) {
             $additionalCallbacks[] = [
                 'action' => 'on_status',
                 'payload' => $statusPayload,
-                'delay_us' => 1500000 // 1.5s interval between lifecycle milestone updates
+                'delay_us' => 2000000 // 2.0s interval between lifecycle milestone updates
             ];
         }
         break;
@@ -2077,6 +2081,8 @@ switch ($requestAction) {
     case 'update':
         $callbackAction = 'on_update';
         $txnId = $context['transaction_id'] ?? '';
+        $sessionFile = $storageDir . '/session_' . $txnId . '.json';
+        $sessionData = (file_exists($sessionFile)) ? json_decode(@file_get_contents($sessionFile), true) : null;
 
         // Track update calls for this transaction to handle multi-step return flows
         $sessionsFile = $storageDir . '/return_sessions.json';
@@ -2091,7 +2097,64 @@ switch ($requestAction) {
         ];
         @file_put_contents($sessionsFile, json_encode($sessions, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
 
-        $orderId = $message['order']['id'] ?? 'KM_ONDC_ORD_881290';
+        $rawOrderId = $message['order']['id'] ?? ($sessionData['order_id'] ?? 'KM-ONDC-ORD-881290');
+        $orderId = substr(preg_replace('/[^a-zA-Z0-9-]/', '-', $rawOrderId), 0, 32);
+
+        $nowIsoMs = gmdate('Y-m-d\TH:i:s') . '.000Z';
+        $inBilling = $sessionData['billing'] ?? $message['order']['billing'] ?? [];
+        $billing = [
+            'name' => !empty($inBilling['name']) ? $inBilling['name'] : 'Apex Educational Trust',
+            'address' => [
+                'name' => !empty($inBilling['address']['name']) ? $inBilling['address']['name'] : (!empty($inBilling['name']) ? $inBilling['name'] : 'Apex Educational Trust'),
+                'building' => !empty($inBilling['address']['building']) ? $inBilling['address']['building'] : 'Building 4A',
+                'locality' => !empty($inBilling['address']['locality']) ? $inBilling['address']['locality'] : 'Knowledge Park II',
+                'city' => !empty($inBilling['address']['city']) ? $inBilling['address']['city'] : 'Greater Noida',
+                'state' => !empty($inBilling['address']['state']) ? $inBilling['address']['state'] : 'Uttar Pradesh',
+                'country' => !empty($inBilling['address']['country']) ? $inBilling['address']['country'] : 'IND',
+                'area_code' => !empty($inBilling['address']['area_code']) ? $inBilling['address']['area_code'] : '201310'
+            ],
+            'phone' => !empty($inBilling['phone']) ? $inBilling['phone'] : '9876543210',
+            'tax_number' => !empty($inBilling['tax_number']) ? $inBilling['tax_number'] : '07AAAAA0000A1Z5',
+            'created_at' => !empty($inBilling['created_at']) && str_ends_with($inBilling['created_at'], '.000Z') ? $inBilling['created_at'] : $nowIsoMs,
+            'updated_at' => $nowIsoMs
+        ];
+
+        // Retrieve existing fulfillments from session
+        $sessFulfillments = $sessionData['fulfillments'] ?? [];
+        $primaryStart = $sessFulfillments[0]['start'] ?? [
+            'location' => [
+                'id' => 'L1',
+                'descriptor' => [ 'name' => 'Kogniti Central Facility' ],
+                'gps' => '12.9715987,77.5945627',
+                'address' => [
+                    'locality' => 'Sector 62',
+                    'city' => 'Greater Noida',
+                    'area_code' => '201309',
+                    'state' => 'Uttar Pradesh'
+                ]
+            ],
+            'contact' => [
+                'phone' => '9876543210',
+                'email' => 'support@kognitiminds.com'
+            ]
+        ];
+        $primaryEnd = $sessFulfillments[0]['end'] ?? [
+            'location' => [
+                'gps' => '12.9715987,77.5945627',
+                'address' => [
+                    'name' => 'Apex Educational Trust',
+                    'building' => 'Building 4A',
+                    'locality' => 'Knowledge Park II',
+                    'city' => 'Greater Noida',
+                    'state' => 'Uttar Pradesh',
+                    'country' => 'IND',
+                    'area_code' => '201310'
+                ]
+            ],
+            'contact' => [
+                'phone' => '9876543210'
+            ]
+        ];
 
         if ($updateCount === 1) {
             // STEP 13 & 14: Partial Order Return -> Return_Approved
@@ -2100,7 +2163,19 @@ switch ($requestAction) {
                 $basePayload = json_decode(file_get_contents($scenarioFile), true);
                 $basePayload['context'] = buildCallbackContext($context, 'on_update');
                 $basePayload['message']['order']['id'] = $orderId;
-                $basePayload['message']['order']['updated_at'] = gmdate('Y-m-d\TH:i:s\Z');
+                $basePayload['message']['order']['billing'] = $billing;
+                $basePayload['message']['order']['created_at'] = $billing['created_at'];
+                $basePayload['message']['order']['updated_at'] = $nowIsoMs;
+                
+                // Ensure fulfillment 0 has full start and end addresses
+                if (!empty($basePayload['message']['order']['fulfillments'][0])) {
+                    $basePayload['message']['order']['fulfillments'][0]['start'] = $primaryStart;
+                    $basePayload['message']['order']['fulfillments'][0]['end'] = $primaryEnd;
+                }
+                if (!empty($basePayload['message']['order']['fulfillments'][1]['id'])) {
+                    $basePayload['message']['order']['fulfillments'][1]['id'] = preg_replace('/[^a-zA-Z0-9-]/', '-', $basePayload['message']['order']['fulfillments'][1]['id']);
+                }
+
                 if (!empty($basePayload['message']['order']['payment']) && empty($basePayload['message']['order']['payments'])) {
                     $basePayload['message']['order']['payments'] = [ $basePayload['message']['order']['payment'] ];
                 }
@@ -2108,40 +2183,42 @@ switch ($requestAction) {
 
                 // STEP 15 (UNSOLICITED): Return_Picked
                 $pickedPayload = $basePayload;
-                $pickedPayload['context'] = buildCallbackContext($context, 'on_update', bin2hex(random_bytes(16)));
+                $pickedPayload['context'] = buildCallbackContext($context, 'on_update', generateOndcUuid());
                 if (!empty($pickedPayload['message']['order']['fulfillments'])) {
                     foreach ($pickedPayload['message']['order']['fulfillments'] as &$f) {
-                        if (($f['type'] ?? '') === 'Return' || str_starts_with($f['id'] ?? '', 'R_')) {
+                        if (($f['type'] ?? '') === 'Return' || str_starts_with($f['id'] ?? '', 'R-') || str_starts_with($f['id'] ?? '', 'R_')) {
+                            $f['id'] = preg_replace('/[^a-zA-Z0-9-]/', '-', $f['id']);
                             $f['state']['descriptor']['code'] = 'Return_Picked';
                             $f['state']['descriptor']['name'] = 'Return Package Picked Up by Logistics Partner';
                         }
                     }
                     unset($f);
                 }
-                $pickedPayload['message']['order']['updated_at'] = gmdate('Y-m-d\TH:i:s\Z');
+                $pickedPayload['message']['order']['updated_at'] = gmdate('Y-m-d\TH:i:s', time() + 2) . '.000Z';
                 $additionalCallbacks[] = [
                     'action' => 'on_update',
                     'payload' => $pickedPayload,
-                    'delay_us' => 1500000
+                    'delay_us' => 2000000
                 ];
 
                 // STEP 16 (UNSOLICITED): Return_Delivered
                 $deliveredPayload = $basePayload;
-                $deliveredPayload['context'] = buildCallbackContext($context, 'on_update', bin2hex(random_bytes(16)));
+                $deliveredPayload['context'] = buildCallbackContext($context, 'on_update', generateOndcUuid());
                 if (!empty($deliveredPayload['message']['order']['fulfillments'])) {
                     foreach ($deliveredPayload['message']['order']['fulfillments'] as &$f) {
-                        if (($f['type'] ?? '') === 'Return' || str_starts_with($f['id'] ?? '', 'R_')) {
+                        if (($f['type'] ?? '') === 'Return' || str_starts_with($f['id'] ?? '', 'R-') || str_starts_with($f['id'] ?? '', 'R_')) {
+                            $f['id'] = preg_replace('/[^a-zA-Z0-9-]/', '-', $f['id']);
                             $f['state']['descriptor']['code'] = 'Return_Delivered';
                             $f['state']['descriptor']['name'] = 'Return Package Delivered & Inspected at Kogniti Facility';
                         }
                     }
                     unset($f);
                 }
-                $deliveredPayload['message']['order']['updated_at'] = gmdate('Y-m-d\TH:i:s\Z');
+                $deliveredPayload['message']['order']['updated_at'] = gmdate('Y-m-d\TH:i:s', time() + 4) . '.000Z';
                 $additionalCallbacks[] = [
                     'action' => 'on_update',
                     'payload' => $deliveredPayload,
-                    'delay_us' => 1500000
+                    'delay_us' => 2000000
                 ];
             }
         } else {
@@ -2151,7 +2228,16 @@ switch ($requestAction) {
                 $basePayload = json_decode(file_get_contents($scenarioFile), true);
                 $basePayload['context'] = buildCallbackContext($context, 'on_update');
                 $basePayload['message']['order']['id'] = $orderId;
-                $basePayload['message']['order']['updated_at'] = gmdate('Y-m-d\TH:i:s\Z');
+                $basePayload['message']['order']['billing'] = $billing;
+                $basePayload['message']['order']['created_at'] = $billing['created_at'];
+                $basePayload['message']['order']['updated_at'] = $nowIsoMs;
+                if (!empty($basePayload['message']['order']['fulfillments'][0])) {
+                    $basePayload['message']['order']['fulfillments'][0]['start'] = $primaryStart;
+                    $basePayload['message']['order']['fulfillments'][0]['end'] = $primaryEnd;
+                }
+                if (!empty($basePayload['message']['order']['fulfillments'][1]['id'])) {
+                    $basePayload['message']['order']['fulfillments'][1]['id'] = preg_replace('/[^a-zA-Z0-9-]/', '-', $basePayload['message']['order']['fulfillments'][1]['id']);
+                }
                 if (!empty($basePayload['message']['order']['payment']) && empty($basePayload['message']['order']['payments'])) {
                     $basePayload['message']['order']['payments'] = [ $basePayload['message']['order']['payment'] ];
                 }
