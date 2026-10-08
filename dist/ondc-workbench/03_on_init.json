@@ -145,7 +145,28 @@
             "settlement_ifsc_code": "HDFC0000001"
           }
         ]
-      }
+      },
+      "payments": [
+        {
+          "type": "ON-FULFILLMENT",
+          "status": "NOT-PAID",
+          "@ondc/org/buyer_app_finder_fee_type": "percent",
+          "@ondc/org/buyer_app_finder_fee_amount": "3.0",
+          "@ondc/org/settlement_basis": "delivery",
+          "@ondc/org/settlement_window": "P1D",
+          "@ondc/org/withholding_amount": "0.00",
+          "@ondc/org/settlement_details": [
+            {
+              "settlement_counterparty": "buyer",
+              "settlement_phase": "sale-amount",
+              "settlement_type": "neft",
+              "beneficiary_name": "KOGNITI MINDS PRIVATE LIMITED",
+              "settlement_bank_account_no": "99990100012345",
+              "settlement_ifsc_code": "HDFC0000001"
+            }
+          ]
+        }
+      ]
     }
   }
 }

@@ -199,6 +199,43 @@
           }
         ]
       },
+      "payments": [
+        {
+          "type": "ON-FULFILLMENT",
+          "status": "PAID",
+          "params": {
+            "amount": "3224.23",
+            "currency": "INR"
+          },
+          "tags": [
+            {
+              "code": "settlement_details",
+              "list": [
+                {
+                  "code": "settlement_phase",
+                  "value": "refund"
+                },
+                {
+                  "code": "settlement_type",
+                  "value": "neft"
+                },
+                {
+                  "code": "settlement_status",
+                  "value": "INITIATED"
+                },
+                {
+                  "code": "beneficiary_name",
+                  "value": "Apex Educational Trust"
+                },
+                {
+                  "code": "settlement_amount",
+                  "value": "3224.23"
+                }
+              ]
+            }
+          ]
+        }
+      ],
       "updated_at": "2026-09-26T20:00:21.282Z"
     }
   }

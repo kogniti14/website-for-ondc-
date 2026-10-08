@@ -1501,11 +1501,15 @@ switch ($requestAction) {
             }
         }
 
+        $reqPayment = $message['order']['payments'][0] ?? ($message['order']['payment'] ?? []);
+        $finderFeeType = !empty($reqPayment['@ondc/org/buyer_app_finder_fee_type']) ? $reqPayment['@ondc/org/buyer_app_finder_fee_type'] : 'percent';
+        $finderFeeAmount = !empty($reqPayment['@ondc/org/buyer_app_finder_fee_amount']) ? (string)$reqPayment['@ondc/org/buyer_app_finder_fee_amount'] : '3.0';
+
         $paymentObj = [
             'type' => 'ON-FULFILLMENT',
             'status' => 'NOT-PAID',
-            '@ondc/org/buyer_app_finder_fee_type' => 'percent',
-            '@ondc/org/buyer_app_finder_fee_amount' => '3.0',
+            '@ondc/org/buyer_app_finder_fee_type' => $finderFeeType,
+            '@ondc/org/buyer_app_finder_fee_amount' => $finderFeeAmount,
             '@ondc/org/settlement_basis' => 'delivery',
             '@ondc/org/settlement_window' => 'P1D',
             '@ondc/org/withholding_amount' => '0.00',
@@ -1530,7 +1534,8 @@ switch ($requestAction) {
                     'billing' => $billing,
                     'fulfillments' => $fulfillments,
                     'quote' => $quote,
-                    'payment' => $paymentObj
+                    'payment' => $paymentObj,
+                    'payments' => [ $paymentObj ]
                 ]
             ]
         ];
@@ -1538,6 +1543,8 @@ switch ($requestAction) {
         if ($sessionData) {
             $sessionData['billing'] = $billing;
             $sessionData['fulfillment_end'] = $fulfillmentEnd;
+            $sessionData['payment'] = $paymentObj;
+            $sessionData['payments'] = [ $paymentObj ];
             @file_put_contents($sessionFile, json_encode($sessionData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
         }
         break;
@@ -1607,7 +1614,7 @@ switch ($requestAction) {
             }
         }
 
-        $paymentObj = [
+        $paymentObj = $sessionData['payment'] ?? [
             'type' => 'ON-FULFILLMENT',
             'status' => 'NOT-PAID',
             '@ondc/org/buyer_app_finder_fee_type' => 'percent',
@@ -1639,6 +1646,7 @@ switch ($requestAction) {
                     'fulfillments' => $fulfillments,
                     'quote' => $quote,
                     'payment' => $paymentObj,
+                    'payments' => [ $paymentObj ],
                     'created_at' => gmdate('Y-m-d\TH:i:s\Z'),
                     'updated_at' => gmdate('Y-m-d\TH:i:s\Z')
                 ]
@@ -1684,6 +1692,14 @@ switch ($requestAction) {
                 $statusPayload['message']['order']['id'] = $orderId;
                 $statusPayload['message']['order']['state'] = $milestone['orderState'];
                 $statusPayload['message']['order']['provider'] = $providerObj;
+                $statusPayload['message']['order']['payment'] = $paymentObj;
+                $statusPayload['message']['order']['payments'] = [ $paymentObj ];
+                if (!empty($quote)) {
+                    $statusPayload['message']['order']['quote'] = $quote;
+                }
+                if (!empty($billing)) {
+                    $statusPayload['message']['order']['billing'] = $billing;
+                }
                 if (!empty($message['order']['items'])) {
                     $statusPayload['message']['order']['items'] = $message['order']['items'];
                 }
@@ -1702,6 +1718,10 @@ switch ($requestAction) {
                             'state' => $milestone['orderState'],
                             'provider' => $providerObj,
                             'items' => $items,
+                            'billing' => $billing,
+                            'quote' => $quote,
+                            'payment' => $paymentObj,
+                            'payments' => [ $paymentObj ],
                             'fulfillments' => [
                                 [
                                     'id' => $primaryFulfillmentId,
@@ -1762,6 +1782,9 @@ switch ($requestAction) {
                 $basePayload['context'] = buildCallbackContext($context, 'on_update');
                 $basePayload['message']['order']['id'] = $orderId;
                 $basePayload['message']['order']['updated_at'] = gmdate('Y-m-d\TH:i:s\Z');
+                if (!empty($basePayload['message']['order']['payment']) && empty($basePayload['message']['order']['payments'])) {
+                    $basePayload['message']['order']['payments'] = [ $basePayload['message']['order']['payment'] ];
+                }
                 $callbackPayload = $basePayload;
 
                 // STEP 15 (UNSOLICITED): Return_Picked
@@ -1780,7 +1803,7 @@ switch ($requestAction) {
                 $additionalCallbacks[] = [
                     'action' => 'on_update',
                     'payload' => $pickedPayload,
-                    'delay_us' => 1000000
+                    'delay_us' => 1500000
                 ];
 
                 // STEP 16 (UNSOLICITED): Return_Delivered
@@ -1799,7 +1822,7 @@ switch ($requestAction) {
                 $additionalCallbacks[] = [
                     'action' => 'on_update',
                     'payload' => $deliveredPayload,
-                    'delay_us' => 1000000
+                    'delay_us' => 1500000
                 ];
             }
         } else {
@@ -1810,6 +1833,9 @@ switch ($requestAction) {
                 $basePayload['context'] = buildCallbackContext($context, 'on_update');
                 $basePayload['message']['order']['id'] = $orderId;
                 $basePayload['message']['order']['updated_at'] = gmdate('Y-m-d\TH:i:s\Z');
+                if (!empty($basePayload['message']['order']['payment']) && empty($basePayload['message']['order']['payments'])) {
+                    $basePayload['message']['order']['payments'] = [ $basePayload['message']['order']['payment'] ];
+                }
                 $callbackPayload = $basePayload;
             }
         }
