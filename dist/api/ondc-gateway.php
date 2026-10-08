@@ -861,7 +861,23 @@ function dispatchAsyncCallback($bapUri, $callbackAction, $payload, $storageDir =
         $payload['context']['timestamp'] = gmdate('Y-m-d\TH:i:s\Z', max(time(), $currTs));
     }
     if (isset($payload['message']['order']['updated_at'])) {
-        $payload['message']['order']['updated_at'] = $payload['context']['timestamp'] ?? $dispatchTs;
+        $currUpTs = !empty($payload['context']['timestamp']) ? strtotime($payload['context']['timestamp']) : time();
+        $payload['message']['order']['updated_at'] = gmdate('Y-m-d\TH:i:s', max(time(), $currUpTs)) . '.000Z';
+    }
+    if (isset($payload['message']['order']['created_at']) && !str_ends_with($payload['message']['order']['created_at'], '.000Z')) {
+        $currCrTs = strtotime($payload['message']['order']['created_at']);
+        $payload['message']['order']['created_at'] = gmdate('Y-m-d\TH:i:s', $currCrTs ?: time()) . '.000Z';
+    }
+    if (isset($payload['message']['order']['billing']['created_at']) && !str_ends_with($payload['message']['order']['billing']['created_at'], '.000Z')) {
+        $currCrTs = strtotime($payload['message']['order']['billing']['created_at']);
+        $payload['message']['order']['billing']['created_at'] = gmdate('Y-m-d\TH:i:s', $currCrTs ?: time()) . '.000Z';
+    }
+    if (isset($payload['message']['order']['billing']['updated_at']) && !str_ends_with($payload['message']['order']['billing']['updated_at'], '.000Z')) {
+        $currUpTs = strtotime($payload['message']['order']['billing']['updated_at']);
+        $payload['message']['order']['billing']['updated_at'] = gmdate('Y-m-d\TH:i:s', $currUpTs ?: time()) . '.000Z';
+    }
+    if (isset($payload['message']['order']['id'])) {
+        $payload['message']['order']['id'] = substr(preg_replace('/[^a-zA-Z0-9-]/', '-', $payload['message']['order']['id']), 0, 32);
     }
 
     $jsonBody = json_encode($payload, JSON_UNESCAPED_SLASHES);
@@ -1544,7 +1560,11 @@ switch ($requestAction) {
     case 'confirm':
         $callbackAction = 'on_confirm';
         $txnId = $context['transaction_id'] ?? '';
-        $orderId = $message['order']['id'] ?? ('KM_ONDC_ORD_' . strtoupper(bin2hex(random_bytes(3))));
+        $rawOrderId = $message['order']['id'] ?? ('KM-ONDC-ORD-' . strtoupper(bin2hex(random_bytes(3))));
+        $orderId = preg_replace('/[^a-zA-Z0-9-]/', '-', $rawOrderId);
+        if (strlen($orderId) > 32) {
+            $orderId = substr($orderId, 0, 32);
+        }
 
         $sessionFile = $storageDir . '/session_' . $txnId . '.json';
         $sessionData = (file_exists($sessionFile)) ? json_decode(@file_get_contents($sessionFile), true) : null;
@@ -1559,17 +1579,19 @@ switch ($requestAction) {
                 'code' => 'kogniti-minds-bpp'
             ]
         ];
+        if (!is_array($providerObj)) {
+            $providerObj = [];
+        }
+        $providerObj['id'] = $providerObj['id'] ?? 'kogniti-minds-bpp';
         if (empty($providerObj['locations'])) {
             $providerObj['locations'] = [ [ 'id' => 'L1' ] ];
         }
-        if (empty($providerObj['descriptor']['name'])) {
-            $providerObj['descriptor'] = [
-                'name' => 'KOGNITI MINDS PRIVATE LIMITED',
-                'short_desc' => 'Sustainable Agri-Waste Paper & Copier Products Manufacturer',
-                'long_desc' => 'Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.',
-                'code' => 'kogniti-minds-bpp'
-            ];
+        if (empty($providerObj['descriptor']) || !is_array($providerObj['descriptor'])) {
+            $providerObj['descriptor'] = [];
         }
+        $providerObj['descriptor']['name'] = !empty($providerObj['descriptor']['name']) ? $providerObj['descriptor']['name'] : 'KOGNITI MINDS PRIVATE LIMITED';
+        $providerObj['descriptor']['short_desc'] = !empty($providerObj['descriptor']['short_desc']) ? $providerObj['descriptor']['short_desc'] : 'Sustainable Agri-Waste Paper & Copier Products Manufacturer';
+        $providerObj['descriptor']['code'] = !empty($providerObj['descriptor']['code']) ? $providerObj['descriptor']['code'] : 'kogniti-minds-bpp';
 
         $items = $sessionData['items'] ?? $message['order']['items'] ?? [
             [
@@ -1601,30 +1623,24 @@ switch ($requestAction) {
             unset($it);
         }
 
-        $billing = $sessionData['billing'] ?? $message['order']['billing'] ?? [
-            'name' => 'Apex Educational Trust',
+        $nowIsoMs = gmdate('Y-m-d\TH:i:s') . '.000Z';
+        $inBilling = $sessionData['billing'] ?? $message['order']['billing'] ?? [];
+        $billing = [
+            'name' => !empty($inBilling['name']) ? $inBilling['name'] : 'Apex Educational Trust',
             'address' => [
-                'street' => 'Knowledge Park II',
-                'city' => 'Greater Noida',
-                'state' => 'Uttar Pradesh',
-                'area_code' => '201310'
+                'name' => !empty($inBilling['address']['name']) ? $inBilling['address']['name'] : (!empty($inBilling['name']) ? $inBilling['name'] : 'Apex Educational Trust'),
+                'building' => !empty($inBilling['address']['building']) ? $inBilling['address']['building'] : 'Building 4A',
+                'locality' => !empty($inBilling['address']['locality']) ? $inBilling['address']['locality'] : 'Knowledge Park II',
+                'city' => !empty($inBilling['address']['city']) ? $inBilling['address']['city'] : 'Greater Noida',
+                'state' => !empty($inBilling['address']['state']) ? $inBilling['address']['state'] : 'Uttar Pradesh',
+                'country' => !empty($inBilling['address']['country']) ? $inBilling['address']['country'] : 'IND',
+                'area_code' => !empty($inBilling['address']['area_code']) ? $inBilling['address']['area_code'] : '201310'
             ],
-            'tax_number' => '07AAAAA0000A1Z5'
+            'phone' => !empty($inBilling['phone']) ? $inBilling['phone'] : '9876543210',
+            'tax_number' => !empty($inBilling['tax_number']) ? $inBilling['tax_number'] : '07AAAAA0000A1Z5',
+            'created_at' => !empty($inBilling['created_at']) && str_ends_with($inBilling['created_at'], '.000Z') ? $inBilling['created_at'] : $nowIsoMs,
+            'updated_at' => !empty($inBilling['updated_at']) && str_ends_with($inBilling['updated_at'], '.000Z') ? $inBilling['updated_at'] : $nowIsoMs
         ];
-        if (empty($billing['name'])) {
-            $billing['name'] = 'Apex Educational Trust';
-        }
-        if (empty($billing['address'])) {
-            $billing['address'] = [
-                'street' => 'Knowledge Park II',
-                'city' => 'Greater Noida',
-                'state' => 'Uttar Pradesh',
-                'area_code' => '201310'
-            ];
-        }
-        if (empty($billing['tax_number'])) {
-            $billing['tax_number'] = '07AAAAA0000A1Z5';
-        }
 
         $primaryFulfillmentId = $message['order']['fulfillments'][0]['id'] ?? ($sessionData['fulfillment']['id'] ?? 'F1');
         foreach ($items as &$it) {
@@ -1643,6 +1659,42 @@ switch ($requestAction) {
                 'state' => [
                     'descriptor' => [
                         'code' => 'Order-picked-up'
+                    ]
+                ],
+                'start' => [
+                    'location' => [
+                        'id' => 'L1',
+                        'descriptor' => [
+                            'name' => 'Kogniti Central Facility'
+                        ],
+                        'gps' => '12.9715987,77.5945627',
+                        'address' => [
+                            'locality' => 'Sector 62',
+                            'city' => 'Greater Noida',
+                            'area_code' => '201309',
+                            'state' => 'Uttar Pradesh'
+                        ]
+                    ],
+                    'contact' => [
+                        'phone' => '9876543210',
+                        'email' => 'support@kognitiminds.com'
+                    ]
+                ],
+                'end' => [
+                    'location' => [
+                        'gps' => '12.9715987,77.5945627',
+                        'address' => [
+                            'name' => 'Apex Educational Trust',
+                            'building' => 'Building 4A',
+                            'locality' => 'Knowledge Park II',
+                            'city' => 'Greater Noida',
+                            'state' => 'Uttar Pradesh',
+                            'country' => 'IND',
+                            'area_code' => '201310'
+                        ]
+                    ],
+                    'contact' => [
+                        'phone' => '9876543210'
                     ]
                 ]
             ]
@@ -1712,18 +1764,26 @@ switch ($requestAction) {
                 if (($bItem['@ondc/org/title_type'] ?? '') === 'delivery') {
                     $bItem['@ondc/org/item_id'] = $primaryFulfillmentId;
                 }
-            }
             unset($bItem);
         }
+        if (empty($quote['ttl'])) {
+            $quote['ttl'] = 'P1D';
+        }
 
-        $paymentObj = $sessionData['payment'] ?? [
+        $grandTotalStr = number_format((float)($quote['price']['value'] ?? 11981.44), 2, '.', '');
+        $paymentObj = [
             'type' => 'ON-FULFILLMENT',
             'status' => 'NOT-PAID',
+            'collected_by' => 'BAP',
             '@ondc/org/buyer_app_finder_fee_type' => 'percent',
             '@ondc/org/buyer_app_finder_fee_amount' => '3.0',
             '@ondc/org/settlement_basis' => 'delivery',
             '@ondc/org/settlement_window' => 'P1D',
             '@ondc/org/withholding_amount' => '0.00',
+            'params' => [
+                'currency' => 'INR',
+                'amount' => $grandTotalStr
+            ],
             '@ondc/org/settlement_details' => [
                 [
                     'settlement_counterparty' => 'buyer',
@@ -1736,6 +1796,7 @@ switch ($requestAction) {
             ]
         ];
 
+        $nowIsoMs = gmdate('Y-m-d\TH:i:s') . '.000Z';
         $callbackPayload = [
             'context' => buildCallbackContext($context, 'on_confirm'),
             'message' => [
@@ -1749,8 +1810,8 @@ switch ($requestAction) {
                     'quote' => $quote,
                     'payment' => $paymentObj,
                     'payments' => [ $paymentObj ],
-                    'created_at' => gmdate('Y-m-d\TH:i:s\Z'),
-                    'updated_at' => gmdate('Y-m-d\TH:i:s\Z')
+                    'created_at' => $nowIsoMs,
+                    'updated_at' => $nowIsoMs
                 ]
             ]
         ];
@@ -1765,7 +1826,7 @@ switch ($requestAction) {
             'id' => $orderId,
             'transaction_id' => $context['transaction_id'] ?? '',
             'status' => 'Created',
-            'createdAt' => gmdate('Y-m-d\TH:i:s\Z'),
+            'createdAt' => $nowIsoMs,
             'payload' => $callbackPayload['message']['order']
         ];
         @file_put_contents($ordersFile, json_encode($orders, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
@@ -1793,29 +1854,38 @@ switch ($requestAction) {
 
         foreach ($statusMilestones as $milestone) {
             $statusContext = buildCallbackContext($context, 'on_status', generateOndcUuid());
+            $milestoneIsoMs = gmdate('Y-m-d\TH:i:s') . '.000Z';
             $statusPayload = [
                 'context' => $statusContext,
                 'message' => [
                     'order' => [
                         'id' => $orderId,
                         'state' => $milestone['orderState'],
-                        'provider' => [
-                            'id' => $providerObj['id'] ?? 'kogniti-minds-bpp'
-                        ],
+                        'provider' => $providerObj,
                         'items' => $items,
+                        'billing' => $billing,
                         'fulfillments' => [
                             [
                                 'id' => $primaryFulfillmentId,
                                 'type' => 'Delivery',
+                                '@ondc/org/provider_name' => 'Kogniti Express Logistics',
+                                '@ondc/org/category' => 'Standard Delivery',
+                                '@ondc/org/TAT' => 'P2D',
                                 'state' => [
                                     'descriptor' => [
                                         'code' => $milestone['code']
                                     ]
                                 ],
-                                'tracking' => true
+                                'tracking' => true,
+                                'start' => $fulfillments[0]['start'],
+                                'end' => $fulfillments[0]['end']
                             ]
                         ],
-                        'updated_at' => gmdate('Y-m-d\TH:i:s\Z')
+                        'quote' => $quote,
+                        'payment' => $paymentObj,
+                        'payments' => [ $paymentObj ],
+                        'created_at' => $nowIsoMs,
+                        'updated_at' => $milestoneIsoMs
                     ]
                 ]
             ];
@@ -1833,36 +1903,167 @@ switch ($requestAction) {
         $txnId = $context['transaction_id'] ?? '';
         $sessionFile = $storageDir . '/session_' . $txnId . '.json';
         $sessionData = (file_exists($sessionFile)) ? json_decode(@file_get_contents($sessionFile), true) : null;
-        $orderId = $message['order_id'] ?? ($sessionData['order_id'] ?? 'KM_ONDC_ORD_881290');
+        $rawOrderId = $message['order_id'] ?? ($sessionData['order_id'] ?? 'KM-ONDC-ORD-881290');
+        $orderId = substr(preg_replace('/[^a-zA-Z0-9-]/', '-', $rawOrderId), 0, 32);
+
+        $nowIsoMs = gmdate('Y-m-d\TH:i:s') . '.000Z';
+        $statusProvider = $sessionData['provider'] ?? [
+            'id' => 'kogniti-minds-bpp',
+            'locations' => [ [ 'id' => 'L1' ] ],
+            'descriptor' => [
+                'name' => 'KOGNITI MINDS PRIVATE LIMITED',
+                'short_desc' => 'Sustainable Agri-Waste Paper & Copier Products Manufacturer',
+                'long_desc' => 'Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.',
+                'code' => 'kogniti-minds-bpp'
+            ]
+        ];
+        if (empty($statusProvider['locations'])) {
+            $statusProvider['locations'] = [ [ 'id' => 'L1' ] ];
+        }
+        if (empty($statusProvider['descriptor']) || !is_array($statusProvider['descriptor'])) {
+            $statusProvider['descriptor'] = [];
+        }
+        $statusProvider['descriptor']['name'] = !empty($statusProvider['descriptor']['name']) ? $statusProvider['descriptor']['name'] : 'KOGNITI MINDS PRIVATE LIMITED';
+        $statusProvider['descriptor']['short_desc'] = !empty($statusProvider['descriptor']['short_desc']) ? $statusProvider['descriptor']['short_desc'] : 'Sustainable Agri-Waste Paper & Copier Products Manufacturer';
+        $statusProvider['descriptor']['code'] = !empty($statusProvider['descriptor']['code']) ? $statusProvider['descriptor']['code'] : 'kogniti-minds-bpp';
+
+        $statusItems = $sessionData['items'] ?? [
+            [
+                'id' => 'km-agri-a4-75',
+                'fulfillment_id' => 'F1',
+                'quantity' => [ 'count' => 50 ]
+            ]
+        ];
+        $inBilling = $sessionData['billing'] ?? [];
+        $statusBilling = [
+            'name' => !empty($inBilling['name']) ? $inBilling['name'] : 'Apex Educational Trust',
+            'address' => [
+                'name' => !empty($inBilling['address']['name']) ? $inBilling['address']['name'] : (!empty($inBilling['name']) ? $inBilling['name'] : 'Apex Educational Trust'),
+                'building' => !empty($inBilling['address']['building']) ? $inBilling['address']['building'] : 'Building 4A',
+                'locality' => !empty($inBilling['address']['locality']) ? $inBilling['address']['locality'] : 'Knowledge Park II',
+                'city' => !empty($inBilling['address']['city']) ? $inBilling['address']['city'] : 'Greater Noida',
+                'state' => !empty($inBilling['address']['state']) ? $inBilling['address']['state'] : 'Uttar Pradesh',
+                'country' => !empty($inBilling['address']['country']) ? $inBilling['address']['country'] : 'IND',
+                'area_code' => !empty($inBilling['address']['area_code']) ? $inBilling['address']['area_code'] : '201310'
+            ],
+            'phone' => !empty($inBilling['phone']) ? $inBilling['phone'] : '9876543210',
+            'tax_number' => !empty($inBilling['tax_number']) ? $inBilling['tax_number'] : '07AAAAA0000A1Z5',
+            'created_at' => !empty($inBilling['created_at']) && str_ends_with($inBilling['created_at'], '.000Z') ? $inBilling['created_at'] : $nowIsoMs,
+            'updated_at' => !empty($inBilling['updated_at']) && str_ends_with($inBilling['updated_at'], '.000Z') ? $inBilling['updated_at'] : $nowIsoMs
+        ];
+        $statusFulfillments = $sessionData['fulfillments'] ?? [
+            [
+                'id' => 'F1',
+                'type' => 'Delivery',
+                '@ondc/org/provider_name' => 'Kogniti Express Logistics',
+                '@ondc/org/category' => 'Standard Delivery',
+                '@ondc/org/TAT' => 'P2D',
+                'state' => [
+                    'descriptor' => [
+                        'code' => 'Order-delivered'
+                    ]
+                ],
+                'tracking' => true,
+                'start' => [
+                    'location' => [
+                        'id' => 'L1',
+                        'descriptor' => [
+                            'name' => 'Kogniti Central Facility'
+                        ],
+                        'gps' => '12.9715987,77.5945627',
+                        'address' => [
+                            'locality' => 'Sector 62',
+                            'city' => 'Greater Noida',
+                            'area_code' => '201309',
+                            'state' => 'Uttar Pradesh'
+                        ]
+                    ],
+                    'contact' => [
+                        'phone' => '9876543210',
+                        'email' => 'support@kognitiminds.com'
+                    ]
+                ],
+                'end' => [
+                    'location' => [
+                        'gps' => '12.9715987,77.5945627',
+                        'address' => [
+                            'name' => 'Apex Educational Trust',
+                            'building' => 'Building 4A',
+                            'locality' => 'Knowledge Park II',
+                            'city' => 'Greater Noida',
+                            'state' => 'Uttar Pradesh',
+                            'country' => 'IND',
+                            'area_code' => '201310'
+                        ]
+                    ],
+                    'contact' => [
+                        'phone' => '9876543210'
+                    ]
+                ]
+            ]
+        ];
+        $statusQuote = $sessionData['quote'] ?? [
+            'price' => [ 'currency' => 'INR', 'value' => '11981.44' ],
+            'breakup' => [
+                [
+                    '@ondc/org/item_id' => 'km-agri-a4-75',
+                    '@ondc/org/item_quantity' => [ 'count' => 50 ],
+                    'title' => 'Kogniti AgroPrint 75 GSM A4 Sustainable Copier Paper (500 Sheets)',
+                    '@ondc/org/title_type' => 'item',
+                    'price' => [ 'currency' => 'INR', 'value' => '9108.00' ]
+                ],
+                [
+                    '@ondc/org/item_id' => 'km-agri-a4-75',
+                    'title' => 'Tax (CGST 9% + SGST 9%)',
+                    '@ondc/org/title_type' => 'tax',
+                    'price' => [ 'currency' => 'INR', 'value' => '1639.44' ]
+                ],
+                [
+                    '@ondc/org/item_id' => 'F1',
+                    'title' => 'Delivery charges (Surface Logistics)',
+                    '@ondc/org/title_type' => 'delivery',
+                    'price' => [ 'currency' => 'INR', 'value' => '1234.00' ]
+                ]
+            ],
+            'ttl' => 'P1D'
+        ];
+        $statusPayment = $sessionData['payment'] ?? [
+            'type' => 'ON-FULFILLMENT',
+            'status' => 'NOT-PAID',
+            'collected_by' => 'BAP',
+            '@ondc/org/buyer_app_finder_fee_type' => 'percent',
+            '@ondc/org/buyer_app_finder_fee_amount' => '3.0',
+            '@ondc/org/settlement_basis' => 'delivery',
+            '@ondc/org/settlement_window' => 'P1D',
+            '@ondc/org/withholding_amount' => '0.00',
+            'params' => [ 'currency' => 'INR', 'amount' => '11981.44' ],
+            '@ondc/org/settlement_details' => [
+                [
+                    'settlement_counterparty' => 'buyer',
+                    'settlement_phase' => 'sale-amount',
+                    'settlement_type' => 'neft',
+                    'beneficiary_name' => 'KOGNITI MINDS PRIVATE LIMITED',
+                    'settlement_bank_account_no' => '99990100012345',
+                    'settlement_ifsc_code' => 'HDFC0000001'
+                ]
+            ]
+        ];
+
         $callbackPayload = [
             'context' => buildCallbackContext($context, 'on_status'),
             'message' => [
                 'order' => [
                     'id' => $orderId,
                     'state' => 'Completed',
-                    'provider' => [
-                        'id' => $sessionData['provider']['id'] ?? 'kogniti-minds-bpp'
-                    ],
-                    'items' => $sessionData['items'] ?? [
-                        [
-                            'id' => 'km-agri-a4-75',
-                            'fulfillment_id' => 'F1',
-                            'quantity' => [ 'count' => 50 ]
-                        ]
-                    ],
-                    'fulfillments' => [
-                        [
-                            'id' => $sessionData['fulfillment']['id'] ?? 'F1',
-                            'type' => 'Delivery',
-                            'state' => [
-                                'descriptor' => [
-                                    'code' => 'Order-delivered'
-                                ]
-                            ],
-                            'tracking' => true
-                        ]
-                    ],
-                    'updated_at' => gmdate('Y-m-d\TH:i:s\Z')
+                    'provider' => $statusProvider,
+                    'items' => $statusItems,
+                    'billing' => $statusBilling,
+                    'fulfillments' => $statusFulfillments,
+                    'quote' => $statusQuote,
+                    'payment' => $statusPayment,
+                    'payments' => [ $statusPayment ],
+                    'created_at' => $nowIsoMs,
+                    'updated_at' => $nowIsoMs
                 ]
             ]
         ];
@@ -2042,11 +2243,12 @@ if ($callbackPayload && !empty($context['bap_uri'])) {
     // Ensure timestamp is current and strictly greater than incoming request
     $reqTs = !empty($context['timestamp']) ? strtotime($context['timestamp']) : time();
     $dispatchTs = gmdate('Y-m-d\TH:i:s\Z', max(time(), $reqTs + 2));
+    $dispatchTsMs = gmdate('Y-m-d\TH:i:s', max(time(), $reqTs + 2)) . '.000Z';
     if (isset($callbackPayload['context'])) {
         $callbackPayload['context']['timestamp'] = $dispatchTs;
     }
     if (isset($callbackPayload['message']['order']['updated_at'])) {
-        $callbackPayload['message']['order']['updated_at'] = $dispatchTs;
+        $callbackPayload['message']['order']['updated_at'] = $dispatchTsMs;
     }
 
     dispatchAsyncCallback($context['bap_uri'], $callbackAction, $callbackPayload, $storageDir, $callbackMeta ?? []);
@@ -2060,11 +2262,12 @@ if ($callbackPayload && !empty($context['bap_uri'])) {
 
             $lastMilestoneTime = max(time(), $lastMilestoneTime + 1);
             $extraTs = gmdate('Y-m-d\TH:i:s\Z', $lastMilestoneTime);
+            $extraTsMs = gmdate('Y-m-d\TH:i:s', $lastMilestoneTime) . '.000Z';
             if (isset($extraCb['payload']['context'])) {
                 $extraCb['payload']['context']['timestamp'] = $extraTs;
             }
             if (isset($extraCb['payload']['message']['order']['updated_at'])) {
-                $extraCb['payload']['message']['order']['updated_at'] = $extraTs;
+                $extraCb['payload']['message']['order']['updated_at'] = $extraTsMs;
             }
             dispatchAsyncCallback($context['bap_uri'], $extraCb['action'], $extraCb['payload'], $storageDir, [
                 'transaction_id' => $context['transaction_id'] ?? null,
