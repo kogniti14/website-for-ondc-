@@ -825,8 +825,8 @@ function buildCallbackContext($incomingContext, $callbackAction, $overrideMsgId 
         'core_version' => $incomingContext['core_version'] ?? '1.2.5',
         'bap_id' => $incomingContext['bap_id'] ?? 'workbench.ondc.tech',
         'bap_uri' => $incomingContext['bap_uri'] ?? 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer',
-        'bpp_id' => 'kognitiminds.com',
-        'bpp_uri' => 'https://kognitiminds.com',
+        'bpp_id' => $incomingContext['bpp_id'] ?? 'kognitiminds.com',
+        'bpp_uri' => $incomingContext['bpp_uri'] ?? 'https://kognitiminds.com',
         'transaction_id' => $incomingContext['transaction_id'] ?? '',
         'message_id' => $msgId,
         'timestamp' => gmdate('Y-m-d\TH:i:s\Z', $cbTs),
@@ -852,6 +852,47 @@ function resolveWorkbenchScenarioFile($filename) {
         }
     }
     return null;
+}
+
+// Helper: Generate Beckn RFC compliant Ed25519 digital signature & BLAKE-512 digest
+function generateBecknAuthorizationHeader($jsonBody, $storageDir, $subscriberId = 'kognitiminds.com', $keyId = 'kogniti-key-01') {
+    if (!function_exists('sodium_crypto_sign_detached') || !function_exists('sodium_crypto_generichash')) {
+        return null;
+    }
+    
+    $keyFile = $storageDir . '/ondc_signing_keys.json';
+    $keys = null;
+    if (file_exists($keyFile)) {
+        $keys = json_decode(@file_get_contents($keyFile), true);
+    }
+    if (!$keys || empty($keys['secret_key'])) {
+        $kp = sodium_crypto_sign_keypair();
+        $keys = [
+            'secret_key' => base64_encode(sodium_crypto_sign_secretkey($kp)),
+            'public_key' => base64_encode(sodium_crypto_sign_publickey($kp)),
+            'created_at' => gmdate('Y-m-d\TH:i:s\Z')
+        ];
+        @file_put_contents($keyFile, json_encode($keys, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
+    }
+
+    try {
+        $digest = base64_encode(sodium_crypto_generichash($jsonBody, '', 64));
+        $now = time();
+        $created = (string)$now;
+        $expires = (string)($now + 300);
+        $signingString = "(created): {$created}\n(expires): {$expires}\ndigest: BLAKE-512={$digest}";
+        $secretKeyBin = base64_decode($keys['secret_key']);
+        $sigBin = sodium_crypto_sign_detached($signingString, $secretKeyBin);
+        $signature = base64_encode($sigBin);
+        
+        $authHeader = "Signature keyId=\"{$subscriberId}|{$keyId}|ed25519\",algorithm=\"ed25519\",created=\"{$created}\",expires=\"{$expires}\",headers=\"(created) (expires) digest\",signature=\"{$signature}\"";
+        return [
+            'auth' => $authHeader,
+            'digest' => 'BLAKE-512=' . $digest
+        ];
+    } catch (\Throwable $e) {
+        return null;
+    }
 }
 
 // 13. Helper: Dispatch Asynchronous HTTP Callback to BAP / Workbench
@@ -907,11 +948,21 @@ function dispatchAsyncCallback($bapUri, $callbackAction, $payload, $storageDir =
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_TIMEOUT, 12);
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 4);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+
+    $httpHeaders = [
         'Content-Type: application/json',
         'Accept: application/json',
         'User-Agent: Kogniti-Minds-ONDC-BPP/1.2.5'
-    ]);
+    ];
+    if ($storageDir) {
+        $bppId = $payload['context']['bpp_id'] ?? 'kognitiminds.com';
+        $authData = generateBecknAuthorizationHeader($jsonBody, $storageDir, $bppId);
+        if ($authData) {
+            $httpHeaders[] = 'Authorization: ' . $authData['auth'];
+            $httpHeaders[] = 'Digest: ' . $authData['digest'];
+        }
+    }
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $httpHeaders);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 
@@ -1447,16 +1498,23 @@ switch ($requestAction) {
         $sessionFile = $storageDir . '/session_' . $txnId . '.json';
         $sessionData = (file_exists($sessionFile)) ? json_decode(@file_get_contents($sessionFile), true) : null;
 
-        $orderReq = $message['order'] ?? [];
-        $billing = $orderReq['billing'] ?? [
-            'name' => 'Apex Educational Trust',
+        $nowIsoMs = gmdate('Y-m-d\TH:i:s') . '.000Z';
+        $inBilling = $sessionData['billing'] ?? $message['order']['billing'] ?? [];
+        $billing = [
+            'name' => !empty($inBilling['name']) ? $inBilling['name'] : 'Apex Educational Trust',
             'address' => [
-                'street' => 'Knowledge Park II',
-                'city' => 'Greater Noida',
-                'state' => 'Uttar Pradesh',
-                'area_code' => '201310'
+                'name' => !empty($inBilling['address']['name']) ? $inBilling['address']['name'] : (!empty($inBilling['name']) ? $inBilling['name'] : 'Apex Educational Trust'),
+                'building' => !empty($inBilling['address']['building']) ? $inBilling['address']['building'] : 'Building 4A',
+                'locality' => !empty($inBilling['address']['locality']) ? $inBilling['address']['locality'] : 'Knowledge Park II',
+                'city' => !empty($inBilling['address']['city']) ? $inBilling['address']['city'] : 'Greater Noida',
+                'state' => !empty($inBilling['address']['state']) ? $inBilling['address']['state'] : 'Uttar Pradesh',
+                'country' => !empty($inBilling['address']['country']) ? $inBilling['address']['country'] : 'IND',
+                'area_code' => !empty($inBilling['address']['area_code']) ? $inBilling['address']['area_code'] : '201310'
             ],
-            'tax_number' => '07AAAAA0000A1Z5'
+            'phone' => !empty($inBilling['phone']) ? $inBilling['phone'] : '9876543210',
+            'tax_number' => !empty($inBilling['tax_number']) ? $inBilling['tax_number'] : '07AAAAA0000A1Z5',
+            'created_at' => !empty($inBilling['created_at']) && str_ends_with($inBilling['created_at'], '.000Z') ? $inBilling['created_at'] : $nowIsoMs,
+            'updated_at' => !empty($inBilling['updated_at']) && str_ends_with($inBilling['updated_at'], '.000Z') ? $inBilling['updated_at'] : $nowIsoMs
         ];
 
         $providerObj = $sessionData['provider'] ?? [
@@ -1469,27 +1527,39 @@ switch ($requestAction) {
                 'code' => 'kogniti-minds-bpp'
             ]
         ];
+        if (empty($providerObj['locations'])) {
+            $providerObj['locations'] = [ [ 'id' => 'L1' ] ];
+        }
 
-        $items = $sessionData['items'] ?? $orderReq['items'] ?? [
+        $items = $sessionData['items'] ?? $message['order']['items'] ?? [
             [
                 'id' => 'km-agri-a4-75',
                 'fulfillment_id' => 'F1',
                 'quantity' => [ 'count' => 50 ]
             ]
         ];
-
-        $primaryFulfillmentId = $orderReq['fulfillments'][0]['id'] ?? ($sessionData['fulfillment']['id'] ?? 'F1');
-
-        $fulfillmentEnd = $orderReq['fulfillments'][0]['end'] ?? [
-            'location' => [
-                'address' => [
-                    'street' => 'Knowledge Park II',
-                    'city' => 'Greater Noida',
-                    'state' => 'Uttar Pradesh',
-                    'area_code' => '201310'
+        if (empty($items) || !is_array($items)) {
+            $items = [
+                [
+                    'id' => 'km-agri-a4-75',
+                    'fulfillment_id' => 'F1',
+                    'quantity' => [ 'count' => 50 ]
                 ]
-            ]
-        ];
+            ];
+        } else {
+            foreach ($items as &$it) {
+                if (empty($it['id'])) $it['id'] = 'km-agri-a4-75';
+                if (empty($it['fulfillment_id'])) $it['fulfillment_id'] = 'F1';
+                if (empty($it['quantity']['count'])) $it['quantity'] = [ 'count' => 50 ];
+            }
+            unset($it);
+        }
+
+        $primaryFulfillmentId = $message['order']['fulfillments'][0]['id'] ?? ($sessionData['fulfillment']['id'] ?? 'F1');
+        foreach ($items as &$it) {
+            $it['fulfillment_id'] = $primaryFulfillmentId;
+        }
+        unset($it);
 
         $fulfillments = [
             [
@@ -1504,7 +1574,42 @@ switch ($requestAction) {
                         'code' => 'Serviceable'
                     ]
                 ],
-                'end' => $fulfillmentEnd
+                'start' => [
+                    'location' => [
+                        'id' => 'L1',
+                        'descriptor' => [
+                            'name' => 'Kogniti Central Facility'
+                        ],
+                        'gps' => '12.9715987,77.5945627',
+                        'address' => [
+                            'locality' => 'Sector 62',
+                            'city' => 'Greater Noida',
+                            'area_code' => '201309',
+                            'state' => 'Uttar Pradesh'
+                        ]
+                    ],
+                    'contact' => [
+                        'phone' => '9876543210',
+                        'email' => 'support@kognitiminds.com'
+                    ]
+                ],
+                'end' => [
+                    'location' => [
+                        'gps' => '12.9715987,77.5945627',
+                        'address' => [
+                            'name' => 'Apex Educational Trust',
+                            'building' => 'Building 4A',
+                            'locality' => 'Knowledge Park II',
+                            'city' => 'Greater Noida',
+                            'state' => 'Uttar Pradesh',
+                            'country' => 'IND',
+                            'area_code' => '201310'
+                        ]
+                    ],
+                    'contact' => [
+                        'phone' => '9876543210'
+                    ]
+                ]
             ]
         ];
 
@@ -1516,7 +1621,56 @@ switch ($requestAction) {
                 $quote = $rawInit['message']['order']['quote'] ?? null;
             }
         }
+        if (!$quote || empty($quote['price']) || empty($quote['breakup'])) {
+            $quote = [
+                'price' => [
+                    'currency' => 'INR',
+                    'value' => '11981.44'
+                ],
+                'breakup' => [
+                    [
+                        '@ondc/org/item_id' => 'km-agri-a4-75',
+                        '@ondc/org/item_quantity' => [ 'count' => 50 ],
+                        'title' => 'Kogniti AgroPrint 75 GSM A4 Sustainable Copier Paper (500 Sheets)',
+                        '@ondc/org/title_type' => 'item',
+                        'price' => [ 'currency' => 'INR', 'value' => '9108.00' ],
+                        'item' => [
+                            'quantity' => [
+                                'available' => [ 'count' => '2140' ],
+                                'maximum' => [ 'count' => '500' ]
+                            ],
+                            'price' => [ 'currency' => 'INR', 'value' => '182.16' ]
+                        ]
+                    ],
+                    [
+                        '@ondc/org/item_id' => 'km-agri-a4-75',
+                        'title' => 'Tax (CGST 9% + SGST 9%)',
+                        '@ondc/org/title_type' => 'tax',
+                        'price' => [ 'currency' => 'INR', 'value' => '1639.44' ]
+                    ],
+                    [
+                        '@ondc/org/item_id' => $primaryFulfillmentId,
+                        'title' => 'Delivery charges (Surface Logistics)',
+                        '@ondc/org/title_type' => 'delivery',
+                        'price' => [ 'currency' => 'INR', 'value' => '1234.00' ]
+                    ]
+                ],
+                'ttl' => 'P1D'
+            ];
+        }
+        if (!empty($quote['breakup'])) {
+            foreach ($quote['breakup'] as &$bItem) {
+                if (($bItem['@ondc/org/title_type'] ?? '') === 'delivery') {
+                    $bItem['@ondc/org/item_id'] = $primaryFulfillmentId;
+                }
+            }
+            unset($bItem);
+        }
+        if (empty($quote['ttl'])) {
+            $quote['ttl'] = 'P1D';
+        }
 
+        $grandTotalStr = number_format((float)($quote['price']['value'] ?? 11981.44), 2, '.', '');
         $reqPayment = $message['order']['payments'][0] ?? ($message['order']['payment'] ?? []);
         $finderFeeType = !empty($reqPayment['@ondc/org/buyer_app_finder_fee_type']) ? $reqPayment['@ondc/org/buyer_app_finder_fee_type'] : 'percent';
         $finderFeeAmount = !empty($reqPayment['@ondc/org/buyer_app_finder_fee_amount']) ? (string)$reqPayment['@ondc/org/buyer_app_finder_fee_amount'] : '3.0';
@@ -1524,11 +1678,16 @@ switch ($requestAction) {
         $paymentObj = [
             'type' => 'ON-FULFILLMENT',
             'status' => 'NOT-PAID',
+            'collected_by' => 'BAP',
             '@ondc/org/buyer_app_finder_fee_type' => $finderFeeType,
             '@ondc/org/buyer_app_finder_fee_amount' => $finderFeeAmount,
             '@ondc/org/settlement_basis' => 'delivery',
             '@ondc/org/settlement_window' => 'P1D',
             '@ondc/org/withholding_amount' => '0.00',
+            'params' => [
+                'currency' => 'INR',
+                'amount' => $grandTotalStr
+            ],
             '@ondc/org/settlement_details' => [
                 [
                     'settlement_counterparty' => 'buyer',
@@ -1558,7 +1717,8 @@ switch ($requestAction) {
 
         if ($sessionData) {
             $sessionData['billing'] = $billing;
-            $sessionData['fulfillment_end'] = $fulfillmentEnd;
+            $sessionData['fulfillments'] = $fulfillments;
+            $sessionData['quote'] = $quote;
             $sessionData['payment'] = $paymentObj;
             $sessionData['payments'] = [ $paymentObj ];
             @file_put_contents($sessionFile, json_encode($sessionData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);

@@ -18,6 +18,11 @@
     "order": {
       "provider": {
         "id": "kogniti-minds-bpp",
+        "locations": [
+          {
+            "id": "L1"
+          }
+        ],
         "descriptor": {
           "name": "KOGNITI MINDS PRIVATE LIMITED",
           "short_desc": "Sustainable Agri-Waste Paper & Copier Products Manufacturer",
