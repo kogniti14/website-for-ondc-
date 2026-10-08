@@ -5,6 +5,11 @@
  * Compliant with official ONDC RETeB2B 1.2.5 contract & ONDC Workbench specification.
  */
 
+// Execution Limits & Process Protection for Unsolicited Background Callback Pipelines
+@set_time_limit(180);
+@ignore_user_abort(true);
+@ini_set('max_execution_time', '180');
+
 // 1. CORS and Standard Security Headers
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -783,14 +788,22 @@ function getAuthoritativeProductsCatalog($storageDir) {
     ];
 }
 
+// Helper: Generate RFC 4122 Compliant UUID v4
+function generateOndcUuid() {
+    $data = random_bytes(16);
+    $data[6] = chr(ord($data[6]) & 0x0f | 0x40); // v4
+    $data[8] = chr(ord($data[8]) & 0x3f | 0x80); // RFC 4122 variant
+    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+}
+
 // 12. Helper to Build Outgoing Callback Context
 function buildCallbackContext($incomingContext, $callbackAction, $overrideMsgId = null) {
     if ($overrideMsgId !== null) {
         $msgId = $overrideMsgId;
-    } elseif (!empty($incomingContext['message_id']) && !str_starts_with($callbackAction, 'on_status_unsolicited')) {
+    } elseif (!empty($incomingContext['message_id']) && !str_starts_with($callbackAction, 'on_status')) {
         $msgId = $incomingContext['message_id'];
     } else {
-        $msgId = bin2hex(random_bytes(16));
+        $msgId = generateOndcUuid();
     }
 
     $reqTs = !empty($incomingContext['timestamp']) ? strtotime($incomingContext['timestamp']) : time();
@@ -1668,6 +1681,16 @@ switch ($requestAction) {
         ];
         @file_put_contents($ordersFile, json_encode($orders, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
 
+        if ($sessionData) {
+            $sessionData['order_id'] = $orderId;
+            $sessionData['billing'] = $billing;
+            $sessionData['fulfillments'] = $fulfillments;
+            $sessionData['quote'] = $quote;
+            $sessionData['payment'] = $paymentObj;
+            $sessionData['payments'] = [ $paymentObj ];
+            @file_put_contents($sessionFile, json_encode($sessionData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
+        }
+
         // Schedule the 6 unsolicited on_status updates for Steps 7-12
         // Lifecycle states: Packed, Order-picked-up, In-transit, At-destination-hub, Out-for-delivery, Order-delivered
         $statusMilestones = [
@@ -1679,63 +1702,35 @@ switch ($requestAction) {
             ['code' => 'Order-delivered', 'orderState' => 'Completed']
         ];
 
-        $statusScenarioFile = resolveWorkbenchScenarioFile('05_on_status.json');
-        $baseStatusTemplate = ($statusScenarioFile && file_exists($statusScenarioFile))
-            ? json_decode(file_get_contents($statusScenarioFile), true)
-            : null;
-
         foreach ($statusMilestones as $milestone) {
-            $statusContext = buildCallbackContext($context, 'on_status', bin2hex(random_bytes(16)));
-            if ($baseStatusTemplate) {
-                $statusPayload = $baseStatusTemplate;
-                $statusPayload['context'] = $statusContext;
-                $statusPayload['message']['order']['id'] = $orderId;
-                $statusPayload['message']['order']['state'] = $milestone['orderState'];
-                $statusPayload['message']['order']['provider'] = $providerObj;
-                $statusPayload['message']['order']['payment'] = $paymentObj;
-                $statusPayload['message']['order']['payments'] = [ $paymentObj ];
-                if (!empty($quote)) {
-                    $statusPayload['message']['order']['quote'] = $quote;
-                }
-                if (!empty($billing)) {
-                    $statusPayload['message']['order']['billing'] = $billing;
-                }
-                if (!empty($message['order']['items'])) {
-                    $statusPayload['message']['order']['items'] = $message['order']['items'];
-                }
-                if (!empty($statusPayload['message']['order']['fulfillments'][0])) {
-                    $statusPayload['message']['order']['fulfillments'][0]['id'] = $primaryFulfillmentId;
-                    $statusPayload['message']['order']['fulfillments'][0]['state']['descriptor']['code'] = $milestone['code'];
-                    $statusPayload['message']['order']['fulfillments'][0]['tracking_url'] = 'https://kognitiminds.com/track/' . $orderId;
-                }
-                $statusPayload['message']['order']['updated_at'] = gmdate('Y-m-d\TH:i:s\Z');
-            } else {
-                $statusPayload = [
-                    'context' => $statusContext,
-                    'message' => [
-                        'order' => [
-                            'id' => $orderId,
-                            'state' => $milestone['orderState'],
-                            'provider' => $providerObj,
-                            'items' => $items,
-                            'billing' => $billing,
-                            'quote' => $quote,
-                            'payment' => $paymentObj,
-                            'payments' => [ $paymentObj ],
-                            'fulfillments' => [
-                                [
-                                    'id' => $primaryFulfillmentId,
-                                    'type' => 'Delivery',
-                                    'state' => [ 'descriptor' => [ 'code' => $milestone['code'] ] ],
-                                    'tracking' => true,
-                                    'tracking_url' => 'https://kognitiminds.com/track/' . $orderId
-                                ]
-                            ],
-                            'updated_at' => gmdate('Y-m-d\TH:i:s\Z')
-                        ]
+            $statusContext = buildCallbackContext($context, 'on_status', generateOndcUuid());
+            $statusPayload = [
+                'context' => $statusContext,
+                'message' => [
+                    'order' => [
+                        'id' => $orderId,
+                        'state' => $milestone['orderState'],
+                        'provider' => [
+                            'id' => $providerObj['id'] ?? 'kogniti-minds-bpp'
+                        ],
+                        'items' => $items,
+                        'fulfillments' => [
+                            [
+                                'id' => $primaryFulfillmentId,
+                                'type' => 'Delivery',
+                                'state' => [
+                                    'descriptor' => [
+                                        'code' => $milestone['code']
+                                    ]
+                                ],
+                                'tracking' => true,
+                                'tracking_url' => 'https://kognitiminds.com/track/' . $orderId
+                            ]
+                        ],
+                        'updated_at' => gmdate('Y-m-d\TH:i:s\Z')
                     ]
-                ];
-            }
+                ]
+            ];
 
             $additionalCallbacks[] = [
                 'action' => 'on_status',
@@ -1747,12 +1742,43 @@ switch ($requestAction) {
 
     case 'status':
         $callbackAction = 'on_status';
-        $scenarioFile = resolveWorkbenchScenarioFile('05_on_status.json');
-        if ($scenarioFile && file_exists($scenarioFile)) {
-            $basePayload = json_decode(file_get_contents($scenarioFile), true);
-            $basePayload['context'] = buildCallbackContext($context, 'on_status');
-            $callbackPayload = $basePayload;
-        }
+        $txnId = $context['transaction_id'] ?? '';
+        $sessionFile = $storageDir . '/session_' . $txnId . '.json';
+        $sessionData = (file_exists($sessionFile)) ? json_decode(@file_get_contents($sessionFile), true) : null;
+        $orderId = $message['order_id'] ?? ($sessionData['order_id'] ?? 'KM_ONDC_ORD_881290');
+        $callbackPayload = [
+            'context' => buildCallbackContext($context, 'on_status'),
+            'message' => [
+                'order' => [
+                    'id' => $orderId,
+                    'state' => 'Completed',
+                    'provider' => [
+                        'id' => $sessionData['provider']['id'] ?? 'kogniti-minds-bpp'
+                    ],
+                    'items' => $sessionData['items'] ?? [
+                        [
+                            'id' => 'km-agri-a4-75',
+                            'fulfillment_id' => 'F1',
+                            'quantity' => [ 'count' => 50 ]
+                        ]
+                    ],
+                    'fulfillments' => [
+                        [
+                            'id' => $sessionData['fulfillment']['id'] ?? 'F1',
+                            'type' => 'Delivery',
+                            'state' => [
+                                'descriptor' => [
+                                    'code' => 'Order-delivered'
+                                ]
+                            ],
+                            'tracking' => true,
+                            'tracking_url' => 'https://kognitiminds.com/track/' . $orderId
+                        ]
+                    ],
+                    'updated_at' => gmdate('Y-m-d\TH:i:s\Z')
+                ]
+            ]
+        ];
         break;
 
     case 'update':
@@ -1940,11 +1966,13 @@ if ($callbackPayload && !empty($context['bap_uri'])) {
 
     // Dispatch any chained unsolicited callbacks (e.g. on_status milestones, return progression)
     if (!empty($additionalCallbacks)) {
+        $lastMilestoneTime = max(time(), $reqTs + 2);
         foreach ($additionalCallbacks as $extraCb) {
             $delay = !empty($extraCb['delay_us']) ? $extraCb['delay_us'] : 1500000;
             usleep($delay);
 
-            $extraTs = gmdate('Y-m-d\TH:i:s\Z');
+            $lastMilestoneTime = max(time(), $lastMilestoneTime + 1);
+            $extraTs = gmdate('Y-m-d\TH:i:s\Z', $lastMilestoneTime);
             if (isset($extraCb['payload']['context'])) {
                 $extraCb['payload']['context']['timestamp'] = $extraTs;
             }

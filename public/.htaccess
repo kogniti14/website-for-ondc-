@@ -53,6 +53,13 @@ Options -Indexes -MultiViews
     Header set Access-Control-Allow-Origin "*"
     Header set Cache-Control "public, max-age=2592000, stale-while-revalidate=86400"
   </FilesMatch>
+
+  # ONDC Gateway & Protocol Endpoints CORS Suite
+  <FilesMatch "\.(php|json)$">
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, Digest, Date, X-Requested-With, Accept"
+  </FilesMatch>
 </IfModule>
 
 # Block access to hidden files, git repos, environment variables, and source configs
@@ -107,21 +114,35 @@ Options -Indexes -MultiViews
   RewriteRule ^api/data/([a-zA-Z0-9_-]+)/?([a-zA-Z0-9_-]*)?$ api/data.php?collection=$1&id=$2 [QSA,L]
 
   # Dedicated ONDC RETeB2B 1.2.5 Protocol Routes (Hostinger Native Execution - Zero 503 errors)
-  # Internal callback routes (on_search, on_select, etc.):
-  # Human browser navigation -> Redirect to dedicated Admin SPA Workbench
-  RewriteCond %{REQUEST_METHOD} !^POST$
-  RewriteRule ^on_([a-z]+)$ /admin/ondc/on-$1 [R=302,L]
+  # 1. CORS Preflight (OPTIONS) - Always handle directly via ondc-gateway for all ONDC protocol routes
+  RewriteCond %{REQUEST_METHOD} ^OPTIONS$
+  RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteCond %{REQUEST_METHOD} ^OPTIONS$
+  RewriteRule ^(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteCond %{REQUEST_METHOD} ^OPTIONS$
+  RewriteRule ^ondc/(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteCond %{REQUEST_METHOD} ^OPTIONS$
+  RewriteRule ^ondc/(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+
+  # 2. Protocol Machine-to-Machine POST Endpoints (Buyer -> Seller Gateway & Callbacks)
+  RewriteCond %{REQUEST_METHOD} ^POST$
+  RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteCond %{REQUEST_METHOD} ^POST$
+  RewriteRule ^(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteCond %{REQUEST_METHOD} ^POST$
+  RewriteRule ^ondc/(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteCond %{REQUEST_METHOD} ^POST$
+  RewriteRule ^ondc/(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteRule ^ondc/on_search_sample/?$ api/ondc-gateway.php?action=on_search_sample [QSA,L]
+
+  # 3. Human browser navigation (GET / HEAD)
+  # Internal callback routes -> Redirect to dedicated Admin SPA Workbench
+  RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+  RewriteRule ^on_([a-z]+)/?$ /admin/ondc/on-$1 [R=302,L]
 
   # Human browser navigation -> Load SPA (index.html)
-  RewriteCond %{REQUEST_METHOD} !^POST$
-  RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support|products|shop|deals|b2b-overview|wholesale-catalog|rfq|business-dashboard|success-stories|certifications|certifications-compliance|business-login|business-register|b2b-deals|gst-input-credit|login|admin|wishlist|cart|checkout|orders|account|terms|privacy|refund|shipping)$ index.html [L]
-
-  # Protocol Machine-to-Machine POST Endpoints (Buyer -> Seller Gateway):
-  RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support)$ api/ondc-gateway.php?action=$1 [QSA,L]
-  RewriteRule ^(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)$ api/ondc-gateway.php?action=$1 [QSA,L]
-  RewriteRule ^ondc/(search|select|init|confirm|status|track|cancel|update|rating|support)$ api/ondc-gateway.php?action=$1 [QSA,L]
-  RewriteRule ^ondc/(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)$ api/ondc-gateway.php?action=$1 [QSA,L]
-  RewriteRule ^ondc/on_search_sample/?$ api/ondc-gateway.php?action=on_search_sample [QSA,L]
+  RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+  RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support|products|shop|deals|b2b-overview|wholesale-catalog|rfq|business-dashboard|success-stories|certifications|certifications-compliance|business-login|business-register|b2b-deals|gst-input-credit|login|admin|wishlist|cart|checkout|orders|account|terms|privacy|refund|shipping)/?$ index.html [L]
 
   # 2. Direct Static Upload Serving
   RewriteRule ^uploads/(.*)$ uploads/$1 [L]
