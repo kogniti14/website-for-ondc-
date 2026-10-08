@@ -1559,6 +1559,17 @@ switch ($requestAction) {
                 'code' => 'kogniti-minds-bpp'
             ]
         ];
+        if (empty($providerObj['locations'])) {
+            $providerObj['locations'] = [ [ 'id' => 'L1' ] ];
+        }
+        if (empty($providerObj['descriptor']['name'])) {
+            $providerObj['descriptor'] = [
+                'name' => 'KOGNITI MINDS PRIVATE LIMITED',
+                'short_desc' => 'Sustainable Agri-Waste Paper & Copier Products Manufacturer',
+                'long_desc' => 'Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.',
+                'code' => 'kogniti-minds-bpp'
+            ];
+        }
 
         $items = $sessionData['items'] ?? $message['order']['items'] ?? [
             [
@@ -1567,6 +1578,28 @@ switch ($requestAction) {
                 'quantity' => [ 'count' => 50 ]
             ]
         ];
+        if (empty($items) || !is_array($items)) {
+            $items = [
+                [
+                    'id' => 'km-agri-a4-75',
+                    'fulfillment_id' => 'F1',
+                    'quantity' => [ 'count' => 50 ]
+                ]
+            ];
+        } else {
+            foreach ($items as &$it) {
+                if (empty($it['id'])) {
+                    $it['id'] = 'km-agri-a4-75';
+                }
+                if (empty($it['fulfillment_id'])) {
+                    $it['fulfillment_id'] = 'F1';
+                }
+                if (empty($it['quantity']['count'])) {
+                    $it['quantity'] = [ 'count' => 50 ];
+                }
+            }
+            unset($it);
+        }
 
         $billing = $sessionData['billing'] ?? $message['order']['billing'] ?? [
             'name' => 'Apex Educational Trust',
@@ -1578,8 +1611,27 @@ switch ($requestAction) {
             ],
             'tax_number' => '07AAAAA0000A1Z5'
         ];
+        if (empty($billing['name'])) {
+            $billing['name'] = 'Apex Educational Trust';
+        }
+        if (empty($billing['address'])) {
+            $billing['address'] = [
+                'street' => 'Knowledge Park II',
+                'city' => 'Greater Noida',
+                'state' => 'Uttar Pradesh',
+                'area_code' => '201310'
+            ];
+        }
+        if (empty($billing['tax_number'])) {
+            $billing['tax_number'] = '07AAAAA0000A1Z5';
+        }
 
         $primaryFulfillmentId = $message['order']['fulfillments'][0]['id'] ?? ($sessionData['fulfillment']['id'] ?? 'F1');
+        foreach ($items as &$it) {
+            $it['fulfillment_id'] = $primaryFulfillmentId;
+        }
+        unset($it);
+
         $fulfillments = [
             [
                 'id' => $primaryFulfillmentId,
@@ -1604,6 +1656,65 @@ switch ($requestAction) {
                 $rawConfirm = json_decode(file_get_contents($scenarioFile), true);
                 $quote = $rawConfirm['message']['order']['quote'] ?? null;
             }
+        }
+        if (!$quote || empty($quote['price']) || empty($quote['breakup'])) {
+            $quote = [
+                'price' => [
+                    'currency' => 'INR',
+                    'value' => '11981.44'
+                ],
+                'breakup' => [
+                    [
+                        '@ondc/org/item_id' => 'km-agri-a4-75',
+                        '@ondc/org/item_quantity' => [
+                            'count' => 50
+                        ],
+                        'title' => 'Kogniti AgroPrint 75 GSM A4 Sustainable Copier Paper (500 Sheets)',
+                        '@ondc/org/title_type' => 'item',
+                        'price' => [
+                            'currency' => 'INR',
+                            'value' => '9108.00'
+                        ],
+                        'item' => [
+                            'quantity' => [
+                                'available' => [ 'count' => '2140' ],
+                                'maximum' => [ 'count' => '500' ]
+                            ],
+                            'price' => [
+                                'currency' => 'INR',
+                                'value' => '182.16'
+                            ]
+                        ]
+                    ],
+                    [
+                        '@ondc/org/item_id' => 'km-agri-a4-75',
+                        'title' => 'Tax (CGST 9% + SGST 9%)',
+                        '@ondc/org/title_type' => 'tax',
+                        'price' => [
+                            'currency' => 'INR',
+                            'value' => '1639.44'
+                        ]
+                    ],
+                    [
+                        '@ondc/org/item_id' => $primaryFulfillmentId,
+                        'title' => 'Delivery charges (Surface Logistics)',
+                        '@ondc/org/title_type' => 'delivery',
+                        'price' => [
+                            'currency' => 'INR',
+                            'value' => '1234.00'
+                        ]
+                    ]
+                ],
+                'ttl' => 'P1D'
+            ];
+        }
+        if (!empty($quote['breakup'])) {
+            foreach ($quote['breakup'] as &$bItem) {
+                if (($bItem['@ondc/org/title_type'] ?? '') === 'delivery') {
+                    $bItem['@ondc/org/item_id'] = $primaryFulfillmentId;
+                }
+            }
+            unset($bItem);
         }
 
         $paymentObj = $sessionData['payment'] ?? [
