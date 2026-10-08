@@ -164,7 +164,6 @@ export function createOndcOrder({ ondcOrderId, context, orderPayload = {} }) {
         type: 'Delivery',
         state: { descriptor: { code: 'Order-picked-up' } },
         tracking: true,
-        tracking_url: `https://kognitiminds.com/track/${resolvedOrderId}`,
       },
     ],
   };

@@ -63,8 +63,7 @@
             "descriptor": {
               "code": "Order-picked-up"
             }
-          },
-          "tracking_url": "https://kognitiminds.com/track/KM_ONDC_ORD_881290"
+          }
         }
       ],
       "quote": {

@@ -1644,8 +1644,7 @@ switch ($requestAction) {
                     'descriptor' => [
                         'code' => 'Order-picked-up'
                     ]
-                ],
-                'tracking_url' => 'https://kognitiminds.com/track/' . $orderId
+                ]
             ]
         ];
 
@@ -1813,8 +1812,7 @@ switch ($requestAction) {
                                         'code' => $milestone['code']
                                     ]
                                 ],
-                                'tracking' => true,
-                                'tracking_url' => 'https://kognitiminds.com/track/' . $orderId
+                                'tracking' => true
                             ]
                         ],
                         'updated_at' => gmdate('Y-m-d\TH:i:s\Z')
@@ -1861,8 +1859,7 @@ switch ($requestAction) {
                                     'code' => 'Order-delivered'
                                 ]
                             ],
-                            'tracking' => true,
-                            'tracking_url' => 'https://kognitiminds.com/track/' . $orderId
+                            'tracking' => true
                         ]
                     ],
                     'updated_at' => gmdate('Y-m-d\TH:i:s\Z')
