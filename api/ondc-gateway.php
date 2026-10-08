@@ -326,8 +326,12 @@ if ($action === 'admin_transactions') {
 }
 
 if ($action === 'admin_logs' || $action === 'admin_inspect') {
+    @ini_set('memory_limit', '256M');
     $logFile = $storageDir . '/ondc_logs.json';
-    $rawLogs = file_exists($logFile) ? (json_decode(file_get_contents($logFile), true) ?: []) : [];
+    $rawLogs = file_exists($logFile) ? (json_decode(@file_get_contents($logFile), true) ?: []) : [];
+    if (count($rawLogs) > 50) {
+        $rawLogs = array_slice($rawLogs, 0, 50);
+    }
     
     if ($action === 'admin_inspect') {
         http_response_code(200);
@@ -496,8 +500,8 @@ function logOndcEvent($storageDir, $event, $data = []) {
     }
 
     array_unshift($logs, $cleanData);
-    if (count($logs) > 500) {
-        $logs = array_slice($logs, 0, 500);
+    if (count($logs) > 100) {
+        $logs = array_slice($logs, 0, 100);
     }
     @file_put_contents($logFile, json_encode($logs, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
 }
