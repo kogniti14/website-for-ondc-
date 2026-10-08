@@ -507,6 +507,10 @@ function sendAckResponse($logParams = []) {
         ]
     ]);
 
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        @session_write_close();
+    }
+
     // Clean active buffers
     while (ob_get_level() > 0) {
         @ob_end_clean();
@@ -517,16 +521,14 @@ function sendAckResponse($logParams = []) {
     header('Content-Type: application/json; charset=utf-8');
     header('Connection: close');
     header('Content-Length: ' . strlen($body));
+    header('X-Accel-Buffering: no');
     echo $body;
+    flush();
 
     if (function_exists('litespeed_finish_request')) {
         litespeed_finish_request();
     } elseif (function_exists('fastcgi_finish_request')) {
         fastcgi_finish_request();
-    }
-    flush();
-    if (function_exists('ob_flush')) {
-        @ob_flush();
     }
 }
 
@@ -791,6 +793,9 @@ function buildCallbackContext($incomingContext, $callbackAction, $overrideMsgId 
         $msgId = bin2hex(random_bytes(16));
     }
 
+    $reqTs = !empty($incomingContext['timestamp']) ? strtotime($incomingContext['timestamp']) : time();
+    $cbTs = max(time(), $reqTs + 2);
+
     return [
         'domain' => $incomingContext['domain'] ?? 'ONDC:RETeB2B',
         'country' => $incomingContext['country'] ?? 'IND',
@@ -803,7 +808,7 @@ function buildCallbackContext($incomingContext, $callbackAction, $overrideMsgId 
         'bpp_uri' => 'https://kognitiminds.com',
         'transaction_id' => $incomingContext['transaction_id'] ?? '',
         'message_id' => $msgId,
-        'timestamp' => gmdate('Y-m-d\TH:i:s\Z'),
+        'timestamp' => gmdate('Y-m-d\TH:i:s\Z', $cbTs),
         'ttl' => 'PT30S'
     ];
 }
@@ -834,6 +839,16 @@ function dispatchAsyncCallback($bapUri, $callbackAction, $payload, $storageDir =
     $targetUrl = rtrim($bapUri, '/');
     if (!str_ends_with($targetUrl, $callbackAction)) {
         $targetUrl .= '/' . $callbackAction;
+    }
+
+    // Ensure the payload context timestamp is strictly up-to-date at the exact moment of dispatch
+    $dispatchTs = gmdate('Y-m-d\TH:i:s\Z');
+    if (isset($payload['context'])) {
+        $currTs = !empty($payload['context']['timestamp']) ? strtotime($payload['context']['timestamp']) : 0;
+        $payload['context']['timestamp'] = gmdate('Y-m-d\TH:i:s\Z', max(time(), $currTs));
+    }
+    if (isset($payload['message']['order']['updated_at'])) {
+        $payload['message']['order']['updated_at'] = $payload['context']['timestamp'] ?? $dispatchTs;
     }
 
     $jsonBody = json_encode($payload, JSON_UNESCAPED_SLASHES);
@@ -1249,7 +1264,7 @@ function processOndcSelect($storageDir, $context, $message) {
             'bpp_uri' => 'https://kognitiminds.com',
             'transaction_id' => $txnId,
             'message_id' => $msgId,
-            'timestamp' => gmdate('Y-m-d\TH:i:s\Z'),
+            'timestamp' => gmdate('Y-m-d\TH:i:s\Z', max(time(), (!empty($context['timestamp']) ? strtotime($context['timestamp']) : time()) + 2)),
             'ttl' => 'PT30S'
         ],
         'message' => [
@@ -1447,6 +1462,8 @@ switch ($requestAction) {
             ]
         ];
 
+        $primaryFulfillmentId = $orderReq['fulfillments'][0]['id'] ?? ($sessionData['fulfillment']['id'] ?? 'F1');
+
         $fulfillmentEnd = $orderReq['fulfillments'][0]['end'] ?? [
             'location' => [
                 'address' => [
@@ -1460,7 +1477,7 @@ switch ($requestAction) {
 
         $fulfillments = [
             [
-                'id' => 'F1',
+                'id' => $primaryFulfillmentId,
                 'type' => 'Delivery',
                 '@ondc/org/provider_name' => 'Kogniti Express Logistics',
                 '@ondc/org/category' => 'Standard Delivery',
@@ -1563,9 +1580,10 @@ switch ($requestAction) {
             'tax_number' => '07AAAAA0000A1Z5'
         ];
 
+        $primaryFulfillmentId = $message['order']['fulfillments'][0]['id'] ?? ($sessionData['fulfillment']['id'] ?? 'F1');
         $fulfillments = [
             [
-                'id' => 'F1',
+                'id' => $primaryFulfillmentId,
                 'type' => 'Delivery',
                 '@ondc/org/provider_name' => 'Kogniti Express Logistics',
                 '@ondc/org/category' => 'Standard Delivery',
@@ -1665,10 +1683,12 @@ switch ($requestAction) {
                 $statusPayload['context'] = $statusContext;
                 $statusPayload['message']['order']['id'] = $orderId;
                 $statusPayload['message']['order']['state'] = $milestone['orderState'];
+                $statusPayload['message']['order']['provider'] = $providerObj;
                 if (!empty($message['order']['items'])) {
                     $statusPayload['message']['order']['items'] = $message['order']['items'];
                 }
                 if (!empty($statusPayload['message']['order']['fulfillments'][0])) {
+                    $statusPayload['message']['order']['fulfillments'][0]['id'] = $primaryFulfillmentId;
                     $statusPayload['message']['order']['fulfillments'][0]['state']['descriptor']['code'] = $milestone['code'];
                     $statusPayload['message']['order']['fulfillments'][0]['tracking_url'] = 'https://kognitiminds.com/track/' . $orderId;
                 }
@@ -1680,11 +1700,11 @@ switch ($requestAction) {
                         'order' => [
                             'id' => $orderId,
                             'state' => $milestone['orderState'],
-                            'provider' => [ 'id' => 'kogniti-minds-bpp' ],
-                            'items' => $message['order']['items'] ?? [['id' => 'km-agri-a4-75', 'quantity' => ['count' => 50]]],
+                            'provider' => $providerObj,
+                            'items' => $items,
                             'fulfillments' => [
                                 [
-                                    'id' => 'F1',
+                                    'id' => $primaryFulfillmentId,
                                     'type' => 'Delivery',
                                     'state' => [ 'descriptor' => [ 'code' => $milestone['code'] ] ],
                                     'tracking' => true,
@@ -1700,7 +1720,7 @@ switch ($requestAction) {
             $additionalCallbacks[] = [
                 'action' => 'on_status',
                 'payload' => $statusPayload,
-                'delay_us' => 1000000 // 1.0s interval between lifecycle milestone updates
+                'delay_us' => 1500000 // 1.5s interval between lifecycle milestone updates
             ];
         }
         break;
@@ -1877,21 +1897,33 @@ sendAckResponse();
 
 // 17. Asynchronously Dispatch Outbound Callback to BAP
 if ($callbackPayload && !empty($context['bap_uri'])) {
-    // Grace period (1.2s): Allows calling BAP/Workbench to receive ACK and commit the request to flow history before callback arrives
-    usleep(1200000);
+    // Grace period (2.5s): Guarantees calling BAP/Workbench has completely received ACK, closed the socket, and committed the request to its active state machine before callback arrives
+    usleep(2500000);
 
-    if ($callbackAction === 'on_select') {
-        logOndcEvent($storageDir, 'ON_SELECT_SENT', array_merge($callbackMeta ?? [], [
-            'target_url' => rtrim($context['bap_uri'], '/') . '/on_select'
-        ]));
+    // Ensure timestamp is current and strictly greater than incoming request
+    $reqTs = !empty($context['timestamp']) ? strtotime($context['timestamp']) : time();
+    $dispatchTs = gmdate('Y-m-d\TH:i:s\Z', max(time(), $reqTs + 2));
+    if (isset($callbackPayload['context'])) {
+        $callbackPayload['context']['timestamp'] = $dispatchTs;
     }
+    if (isset($callbackPayload['message']['order']['updated_at'])) {
+        $callbackPayload['message']['order']['updated_at'] = $dispatchTs;
+    }
+
     dispatchAsyncCallback($context['bap_uri'], $callbackAction, $callbackPayload, $storageDir, $callbackMeta ?? []);
 
     // Dispatch any chained unsolicited callbacks (e.g. on_status milestones, return progression)
     if (!empty($additionalCallbacks)) {
         foreach ($additionalCallbacks as $extraCb) {
-            if (!empty($extraCb['delay_us'])) {
-                usleep($extraCb['delay_us']);
+            $delay = !empty($extraCb['delay_us']) ? $extraCb['delay_us'] : 1500000;
+            usleep($delay);
+
+            $extraTs = gmdate('Y-m-d\TH:i:s\Z');
+            if (isset($extraCb['payload']['context'])) {
+                $extraCb['payload']['context']['timestamp'] = $extraTs;
+            }
+            if (isset($extraCb['payload']['message']['order']['updated_at'])) {
+                $extraCb['payload']['message']['order']['updated_at'] = $extraTs;
             }
             dispatchAsyncCallback($context['bap_uri'], $extraCb['action'], $extraCb['payload'], $storageDir, [
                 'transaction_id' => $context['transaction_id'] ?? null,
