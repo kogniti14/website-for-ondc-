@@ -1764,6 +1764,7 @@ switch ($requestAction) {
                 if (($bItem['@ondc/org/title_type'] ?? '') === 'delivery') {
                     $bItem['@ondc/org/item_id'] = $primaryFulfillmentId;
                 }
+            }
             unset($bItem);
         }
         if (empty($quote['ttl'])) {
