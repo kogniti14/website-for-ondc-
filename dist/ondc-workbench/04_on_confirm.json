@@ -67,7 +67,7 @@
           "tracking": true,
           "state": {
             "descriptor": {
-              "code": "Order-picked-up"
+              "code": "Pending"
             }
           },
           "start": {

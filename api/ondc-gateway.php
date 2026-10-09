@@ -364,41 +364,148 @@ if ($action === 'admin_logs' || $action === 'admin_inspect') {
     exit;
 }
 
-if ($action === 'admin_test_env') {
-    $ch1 = curl_init('http://127.0.0.1/api/ondc-gateway.php?action=health');
-    curl_setopt($ch1, CURLOPT_HTTPHEADER, [
-        'Host: kognitiminds.com',
-        'X-Forwarded-Proto: https'
-    ]);
-    curl_setopt($ch1, CURLOPT_TIMEOUT, 2);
-    curl_setopt($ch1, CURLOPT_RETURNTRANSFER, true);
-    $res1 = curl_exec($ch1);
-    $err1 = curl_error($ch1);
-    $code1 = curl_getinfo($ch1, CURLINFO_HTTP_CODE);
-    curl_close($ch1);
+if ($action === 'dispatch_milestones') {
+    $txnId = $_GET['txn_id'] ?? ($_POST['txn_id'] ?? '');
+    if (empty($txnId)) {
+        $allSessionFiles = glob($storageDir . '/session_*.json');
+        if (!empty($allSessionFiles)) {
+            usort($allSessionFiles, function($a, $b) {
+                return filemtime($b) - filemtime($a);
+            });
+            $latestFile = basename($allSessionFiles[0]);
+            $txnId = str_replace(['session_', '.json'], '', $latestFile);
+        }
+    }
 
-    $ch2 = curl_init('https://88.222.222.156/api/ondc-gateway.php?action=health');
-    curl_setopt($ch2, CURLOPT_HTTPHEADER, ['Host: kognitiminds.com']);
-    curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch2, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch2, CURLOPT_TIMEOUT, 2);
-    curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
-    $res2 = curl_exec($ch2);
-    $err2 = curl_error($ch2);
-    $code2 = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
-    curl_close($ch2);
+    if (empty($txnId)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'No active transaction found to dispatch milestones.']);
+        exit;
+    }
 
-    http_response_code(200);
-    echo json_encode([
-        'sapi' => php_sapi_name(),
-        'litespeed_finish_request' => function_exists('litespeed_finish_request'),
-        'fastcgi_finish_request' => function_exists('fastcgi_finish_request'),
-        'disable_functions' => ini_get('disable_functions'),
-        'loopback_127_code' => $code1,
-        'loopback_127_err' => $err1,
-        'loopback_hostinger_ip_code' => $code2,
-        'loopback_hostinger_ip_err' => $err2,
-    ], JSON_PRETTY_PRINT);
+    // Immediately ACK caller so loopback/trigger finishes in < 10ms
+    sendAckResponse();
+
+    $sessionFile = $storageDir . '/session_' . $txnId . '.json';
+    if (!file_exists($sessionFile)) {
+        exit;
+    }
+    $sessionData = json_decode(@file_get_contents($sessionFile), true);
+    if (!$sessionData) exit;
+
+    $bapUri = $sessionData['bap_uri'] ?? 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer';
+    $orderId = $sessionData['order_id'] ?? ('KM-ONDC-ORD-' . strtoupper(substr(md5($txnId), 0, 6)));
+    $providerObj = $sessionData['provider'] ?? [
+        'id' => 'kogniti-minds-bpp',
+        'locations' => [ [ 'id' => 'L1' ] ],
+        'descriptor' => [
+            'name' => 'KOGNITI MINDS PRIVATE LIMITED',
+            'short_desc' => 'Sustainable Agri-Waste Paper & Copier Products Manufacturer',
+            'code' => 'kogniti-minds-bpp'
+        ]
+    ];
+    $items = $sessionData['items'] ?? [
+        [
+            'id' => 'km-agri-a4-75',
+            'fulfillment_id' => 'F1',
+            'quantity' => [ 'count' => 50 ]
+        ]
+    ];
+    $billing = $sessionData['billing'] ?? [];
+    $fulfillments = $sessionData['fulfillments'] ?? [];
+    $quote = $sessionData['quote'] ?? [];
+    $paymentObj = $sessionData['payment'] ?? [];
+    $primaryFulfillmentId = $fulfillments[0]['id'] ?? 'F1';
+
+    // 6 Lifecycle milestones for Steps 7 to 12
+    $statusMilestones = [
+        ['code' => 'Packed', 'orderState' => 'Accepted'],
+        ['code' => 'Order-picked-up', 'orderState' => 'In-progress'],
+        ['code' => 'In-transit', 'orderState' => 'In-progress'],
+        ['code' => 'At-destination-hub', 'orderState' => 'In-progress'],
+        ['code' => 'Out-for-delivery', 'orderState' => 'In-progress'],
+        ['code' => 'Order-delivered', 'orderState' => 'Completed']
+    ];
+
+    $milestoneBaseTime = time();
+
+    foreach ($statusMilestones as $idx => $milestone) {
+        // 2.0s separation window guarantees Workbench database commits each step before the next arrives
+        usleep(2000000);
+
+        $milestoneBaseTime += 2;
+        $milestoneTs = gmdate('Y-m-d\TH:i:s\Z', $milestoneBaseTime);
+        $milestoneTsMs = gmdate('Y-m-d\TH:i:s', $milestoneBaseTime) . '.000Z';
+
+        $statusContext = [
+            'domain' => $sessionData['domain'] ?? 'ONDC:RETeB2B',
+            'country' => 'IND',
+            'city' => 'std:080',
+            'action' => 'on_status',
+            'core_version' => '1.2.5',
+            'bap_id' => $sessionData['bap_id'] ?? 'workbench.ondc.tech',
+            'bap_uri' => $bapUri,
+            'bpp_id' => $sessionData['bpp_id'] ?? 'kognitiminds.com',
+            'bpp_uri' => 'https://kognitiminds.com',
+            'transaction_id' => $txnId,
+            'message_id' => generateOndcUuid(),
+            'timestamp' => $milestoneTs,
+            'ttl' => 'PT30S'
+        ];
+
+        $statusPayload = [
+            'context' => $statusContext,
+            'message' => [
+                'order' => [
+                    'id' => $orderId,
+                    'state' => $milestone['orderState'],
+                    'provider' => $providerObj,
+                    'items' => $items,
+                    'billing' => $billing,
+                    'fulfillments' => [
+                        [
+                            'id' => $primaryFulfillmentId,
+                            'type' => 'Delivery',
+                            '@ondc/org/provider_name' => 'Kogniti Express Logistics',
+                            '@ondc/org/category' => 'Standard Delivery',
+                            '@ondc/org/TAT' => 'P2D',
+                            'state' => [
+                                'descriptor' => [
+                                    'code' => $milestone['code']
+                                ]
+                            ],
+                            'tracking' => true,
+                            'start' => $fulfillments[0]['start'] ?? [],
+                            'end' => $fulfillments[0]['end'] ?? []
+                        ]
+                    ],
+                    'quote' => $quote,
+                    'payment' => $paymentObj,
+                    'payments' => [ $paymentObj ],
+                    'created_at' => $sessionData['created_at'] ?? $billing['created_at'] ?? $milestoneTsMs,
+                    'updated_at' => $milestoneTsMs
+                ]
+            ]
+        ];
+
+        // Update stored order status in ondc_orders.json
+        $ordersFile = $storageDir . '/ondc_orders.json';
+        if (file_exists($ordersFile)) {
+            $orders = json_decode(@file_get_contents($ordersFile), true) ?: [];
+            if (isset($orders[$orderId])) {
+                $orders[$orderId]['status'] = $milestone['orderState'];
+                $orders[$orderId]['payload'] = $statusPayload['message']['order'];
+                $orders[$orderId]['updatedAt'] = $milestoneTs;
+                @file_put_contents($ordersFile, json_encode($orders, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
+            }
+        }
+
+        dispatchAsyncCallback($bapUri, 'on_status', $statusPayload, $storageDir, [
+            'transaction_id' => $txnId,
+            'unsolicited' => true,
+            'milestone' => $milestone['code']
+        ]);
+    }
     exit;
 }
 
@@ -1021,6 +1128,22 @@ function dispatchAsyncCallback($bapUri, $callbackAction, $payload, $storageDir =
     }
 
     return ['status' => $httpCode, 'body' => $responseBody, 'error' => $curlErr];
+}
+
+// 13c. Helper: Trigger Asynchronous Lifecycle Milestones via LiteSpeed Loopback Worker
+function triggerAsyncMilestones($txnId, $storageDir) {
+    if (empty($txnId)) return;
+    $loopbackUrl = 'http://127.0.0.1/api/ondc-gateway.php?action=dispatch_milestones&txn_id=' . urlencode($txnId);
+    $ch = curl_init($loopbackUrl);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Host: kognitiminds.com',
+        'X-Forwarded-Proto: https'
+    ]);
+    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 400); // 400ms non-blocking fire-and-forget
+    curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    @curl_exec($ch);
+    @curl_close($ch);
 }
 
 // 13b. Core Engine: Dynamic ONDC /select Processor for Every Catalogue Product
@@ -1754,6 +1877,10 @@ switch ($requestAction) {
         ];
 
         if ($sessionData) {
+            $sessionData['bap_uri'] = $context['bap_uri'] ?? ($sessionData['bap_uri'] ?? null);
+            $sessionData['bap_id'] = $context['bap_id'] ?? ($sessionData['bap_id'] ?? null);
+            $sessionData['bpp_id'] = $context['bpp_id'] ?? ($sessionData['bpp_id'] ?? null);
+            $sessionData['domain'] = $context['domain'] ?? ($sessionData['domain'] ?? 'ONDC:RETeB2B');
             $sessionData['billing'] = $billing;
             $sessionData['fulfillments'] = $fulfillments;
             $sessionData['quote'] = $quote;
@@ -1864,7 +1991,7 @@ switch ($requestAction) {
                 'tracking' => true,
                 'state' => [
                     'descriptor' => [
-                        'code' => 'Order-picked-up'
+                        'code' => 'Pending'
                     ]
                 ],
                 'start' => [
@@ -2040,68 +2167,17 @@ switch ($requestAction) {
 
         if ($sessionData) {
             $sessionData['order_id'] = $orderId;
+            $sessionData['bap_uri'] = $context['bap_uri'] ?? ($sessionData['bap_uri'] ?? null);
+            $sessionData['bap_id'] = $context['bap_id'] ?? ($sessionData['bap_id'] ?? null);
+            $sessionData['bpp_id'] = $context['bpp_id'] ?? ($sessionData['bpp_id'] ?? null);
+            $sessionData['domain'] = $context['domain'] ?? ($sessionData['domain'] ?? 'ONDC:RETeB2B');
             $sessionData['billing'] = $billing;
             $sessionData['fulfillments'] = $fulfillments;
             $sessionData['quote'] = $quote;
             $sessionData['payment'] = $paymentObj;
             $sessionData['payments'] = [ $paymentObj ];
+            $sessionData['created_at'] = $nowIsoMs;
             @file_put_contents($sessionFile, json_encode($sessionData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
-        }
-
-        // Schedule the 6 unsolicited on_status updates for Steps 7-12
-        // Lifecycle states: Packed, Order-picked-up, In-transit, At-destination-hub, Out-for-delivery, Order-delivered
-        $statusMilestones = [
-            ['code' => 'Packed', 'orderState' => 'Accepted'],
-            ['code' => 'Order-picked-up', 'orderState' => 'In-progress'],
-            ['code' => 'In-transit', 'orderState' => 'In-progress'],
-            ['code' => 'At-destination-hub', 'orderState' => 'In-progress'],
-            ['code' => 'Out-for-delivery', 'orderState' => 'In-progress'],
-            ['code' => 'Order-delivered', 'orderState' => 'Completed']
-        ];
-
-        foreach ($statusMilestones as $milestone) {
-            $statusContext = buildCallbackContext($context, 'on_status', generateOndcUuid());
-            $milestoneIsoMs = gmdate('Y-m-d\TH:i:s') . '.000Z';
-            $statusPayload = [
-                'context' => $statusContext,
-                'message' => [
-                    'order' => [
-                        'id' => $orderId,
-                        'state' => $milestone['orderState'],
-                        'provider' => $providerObj,
-                        'items' => $items,
-                        'billing' => $billing,
-                        'fulfillments' => [
-                            [
-                                'id' => $primaryFulfillmentId,
-                                'type' => 'Delivery',
-                                '@ondc/org/provider_name' => 'Kogniti Express Logistics',
-                                '@ondc/org/category' => 'Standard Delivery',
-                                '@ondc/org/TAT' => 'P2D',
-                                'state' => [
-                                    'descriptor' => [
-                                        'code' => $milestone['code']
-                                    ]
-                                ],
-                                'tracking' => true,
-                                'start' => $fulfillments[0]['start'],
-                                'end' => $fulfillments[0]['end']
-                            ]
-                        ],
-                        'quote' => $quote,
-                        'payment' => $paymentObj,
-                        'payments' => [ $paymentObj ],
-                        'created_at' => $nowIsoMs,
-                        'updated_at' => $milestoneIsoMs
-                    ]
-                ]
-            ];
-
-            $additionalCallbacks[] = [
-                'action' => 'on_status',
-                'payload' => $statusPayload,
-                'delay_us' => 2000000 // 2.0s interval between lifecycle milestone updates
-            ];
         }
         break;
 
@@ -2541,6 +2617,11 @@ if ($callbackPayload && !empty($context['bap_uri'])) {
     }
 
     dispatchAsyncCallback($context['bap_uri'], $callbackAction, $callbackPayload, $storageDir, $callbackMeta ?? []);
+
+    // If this was on_confirm, trigger the background unsolicited milestones runner via loopback!
+    if ($callbackAction === 'on_confirm' && !empty($context['transaction_id'])) {
+        triggerAsyncMilestones($context['transaction_id'], $storageDir);
+    }
 
     // Dispatch any chained unsolicited callbacks (e.g. on_status milestones, return progression)
     if (!empty($additionalCallbacks)) {
