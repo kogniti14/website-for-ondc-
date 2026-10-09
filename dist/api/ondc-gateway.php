@@ -364,6 +364,24 @@ if ($action === 'admin_logs' || $action === 'admin_inspect') {
     exit;
 }
 
+if ($action === 'admin_test_env') {
+    http_response_code(200);
+    echo json_encode([
+        'sapi' => php_sapi_name(),
+        'litespeed_finish_request' => function_exists('litespeed_finish_request'),
+        'fastcgi_finish_request' => function_exists('fastcgi_finish_request'),
+        'exec' => function_exists('exec'),
+        'shell_exec' => function_exists('shell_exec'),
+        'popen' => function_exists('popen'),
+        'proc_open' => function_exists('proc_open'),
+        'disable_functions' => ini_get('disable_functions'),
+        'dns_kognitiminds' => gethostbyname('kognitiminds.com'),
+        'server_addr' => $_SERVER['SERVER_ADDR'] ?? 'unknown',
+        'remote_addr' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+    ], JSON_PRETTY_PRINT);
+    exit;
+}
+
 if ($action === 'admin_stats') {
     $ordersFile = $storageDir . '/ondc_orders.json';
     $orders = file_exists($ordersFile) ? (json_decode(file_get_contents($ordersFile), true) ?: []) : [];
