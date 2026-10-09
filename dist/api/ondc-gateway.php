@@ -365,19 +365,36 @@ if ($action === 'admin_logs' || $action === 'admin_inspect') {
 }
 
 if ($action === 'admin_test_env') {
+    $ch1 = curl_init('http://127.0.0.1/api/ondc-gateway.php?action=health');
+    curl_setopt($ch1, CURLOPT_HTTPHEADER, ['Host: kognitiminds.com']);
+    curl_setopt($ch1, CURLOPT_TIMEOUT, 2);
+    curl_setopt($ch1, CURLOPT_RETURNTRANSFER, true);
+    $res1 = curl_exec($ch1);
+    $err1 = curl_error($ch1);
+    $code1 = curl_getinfo($ch1, CURLINFO_HTTP_CODE);
+    curl_close($ch1);
+
+    $ch2 = curl_init('https://88.222.222.156/api/ondc-gateway.php?action=health');
+    curl_setopt($ch2, CURLOPT_HTTPHEADER, ['Host: kognitiminds.com']);
+    curl_setopt($ch2, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch2, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch2, CURLOPT_TIMEOUT, 2);
+    curl_setopt($ch2, CURLOPT_RETURNTRANSFER, true);
+    $res2 = curl_exec($ch2);
+    $err2 = curl_error($ch2);
+    $code2 = curl_getinfo($ch2, CURLINFO_HTTP_CODE);
+    curl_close($ch2);
+
     http_response_code(200);
     echo json_encode([
         'sapi' => php_sapi_name(),
         'litespeed_finish_request' => function_exists('litespeed_finish_request'),
         'fastcgi_finish_request' => function_exists('fastcgi_finish_request'),
-        'exec' => function_exists('exec'),
-        'shell_exec' => function_exists('shell_exec'),
-        'popen' => function_exists('popen'),
-        'proc_open' => function_exists('proc_open'),
         'disable_functions' => ini_get('disable_functions'),
-        'dns_kognitiminds' => gethostbyname('kognitiminds.com'),
-        'server_addr' => $_SERVER['SERVER_ADDR'] ?? 'unknown',
-        'remote_addr' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+        'loopback_127_code' => $code1,
+        'loopback_127_err' => $err1,
+        'loopback_hostinger_ip_code' => $code2,
+        'loopback_hostinger_ip_err' => $err2,
     ], JSON_PRETTY_PRINT);
     exit;
 }
