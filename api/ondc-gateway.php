@@ -366,7 +366,10 @@ if ($action === 'admin_logs' || $action === 'admin_inspect') {
 
 if ($action === 'admin_test_env') {
     $ch1 = curl_init('http://127.0.0.1/api/ondc-gateway.php?action=health');
-    curl_setopt($ch1, CURLOPT_HTTPHEADER, ['Host: kognitiminds.com']);
+    curl_setopt($ch1, CURLOPT_HTTPHEADER, [
+        'Host: kognitiminds.com',
+        'X-Forwarded-Proto: https'
+    ]);
     curl_setopt($ch1, CURLOPT_TIMEOUT, 2);
     curl_setopt($ch1, CURLOPT_RETURNTRANSFER, true);
     $res1 = curl_exec($ch1);
