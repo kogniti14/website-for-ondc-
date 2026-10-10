@@ -365,6 +365,8 @@ if ($action === 'admin_logs' || $action === 'admin_inspect') {
 }
 
 if ($action === 'dispatch_milestones') {
+    @ignore_user_abort(true);
+    @set_time_limit(60);
     $txnId = $_GET['txn_id'] ?? ($_POST['txn_id'] ?? '');
     if (empty($txnId)) {
         $allSessionFiles = glob($storageDir . '/session_*.json');
@@ -387,10 +389,36 @@ if ($action === 'dispatch_milestones') {
     sendAckResponse();
 
     $sessionFile = $storageDir . '/session_' . $txnId . '.json';
-    if (!file_exists($sessionFile)) {
-        exit;
+    $sessionData = file_exists($sessionFile) ? json_decode(@file_get_contents($sessionFile), true) : null;
+
+    if (!$sessionData) {
+        $ordersFile = $storageDir . '/ondc_orders.json';
+        if (file_exists($ordersFile)) {
+            $allOrders = json_decode(@file_get_contents($ordersFile), true) ?: [];
+            foreach ($allOrders as $ord) {
+                if (($ord['transaction_id'] ?? '') === $txnId) {
+                    $sessionData = [
+                        'transaction_id' => $txnId,
+                        'order_id' => $ord['id'],
+                        'bap_uri' => 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer',
+                        'bap_id' => 'workbench.ondc.tech',
+                        'bpp_id' => 'kogniti-minds-bpp',
+                        'bpp_uri' => 'https://kognitiminds.com',
+                        'domain' => 'ONDC:RETeB2B',
+                        'provider' => $ord['payload']['provider'] ?? null,
+                        'items' => $ord['payload']['items'] ?? null,
+                        'billing' => $ord['payload']['billing'] ?? null,
+                        'fulfillments' => $ord['payload']['fulfillments'] ?? null,
+                        'quote' => $ord['payload']['quote'] ?? null,
+                        'payment' => $ord['payload']['payment'] ?? null,
+                        'created_at' => $ord['createdAt'] ?? null
+                    ];
+                    break;
+                }
+            }
+        }
     }
-    $sessionData = json_decode(@file_get_contents($sessionFile), true);
+
     if (!$sessionData) exit;
 
     $bapUri = $sessionData['bap_uri'] ?? 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer';
@@ -1139,7 +1167,7 @@ function triggerAsyncMilestones($txnId, $storageDir) {
         'Host: kognitiminds.com',
         'X-Forwarded-Proto: https'
     ]);
-    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 400); // 400ms non-blocking fire-and-forget
+    curl_setopt($ch, CURLOPT_TIMEOUT_MS, 1200); // 1.2s non-blocking fire-and-forget
     curl_setopt($ch, CURLOPT_NOSIGNAL, 1);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     @curl_exec($ch);
@@ -1876,18 +1904,21 @@ switch ($requestAction) {
             ]
         ];
 
-        if ($sessionData) {
-            $sessionData['bap_uri'] = $context['bap_uri'] ?? ($sessionData['bap_uri'] ?? null);
-            $sessionData['bap_id'] = $context['bap_id'] ?? ($sessionData['bap_id'] ?? null);
-            $sessionData['bpp_id'] = $context['bpp_id'] ?? ($sessionData['bpp_id'] ?? null);
-            $sessionData['domain'] = $context['domain'] ?? ($sessionData['domain'] ?? 'ONDC:RETeB2B');
-            $sessionData['billing'] = $billing;
-            $sessionData['fulfillments'] = $fulfillments;
-            $sessionData['quote'] = $quote;
-            $sessionData['payment'] = $paymentObj;
-            $sessionData['payments'] = [ $paymentObj ];
-            @file_put_contents($sessionFile, json_encode($sessionData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
+        if (!$sessionData || !is_array($sessionData)) {
+            $sessionData = [];
         }
+        $sessionData['transaction_id'] = $txnId;
+        $sessionData['bap_uri'] = $context['bap_uri'] ?? ($sessionData['bap_uri'] ?? null);
+        $sessionData['bap_id'] = $context['bap_id'] ?? ($sessionData['bap_id'] ?? null);
+        $sessionData['bpp_id'] = $context['bpp_id'] ?? ($sessionData['bpp_id'] ?? null);
+        $sessionData['bpp_uri'] = $context['bpp_uri'] ?? ($sessionData['bpp_uri'] ?? 'https://kognitiminds.com');
+        $sessionData['domain'] = $context['domain'] ?? ($sessionData['domain'] ?? 'ONDC:RETeB2B');
+        $sessionData['billing'] = $billing;
+        $sessionData['fulfillments'] = $fulfillments;
+        $sessionData['quote'] = $quote;
+        $sessionData['payment'] = $paymentObj;
+        $sessionData['payments'] = [ $paymentObj ];
+        @file_put_contents($sessionFile, json_encode($sessionData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
         break;
 
     case 'confirm':
@@ -2165,20 +2196,25 @@ switch ($requestAction) {
         ];
         @file_put_contents($ordersFile, json_encode($orders, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
 
-        if ($sessionData) {
-            $sessionData['order_id'] = $orderId;
-            $sessionData['bap_uri'] = $context['bap_uri'] ?? ($sessionData['bap_uri'] ?? null);
-            $sessionData['bap_id'] = $context['bap_id'] ?? ($sessionData['bap_id'] ?? null);
-            $sessionData['bpp_id'] = $context['bpp_id'] ?? ($sessionData['bpp_id'] ?? null);
-            $sessionData['domain'] = $context['domain'] ?? ($sessionData['domain'] ?? 'ONDC:RETeB2B');
-            $sessionData['billing'] = $billing;
-            $sessionData['fulfillments'] = $fulfillments;
-            $sessionData['quote'] = $quote;
-            $sessionData['payment'] = $paymentObj;
-            $sessionData['payments'] = [ $paymentObj ];
-            $sessionData['created_at'] = $nowIsoMs;
-            @file_put_contents($sessionFile, json_encode($sessionData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
+        if (!$sessionData || !is_array($sessionData)) {
+            $sessionData = [];
         }
+        $sessionData['transaction_id'] = $txnId;
+        $sessionData['order_id'] = $orderId;
+        $sessionData['bap_uri'] = $context['bap_uri'] ?? ($sessionData['bap_uri'] ?? 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer');
+        $sessionData['bap_id'] = $context['bap_id'] ?? ($sessionData['bap_id'] ?? 'workbench.ondc.tech');
+        $sessionData['bpp_id'] = $context['bpp_id'] ?? ($sessionData['bpp_id'] ?? 'kogniti-minds-bpp');
+        $sessionData['bpp_uri'] = $context['bpp_uri'] ?? ($sessionData['bpp_uri'] ?? 'https://kognitiminds.com');
+        $sessionData['domain'] = $context['domain'] ?? ($sessionData['domain'] ?? 'ONDC:RETeB2B');
+        $sessionData['provider'] = $providerObj;
+        $sessionData['items'] = $items;
+        $sessionData['billing'] = $billing;
+        $sessionData['fulfillments'] = $fulfillments;
+        $sessionData['quote'] = $quote;
+        $sessionData['payment'] = $paymentObj;
+        $sessionData['payments'] = [ $paymentObj ];
+        $sessionData['created_at'] = $nowIsoMs;
+        @file_put_contents($sessionFile, json_encode($sessionData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES), LOCK_EX);
         break;
 
     case 'status':
