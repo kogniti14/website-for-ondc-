@@ -368,31 +368,16 @@ if ($action === 'admin_logs' || $action === 'admin_inspect') {
     http_response_code(200);
     echo json_encode(['success' => true, 'total' => count($enrichedLogs), 'logs' => $enrichedLogs], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     exit;
-}
+}function executeOrderLifecycleMilestones($txnId, $storageDir) {
+    if (empty($txnId)) return;
+    $lockFile = $storageDir . '/milestones_' . $txnId . '.lock';
+    if (file_exists($lockFile) && (time() - filemtime($lockFile) < 120)) {
+        return; // Already executed or actively running
+    }
+    @touch($lockFile);
 
-if ($action === 'dispatch_milestones') {
     @ignore_user_abort(true);
-    @set_time_limit(60);
-    $txnId = $_GET['txn_id'] ?? ($_POST['txn_id'] ?? '');
-    if (empty($txnId)) {
-        $allSessionFiles = glob($storageDir . '/session_*.json');
-        if (!empty($allSessionFiles)) {
-            usort($allSessionFiles, function($a, $b) {
-                return filemtime($b) - filemtime($a);
-            });
-            $latestFile = basename($allSessionFiles[0]);
-            $txnId = str_replace(['session_', '.json'], '', $latestFile);
-        }
-    }
-
-    if (empty($txnId)) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'No active transaction found to dispatch milestones.']);
-        exit;
-    }
-
-    // Immediately ACK caller so loopback/trigger finishes in < 10ms
-    sendAckResponse();
+    @set_time_limit(180);
 
     $sessionFile = $storageDir . '/session_' . $txnId . '.json';
     $sessionData = file_exists($sessionFile) ? json_decode(@file_get_contents($sessionFile), true) : null;
@@ -425,7 +410,7 @@ if ($action === 'dispatch_milestones') {
         }
     }
 
-    if (!$sessionData) exit;
+    if (!$sessionData) return;
 
     $bapUri = $sessionData['bap_uri'] ?? 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer';
     $orderId = $sessionData['order_id'] ?? ('KM-ONDC-ORD-' . strtoupper(substr(md5($txnId), 0, 6)));
@@ -479,7 +464,7 @@ if ($action === 'dispatch_milestones') {
             'core_version' => '1.2.5',
             'bap_id' => $sessionData['bap_id'] ?? 'workbench.ondc.tech',
             'bap_uri' => $bapUri,
-            'bpp_id' => $sessionData['bpp_id'] ?? 'kognitiminds.com',
+            'bpp_id' => $sessionData['bpp_id'] ?? 'kogniti-minds-bpp',
             'bpp_uri' => 'https://kognitiminds.com',
             'transaction_id' => $txnId,
             'message_id' => generateOndcUuid(),
@@ -540,6 +525,32 @@ if ($action === 'dispatch_milestones') {
             'milestone' => $milestone['code']
         ]);
     }
+}
+
+if ($action === 'dispatch_milestones') {
+    @ignore_user_abort(true);
+    @set_time_limit(180);
+    $txnId = $_GET['txn_id'] ?? ($_POST['txn_id'] ?? '');
+    if (empty($txnId)) {
+        $allSessionFiles = glob($storageDir . '/session_*.json');
+        if (!empty($allSessionFiles)) {
+            usort($allSessionFiles, function($a, $b) {
+                return filemtime($b) - filemtime($a);
+            });
+            $latestFile = basename($allSessionFiles[0]);
+            $txnId = str_replace(['session_', '.json'], '', $latestFile);
+        }
+    }
+
+    if (empty($txnId)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'No active transaction found to dispatch milestones.']);
+        exit;
+    }
+
+    // Immediately ACK caller so caller finishes in < 10ms
+    sendAckResponse();
+    executeOrderLifecycleMilestones($txnId, $storageDir);
     exit;
 }
 
@@ -2660,9 +2671,10 @@ if ($callbackPayload && !empty($context['bap_uri'])) {
 
     dispatchAsyncCallback($context['bap_uri'], $callbackAction, $callbackPayload, $storageDir, $callbackMeta ?? []);
 
-    // If this was on_confirm, trigger the background unsolicited milestones runner via loopback!
+    // If this was on_confirm, execute the background unsolicited milestones runner directly!
     if ($callbackAction === 'on_confirm' && !empty($context['transaction_id'])) {
         triggerAsyncMilestones($context['transaction_id'], $storageDir);
+        executeOrderLifecycleMilestones($context['transaction_id'], $storageDir);
     }
 
     // Dispatch any chained unsolicited callbacks (e.g. on_status milestones, return progression)

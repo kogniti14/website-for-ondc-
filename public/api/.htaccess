@@ -1,0 +1,39 @@
+# ONDC Protocol Gateway & API Directory Guard
+Options -Indexes -MultiViews
+
+<IfModule mod_headers.c>
+  Header always set Access-Control-Allow-Origin "*"
+  Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+  Header always set Access-Control-Allow-Headers "Content-Type, Authorization, Digest, Date, X-Requested-With, Accept"
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # CORS Preflight
+  RewriteCond %{REQUEST_METHOD} ^OPTIONS$
+  RewriteRule ^ - [R=200,L]
+
+  # Existing physical files inside /api/ (e.g. health.php, data.php, upload.php, ondc-gateway.php)
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+
+  # Protocol Machine-to-Machine Endpoints
+  RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ ondc-gateway.php?action=$1 [QSA,L]
+  RewriteRule ^(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)/?$ ondc-gateway.php?action=$1 [QSA,L]
+  RewriteRule ^ondc/(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ ondc-gateway.php?action=$1 [QSA,L]
+  RewriteRule ^ondc/(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)/?$ ondc-gateway.php?action=$1 [QSA,L]
+
+  # Direct Admin & Health routes if accessed inside /api/
+  RewriteRule ^ondc/health/?$ ondc-gateway.php?action=health [QSA,L]
+  RewriteRule ^health/?$ health.php [QSA,L]
+  RewriteRule ^admin/ondc/logs/?$ ondc-gateway.php?action=admin_logs [QSA,L]
+  RewriteRule ^admin/ondc/orders/?$ ondc-gateway.php?action=admin_orders [QSA,L]
+  RewriteRule ^admin/ondc/transactions/?$ ondc-gateway.php?action=admin_transactions [QSA,L]
+  RewriteRule ^admin/ondc/stats/?$ ondc-gateway.php?action=admin_stats [QSA,L]
+  RewriteRule ^admin/ondc/workbench/simulate/?$ ondc-gateway.php?action=admin_simulate [QSA,L]
+
+  # Fallback for POST to /api or /api/
+  RewriteCond %{REQUEST_METHOD} ^POST$
+  RewriteRule ^$ ondc-gateway.php [QSA,L]
+</IfModule>

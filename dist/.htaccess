@@ -114,25 +114,41 @@ Options -Indexes -MultiViews
   RewriteRule ^api/data/([a-zA-Z0-9_-]+)/?([a-zA-Z0-9_-]*)?$ api/data.php?collection=$1&id=$2 [QSA,L]
 
   # Dedicated ONDC RETeB2B 1.2.5 Protocol Routes (Hostinger Native Execution - Zero 503 errors)
-  # 1. CORS Preflight (OPTIONS) - Always handle directly via ondc-gateway for all ONDC protocol routes
-  RewriteCond %{REQUEST_METHOD} ^OPTIONS$
+  # 1a. Protocol Machine-to-Machine POST Endpoints (Buyer -> Seller Gateway & Callbacks)
+  RewriteCond %{REQUEST_METHOD} ^POST$
   RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
-  RewriteCond %{REQUEST_METHOD} ^OPTIONS$
-  RewriteRule ^(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
-  RewriteCond %{REQUEST_METHOD} ^OPTIONS$
+  RewriteCond %{REQUEST_METHOD} ^POST$
+  RewriteRule ^api/(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteCond %{REQUEST_METHOD} ^POST$
   RewriteRule ^ondc/(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
-  RewriteCond %{REQUEST_METHOD} ^OPTIONS$
-  RewriteRule ^ondc/(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteCond %{REQUEST_METHOD} ^POST$
+  RewriteRule ^api/ondc/(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
 
-  # 2. Protocol Machine-to-Machine POST Endpoints (Buyer -> Seller Gateway & Callbacks)
-  RewriteCond %{REQUEST_METHOD} ^POST$
-  RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  # Inbound Callbacks POST Endpoints
   RewriteCond %{REQUEST_METHOD} ^POST$
   RewriteRule ^(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
   RewriteCond %{REQUEST_METHOD} ^POST$
-  RewriteRule ^ondc/(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteRule ^api/(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
   RewriteCond %{REQUEST_METHOD} ^POST$
   RewriteRule ^ondc/(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteCond %{REQUEST_METHOD} ^POST$
+  RewriteRule ^api/ondc/(on_search|on_select|on_init|on_confirm|on_status|on_track|on_cancel|on_update|on_rating|on_support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+
+  # POST to Root or /api or /ondc or /api/ondc -> Route directly to ondc-gateway
+  RewriteCond %{REQUEST_METHOD} ^POST$
+  RewriteRule ^(api/ondc|ondc|api)?/?$ api/ondc-gateway.php [QSA,L]
+
+  # 1b. CORS Preflight (OPTIONS)
+  RewriteCond %{REQUEST_METHOD} ^OPTIONS$
+  RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteCond %{REQUEST_METHOD} ^OPTIONS$
+  RewriteRule ^api/(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteCond %{REQUEST_METHOD} ^OPTIONS$
+  RewriteRule ^ondc/(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteCond %{REQUEST_METHOD} ^OPTIONS$
+  RewriteRule ^api/ondc/(search|select|init|confirm|status|track|cancel|update|rating|support)/?$ api/ondc-gateway.php?action=$1 [QSA,L]
+  RewriteCond %{REQUEST_METHOD} ^OPTIONS$
+  RewriteRule ^(api/ondc|ondc|api)?/?$ api/ondc-gateway.php [QSA,L]
   RewriteRule ^ondc/on_search_sample/?$ api/ondc-gateway.php?action=on_search_sample [QSA,L]
 
   # 3. Human browser navigation (GET / HEAD)
@@ -140,22 +156,48 @@ Options -Indexes -MultiViews
   RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
   RewriteRule ^on_([a-z]+)/?$ /admin/ondc/on-$1 [R=302,L]
 
-  # Human browser navigation -> Load SPA (index.html)
+  # Human browser navigation -> Load SPA (dist/index.html if in repo root mode, or index.html if in dist mode)
+  RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+  RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
+  RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support|products|shop|deals|b2b-overview|wholesale-catalog|rfq|business-dashboard|success-stories|certifications|certifications-compliance|business-login|business-register|b2b-deals|gst-input-credit|login|admin|wishlist|cart|checkout|orders|account|terms|privacy|refund|shipping)/?$ dist/index.html [L]
+
   RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
   RewriteRule ^(search|select|init|confirm|status|track|cancel|update|rating|support|products|shop|deals|b2b-overview|wholesale-catalog|rfq|business-dashboard|success-stories|certifications|certifications-compliance|business-login|business-register|b2b-deals|gst-input-credit|login|admin|wishlist|cart|checkout|orders|account|terms|privacy|refund|shipping)/?$ index.html [L]
+
+  # Root GET route -> dist/index.html if in repo root mode
+  RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+  RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
+  RewriteRule ^$ dist/index.html [L]
 
   # 2. Direct Static Upload Serving
   RewriteRule ^uploads/(.*)$ uploads/$1 [L]
 
-  # 4. Serve physical static files and directories directly if they exist
-  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  # Direct /assets/* resolution for repo root mode
+  RewriteCond %{DOCUMENT_ROOT}/dist/assets/$1 -f
+  RewriteRule ^assets/(.*)$ dist/assets/$1 [L]
+
+  # 4. Serve physical static files and directories directly if they exist (EXCLUDE POST)
+  RewriteCond %{REQUEST_METHOD} !^POST$
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
+
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+
+  # Root-level static files resolution for repo root mode
+  RewriteCond %{DOCUMENT_ROOT}/dist/$1 -f
+  RewriteRule ^([a-zA-Z0-9_-]+\.(png|jpe?g|gif|ico|svg|webp|woff|woff2|ttf|eot|pdf|zip|json))$ dist/$1 [L]
 
   # 5. Guard: Missing static assets return clean 404 (NEVER rewrite .js/.css to index.html)
   RewriteCond %{REQUEST_URI} \.(js|css|png|jpg|jpeg|gif|ico|svg|webp|woff|woff2|ttf|eot|pdf)$ [NC]
   RewriteRule ^ - [R=404,L]
 
-  # 6. Client-side SPA route fallback
+  # 6. Client-side SPA route fallback (Non-POST)
+  RewriteCond %{REQUEST_METHOD} !^POST$
+  RewriteCond %{DOCUMENT_ROOT}/dist/index.html -f
+  RewriteRule . dist/index.html [L]
+
+  RewriteCond %{REQUEST_METHOD} !^POST$
   RewriteRule . /index.html [L]
 </IfModule>
+
