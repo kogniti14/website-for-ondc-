@@ -36,14 +36,11 @@ header('Content-Type: application/json; charset=utf-8');
 $rawAction = trim($_GET['action'] ?? '');
 if (empty($rawAction)) {
     $uriPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
-    $uriPath = preg_replace('#^/+#', '', $uriPath);
+    $uriPath = trim($uriPath, '/');
     $parts = explode('/', $uriPath);
-    if (!empty($parts[0])) {
-        if ($parts[0] === 'ondc' && !empty($parts[1])) {
-            $rawAction = $parts[1];
-        } else {
-            $rawAction = $parts[0];
-        }
+    $lastPart = end($parts);
+    if (!empty($lastPart) && $lastPart !== 'ondc-gateway.php' && $lastPart !== 'api' && $lastPart !== 'ondc' && $lastPart !== 'index.html') {
+        $rawAction = $lastPart;
     }
 }
 $action = strtolower(preg_replace('/[^a-zA-Z0-9_]/', '', $rawAction));
