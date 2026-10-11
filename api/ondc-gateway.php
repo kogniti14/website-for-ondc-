@@ -1457,6 +1457,7 @@ function processOndcSelect($storageDir, $context, $message) {
                 'provider' => [
                     'id' => $effectiveProviderId,
                     'locations' => [
+                        [ 'id' => !empty($message['order']['provider']['locations'][0]['id']) ? $message['order']['provider']['locations'][0]['id'] : 'KOGNITI_LOCATION' ],
                         [ 'id' => 'L1' ]
                     ],
                     'descriptor' => [
@@ -1614,7 +1615,7 @@ switch ($requestAction) {
 
         $providerObj = $sessionData['provider'] ?? [
             'id' => 'kogniti-minds-bpp',
-            'locations' => [ [ 'id' => 'L1' ] ],
+            'locations' => [ [ 'id' => 'KOGNITI_LOCATION' ], [ 'id' => 'L1' ] ],
             'descriptor' => [
                 'name' => 'KOGNITI MINDS PRIVATE LIMITED',
                 'short_desc' => 'Sustainable Agri-Waste Paper & Copier Products Manufacturer',
@@ -1623,7 +1624,7 @@ switch ($requestAction) {
             ]
         ];
         if (empty($providerObj['locations'])) {
-            $providerObj['locations'] = [ [ 'id' => 'L1' ] ];
+            $providerObj['locations'] = [ [ 'id' => 'KOGNITI_LOCATION' ], [ 'id' => 'L1' ] ];
         }
 
         $items = $sessionData['items'] ?? $message['order']['items'] ?? [
@@ -1841,7 +1842,7 @@ switch ($requestAction) {
 
         $providerObj = $sessionData['provider'] ?? [
             'id' => 'kogniti-minds-bpp',
-            'locations' => [ [ 'id' => 'L1' ] ],
+            'locations' => [ [ 'id' => 'KOGNITI_LOCATION' ], [ 'id' => 'L1' ] ],
             'descriptor' => [
                 'name' => 'KOGNITI MINDS PRIVATE LIMITED',
                 'short_desc' => 'Sustainable Agri-Waste Paper & Copier Products Manufacturer',
@@ -1854,7 +1855,7 @@ switch ($requestAction) {
         }
         $providerObj['id'] = $providerObj['id'] ?? 'kogniti-minds-bpp';
         if (empty($providerObj['locations'])) {
-            $providerObj['locations'] = [ [ 'id' => 'L1' ] ];
+            $providerObj['locations'] = [ [ 'id' => 'KOGNITI_LOCATION' ], [ 'id' => 'L1' ] ];
         }
         if (empty($providerObj['descriptor']) || !is_array($providerObj['descriptor'])) {
             $providerObj['descriptor'] = [];
@@ -2139,7 +2140,7 @@ switch ($requestAction) {
         $nowIsoMs = gmdate('Y-m-d\TH:i:s') . '.000Z';
         $statusProvider = $sessionData['provider'] ?? [
             'id' => 'kogniti-minds-bpp',
-            'locations' => [ [ 'id' => 'L1' ] ],
+            'locations' => [ [ 'id' => 'KOGNITI_LOCATION' ], [ 'id' => 'L1' ] ],
             'descriptor' => [
                 'name' => 'KOGNITI MINDS PRIVATE LIMITED',
                 'short_desc' => 'Sustainable Agri-Waste Paper & Copier Products Manufacturer',
@@ -2148,7 +2149,7 @@ switch ($requestAction) {
             ]
         ];
         if (empty($statusProvider['locations'])) {
-            $statusProvider['locations'] = [ [ 'id' => 'L1' ] ];
+            $statusProvider['locations'] = [ [ 'id' => 'KOGNITI_LOCATION' ], [ 'id' => 'L1' ] ];
         }
         if (empty($statusProvider['descriptor']) || !is_array($statusProvider['descriptor'])) {
             $statusProvider['descriptor'] = [];

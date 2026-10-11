@@ -22,7 +22,7 @@
         "id": "kogniti-minds-bpp",
         "locations": [
           {
-            "id": "L1"
+            "id": "KOGNITI_LOCATION"
           }
         ],
         "descriptor": {

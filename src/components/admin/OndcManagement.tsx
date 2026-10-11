@@ -998,27 +998,124 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
           context,
           message: {
             catalog: {
-              'bpp/descriptor': { name: 'KOGNITI MINDS PRIVATE LIMITED' },
+              'bpp/descriptor': {
+                name: 'Kogniti Minds Private Limited',
+                short_desc: 'Sustainable paper and stationery products from agricultural waste.',
+                long_desc: 'Kogniti Minds Private Limited provides sustainable paper, stationery and packaging products made using agricultural waste.'
+              },
+              'bpp/fulfillments': [
+                {
+                  id: 'F1',
+                  type: 'Delivery'
+                }
+              ],
               'bpp/providers': [
                 {
                   id: 'kogniti-minds-bpp',
-                  descriptor: { name: 'KOGNITI MINDS PRIVATE LIMITED' },
-                  items: [{ id: 'km-agri-a4-75', descriptor: { name: 'Kogniti AgroPrint 75 GSM A4' }, price: { currency: 'INR', value: isB2c ? '289.00' : '198.00' } }]
+                  descriptor: {
+                    name: 'Kogniti Minds Private Limited',
+                    short_desc: 'Sustainable paper and stationery products from agricultural waste.',
+                    long_desc: 'Kogniti Minds Private Limited provides sustainable paper, stationery and packaging products made using agricultural waste.'
+                  },
+                  locations: [
+                    {
+                      id: 'KOGNITI_LOCATION'
+                    }
+                  ],
+                  items: [
+                    {
+                      id: 'km-agri-a4-75',
+                      descriptor: {
+                        name: 'Kogniti AgroPrint 75 GSM A4 Sustainable Copier Paper (500 Sheets)',
+                        short_desc: '75 GSM A4 sustainable copier paper made using agricultural waste.',
+                        long_desc: 'Sustainable A4 copier paper suitable for office printing, photocopying and business use.'
+                      },
+                      category_id: 'Paper and Paper Products',
+                      fulfillment_ids: ['F1'],
+                      location_ids: ['KOGNITI_LOCATION'],
+                      price: {
+                        currency: 'INR',
+                        value: isB2c ? '244.92' : '182.16'
+                      },
+                      quantity: {
+                        available: {
+                          count: 2140
+                        },
+                        maximum: {
+                          count: 500
+                        }
+                      }
+                    }
+                  ]
                 }
               ]
             }
           }
         };
       case 'select':
-        return { context, message: { order: { items: [{ id: 'km-agri-a4-75', quantity: { count: isB2c ? 1 : 10 } }] } } };
-      case 'on_select':
         return {
           context,
           message: {
             order: {
               provider: { id: 'kogniti-minds-bpp' },
-              items: [{ id: 'km-agri-a4-75', fulfillment_id: 'F1', quantity: { count: isB2c ? 1 : 10 } }],
-              quote: { price: { currency: 'INR', value: isB2c ? '289.00' : '2336.40' }, breakup: [] }
+              items: [{ id: 'km-agri-a4-75', quantity: { count: isB2c ? 1 : 50 } }],
+              fulfillments: [{ end: { location: { address: { area_code: '201310' } } } }]
+            }
+          }
+        };
+      case 'on_select':
+        return {
+          context,
+          message: {
+            order: {
+              provider: {
+                id: 'kogniti-minds-bpp',
+                locations: [{ id: 'KOGNITI_LOCATION' }]
+              },
+              items: [{ id: 'km-agri-a4-75', fulfillment_id: 'F1', quantity: { count: isB2c ? 1 : 50 } }],
+              fulfillments: [
+                {
+                  id: 'F1',
+                  type: 'Delivery',
+                  '@ondc/org/provider_name': 'Kogniti Express Logistics',
+                  '@ondc/org/category': 'Standard Delivery',
+                  '@ondc/org/TAT': 'P2D',
+                  tracking: false,
+                  state: { descriptor: { code: 'Serviceable' } }
+                }
+              ],
+              quote: {
+                price: { currency: 'INR', value: isB2c ? '289.00' : '11981.44' },
+                breakup: [
+                  {
+                    '@ondc/org/item_id': 'km-agri-a4-75',
+                    '@ondc/org/item_quantity': { count: isB2c ? 1 : 50 },
+                    title: 'Kogniti AgroPrint 75 GSM A4 Sustainable Copier Paper (500 Sheets)',
+                    '@ondc/org/title_type': 'item',
+                    price: { currency: 'INR', value: isB2c ? '244.92' : '9108.00' },
+                    item: {
+                      quantity: {
+                        available: { count: '2140' },
+                        maximum: { count: '500' }
+                      },
+                      price: { currency: 'INR', value: isB2c ? '244.92' : '182.16' }
+                    }
+                  },
+                  {
+                    '@ondc/org/item_id': 'km-agri-a4-75',
+                    title: 'Tax (CGST 9% + SGST 9%)',
+                    '@ondc/org/title_type': 'tax',
+                    price: { currency: 'INR', value: isB2c ? '44.08' : '1639.44' }
+                  },
+                  {
+                    '@ondc/org/item_id': 'F1',
+                    title: 'Delivery charges (Surface Logistics)',
+                    '@ondc/org/title_type': 'delivery',
+                    price: { currency: 'INR', value: isB2c ? '0.00' : '1234.00' }
+                  }
+                ],
+                ttl: 'P1D'
+              }
             }
           }
         };
@@ -1027,10 +1124,36 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
           context,
           message: {
             order: {
-              items: [{ id: 'km-agri-a4-75', quantity: { count: isB2c ? 1 : 10 } }],
+              provider: { id: 'kogniti-minds-bpp', locations: [{ id: 'KOGNITI_LOCATION' }] },
+              items: [{ id: 'km-agri-a4-75', fulfillment_id: 'F1', quantity: { count: isB2c ? 1 : 50 } }],
               billing: isB2c
                 ? { name: 'Aarav Sharma', address: { city: 'Noida', state: 'Uttar Pradesh' }, phone: '9811234567' }
-                : { name: 'Apex Educational Trust', address: { city: 'Noida', state: 'Uttar Pradesh' } }
+                : {
+                    name: 'Apex Educational Trust',
+                    address: { name: 'Apex Educational Trust', building: 'Building 4A', locality: 'Knowledge Park II', city: 'Greater Noida', state: 'Uttar Pradesh', country: 'IND', area_code: '201310' },
+                    phone: '9876543210',
+                    tax_number: '07AAAAA0000A1Z5'
+                  },
+              fulfillments: [
+                {
+                  id: 'F1',
+                  type: 'Delivery',
+                  end: {
+                    location: {
+                      address: {
+                        name: isB2c ? 'Aarav Sharma' : 'Apex Educational Trust',
+                        building: isB2c ? 'Flat 402' : 'Building 4A',
+                        locality: isB2c ? 'ATS Greens' : 'Knowledge Park II',
+                        city: 'Greater Noida',
+                        state: 'Uttar Pradesh',
+                        country: 'IND',
+                        area_code: '201310'
+                      }
+                    },
+                    contact: { phone: '9876543210' }
+                  }
+                }
+              ]
             }
           }
         };
@@ -1039,11 +1162,19 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
           context,
           message: {
             order: {
-              provider: { id: 'kogniti-minds-bpp' },
+              provider: { id: 'kogniti-minds-bpp', locations: [{ id: 'KOGNITI_LOCATION' }] },
+              items: [{ id: 'km-agri-a4-75', fulfillment_id: 'F1', quantity: { count: isB2c ? 1 : 50 } }],
               billing: isB2c
                 ? { name: 'Aarav Sharma', phone: '9811234567' }
-                : { name: 'Apex Educational Trust', tax_number: '09AAACA1234A1Z5' },
-              payment: { type: 'ON-FULFILLMENT', status: 'NOT-PAID' }
+                : { name: 'Apex Educational Trust', tax_number: '07AAAAA0000A1Z5' },
+              payment: {
+                type: 'ON-FULFILLMENT',
+                status: 'NOT-PAID',
+                collected_by: 'BAP',
+                '@ondc/org/buyer_app_finder_fee_type': 'percent',
+                '@ondc/org/buyer_app_finder_fee_amount': '3.0',
+                params: { currency: 'INR', amount: isB2c ? '289.00' : '11981.44' }
+              }
             }
           }
         };
@@ -1052,8 +1183,8 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
           context,
           message: {
             order: {
-              id: `ord_${Date.now()}`,
-              items: [{ id: 'km-agri-a4-75', quantity: { count: isB2c ? 1 : 10 } }],
+              id: `KM-ONDC-ORD-${Date.now().toString().slice(-6)}`,
+              items: [{ id: 'km-agri-a4-75', fulfillment_id: 'F1', quantity: { count: isB2c ? 1 : 50 } }],
               channel: isB2c ? 'b2c' : 'b2b',
               autoConfirmed: true
             }
@@ -1064,10 +1195,10 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
           context,
           message: {
             order: {
-              id: `ord_${Date.now()}`,
+              id: `KM-ONDC-ORD-${Date.now().toString().slice(-6)}`,
               state: 'Created',
               orderStatus: 'confirmed',
-              provider: { id: 'kogniti-minds-bpp' },
+              provider: { id: 'kogniti-minds-bpp', locations: [{ id: 'KOGNITI_LOCATION' }] },
               channel: isB2c ? 'b2c' : 'b2b',
               autoConfirmed: true
             }
