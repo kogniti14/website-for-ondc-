@@ -63,11 +63,23 @@ if ($action === 'health' || $action === 'ondc/health' || $action === 'api/ondc/h
 
 // 4. Sample Payload Endpoint for Workbench Testing
 if ($action === 'on_search_sample') {
-    $samplePath = dirname(__DIR__) . '/ondc-workbench/01_on_search.json';
-    if (file_exists($samplePath)) {
-        http_response_code(200);
-        readfile($samplePath);
-        exit;
+    $sampleCandidates = [
+        dirname(__DIR__) . '/public/ondc-workbench/01_on_search.json',
+        dirname(__DIR__) . '/dist/ondc-workbench/01_on_search.json',
+        dirname(__DIR__) . '/ondc-workbench/01_on_search.json',
+        __DIR__ . '/../public/ondc-workbench/01_on_search.json',
+        __DIR__ . '/../ondc-workbench/01_on_search.json',
+        ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/public/ondc-workbench/01_on_search.json',
+        ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/dist/ondc-workbench/01_on_search.json',
+        ($_SERVER['DOCUMENT_ROOT'] ?? '') . '/ondc-workbench/01_on_search.json',
+    ];
+    foreach ($sampleCandidates as $samplePath) {
+        if (!empty($samplePath) && file_exists($samplePath)) {
+            http_response_code(200);
+            header('Content-Type: application/json; charset=utf-8');
+            readfile($samplePath);
+            exit;
+        }
     }
 }
 
