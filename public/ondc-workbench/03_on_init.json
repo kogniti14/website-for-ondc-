@@ -11,7 +11,7 @@
     "bpp_uri": "https://kognitiminds.com",
     "transaction_id": "54e3d489-0be3-455b-9d41-3da39d520377",
     "message_id": "e2e858db-bfd7-4ee4-9b27-c10ce5cda195",
-    "timestamp": "2026-09-26T20:00:21.277Z",
+    "timestamp": "2026-10-11T07:30:00.000Z",
     "ttl": "PT30S"
   },
   "message": {
@@ -21,13 +21,15 @@
         "locations": [
           {
             "id": "KOGNITI_LOCATION"
+          },
+          {
+            "id": "L1"
           }
         ],
         "descriptor": {
           "name": "KOGNITI MINDS PRIVATE LIMITED",
           "short_desc": "Sustainable Agri-Waste Paper & Copier Products Manufacturer",
-          "long_desc": "Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.",
-          "code": "kogniti-minds-bpp"
+          "long_desc": "Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues."
         }
       },
       "items": [
@@ -51,9 +53,7 @@
           "area_code": "201310"
         },
         "phone": "9876543210",
-        "tax_number": "07AAAAA0000A1Z5",
-        "created_at": "2026-09-26T20:00:21.000Z",
-        "updated_at": "2026-09-26T20:00:21.000Z"
+        "tax_number": "07AAAAA0000A1Z5"
       },
       "fulfillments": [
         {
@@ -63,11 +63,6 @@
           "@ondc/org/category": "Standard Delivery",
           "@ondc/org/TAT": "P2D",
           "tracking": false,
-          "state": {
-            "descriptor": {
-              "code": "Serviceable"
-            }
-          },
           "start": {
             "location": {
               "id": "L1",

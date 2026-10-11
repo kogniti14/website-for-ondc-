@@ -1445,8 +1445,8 @@ function processOndcSelect($storageDir, $context, $message) {
             'core_version' => $context['core_version'] ?? '1.2.5',
             'bap_id' => $bapId ?: 'workbench.ondc.tech',
             'bap_uri' => $bapUri ?: 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer',
-            'bpp_id' => 'kognitiminds.com',
-            'bpp_uri' => 'https://kognitiminds.com',
+            'bpp_id' => !empty($context['bpp_id']) ? $context['bpp_id'] : 'kognitiminds.com',
+            'bpp_uri' => !empty($context['bpp_uri']) ? $context['bpp_uri'] : 'https://kognitiminds.com',
             'transaction_id' => $txnId,
             'message_id' => $msgId,
             'timestamp' => gmdate('Y-m-d\TH:i:s\Z', max(time(), (!empty($context['timestamp']) ? strtotime($context['timestamp']) : time()) + 2)),
@@ -1463,8 +1463,7 @@ function processOndcSelect($storageDir, $context, $message) {
                     'descriptor' => [
                         'name' => 'KOGNITI MINDS PRIVATE LIMITED',
                         'short_desc' => 'Sustainable Agri-Waste Paper & Copier Products Manufacturer',
-                        'long_desc' => 'Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.',
-                        'code' => $effectiveProviderId
+                        'long_desc' => 'Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.'
                     ]
                 ],
                 'items' => $orderItems,
@@ -1475,12 +1474,7 @@ function processOndcSelect($storageDir, $context, $message) {
                         '@ondc/org/provider_name' => 'Kogniti Express Logistics',
                         '@ondc/org/category' => 'Standard Delivery',
                         '@ondc/org/TAT' => 'P2D',
-                        'tracking' => false,
-                        'state' => [
-                            'descriptor' => [
-                                'code' => 'Serviceable'
-                            ]
-                        ]
+                        'tracking' => false
                     ]
                 ],
                 'quote' => [
@@ -1608,9 +1602,7 @@ switch ($requestAction) {
                 'area_code' => !empty($inBilling['address']['area_code']) ? $inBilling['address']['area_code'] : '201310'
             ],
             'phone' => !empty($inBilling['phone']) ? $inBilling['phone'] : '9876543210',
-            'tax_number' => !empty($inBilling['tax_number']) ? $inBilling['tax_number'] : '07AAAAA0000A1Z5',
-            'created_at' => !empty($inBilling['created_at']) && str_ends_with($inBilling['created_at'], '.000Z') ? $inBilling['created_at'] : $nowIsoMs,
-            'updated_at' => !empty($inBilling['updated_at']) && str_ends_with($inBilling['updated_at'], '.000Z') ? $inBilling['updated_at'] : $nowIsoMs
+            'tax_number' => !empty($inBilling['tax_number']) ? $inBilling['tax_number'] : '07AAAAA0000A1Z5'
         ];
 
         $providerObj = $sessionData['provider'] ?? [
@@ -1619,8 +1611,7 @@ switch ($requestAction) {
             'descriptor' => [
                 'name' => 'KOGNITI MINDS PRIVATE LIMITED',
                 'short_desc' => 'Sustainable Agri-Waste Paper & Copier Products Manufacturer',
-                'long_desc' => 'Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.',
-                'code' => 'kogniti-minds-bpp'
+                'long_desc' => 'Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.'
             ]
         ];
         if (empty($providerObj['locations'])) {
@@ -1846,8 +1837,7 @@ switch ($requestAction) {
             'descriptor' => [
                 'name' => 'KOGNITI MINDS PRIVATE LIMITED',
                 'short_desc' => 'Sustainable Agri-Waste Paper & Copier Products Manufacturer',
-                'long_desc' => 'Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.',
-                'code' => 'kogniti-minds-bpp'
+                'long_desc' => 'Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.'
             ]
         ];
         if (!is_array($providerObj)) {
@@ -1862,7 +1852,6 @@ switch ($requestAction) {
         }
         $providerObj['descriptor']['name'] = !empty($providerObj['descriptor']['name']) ? $providerObj['descriptor']['name'] : 'KOGNITI MINDS PRIVATE LIMITED';
         $providerObj['descriptor']['short_desc'] = !empty($providerObj['descriptor']['short_desc']) ? $providerObj['descriptor']['short_desc'] : 'Sustainable Agri-Waste Paper & Copier Products Manufacturer';
-        $providerObj['descriptor']['code'] = !empty($providerObj['descriptor']['code']) ? $providerObj['descriptor']['code'] : 'kogniti-minds-bpp';
 
         $items = $sessionData['items'] ?? $message['order']['items'] ?? [
             [
@@ -1908,9 +1897,7 @@ switch ($requestAction) {
                 'area_code' => !empty($inBilling['address']['area_code']) ? $inBilling['address']['area_code'] : '201310'
             ],
             'phone' => !empty($inBilling['phone']) ? $inBilling['phone'] : '9876543210',
-            'tax_number' => !empty($inBilling['tax_number']) ? $inBilling['tax_number'] : '07AAAAA0000A1Z5',
-            'created_at' => !empty($inBilling['created_at']) && str_ends_with($inBilling['created_at'], '.000Z') ? $inBilling['created_at'] : $nowIsoMs,
-            'updated_at' => !empty($inBilling['updated_at']) && str_ends_with($inBilling['updated_at'], '.000Z') ? $inBilling['updated_at'] : $nowIsoMs
+            'tax_number' => !empty($inBilling['tax_number']) ? $inBilling['tax_number'] : '07AAAAA0000A1Z5'
         ];
 
         $primaryFulfillmentId = $message['order']['fulfillments'][0]['id'] ?? ($sessionData['fulfillment']['id'] ?? 'F1');
@@ -2144,8 +2131,7 @@ switch ($requestAction) {
             'descriptor' => [
                 'name' => 'KOGNITI MINDS PRIVATE LIMITED',
                 'short_desc' => 'Sustainable Agri-Waste Paper & Copier Products Manufacturer',
-                'long_desc' => 'Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.',
-                'code' => 'kogniti-minds-bpp'
+                'long_desc' => 'Kogniti Minds manufactures premium sustainable copy paper and enterprise stationery crafted from upcycled agricultural crop residues.'
             ]
         ];
         if (empty($statusProvider['locations'])) {
@@ -2156,7 +2142,6 @@ switch ($requestAction) {
         }
         $statusProvider['descriptor']['name'] = !empty($statusProvider['descriptor']['name']) ? $statusProvider['descriptor']['name'] : 'KOGNITI MINDS PRIVATE LIMITED';
         $statusProvider['descriptor']['short_desc'] = !empty($statusProvider['descriptor']['short_desc']) ? $statusProvider['descriptor']['short_desc'] : 'Sustainable Agri-Waste Paper & Copier Products Manufacturer';
-        $statusProvider['descriptor']['code'] = !empty($statusProvider['descriptor']['code']) ? $statusProvider['descriptor']['code'] : 'kogniti-minds-bpp';
 
         $statusItems = $sessionData['items'] ?? [
             [
@@ -2178,9 +2163,7 @@ switch ($requestAction) {
                 'area_code' => !empty($inBilling['address']['area_code']) ? $inBilling['address']['area_code'] : '201310'
             ],
             'phone' => !empty($inBilling['phone']) ? $inBilling['phone'] : '9876543210',
-            'tax_number' => !empty($inBilling['tax_number']) ? $inBilling['tax_number'] : '07AAAAA0000A1Z5',
-            'created_at' => !empty($inBilling['created_at']) && str_ends_with($inBilling['created_at'], '.000Z') ? $inBilling['created_at'] : $nowIsoMs,
-            'updated_at' => !empty($inBilling['updated_at']) && str_ends_with($inBilling['updated_at'], '.000Z') ? $inBilling['updated_at'] : $nowIsoMs
+            'tax_number' => !empty($inBilling['tax_number']) ? $inBilling['tax_number'] : '07AAAAA0000A1Z5'
         ];
         $statusFulfillments = $sessionData['fulfillments'] ?? [
             [
