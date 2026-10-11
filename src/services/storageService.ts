@@ -1121,7 +1121,24 @@ class StorageService {
   // --- B2C Orders ---
   getB2COrders(): B2COrder[] {
     const raw = this.getItem<B2COrder[]>(KEYS.B2C_ORDERS, []);
-    return raw.filter((o) => o.id !== 'b2c_ord_101');
+    let modified = false;
+    const orders = raw.filter((o) => o.id !== 'b2c_ord_101').map((o) => {
+      // Auto-confirm any B2C orders (Zero Admin Approval Required in B2C)
+      if (o.orderStatus === 'placed' || !o.orderStatus) {
+        modified = true;
+        return {
+          ...o,
+          orderStatus: 'confirmed' as const,
+          confirmedAt: o.confirmedAt || o.createdAt || new Date().toISOString(),
+          confirmedBy: o.confirmedBy || 'Automated Instant System Confirmation (No Admin Approval Required)',
+        };
+      }
+      return o;
+    });
+    if (modified) {
+      this.setItem(KEYS.B2C_ORDERS, orders);
+    }
+    return orders;
   }
 
   getB2COrderById(id: string): B2COrder | undefined {
@@ -1129,6 +1146,13 @@ class StorageService {
   }
 
   saveB2COrder(order: B2COrder): void {
+    // Automatically confirm B2C order immediately upon creation without admin approval
+    if (order.orderStatus === 'placed' || !order.orderStatus) {
+      order.orderStatus = 'confirmed';
+      order.confirmedAt = order.confirmedAt || new Date().toISOString();
+      order.confirmedBy = order.confirmedBy || 'Automated Instant System Confirmation (No Admin Approval Required)';
+    }
+
     const orders = this.getB2COrders();
     const existingIndex = orders.findIndex((o) => o.id === order.id);
     if (existingIndex >= 0) {

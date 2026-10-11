@@ -411,18 +411,20 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
         upiId: upiVal,
         bankName: bankName,
       },
-      orderStatus: 'placed',
+      orderStatus: 'confirmed',
+      confirmedAt: new Date().toISOString(),
+      confirmedBy: 'Automated Instant B2C Checkout Confirmation (No Admin Approval Required)',
       trackingNumber: `DEL-IN-${Math.floor(100000000 + Math.random() * 900000000)}`,
       courierPartner: 'Delhivery',
       createdAt: new Date().toISOString(),
       statusTimeline: [
         {
-          status: 'ORDER PLACED',
+          status: 'ORDER PLACED & AUTO-CONFIRMED',
           timestamp: new Date().toLocaleTimeString('en-IN', {
             hour: '2-digit',
             minute: '2-digit',
           }),
-          note: `Order placed successfully via ${paymentMethodUsed.toUpperCase()}. Awaiting admin verification and confirmation.`,
+          note: `Order placed and automatically confirmed instantly via ${paymentMethodUsed.toUpperCase()} (Zero admin approval required for B2C consumer orders).`,
         },
         {
           status: 'PAYMENT CONFIRMED VIA RAZORPAY',
@@ -432,10 +434,10 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
           }),
           note: `Verified transaction of ₹${calculations.total.toLocaleString(
             'en-IN'
-          )} (Razorpay Payment ID: ${transactionId})`,
+          )} (Razorpay Payment ID: ${transactionId}). Section 31 Tax Invoice generated.`,
         },
         {
-          status: 'ONDC RETeB2B 1.2.5 CONFIRMED',
+          status: 'ONDC B2C NETWORK CONFIRMED',
           timestamp: new Date().toLocaleTimeString('en-IN', {
             hour: '2-digit',
             minute: '2-digit',

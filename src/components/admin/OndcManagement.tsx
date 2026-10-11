@@ -227,6 +227,9 @@ const LIVE_ENDPOINTS_LIST: LiveEndpoint[] = [
 interface OndcOrder {
   id: string;
   orderNumber: string;
+  channel?: 'b2c' | 'b2b';
+  autoConfirmed?: boolean;
+  buyerApp?: string;
   poNumber?: string;
   businessName: string;
   gstin?: string;
@@ -326,8 +329,149 @@ interface LogEntry {
 
 const DEFAULT_ONDC_ORDERS: OndcOrder[] = [
   {
+    id: 'ondc_ord_b2c_201',
+    orderNumber: 'KM-ONDC-RET-2026-1049',
+    channel: 'b2c',
+    autoConfirmed: true,
+    buyerApp: 'Mystore Retail App (RET10)',
+    businessName: 'Aarav Sharma (Consumer via Mystore)',
+    grandTotal: 578.0,
+    subtotal: 489.83,
+    taxableAmount: 489.83,
+    totalGst: 88.17,
+    cgst: 44.09,
+    sgst: 44.08,
+    orderStatus: 'confirmed',
+    paymentStatus: 'PAID',
+    paymentMode: 'UPI Instant (ONDC B2C Gateway)',
+    createdAt: new Date(Date.now() - 3600000 * 1.2).toISOString(),
+    updatedAt: new Date(Date.now() - 3600000 * 1.2).toISOString(),
+    billingAddress: {
+      fullName: 'Aarav Sharma',
+      phone: '+91 98112 34567',
+      street: 'Flat 402, Tower 9, ATS Greens',
+      city: 'Noida',
+      state: 'Uttar Pradesh',
+      pincode: '201301',
+    },
+    shippingAddress: {
+      fullName: 'Aarav Sharma',
+      phone: '+91 98112 34567',
+      street: 'Flat 402, Tower 9, ATS Greens',
+      city: 'Noida',
+      state: 'Uttar Pradesh',
+      pincode: '201301',
+    },
+    ondcContext: {
+      transactionId: 'txn_km_b2c_998124a1',
+      messageId: 'msg_b2c_88123f10',
+      bapId: 'buyer-app.mystore.in',
+      bppId: 'kogniti-minds-bpp',
+      domain: 'ONDC:RET10',
+    },
+    items: [
+      {
+        id: 'km-agri-a4-75',
+        name: 'Kogniti AgroPrint 75 GSM A4 Sustainable Copier Paper (500 Sheets)',
+        sku: 'KM-PAP-AG75',
+        hsn: '4802',
+        quantity: 2,
+        baseUnitPrice: 244.92,
+        effectiveUnitPrice: 244.92,
+        taxableAmount: 489.83,
+        gstRate: 18,
+        gstAmount: 88.17,
+        totalAmount: 578.0,
+      },
+    ],
+    statusTimeline: [
+      {
+        status: 'ORDER_PLACED',
+        timestamp: new Date(Date.now() - 3600000 * 1.2).toISOString(),
+        note: 'Consumer placed retail order via Mystore Beckn protocol',
+      },
+      {
+        status: 'CONFIRMED',
+        timestamp: new Date(Date.now() - 3600000 * 1.2).toISOString(),
+        note: '⚡ Instant Auto-Confirmed via ONDC B2C Engine (Zero Admin Approval Required)',
+      },
+    ],
+  },
+  {
+    id: 'ondc_ord_b2c_202',
+    orderNumber: 'KM-ONDC-RET-2026-1050',
+    channel: 'b2c',
+    autoConfirmed: true,
+    buyerApp: 'Paytm ONDC B2C Mall (RET16)',
+    businessName: 'Priya Verma (Consumer via Paytm)',
+    grandTotal: 498.0,
+    subtotal: 422.03,
+    taxableAmount: 422.03,
+    totalGst: 75.97,
+    cgst: 37.99,
+    sgst: 37.98,
+    orderStatus: 'confirmed',
+    paymentStatus: 'PAID',
+    paymentMode: 'Paytm Wallet / Net Banking',
+    createdAt: new Date(Date.now() - 3600000 * 4.8).toISOString(),
+    updatedAt: new Date(Date.now() - 3600000 * 4.8).toISOString(),
+    billingAddress: {
+      fullName: 'Priya Verma',
+      phone: '+91 97188 90123',
+      street: 'B-12, Green Park Extension',
+      city: 'New Delhi',
+      state: 'Delhi',
+      pincode: '110016',
+    },
+    shippingAddress: {
+      fullName: 'Priya Verma',
+      phone: '+91 97188 90123',
+      street: 'B-12, Green Park Extension',
+      city: 'New Delhi',
+      state: 'Delhi',
+      pincode: '110016',
+    },
+    ondcContext: {
+      transactionId: 'txn_km_b2c_77192b44',
+      messageId: 'msg_b2c_66190c12',
+      bapId: 'ondc.paytm.com',
+      bppId: 'kogniti-minds-bpp',
+      domain: 'ONDC:RET16',
+    },
+    items: [
+      {
+        id: 'km-bagasse-nb-a5-160',
+        name: 'Kogniti AgroNote A5 Hardbound Journal (160 Pages)',
+        sku: 'KM-NB-A5-160H',
+        hsn: '4820',
+        quantity: 2,
+        baseUnitPrice: 211.02,
+        effectiveUnitPrice: 211.02,
+        taxableAmount: 422.03,
+        gstRate: 18,
+        gstAmount: 75.97,
+        totalAmount: 498.0,
+      },
+    ],
+    statusTimeline: [
+      {
+        status: 'ORDER_PLACED',
+        timestamp: new Date(Date.now() - 3600000 * 4.8).toISOString(),
+        note: 'Customer placed order via Paytm ONDC',
+      },
+      {
+        status: 'CONFIRMED',
+        timestamp: new Date(Date.now() - 3600000 * 4.8).toISOString(),
+        note: '⚡ Auto-Confirmed instantly (No Admin Approval Required)',
+      },
+    ],
+  },
+  {
     id: 'ondc_ord_101',
     orderNumber: 'KM-ONDC-2026-8941',
+    channel: 'b2b',
+    autoConfirmed: true,
+    buyerApp: 'ONDC B2B Buyer Node',
     poNumber: 'PO-ECO-2026/04',
     businessName: 'EcoPackaging Solutions India Pvt Ltd',
     gstin: '07AAACE1234F1Z5',
@@ -396,6 +540,9 @@ const DEFAULT_ONDC_ORDERS: OndcOrder[] = [
   {
     id: 'ondc_ord_102',
     orderNumber: 'KM-ONDC-2026-8942',
+    channel: 'b2b',
+    autoConfirmed: true,
+    buyerApp: 'ONDC B2B Buyer Node',
     poNumber: 'PO-GREEN-2026/89',
     businessName: 'GreenEarth Food Containers Ltd',
     gstin: '07AABCG9876M1Z2',
@@ -464,6 +611,9 @@ const DEFAULT_ONDC_ORDERS: OndcOrder[] = [
   {
     id: 'ondc_ord_103',
     orderNumber: 'KM-ONDC-2026-8943',
+    channel: 'b2b',
+    autoConfirmed: true,
+    buyerApp: 'ONDC B2B Buyer Node',
     poNumber: 'PO-BIOK-2026/112',
     businessName: 'BioKraft Industries Gujarat LLP',
     gstin: '24AAHFB5544J1Z8',
@@ -536,6 +686,9 @@ const DEFAULT_ONDC_ORDERS: OndcOrder[] = [
   {
     id: 'ondc_ord_104',
     orderNumber: 'KM-ONDC-2026-8944',
+    channel: 'b2b',
+    autoConfirmed: true,
+    buyerApp: 'ONDC B2B Buyer Node',
     poNumber: 'PO-APEX-2026/505',
     businessName: 'Apex Corrugation & Packaging Works',
     gstin: '27AABCA4321K1ZX',
@@ -610,6 +763,9 @@ const DEFAULT_ONDC_ORDERS: OndcOrder[] = [
   {
     id: 'ondc_ord_105',
     orderNumber: 'KM-ONDC-2026-8945',
+    channel: 'b2b',
+    autoConfirmed: true,
+    buyerApp: 'ONDC B2B Buyer Node',
     poNumber: 'PO-SUST-2026/021',
     businessName: 'Sustainable Pulp & Pack LLP',
     gstin: '29AABCS8891P1ZV',
@@ -695,6 +851,9 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
   // ONDC Orders Interactive Management State
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'in_production' | 'ready_for_dispatch' | 'dispatched' | 'delivered' | 'cancelled'>('all');
+  const [channelFilter, setChannelFilter] = useState<'all' | 'b2c' | 'b2b'>('all');
+  const [catalogueChannelView, setCatalogueChannelView] = useState<'b2c' | 'b2b'>('b2b');
+  const [testingChannel, setTestingChannel] = useState<'b2b' | 'b2c'>('b2b');
   const [viewingOrderDetail, setViewingOrderDetail] = useState<OndcOrder | null>(null);
   const [editingOrderStatus, setEditingOrderStatus] = useState<OndcOrder | null>(null);
   const [newStatusValue, setNewStatusValue] = useState<string>('confirmed');
@@ -813,15 +972,16 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
     setSearchQuery(actionKey);
   };
 
-  const getTestPayloadForAction = (actionKey: string): Record<string, any> => {
+  const getTestPayloadForAction = (actionKey: string, channelParam: 'b2b' | 'b2c' = testingChannel): Record<string, any> => {
+    const isB2c = channelParam === 'b2c';
     const context = {
-      domain: 'ONDC:RETeB2B',
+      domain: isB2c ? 'ONDC:RET10' : 'ONDC:RETeB2B',
       country: 'IND',
       city: 'std:080',
       action: actionKey,
-      core_version: '1.2.5',
-      bap_id: 'workbench.ondc.tech',
-      bap_uri: 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer',
+      core_version: isB2c ? '1.2.0' : '1.2.5',
+      bap_id: isB2c ? 'buyer-app.mystore.in' : 'workbench.ondc.tech',
+      bap_uri: isB2c ? 'https://buyer-app.mystore.in/api/v1' : 'https://workbench.ondc.tech/api-service/ONDC:RETeB2B/1.2.5/buyer',
       bpp_id: 'kogniti-minds-bpp',
       bpp_uri: 'https://kognitiminds.com',
       transaction_id: `test_txn_${Date.now()}`,
@@ -832,7 +992,7 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
 
     switch (actionKey) {
       case 'search':
-        return { context, message: { intent: { item: { descriptor: { name: 'copier paper' } } } } };
+        return { context, message: { intent: { item: { descriptor: { name: isB2c ? 'copier paper retail' : 'copier paper wholesale' } } } } };
       case 'on_search':
         return {
           context,
@@ -843,22 +1003,22 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
                 {
                   id: 'kogniti-minds-bpp',
                   descriptor: { name: 'KOGNITI MINDS PRIVATE LIMITED' },
-                  items: [{ id: 'km-agri-a4-75', descriptor: { name: 'Kogniti AgroPrint 75 GSM A4' }, price: { currency: 'INR', value: '198.00' } }]
+                  items: [{ id: 'km-agri-a4-75', descriptor: { name: 'Kogniti AgroPrint 75 GSM A4' }, price: { currency: 'INR', value: isB2c ? '289.00' : '198.00' } }]
                 }
               ]
             }
           }
         };
       case 'select':
-        return { context, message: { order: { items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }] } } };
+        return { context, message: { order: { items: [{ id: 'km-agri-a4-75', quantity: { count: isB2c ? 1 : 10 } }] } } };
       case 'on_select':
         return {
           context,
           message: {
             order: {
               provider: { id: 'kogniti-minds-bpp' },
-              items: [{ id: 'km-agri-a4-75', fulfillment_id: 'F1', quantity: { count: 10 } }],
-              quote: { price: { currency: 'INR', value: '2336.40' }, breakup: [] }
+              items: [{ id: 'km-agri-a4-75', fulfillment_id: 'F1', quantity: { count: isB2c ? 1 : 10 } }],
+              quote: { price: { currency: 'INR', value: isB2c ? '289.00' : '2336.40' }, breakup: [] }
             }
           }
         };
@@ -867,8 +1027,10 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
           context,
           message: {
             order: {
-              items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }],
-              billing: { name: 'Apex Educational Trust', address: { city: 'Noida', state: 'Uttar Pradesh' } }
+              items: [{ id: 'km-agri-a4-75', quantity: { count: isB2c ? 1 : 10 } }],
+              billing: isB2c
+                ? { name: 'Aarav Sharma', address: { city: 'Noida', state: 'Uttar Pradesh' }, phone: '9811234567' }
+                : { name: 'Apex Educational Trust', address: { city: 'Noida', state: 'Uttar Pradesh' } }
             }
           }
         };
@@ -878,13 +1040,25 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
           message: {
             order: {
               provider: { id: 'kogniti-minds-bpp' },
-              billing: { name: 'Apex Educational Trust', tax_number: '09AAACA1234A1Z5' },
+              billing: isB2c
+                ? { name: 'Aarav Sharma', phone: '9811234567' }
+                : { name: 'Apex Educational Trust', tax_number: '09AAACA1234A1Z5' },
               payment: { type: 'ON-FULFILLMENT', status: 'NOT-PAID' }
             }
           }
         };
       case 'confirm':
-        return { context, message: { order: { id: `ord_${Date.now()}`, items: [{ id: 'km-agri-a4-75', quantity: { count: 10 } }] } } };
+        return {
+          context,
+          message: {
+            order: {
+              id: `ord_${Date.now()}`,
+              items: [{ id: 'km-agri-a4-75', quantity: { count: isB2c ? 1 : 10 } }],
+              channel: isB2c ? 'b2c' : 'b2b',
+              autoConfirmed: true
+            }
+          }
+        };
       case 'on_confirm':
         return {
           context,
@@ -892,7 +1066,10 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
             order: {
               id: `ord_${Date.now()}`,
               state: 'Created',
-              provider: { id: 'kogniti-minds-bpp' }
+              orderStatus: 'confirmed',
+              provider: { id: 'kogniti-minds-bpp' },
+              channel: isB2c ? 'b2c' : 'b2b',
+              autoConfirmed: true
             }
           }
         };
@@ -918,7 +1095,7 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
       case 'on_cancel':
         return { context, message: { order: { id: 'ord_sample_01', state: 'Cancelled', tags: { cancellation_reason_id: '001' } } } };
       case 'update':
-        return { context, message: { update_target: 'fulfillment', order: { id: 'ord_sample_01', items: [{ id: 'km-agri-a4-75', quantity: { count: 5 } }] } } };
+        return { context, message: { update_target: 'fulfillment', order: { id: 'ord_sample_01', items: [{ id: 'km-agri-a4-75', quantity: { count: isB2c ? 1 : 5 } }] } } };
       case 'on_update':
         return {
           context,
@@ -1364,9 +1541,16 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
   const prevContract = currentContractIndex > 0 ? allContracts[currentContractIndex - 1] : null;
   const nextContract = currentContractIndex >= 0 && currentContractIndex < allContracts.length - 1 ? allContracts[currentContractIndex + 1] : null;
 
+  const b2cOrderCount = (orders || []).filter((o) => o?.channel === 'b2c' || o?.ondcContext?.domain?.includes('RET1')).length;
+  const b2bOrderCount = (orders || []).filter((o) => o?.channel !== 'b2c' && !o?.ondcContext?.domain?.includes('RET1')).length;
+
   const safeSearch = (searchQuery || '').toLowerCase().trim();
   const filteredOrders = (orders || []).filter((o) => {
     if (!o) return false;
+    const isB2c = o.channel === 'b2c' || o.ondcContext?.domain?.includes('RET1');
+    if (channelFilter === 'b2c' && !isB2c) return false;
+    if (channelFilter === 'b2b' && isB2c) return false;
+
     const ordNum = String(o.orderNumber || o.id || '').toLowerCase();
     const bName = String(o.businessName || '').toLowerCase();
     const txnId = String(o.ondcContext?.transactionId || '').toLowerCase();
@@ -1413,6 +1597,32 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
             </span>
             <span
               style={{
+                background: 'rgba(168, 85, 247, 0.25)',
+                color: '#C084FC',
+                border: '1px solid rgba(168, 85, 247, 0.5)',
+                padding: '0.3rem 0.75rem',
+                borderRadius: '999px',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+              }}
+            >
+              ⚡ HYBRID: B2B Wholesale + B2C Retail
+            </span>
+            <span
+              style={{
+                background: 'rgba(16, 185, 129, 0.2)',
+                color: '#6EE7B7',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                padding: '0.3rem 0.75rem',
+                borderRadius: '999px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+              }}
+            >
+              ⚡ Instant Auto-Confirm Active
+            </span>
+            <span
+              style={{
                 background: 'rgba(59, 130, 246, 0.2)',
                 color: '#93C5FD',
                 border: '1px solid rgba(59, 130, 246, 0.4)',
@@ -1422,19 +1632,7 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
                 fontWeight: 700,
               }}
             >
-              Domain: {stats.domain}
-            </span>
-            <span
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                padding: '0.3rem 0.65rem',
-                borderRadius: '999px',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                color: '#CBD5E1',
-              }}
-            >
-              Version: {stats.version}
+              Domains: RETeB2B 1.2.5 & RET10–RET18
             </span>
             <span
               style={{
@@ -1452,10 +1650,10 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
           </div>
 
           <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em', color: '#FFFFFF' }}>
-            ONDC Seller-Side (BPP) API Dashboard
+            ONDC Unified Seller-Side (BPP) Network Engine
           </h2>
-          <p style={{ margin: '0.4rem 0 0', color: '#94A3B8', fontSize: '0.92rem', maxWidth: '720px' }}>
-            KOGNITI MINDS PRIVATE LIMITED operates exclusively as the Seller / BPP participant node on the Open Network for Digital Commerce under RETeB2B 1.2.5. Connected to real product inventory, dynamic pricing, and warehouse logistics.
+          <p style={{ margin: '0.4rem 0 0', color: '#94A3B8', fontSize: '0.92rem', maxWidth: '760px' }}>
+            KOGNITI MINDS PRIVATE LIMITED operates across both <strong style={{ color: '#E2E8F0' }}>B2B Wholesale (RETeB2B 1.2.5)</strong> and <strong style={{ color: '#E2E8F0' }}>B2C Retail (RET10–RET18)</strong> on the Open Network for Digital Commerce with zero-delay automated order confirmations, atomic warehouse inventory reservation, and real-time state synchronization.
           </p>
         </div>
 
@@ -2676,15 +2874,25 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
           ========================================================================= */}
       {selectedApiAction === null && activeSubTab === 'orders' && (
         <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '1.5rem' }}>
+          {/* Header & Controls */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A', margin: 0 }}>
-              ONDC B2B Orders ({filteredOrders.length})
-            </h3>
+            <div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                ONDC Network Orders Hub ({filteredOrders.length})
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, background: '#DCFCE7', color: '#166534', padding: '0.2rem 0.55rem', borderRadius: '999px', border: '1px solid #BBF7D0' }}>
+                  ⚡ Instant Auto-Confirmed (Zero Approval Delay)
+                </span>
+              </h3>
+              <p style={{ margin: '0.25rem 0 0', fontSize: '0.82rem', color: '#64748B' }}>
+                All retail consumer orders (RET10–RET18) and network wholesale orders auto-confirm instantly upon Beckn /confirm submission.
+              </p>
+            </div>
+
             <div style={{ position: 'relative', minWidth: '260px' }}>
               <Search size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
               <input
                 type="text"
-                placeholder="Search orders, buyers, or txn ID..."
+                placeholder="Search order #, customer, txn ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
@@ -2699,48 +2907,290 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
             </div>
           </div>
 
-          <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
+          {/* Channel Filter Switcher */}
+          <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setChannelFilter('all')}
+              style={{
+                padding: '0.45rem 0.9rem',
+                borderRadius: '8px',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                border: '1px solid',
+                cursor: 'pointer',
+                background: channelFilter === 'all' ? '#0F172A' : '#F8FAFC',
+                color: channelFilter === 'all' ? '#FFFFFF' : '#475569',
+                borderColor: channelFilter === 'all' ? '#0F172A' : '#E2E8F0',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+              }}
+            >
+              🌐 All ONDC Channels ({orders.length})
+            </button>
+            <button
+              onClick={() => setChannelFilter('b2c')}
+              style={{
+                padding: '0.45rem 0.9rem',
+                borderRadius: '8px',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                border: '1px solid',
+                cursor: 'pointer',
+                background: channelFilter === 'b2c' ? '#ECFDF5' : '#F8FAFC',
+                color: channelFilter === 'b2c' ? '#065F46' : '#475569',
+                borderColor: channelFilter === 'b2c' ? '#10B981' : '#E2E8F0',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+              }}
+            >
+              🛍️ B2C Retail ({b2cOrderCount})
+            </button>
+            <button
+              onClick={() => setChannelFilter('b2b')}
+              style={{
+                padding: '0.45rem 0.9rem',
+                borderRadius: '8px',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                border: '1px solid',
+                cursor: 'pointer',
+                background: channelFilter === 'b2b' ? '#EFF6FF' : '#F8FAFC',
+                color: channelFilter === 'b2b' ? '#1E40AF' : '#475569',
+                borderColor: channelFilter === 'b2b' ? '#3B82F6' : '#E2E8F0',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+              }}
+            >
+              🏢 B2B Wholesale ({b2bOrderCount})
+            </button>
+          </div>
+
+          {/* Orders Table */}
+          <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
               <thead>
                 <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', textAlign: 'left' }}>
                   <th style={{ padding: '0.75rem 1rem' }}>Order Number</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Buyer Entity</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Channel</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Buyer Entity & App</th>
                   <th style={{ padding: '0.75rem 1rem' }}>Grand Total</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Status</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Auto-Confirmation</th>
                   <th style={{ padding: '0.75rem 1rem' }}>Transaction ID</th>
                   <th style={{ padding: '0.75rem 1rem' }}>Date</th>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: '#64748B' }}>
-                      No ONDC orders found.
+                    <td colSpan={8} style={{ padding: '2.5rem', textAlign: 'center', color: '#64748B' }}>
+                      No orders found matching the selected channel and query.
                     </td>
                   </tr>
                 ) : (
-                  filteredOrders.map((o) => (
-                    <tr key={o.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: '#0F172A' }}>{o.orderNumber || o.id}</td>
-                      <td style={{ padding: '0.75rem 1rem' }}>{o.businessName || 'Enterprise Buyer'}</td>
-                      <td style={{ padding: '0.75rem 1rem', fontWeight: 700 }}>₹{Number(o.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <span style={{ background: '#DCFCE7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
-                          {o.orderStatus || 'Confirmed'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontSize: '0.75rem', color: '#64748B' }}>
-                        {o.ondcContext?.transactionId || 'N/A'}
-                      </td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#64748B', fontSize: '0.75rem' }}>
-                        {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '—'}
-                      </td>
-                    </tr>
-                  ))
+                  filteredOrders.map((o) => {
+                    const isB2c = o.channel === 'b2c' || o.ondcContext?.domain?.includes('RET1');
+                    return (
+                      <tr key={o.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          <div style={{ fontWeight: 700, color: '#0F172A' }}>{o.orderNumber || o.id}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                            {o.items?.length || 1} item(s) · {o.paymentMode || 'Prepaid Escrow'}
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          {isB2c ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: '#ECFDF5', color: '#065F46', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, border: '1px solid #A7F3D0' }}>
+                              🛍️ B2C Retail
+                            </span>
+                          ) : (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: '#EFF6FF', color: '#1E40AF', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, border: '1px solid #BFDBFE' }}>
+                              🏢 B2B Wholesale
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          <div style={{ fontWeight: 600, color: '#0F172A' }}>{o.businessName || 'Consumer Customer'}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                            {o.buyerApp || (isB2c ? 'Retail Buyer App' : 'B2B Enterprise Portal')} {o.gstin ? `· GSTIN: ${o.gstin}` : ''}
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#0F172A' }}>
+                          ₹{Number(o.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', alignItems: 'flex-start' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: '#DCFCE7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700, border: '1px solid #BBF7D0' }}>
+                              ⚡ Auto-Confirmed
+                            </span>
+                            <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 600 }}>
+                              {o.orderStatus?.toUpperCase() || 'CONFIRMED'}
+                            </span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', fontFamily: 'monospace', fontSize: '0.72rem', color: '#64748B' }}>
+                          {o.ondcContext?.transactionId || 'N/A'}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', color: '#64748B', fontSize: '0.75rem' }}>
+                          {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : '—'}
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                          <button
+                            onClick={() => setViewingOrderDetail(o)}
+                            style={{
+                              background: '#F1F5F9',
+                              border: '1px solid #CBD5E1',
+                              color: '#1E293B',
+                              padding: '0.35rem 0.65rem',
+                              borderRadius: '6px',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                            }}
+                          >
+                            <Eye size={13} /> Inspect
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
+
+          {/* Order Detail Modal */}
+          {viewingOrderDetail && (
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(15, 23, 42, 0.65)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 9999,
+                padding: '1rem',
+                backdropFilter: 'blur(4px)',
+              }}
+            >
+              <div
+                style={{
+                  background: '#FFFFFF',
+                  borderRadius: '16px',
+                  width: '100%',
+                  maxWidth: '780px',
+                  maxHeight: '90vh',
+                  overflowY: 'auto',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                  padding: '2rem',
+                  border: '1px solid #E2E8F0',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                      <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#0F172A' }}>
+                        {viewingOrderDetail.orderNumber || viewingOrderDetail.id}
+                      </h3>
+                      {viewingOrderDetail.channel === 'b2c' ? (
+                        <span style={{ background: '#ECFDF5', color: '#065F46', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700 }}>
+                          🛍️ B2C Retail Order
+                        </span>
+                      ) : (
+                        <span style={{ background: '#EFF6FF', color: '#1E40AF', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700 }}>
+                          🏢 B2B Wholesale Order
+                        </span>
+                      )}
+                      <span style={{ background: '#DCFCE7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700 }}>
+                        ⚡ Auto-Confirmed
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748B' }}>
+                      Placed via {viewingOrderDetail.buyerApp || 'ONDC Buyer App'} · Domain {viewingOrderDetail.ondcContext?.domain || 'ONDC:RETeB2B'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setViewingOrderDetail(null)}
+                    style={{ background: '#F1F5F9', border: 'none', borderRadius: '8px', padding: '0.5rem', cursor: 'pointer', color: '#64748B' }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Customer & Protocol Context */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                  <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.82rem' }}>
+                    <div style={{ fontWeight: 700, color: '#0F172A', marginBottom: '0.5rem' }}>👤 Customer & Delivery Info</div>
+                    <div><strong>Name:</strong> {viewingOrderDetail.businessName || 'Consumer Customer'}</div>
+                    {viewingOrderDetail.gstin && <div><strong>GSTIN:</strong> <code>{viewingOrderDetail.gstin}</code></div>}
+                    <div><strong>Phone:</strong> {viewingOrderDetail.billingAddress?.phone || '+91 99990 00000'}</div>
+                    <div><strong>Address:</strong> {viewingOrderDetail.shippingAddress?.street}, {viewingOrderDetail.shippingAddress?.city}, {viewingOrderDetail.shippingAddress?.state} - {viewingOrderDetail.shippingAddress?.pincode}</div>
+                  </div>
+
+                  <div style={{ background: '#F8FAFC', padding: '1rem', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.82rem' }}>
+                    <div style={{ fontWeight: 700, color: '#0F172A', marginBottom: '0.5rem' }}>🌐 Beckn Protocol Metadata</div>
+                    <div><strong>Txn ID:</strong> <code style={{ color: '#2563EB' }}>{viewingOrderDetail.ondcContext?.transactionId}</code></div>
+                    <div><strong>BAP ID:</strong> <code>{viewingOrderDetail.ondcContext?.bapId || 'buyer-app.ondc.org'}</code></div>
+                    <div><strong>Payment Mode:</strong> {viewingOrderDetail.paymentMode || 'Instant Escrow Settlement'}</div>
+                    <div><strong>Approval Mode:</strong> <span style={{ color: '#166534', fontWeight: 700 }}>Instant Protocol Auto-Approval (Zero Admin Delay)</span></div>
+                  </div>
+                </div>
+
+                {/* Order Items Table */}
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <h4 style={{ fontSize: '0.92rem', fontWeight: 700, margin: '0 0 0.5rem', color: '#0F172A' }}>Items Purchased</h4>
+                  <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                      <thead>
+                        <tr style={{ background: '#F1F5F9', borderBottom: '1px solid #E2E8F0', color: '#475569', textAlign: 'left' }}>
+                          <th style={{ padding: '0.6rem 0.85rem' }}>Item</th>
+                          <th style={{ padding: '0.6rem 0.85rem' }}>HSN</th>
+                          <th style={{ padding: '0.6rem 0.85rem', textAlign: 'center' }}>Qty</th>
+                          <th style={{ padding: '0.6rem 0.85rem', textAlign: 'right' }}>Unit Price</th>
+                          <th style={{ padding: '0.6rem 0.85rem', textAlign: 'right' }}>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(viewingOrderDetail.items || []).map((it, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #F8FAFC' }}>
+                            <td style={{ padding: '0.6rem 0.85rem' }}>
+                              <div style={{ fontWeight: 600, color: '#0F172A' }}>{it.name}</div>
+                              <div style={{ fontSize: '0.7rem', color: '#64748B' }}>SKU: {it.sku}</div>
+                            </td>
+                            <td style={{ padding: '0.6rem 0.85rem' }}>{it.hsn || '4802'}</td>
+                            <td style={{ padding: '0.6rem 0.85rem', textAlign: 'center', fontWeight: 700 }}>{it.quantity}</td>
+                            <td style={{ padding: '0.6rem 0.85rem', textAlign: 'right' }}>₹{Number(it.effectiveUnitPrice || it.baseUnitPrice || 0).toFixed(2)}</td>
+                            <td style={{ padding: '0.6rem 0.85rem', textAlign: 'right', fontWeight: 700 }}>₹{Number(it.totalAmount || 0).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Totals & Notes */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F8FAFC', padding: '1rem', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
+                    <div>Taxable: ₹{Number(viewingOrderDetail.taxableAmount || viewingOrderDetail.subtotal || 0).toFixed(2)} | GST 18%: ₹{Number(viewingOrderDetail.totalGst || 0).toFixed(2)}</div>
+                    <div style={{ color: '#059669', fontWeight: 600, marginTop: '0.2rem' }}>✓ Section 31 Tax Invoice generated instantly on confirmation</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.78rem', color: '#64748B' }}>Grand Total</div>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A' }}>
+                      ₹{Number(viewingOrderDetail.grandTotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -3101,15 +3551,59 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
               <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                Authoritative Eco-Friendly Paper & Stationery Catalogue ({TOTAL_CATALOG_PRODUCTS})
+                Dual-Channel Authoritative Catalogue ({TOTAL_CATALOG_PRODUCTS})
               </h3>
               <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#64748B' }}>
-                All items verified with statutory HSN 4: prefix format (4:4802 / 4:4820), 18% GST tax rate, and volume wholesale discount tiers.
+                All items verified with statutory HSN 4: prefix format (4:4802 / 4:4820), 18% GST rate, and channel-tailored MOQs & pricing.
               </p>
             </div>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#DCFCE7', color: '#166534', padding: '0.35rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700 }}>
-              <CheckCircle2 size={13} /> RETeB2B 1.2.5 Compliant
-            </span>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#DCFCE7', color: '#166534', padding: '0.35rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: 700 }}>
+                <CheckCircle2 size={13} /> RETeB2B & RET10 Ready
+              </span>
+            </div>
+          </div>
+
+          {/* Catalogue Channel Switcher */}
+          <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '1.25rem' }}>
+            <button
+              onClick={() => setCatalogueChannelView('b2b')}
+              style={{
+                padding: '0.45rem 0.9rem',
+                borderRadius: '8px',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                border: '1px solid',
+                cursor: 'pointer',
+                background: catalogueChannelView === 'b2b' ? '#EFF6FF' : '#F8FAFC',
+                color: catalogueChannelView === 'b2b' ? '#1E40AF' : '#475569',
+                borderColor: catalogueChannelView === 'b2b' ? '#3B82F6' : '#E2E8F0',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+              }}
+            >
+              🏢 B2B Wholesale View (Volume Tiers & MOQs)
+            </button>
+            <button
+              onClick={() => setCatalogueChannelView('b2c')}
+              style={{
+                padding: '0.45rem 0.9rem',
+                borderRadius: '8px',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                border: '1px solid',
+                cursor: 'pointer',
+                background: catalogueChannelView === 'b2c' ? '#ECFDF5' : '#F8FAFC',
+                color: catalogueChannelView === 'b2c' ? '#065F46' : '#475569',
+                borderColor: catalogueChannelView === 'b2c' ? '#10B981' : '#E2E8F0',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+              }}
+            >
+              🛍️ B2C Retail View (MRP, Consumer Price & 1-Unit MOQ)
+            </button>
           </div>
 
           <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflowX: 'auto' }}>
@@ -3119,46 +3613,87 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
                   <th style={{ padding: '0.75rem 1rem' }}>Product & SKU</th>
                   <th style={{ padding: '0.75rem 1rem' }}>Category</th>
                   <th style={{ padding: '0.75rem 1rem' }}>Statutory HSN</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>B2B Wholesale</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>GST Slab</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>MOQ</th>
+                  {catalogueChannelView === 'b2b' ? (
+                    <>
+                      <th style={{ padding: '0.75rem 1rem' }}>B2B Wholesale</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>GST Slab</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Wholesale MOQ</th>
+                    </>
+                  ) : (
+                    <>
+                      <th style={{ padding: '0.75rem 1rem' }}>MRP & Consumer Price</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Consumer Savings</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Consumer MOQ</th>
+                    </>
+                  )}
                   <th style={{ padding: '0.75rem 1rem' }}>Stock</th>
-                  <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Protocol Status</th>
+                  <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Checkout Engine</th>
                 </tr>
               </thead>
               <tbody>
-                {MOCK_PRODUCTS.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      <div style={{ fontWeight: 700, color: '#0F172A', maxWidth: '280px' }}>{p.name}</div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748B', fontFamily: 'monospace' }}>SKU: {p.sku} | ID: {p.id}</div>
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem', color: '#475569', fontSize: '0.78rem' }}>{p.category}</td>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      <span style={{ background: '#EFF6FF', color: '#1E40AF', padding: '0.2rem 0.5rem', borderRadius: '4px', fontFamily: 'monospace', fontWeight: 700, fontSize: '0.75rem' }}>
-                        4:{p.hsn || '4802'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#0F172A' }}>
-                      ₹{Number(p.b2bWholesalePrice || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                      <div style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 600 }}>Up to 22% Vol. Tier</div>
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem', color: '#475569' }}>
-                      <span style={{ fontWeight: 600 }}>18%</span> (CGST 9% + SGST 9%)
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#2563EB' }}>
-                      {p.b2bMoq || 10} Units
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: (p.stock || 0) > 500 ? '#10B981' : '#F59E0B' }}>
-                      {Number(p.stock || 0).toLocaleString('en-IN')}
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: '#DCFCE7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700 }}>
-                        <Check size={11} /> Ready
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {MOCK_PRODUCTS.map((p) => {
+                  const mrp = Number(p.b2cMrp || Math.round((p.b2cPrice || 289) * 1.35));
+                  const b2cPrice = Number(p.b2cPrice || 289);
+                  const savingsPercent = Math.max(0, Math.round(((mrp - b2cPrice) / mrp) * 100));
+
+                  return (
+                    <tr key={p.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <div style={{ fontWeight: 700, color: '#0F172A', maxWidth: '280px' }}>{p.name}</div>
+                        <div style={{ fontSize: '0.72rem', color: '#64748B', fontFamily: 'monospace' }}>SKU: {p.sku} | ID: {p.id}</div>
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', color: '#475569', fontSize: '0.78rem' }}>{p.category}</td>
+                      <td style={{ padding: '0.75rem 1rem' }}>
+                        <span style={{ background: '#EFF6FF', color: '#1E40AF', padding: '0.2rem 0.5rem', borderRadius: '4px', fontFamily: 'monospace', fontWeight: 700, fontSize: '0.75rem' }}>
+                          4:{p.hsn || '4802'}
+                        </span>
+                      </td>
+
+                      {catalogueChannelView === 'b2b' ? (
+                        <>
+                          <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#0F172A' }}>
+                            ₹{Number(p.b2bWholesalePrice || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            <div style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 600 }}>Up to 22% Vol. Tier</div>
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem', color: '#475569' }}>
+                            <span style={{ fontWeight: 600 }}>18%</span> (CGST 9% + SGST 9%)
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#2563EB' }}>
+                            {p.b2bMoq || 10} Units
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td style={{ padding: '0.75rem 1rem' }}>
+                            <div style={{ fontSize: '0.72rem', color: '#94A3B8', textDecoration: 'line-through' }}>
+                              MRP: ₹{mrp.toFixed(2)}
+                            </div>
+                            <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#059669' }}>
+                              ₹{b2cPrice.toFixed(2)}
+                            </div>
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem' }}>
+                            <span style={{ background: '#DCFCE7', color: '#166534', padding: '0.2rem 0.45rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700 }}>
+                              {savingsPercent}% OFF
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#059669' }}>
+                            1 Unit (Single Item)
+                          </td>
+                        </>
+                      )}
+
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 600, color: (p.stock || 0) > 500 ? '#10B981' : '#F59E0B' }}>
+                        {Number(p.stock || 0).toLocaleString('en-IN')}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: '#DCFCE7', color: '#166534', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700 }}>
+                          <Check size={11} /> ⚡ Auto-Confirm
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -3215,8 +3750,9 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
                   <th style={{ padding: '0.75rem 1rem' }}>SKU</th>
                   <th style={{ padding: '0.75rem 1rem' }}>Product Title</th>
                   <th style={{ padding: '0.75rem 1rem' }}>Available Stock</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>B2B MOQ</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Atomic Reservation Status</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>B2C Retail MOQ</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>B2B Wholesale MOQ</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Atomic Locking Status</th>
                   <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Stock Health</th>
                 </tr>
               </thead>
@@ -3228,8 +3764,11 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
                     <td style={{ padding: '0.75rem 1rem', fontWeight: 700, fontSize: '0.9rem', color: '#0F172A' }}>
                       {Number(p.stock || 0).toLocaleString('en-IN')} units
                     </td>
+                    <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#059669' }}>
+                      1 unit (Single Instant Checkout)
+                    </td>
                     <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#2563EB' }}>
-                      ≥ {p.b2bMoq || 10} units
+                      ≥ {p.b2bMoq || 10} units (Volume Tier)
                     </td>
                     <td style={{ padding: '0.75rem 1rem' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 600 }}>
@@ -3454,6 +3993,19 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
                 <div><strong style={{ color: '#64748B' }}>SSL/TLS:</strong> HTTPS TLS 1.3 Active</div>
               </div>
             </div>
+
+            <div style={{ border: '1px solid #E2E8F0', borderRadius: '10px', padding: '1.25rem', background: '#F8FAFC' }}>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0F172A', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <CheckCircle2 size={16} color="#059669" /> Auto-Confirmation & Channel Governance
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.82rem' }}>
+                <div><strong style={{ color: '#64748B' }}>B2C Retail Orders:</strong> <span style={{ color: '#059669', fontWeight: 700 }}>⚡ 100% Instant Auto-Confirmed (No Admin Delay)</span></div>
+                <div><strong style={{ color: '#64748B' }}>ONDC Protocol Orders:</strong> <span style={{ color: '#059669', fontWeight: 700 }}>⚡ Instant Beckn /confirm Auto-Approval</span></div>
+                <div><strong style={{ color: '#64748B' }}>Tax Invoice Generator:</strong> Section 31 Retail GST Invoices ready instantly</div>
+                <div><strong style={{ color: '#64748B' }}>Stock Management:</strong> Atomic real-time reservation during confirmation</div>
+                <div><strong style={{ color: '#64748B' }}>B2B Custom Quotations:</strong> Retains enterprise review when requesting offline terms</div>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -3554,6 +4106,54 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
             <div>
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
+                  Target Network Channel:
+                </label>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTestingChannel('b2b');
+                      setTestingConsolePayload(JSON.stringify(getTestPayloadForAction(testingConsoleAction, 'b2b'), null, 2));
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '0.45rem',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      border: '1px solid',
+                      cursor: 'pointer',
+                      background: testingChannel === 'b2b' ? '#EFF6FF' : '#FFFFFF',
+                      borderColor: testingChannel === 'b2b' ? '#3B82F6' : '#CBD5E1',
+                      color: testingChannel === 'b2b' ? '#1D4ED8' : '#64748B',
+                    }}
+                  >
+                    🏢 B2B Wholesale (RETeB2B 1.2.5)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTestingChannel('b2c');
+                      setTestingConsolePayload(JSON.stringify(getTestPayloadForAction(testingConsoleAction, 'b2c'), null, 2));
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '0.45rem',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      border: '1px solid',
+                      cursor: 'pointer',
+                      background: testingChannel === 'b2c' ? '#F0FDF4' : '#FFFFFF',
+                      borderColor: testingChannel === 'b2c' ? '#22C55E' : '#CBD5E1',
+                      color: testingChannel === 'b2c' ? '#15803D' : '#64748B',
+                    }}
+                  >
+                    🛍️ B2C Retail (RET10 - Auto-Confirmed)
+                  </button>
+                </div>
+
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '0.35rem' }}>
                   Select Target Endpoint:
                 </label>
                 <select
@@ -3561,7 +4161,7 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
                   onChange={(e) => {
                     const act = e.target.value;
                     setTestingConsoleAction(act);
-                    setTestingConsolePayload(JSON.stringify(getTestPayloadForAction(act), null, 2));
+                    setTestingConsolePayload(JSON.stringify(getTestPayloadForAction(act, testingChannel), null, 2));
                   }}
                   style={{
                     width: '100%',
@@ -3587,7 +4187,7 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
                     Request Payload (JSON):
                   </label>
                   <button
-                    onClick={() => setTestingConsolePayload(JSON.stringify(getTestPayloadForAction(testingConsoleAction), null, 2))}
+                    onClick={() => setTestingConsolePayload(JSON.stringify(getTestPayloadForAction(testingConsoleAction, testingChannel), null, 2))}
                     style={{ background: 'transparent', border: 'none', color: '#2563EB', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}
                   >
                     Reset to Default Payload

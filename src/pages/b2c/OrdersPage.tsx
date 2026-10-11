@@ -329,13 +329,13 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                           : order.orderStatus === 'rejected'
                           ? 'badge-red'
                           : order.orderStatus === 'placed'
-                          ? 'badge-amber'
+                          ? 'badge-green'
                           : 'badge-blue'
                       }`}
                       style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', fontWeight: 700 }}
                     >
-                      {order.orderStatus === 'placed' && '🟡 Order Placed'}
-                      {order.orderStatus === 'confirmed' && '🟢 Order Confirmed'}
+                      {order.orderStatus === 'placed' && '🟢 Order Confirmed (Auto-Approved)'}
+                      {order.orderStatus === 'confirmed' && '🟢 Order Confirmed (Auto-Approved)'}
                       {order.orderStatus === 'rejected' && '🔴 Order Rejected'}
                       {order.orderStatus === 'processing' && '🔵 Processing'}
                       {order.orderStatus === 'packed' && '📦 Packed'}
@@ -366,26 +366,8 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                       </button>
                     )}
 
-                    {/* View Invoice Button (Official Invoice available only after confirmation) */}
-                    {order.orderStatus === 'placed' ? (
-                      <span
-                        style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                          color: '#92400e',
-                          background: '#fef3c7',
-                          border: '1px solid #fde68a',
-                          borderRadius: 'var(--radius-sm)',
-                          padding: '0.35rem 0.65rem',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.25rem',
-                        }}
-                        title="Official Tax Invoice will be generated upon confirmation by operations team"
-                      >
-                        🔒 Tax Invoice on Confirmation
-                      </span>
-                    ) : order.orderStatus === 'rejected' ? (
+                    {/* View Invoice Button */}
+                    {order.orderStatus === 'rejected' ? (
                       <span
                         style={{
                           fontSize: '0.75rem',
@@ -526,21 +508,21 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                 {order.orderStatus === 'placed' && (
                   <div
                     style={{
-                      background: '#FEF3C7',
-                      border: '1px solid #F59E0B',
+                      background: '#ECFDF5',
+                      border: '1px solid #10B981',
                       borderRadius: '8px',
                       padding: '0.65rem 0.9rem',
                       marginBottom: '1rem',
                       fontSize: '0.82rem',
-                      color: '#92400E',
+                      color: '#065F46',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '0.5rem',
                     }}
                   >
-                    <span>🟡</span>
+                    <span>🟢</span>
                     <span>
-                      <strong>Order Placed (Under Admin Review):</strong> Your order and payment have been logged successfully. Our fulfillment team is reviewing your order details for confirmation.
+                      <strong>Order Confirmed (Auto-Approved):</strong> Your order has been registered and auto-confirmed instantly without admin approval! Proceeding to automated warehouse allocation.
                     </span>
                   </div>
                 )}
@@ -562,7 +544,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
                   >
                     <span>🟢</span>
                     <span>
-                      <strong>Order Confirmed:</strong> Your order has been reviewed and officially confirmed by our operations desk! Proceeding to warehouse packing.
+                      <strong>Order Confirmed (Auto-Approved):</strong> Your consumer order has been automatically confirmed instantly without waiting for admin approval! Official Tax Invoice generated. Proceeding to packaging and dispatch.
                     </span>
                   </div>
                 )}

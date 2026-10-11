@@ -174,12 +174,17 @@ if ($action === 'admin_orders') {
         $shippingFee = (float)($o['shippingFee'] ?? 0);
         $grandTotal = (float)($quoteVal ?: ($subtotal + $totalGst + $shippingFee));
 
+        $domainVal = $o['domain'] ?? ($o['payload']['domain'] ?? ($o['ondcContext']['domain'] ?? ''));
+        $isOrderB2c = !empty($o['channel']) ? ($o['channel'] === 'b2c') : (strpos($domainVal, 'RET1') !== false || strpos($domainVal, 'B2C') !== false || ($grandTotal < 5000 && empty($o['gstin'])));
+
         $enriched[] = array_merge($o, [
             'id' => $orderId,
             'orderNumber' => $ordNumber,
             'poNumber' => $poNumber,
             'businessName' => $billingName,
-            'gstin' => !empty($o['gstin']) ? $o['gstin'] : '09AABCK1234F1Z5',
+            'gstin' => !empty($o['gstin']) ? $o['gstin'] : ($isOrderB2c ? '' : '09AABCK1234F1Z5'),
+            'channel' => $isOrderB2c ? 'b2c' : 'b2b',
+            'autoConfirmed' => true,
             'source' => 'ondc',
             'items' => $normalizedItems,
             'subtotal' => $subtotal,
@@ -193,19 +198,19 @@ if ($action === 'admin_orders') {
             'grandTotal' => $grandTotal,
             'orderStatus' => strtolower($o['orderStatus'] ?? ($o['status'] ?? 'confirmed')),
             'paymentStatus' => $o['paymentStatus'] ?? 'paid',
-            'paymentMode' => $o['paymentMode'] ?? 'ONDC Settlement / Escrow',
-            'paymentTerms' => $o['paymentTerms'] ?? 'T+1 Network Settlement',
+            'paymentMode' => $o['paymentMode'] ?? ($isOrderB2c ? 'UPI Instant Payment (ONDC B2C Gateway)' : 'ONDC Settlement / Escrow'),
+            'paymentTerms' => $o['paymentTerms'] ?? ($isOrderB2c ? 'Instant Consumer Settlement' : 'T+1 Network Settlement'),
             'trackingNumber' => $o['trackingNumber'] ?? ($o['fulfillments'][0]['tracking_id'] ?? 'KM-DEL-'.strtoupper(substr(md5($orderId), 0, 8))),
-            'courierPartner' => $o['courierPartner'] ?? 'Delhivery B2B Logistics',
+            'courierPartner' => $o['courierPartner'] ?? ($isOrderB2c ? 'Shiprocket / Delhivery Surface' : 'Delhivery B2B Logistics'),
             'shippingAddress' => $shippingAddress,
             'billingAddress' => $billingAddress,
             'createdAt' => $o['createdAt'] ?? gmdate('Y-m-d\TH:i:s\Z'),
             'updatedAt' => $o['updatedAt'] ?? gmdate('Y-m-d\TH:i:s\Z'),
             'statusTimeline' => !empty($o['statusTimeline']) && is_array($o['statusTimeline']) ? $o['statusTimeline'] : [
                 [
-                    'status' => 'ORDER CONFIRMED',
+                    'status' => 'ORDER CONFIRMED (AUTO-APPROVED)',
                     'timestamp' => $o['createdAt'] ?? gmdate('Y-m-d\TH:i:s\Z'),
-                    'note' => 'Order received and confirmed via ONDC B2B protocol.'
+                    'note' => 'Order instantly auto-confirmed without requiring manual admin approval.'
                 ]
             ],
             'ondcContext' => [
@@ -2204,10 +2209,15 @@ switch ($requestAction) {
         if (file_exists($ordersFile)) {
             $orders = json_decode(@file_get_contents($ordersFile), true) ?: [];
         }
+        $ctxDomain = $context['domain'] ?? ($sessionData['domain'] ?? 'ONDC:RETeB2B');
+        $isB2c = (strpos($ctxDomain, 'RET1') !== false || strpos($ctxDomain, 'B2C') !== false || strpos($ctxDomain, 'ret1') !== false);
         $orders[$orderId] = [
             'id' => $orderId,
             'transaction_id' => $context['transaction_id'] ?? '',
             'status' => 'Created',
+            'orderStatus' => 'confirmed',
+            'channel' => $isB2c ? 'b2c' : 'b2b',
+            'autoConfirmed' => true,
             'createdAt' => $nowIsoMs,
             'payload' => $callbackPayload['message']['order']
         ];

@@ -3645,8 +3645,18 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="badge badge-amber" style={{ fontSize: '0.78rem' }}>
-                  🟡 {b2cOrders.filter((o) => o.orderStatus === 'placed').length} Awaiting Confirmation
+                <span
+                  className="badge badge-green"
+                  style={{
+                    fontSize: '0.78rem',
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    color: '#059669',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    fontWeight: 700,
+                  }}
+                  title="All retail B2C consumer orders confirm automatically without manual admin approval"
+                >
+                  ⚡ Auto-Confirmation Active (Zero Approval Delay)
                 </span>
                 <span className="badge badge-green" style={{ fontSize: '0.78rem' }}>
                   🟢 {b2cOrders.filter((o) => o.orderStatus === 'confirmed').length} Confirmed
@@ -3919,8 +3929,22 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                             )}
 
                             {o.orderStatus === 'confirmed' && (
-                              <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600 }}>
-                                ✓ Verified
+                              <span
+                                style={{
+                                  fontSize: '0.72rem',
+                                  color: '#059669',
+                                  fontWeight: 700,
+                                  background: 'rgba(16, 185, 129, 0.12)',
+                                  padding: '0.2rem 0.5rem',
+                                  borderRadius: '4px',
+                                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.2rem',
+                                }}
+                                title="Auto-confirmed direct B2C consumer order (Instant approval)"
+                              >
+                                ⚡ Auto-Confirmed (Direct B2C)
                               </span>
                             )}
                             {o.orderStatus === 'rejected' && (
