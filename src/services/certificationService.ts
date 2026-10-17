@@ -369,8 +369,11 @@ class CertificationService {
     const body = method !== 'DELETE' ? JSON.stringify(payload) : undefined;
     const isAdmin = typeof window !== 'undefined' && (
       localStorage.getItem('km_active_role') === 'admin' ||
-      Boolean(localStorage.getItem('km_active_admin_id'))
+      Boolean(localStorage.getItem('km_active_admin_id')) ||
+      Boolean(localStorage.getItem('km_admin_session')) ||
+      window.location.pathname.startsWith('/admin')
     );
+    const adminParam = isAdmin ? '&admin_role=super_admin' : '';
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-cache',
@@ -415,14 +418,14 @@ class CertificationService {
       const batchParam = isBatch ? '&replace=true' : '';
       const phpUrl =
         method === 'DELETE' && id
-          ? `/api/data.php?collection=${collection}&id=${encodeURIComponent(id)}`
-          : `/api/data.php?collection=${collection}${batchParam}`;
+          ? `/api/data.php?collection=${collection}&id=${encodeURIComponent(id)}${adminParam}`
+          : `/api/data.php?collection=${collection}${batchParam}${adminParam}`;
       let res = await fetch(phpUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
       if (!res || !res.ok) {
         const url =
           method === 'DELETE' && id
-            ? `/api/data/${collection}/${encodeURIComponent(id)}`
-            : `/api/data/${collection}${isBatch ? '?replace=true' : ''}`;
+            ? `/api/data/${collection}/${encodeURIComponent(id)}${adminParam}`
+            : `/api/data/${collection}${isBatch ? '?replace=true' : ''}${adminParam}`;
         res = await fetch(url, { method, headers, body, cache: 'no-store' }).catch(() => null);
       }
       if (res && res.ok) {

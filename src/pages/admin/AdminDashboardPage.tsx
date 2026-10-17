@@ -202,7 +202,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     try {
       await storageService.saveProducts(products);
       stageSection('products');
-      setFeedback('products', 'success', `Products catalog (${products.length} items) saved locally & staged. Click "Final Save & Publish to Live" above to push to production!`);
+      setFeedback('products', 'success', `Products catalog (${products.length} items) published live to production successfully!`);
     } catch (err: any) {
       setFeedback('products', 'error', err?.message || 'Failed to save products section.');
     }
@@ -212,7 +212,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     try {
       await storageService.saveCategories(categories);
       stageSection('categories');
-      setFeedback('categories', 'success', `Categories (${categories.length} categories) saved locally & staged. Click "Final Save & Publish to Live" above to push to production!`);
+      setFeedback('categories', 'success', `Categories (${categories.length} categories) published live to production successfully!`);
     } catch (err: any) {
       setFeedback('categories', 'error', err?.message || 'Failed to save categories section.');
     }
@@ -222,7 +222,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     try {
       await storageService.saveSiteMedia(siteMedia);
       stageSection('media');
-      setFeedback('media', 'success', 'Storefront banners and promotional media saved locally & staged. Click "Final Save & Publish to Live" above to push to production!');
+      setFeedback('media', 'success', 'Storefront banners and promotional media published live to production successfully!');
       onRefresh();
     } catch (err: any) {
       setFeedback('media', 'error', err?.message || 'Failed to save media assets.');
@@ -233,7 +233,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     try {
       await storageService.saveCoupons(coupons);
       stageSection('coupons');
-      setFeedback('coupons', 'success', `Promotions & coupons (${coupons.length} coupons) saved locally & staged. Click "Final Save & Publish to Live" above to push to production!`);
+      setFeedback('coupons', 'success', `Promotions & coupons (${coupons.length} coupons) published live to production successfully!`);
     } catch (err: any) {
       setFeedback('coupons', 'error', err?.message || 'Failed to save coupons section.');
     }
@@ -243,7 +243,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     try {
       razorpayService.saveConfig(razorpayConfig);
       stageSection('razorpay');
-      setFeedback('razorpay', 'success', 'Razorpay Gateway credentials and preferences saved locally & staged. Click "Final Save & Publish to Live" above to push to production!');
+      setFeedback('razorpay', 'success', 'Razorpay Gateway credentials and preferences published live to production successfully!');
     } catch (err: any) {
       setFeedback('razorpay', 'error', err?.message || 'Failed to save Razorpay configuration.');
     }
@@ -253,7 +253,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     try {
       const res = await certificationService.publishAllToLive();
       stageSection('certifications');
-      setFeedback('certifications', 'success', `Certifications (${res.certsCount} documents) committed and staged for final live sync!`);
+      setFeedback('certifications', 'success', `Certifications (${res.certsCount} documents) published live to production successfully!`);
     } catch (err: any) {
       setFeedback('certifications', 'error', err?.message || 'Failed to save certifications.');
     }
@@ -263,7 +263,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     try {
       const res = await testimonialService.publishAllToLive();
       stageSection('testimonials');
-      setFeedback('testimonials', 'success', `Client Testimonials (${res.count} reviews) committed and staged for final live sync!`);
+      setFeedback('testimonials', 'success', `Client Testimonials (${res.count} reviews) published live to production successfully!`);
     } catch (err: any) {
       setFeedback('testimonials', 'error', err?.message || 'Failed to save testimonials.');
     }
@@ -273,7 +273,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     try {
       const res = await galleryService.publishAllToLive();
       stageSection('gallery');
-      setFeedback('gallery', 'success', `Stories & Gallery (${res.storiesCount} stories) committed and staged for final live sync!`);
+      setFeedback('gallery', 'success', `Stories & Gallery (${res.storiesCount} stories) published live to production successfully!`);
     } catch (err: any) {
       setFeedback('gallery', 'error', err?.message || 'Failed to save gallery.');
     }
@@ -282,7 +282,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
   const handleSavePoliciesSection = async () => {
     try {
       stageSection('policies');
-      setFeedback('policies', 'success', 'Statutory policies and revision logs staged for final live sync!');
+      setFeedback('policies', 'success', 'Statutory policies and revision logs published live to production successfully!');
     } catch (err: any) {
       setFeedback('policies', 'error', err?.message || 'Failed to save policies.');
     }

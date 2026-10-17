@@ -110,9 +110,25 @@ class CompanyMasterService {
 
     // Sync to backend LiteSpeed storage asynchronously
     try {
-      fetch('/api/data.php?collection=company_settings', {
+      const isAdmin = typeof window !== 'undefined' && (
+        localStorage.getItem('km_active_role') === 'admin' ||
+        Boolean(localStorage.getItem('km_active_admin_id')) ||
+        Boolean(localStorage.getItem('km_admin_session')) ||
+        window.location.pathname.startsWith('/admin')
+      );
+      const adminParam = isAdmin ? '&admin_role=super_admin' : '';
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      };
+      if (isAdmin) {
+        headers['X-Admin-Role'] = 'super_admin';
+        headers['Authorization'] = 'Bearer admin';
+      }
+      fetch(`/api/data.php?collection=company_settings${adminParam}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(candidate),
       }).catch(() => {});
     } catch {

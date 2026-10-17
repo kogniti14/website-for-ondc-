@@ -176,8 +176,11 @@ class StorageService {
     };
     const isAdmin = typeof window !== 'undefined' && (
       localStorage.getItem('km_active_role') === 'admin' ||
-      Boolean(localStorage.getItem('km_active_admin_id'))
+      Boolean(localStorage.getItem('km_active_admin_id')) ||
+      Boolean(localStorage.getItem('km_admin_session')) ||
+      window.location.pathname.startsWith('/admin')
     );
+    const adminParam = isAdmin ? '&admin_role=super_admin' : '';
     if (isAdmin) {
       headers['X-Admin-Role'] = 'super_admin';
       headers['Authorization'] = 'Bearer admin';
@@ -203,13 +206,13 @@ class StorageService {
 
       // 2. FAILOVER & HOSTINGER STORE: Direct native PHP dispatcher (guaranteed active on Hostinger LiteSpeed/Apache)
       const phpUrl = method === 'DELETE' && id
-        ? `/api/data.php?collection=${collection}&id=${encodeURIComponent(id)}`
-        : `/api/data.php?collection=${collection}`;
+        ? `/api/data.php?collection=${collection}&id=${encodeURIComponent(id)}${adminParam}`
+        : `/api/data.php?collection=${collection}${adminParam ? '?' + adminParam.slice(1) : ''}`;
       let res = await fetch(phpUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
       if (!res || !res.ok) {
         const url = method === 'DELETE' && id
-          ? `/api/data/${collection}/${encodeURIComponent(id)}`
-          : `/api/data/${collection}`;
+          ? `/api/data/${collection}/${encodeURIComponent(id)}${adminParam}`
+          : `/api/data/${collection}${adminParam ? '?' + adminParam.slice(1) : ''}`;
         res = await fetch(url, { method, headers, body, cache: 'no-store' }).catch(() => null);
       }
       if (res && res.ok) {
@@ -230,8 +233,11 @@ class StorageService {
 
     const isAdmin = typeof window !== 'undefined' && (
       localStorage.getItem('km_active_role') === 'admin' ||
-      Boolean(localStorage.getItem('km_active_admin_id'))
+      Boolean(localStorage.getItem('km_active_admin_id')) ||
+      Boolean(localStorage.getItem('km_admin_session')) ||
+      window.location.pathname.startsWith('/admin')
     );
+    const adminParam = isAdmin ? '&admin_role=super_admin' : '';
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -266,7 +272,7 @@ class StorageService {
       }
 
       // 2. FAILOVER & HOSTINGER STORE: Direct native PHP dispatcher with atomic replace
-      const phpUrl = `/api/data.php?collection=${collection}&replace=true`;
+      const phpUrl = `/api/data.php?collection=${collection}&replace=true${adminParam}`;
       let res = await fetch(phpUrl, {
         method: 'POST',
         headers,
@@ -275,7 +281,7 @@ class StorageService {
       }).catch(() => null);
 
       if (!res || !res.ok) {
-        const url = `/api/data/${collection}?replace=true`;
+        const url = `/api/data/${collection}?replace=true${adminParam}`;
         res = await fetch(url, {
           method: 'POST',
           headers,

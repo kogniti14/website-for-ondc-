@@ -77,6 +77,10 @@ Options -Indexes -MultiViews
   RewriteEngine On
   RewriteBase /
 
+  # Pass Authorization and Admin headers to PHP in CGI/FastCGI environments
+  SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+  SetEnvIf X-Admin-Role "(.*)" HTTP_X_ADMIN_ROLE=$1
+
   # 0. Canonical Domain & HTTPS Normalization
   # Redirect apex domain (kognitiminds.com) to canonical www.kognitiminds.com (CDN-backed, valid SSL)
   RewriteCond %{HTTP_HOST} ^kognitiminds\.com$ [NC]

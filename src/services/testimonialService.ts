@@ -97,11 +97,22 @@ class TestimonialService {
     if (typeof window === 'undefined') return null;
     const isBatch = Array.isArray(payload);
     const body = method !== 'DELETE' ? JSON.stringify(payload) : undefined;
+    const isAdmin = typeof window !== 'undefined' && (
+      localStorage.getItem('km_active_role') === 'admin' ||
+      Boolean(localStorage.getItem('km_active_admin_id')) ||
+      Boolean(localStorage.getItem('km_admin_session')) ||
+      window.location.pathname.startsWith('/admin')
+    );
+    const adminParam = isAdmin ? '&admin_role=super_admin' : '';
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Cache-Control': 'no-cache',
       'Pragma': 'no-cache',
     };
+    if (isAdmin) {
+      headers['X-Admin-Role'] = 'super_admin';
+      headers['Authorization'] = 'Bearer admin';
+    }
 
     try {
       // 1. PRIMARY: Replicate to Firebase Realtime Database
@@ -135,14 +146,14 @@ class TestimonialService {
       // 2. FAILOVER & HOSTINGER PERSISTENCE
       const phpUrl =
         method === 'DELETE' && id
-          ? `/api/data.php?collection=testimonials&id=${encodeURIComponent(id)}`
-          : `/api/data.php?collection=testimonials${isBatch ? '&replace=true' : ''}`;
+          ? `/api/data.php?collection=testimonials&id=${encodeURIComponent(id)}${adminParam}`
+          : `/api/data.php?collection=testimonials${isBatch ? '&replace=true' : ''}${adminParam}`;
       let res = await fetch(phpUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
       if (!res || !res.ok) {
         const url =
           method === 'DELETE' && id
-            ? `/api/data/testimonials/${encodeURIComponent(id)}`
-            : `/api/data/testimonials${isBatch ? '?replace=true' : ''}`;
+            ? `/api/data/testimonials/${encodeURIComponent(id)}${adminParam}`
+            : `/api/data/testimonials${isBatch ? '?replace=true' : ''}${adminParam}`;
         res = await fetch(url, { method, headers, body, cache: 'no-store' }).catch(() => null);
       }
       if (res && res.ok) {

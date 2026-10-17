@@ -606,7 +606,7 @@ export const AdminPublishSummaryModal: React.FC<AdminPublishSummaryModalProps> =
           {/* Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <a
-              href="https://kognitiminds.com"
+              href="https://www.kognitiminds.com"
               target="_blank"
               rel="noopener noreferrer"
               style={{

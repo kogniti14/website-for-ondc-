@@ -59,6 +59,22 @@ class PolicyNotificationService {
   private saveUpdateRecords(records: PolicyUpdateRecord[]): void {
     try {
       localStorage.setItem(STORAGE_KEY_POLICY_RECORDS, JSON.stringify(records));
+      const isAdmin = typeof window !== 'undefined' && (
+        localStorage.getItem('km_active_role') === 'admin' ||
+        Boolean(localStorage.getItem('km_active_admin_id')) ||
+        Boolean(localStorage.getItem('km_admin_session')) ||
+        window.location.pathname.startsWith('/admin')
+      );
+      const adminParam = isAdmin ? '&admin_role=super_admin' : '';
+      fetch(`/api/data.php?collection=policy_records&replace=true${adminParam}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Role': 'super_admin',
+          'Authorization': 'Bearer admin',
+        },
+        body: JSON.stringify(records),
+      }).catch(() => {});
     } catch (e) {
       console.error('Error saving policy update records:', e);
     }
@@ -87,6 +103,22 @@ class PolicyNotificationService {
     versions[policyId] = version;
     try {
       localStorage.setItem(STORAGE_KEY_POLICY_VERSIONS, JSON.stringify(versions));
+      const isAdmin = typeof window !== 'undefined' && (
+        localStorage.getItem('km_active_role') === 'admin' ||
+        Boolean(localStorage.getItem('km_active_admin_id')) ||
+        Boolean(localStorage.getItem('km_admin_session')) ||
+        window.location.pathname.startsWith('/admin')
+      );
+      const adminParam = isAdmin ? '&admin_role=super_admin' : '';
+      fetch(`/api/data.php?collection=policy_versions${adminParam}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Role': 'super_admin',
+          'Authorization': 'Bearer admin',
+        },
+        body: JSON.stringify(versions),
+      }).catch(() => {});
     } catch (e) {
       console.error('Error saving current policy versions:', e);
     }
