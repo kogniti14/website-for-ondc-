@@ -56,6 +56,7 @@ import {
 } from './adminDbService';
 import { db, isFirebaseConfigured } from './firebase';
 import { ref, set, remove, get } from 'firebase/database';
+import { getProductionApiUrl, getAdminAuthHeaders, getAdminQueryParam, isLocalhost } from './apiConfig';
 
 const KEYS = {
   PRODUCTS: 'km_products_v2',
@@ -204,17 +205,21 @@ class StorageService {
         }
       }
 
-      // 2. FAILOVER & HOSTINGER STORE: Direct native PHP dispatcher (guaranteed active on Hostinger LiteSpeed/Apache)
-      const phpUrl = method === 'DELETE' && id
+      // 2. LIVE PRODUCTION & HOSTINGER STORE: Direct native PHP dispatcher (guaranteed active on Hostinger LiteSpeed)
+      const relativePhp = method === 'DELETE' && id
         ? `/api/data.php?collection=${collection}&id=${encodeURIComponent(id)}${adminParam}`
         : `/api/data.php?collection=${collection}${adminParam ? '?' + adminParam.slice(1) : ''}`;
-      let res = await fetch(phpUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
-      if (!res || !res.ok) {
-        const url = method === 'DELETE' && id
+      const livePhpUrl = getProductionApiUrl(relativePhp);
+      let res = await fetch(livePhpUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
+
+      // If running on localhost, also keep local persistent store updated
+      if (isLocalhost()) {
+        const localUrl = method === 'DELETE' && id
           ? `/api/data/${collection}/${encodeURIComponent(id)}${adminParam}`
           : `/api/data/${collection}${adminParam ? '?' + adminParam.slice(1) : ''}`;
-        res = await fetch(url, { method, headers, body, cache: 'no-store' }).catch(() => null);
+        fetch(localUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
       }
+
       if (res && res.ok) {
         return await res.json().catch(() => null);
       }
@@ -271,18 +276,19 @@ class StorageService {
         }
       }
 
-      // 2. FAILOVER & HOSTINGER STORE: Direct native PHP dispatcher with atomic replace
-      const phpUrl = `/api/data.php?collection=${collection}&replace=true${adminParam}`;
-      let res = await fetch(phpUrl, {
+      // 2. LIVE PRODUCTION & HOSTINGER STORE: Direct native PHP dispatcher with atomic replace
+      const livePhpUrl = getProductionApiUrl(`/api/data.php?collection=${collection}&replace=true${adminParam}`);
+      let res = await fetch(livePhpUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify(fullList),
         cache: 'no-store',
       }).catch(() => null);
 
-      if (!res || !res.ok) {
-        const url = `/api/data/${collection}?replace=true${adminParam}`;
-        res = await fetch(url, {
+      // If running on localhost, also keep local persistent store updated
+      if (isLocalhost()) {
+        const localUrl = `/api/data/${collection}?replace=true${adminParam}`;
+        fetch(localUrl, {
           method: 'POST',
           headers,
           body: JSON.stringify(fullList),
@@ -327,6 +333,9 @@ class StorageService {
     const mappings: Array<{ collection: string; key: string; defaultVal: any; isArray: boolean }> = [
       { collection: 'products', key: KEYS.PRODUCTS, defaultVal: MOCK_PRODUCTS, isArray: true },
       { collection: 'categories', key: KEYS.CATEGORIES, defaultVal: CATEGORIES, isArray: true },
+      { collection: 'certifications', key: 'kogniti_company_certifications', defaultVal: [], isArray: true },
+      { collection: 'certification_categories', key: 'kogniti_certification_categories', defaultVal: [], isArray: true },
+      { collection: 'stories', key: 'km_stories_v1', defaultVal: [], isArray: true },
       { collection: 'b2c_users', key: KEYS.B2C_USERS, defaultVal: [], isArray: true },
       { collection: 'b2b_businesses', key: KEYS.B2B_BUSINESSES, defaultVal: [], isArray: true },
       { collection: 'b2c_orders', key: KEYS.B2C_ORDERS, defaultVal: [], isArray: true },
@@ -338,33 +347,33 @@ class StorageService {
       { collection: 'testimonials', key: 'km_testimonials_v1', defaultVal: [], isArray: true },
       { collection: 'settings', key: 'km_settings_v1', defaultVal: {}, isArray: false },
       { collection: 'site_media', key: KEYS.SITE_MEDIA, defaultVal: {}, isArray: false },
+      { collection: 'company_settings', key: KEYS.COMPANY_SETTINGS, defaultVal: {}, isArray: false },
     ];
 
     const timestamp = Date.now();
     for (const item of mappings) {
       try {
-        let res = await fetch(`/api/data.php?collection=${item.collection}&t=${timestamp}`, {
+        const livePhpUrl = getProductionApiUrl(
+          `/api/data.php?collection=${item.collection}&t=${timestamp}${isAdmin ? '&admin_role=super_admin' : ''}`
+        );
+        let res = await fetch(livePhpUrl, {
           cache: 'no-store',
           headers: reqHeaders,
         }).catch(() => null);
+
         if (!res || !res.ok) {
-          res = await fetch(`/api/data/${item.collection}?t=${timestamp}`, {
+          const fallbackUrl = `/api/data/${item.collection}?t=${timestamp}${isAdmin ? '&admin_role=super_admin' : ''}`;
+          res = await fetch(fallbackUrl, {
             cache: 'no-store',
             headers: reqHeaders,
           }).catch(() => null);
         }
+
         if (res && res.ok) {
           const serverData = await res.json();
           if (item.isArray && Array.isArray(serverData)) {
-            // Server database is authoritative: replace local store without resurrecting deleted items
-            let finalData = item.collection === 'products' ? this.normalizeProducts(serverData) : serverData;
-            if (item.collection === 'products' && Array.isArray(finalData) && finalData.length < 13) {
-              const existingIds = new Set(finalData.map((p: any) => p.id));
-              const missingMocks = MOCK_PRODUCTS.filter((p: any) => !existingIds.has(p.id));
-              if (missingMocks.length > 0) {
-                finalData = [...finalData, ...missingMocks];
-              }
-            }
+            // Live production server is the single source of truth
+            const finalData = item.collection === 'products' ? this.normalizeProducts(serverData) : serverData;
             this.setItem(item.key, finalData);
             dataSyncBus.emit(item.collection, finalData);
           } else if (!item.isArray) {

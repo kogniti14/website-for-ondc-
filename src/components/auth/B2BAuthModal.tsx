@@ -23,6 +23,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { B2BBusiness, B2BDocumentType, B2BDocumentAttachment } from '../../types';
 import { storageService } from '../../services/storageService';
+import { getProductionApiUrl } from '../../services/apiConfig';
 import { UnregisteredUserModal } from './UnregisteredUserModal';
 import { ImageUpload } from '../common/ImageUpload';
 import { isSuperAdminIdentifier } from '../../services/adminDbService';
@@ -161,7 +162,8 @@ export const B2BAuthModal: React.FC<B2BAuthModalProps> = ({ onClose, onSuccess, 
         formData.append('file', file);
         formData.append('folder', 'b2b_documents');
 
-        let uploadRes = await fetch('/api/upload.php', {
+        const liveUploadUrl = getProductionApiUrl('/api/upload.php');
+        let uploadRes = await fetch(liveUploadUrl, {
           method: 'POST',
           body: formData,
         }).catch(() => null);

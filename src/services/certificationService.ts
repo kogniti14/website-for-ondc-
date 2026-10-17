@@ -18,6 +18,7 @@ import {
   deleteObject,
 } from 'firebase/storage';
 import { dataSyncBus } from './dataSyncBus';
+import { getProductionApiUrl, isLocalhost } from './apiConfig';
 
 const LOCAL_STORAGE_CERTS_KEY = 'kogniti_company_certifications';
 const LOCAL_STORAGE_CATEGORIES_KEY = 'kogniti_certification_categories';
@@ -414,20 +415,23 @@ class CertificationService {
         } catch {}
       }
 
-      // 2. FAILOVER & HOSTINGER PERSISTENCE
+      // 2. LIVE PRODUCTION & HOSTINGER PERSISTENCE
       const batchParam = isBatch ? '&replace=true' : '';
-      const phpUrl =
+      const relativePhp =
         method === 'DELETE' && id
           ? `/api/data.php?collection=${collection}&id=${encodeURIComponent(id)}${adminParam}`
           : `/api/data.php?collection=${collection}${batchParam}${adminParam}`;
-      let res = await fetch(phpUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
-      if (!res || !res.ok) {
-        const url =
+      const livePhpUrl = getProductionApiUrl(relativePhp);
+      let res = await fetch(livePhpUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
+
+      if (isLocalhost()) {
+        const localUrl =
           method === 'DELETE' && id
             ? `/api/data/${collection}/${encodeURIComponent(id)}${adminParam}`
             : `/api/data/${collection}${isBatch ? '?replace=true' : ''}${adminParam}`;
-        res = await fetch(url, { method, headers, body, cache: 'no-store' }).catch(() => null);
+        fetch(localUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
       }
+
       if (res && res.ok) {
         return await res.json().catch(() => null);
       }
@@ -455,13 +459,14 @@ class CertificationService {
         reqHeaders['Authorization'] = 'Bearer admin';
       }
 
-      // 1. Hydrate Certifications from authoritative server with anti-cache
-      let res = await fetch(`/api/data.php?collection=certifications&t=${timestamp}`, {
+      // 1. Hydrate Certifications from authoritative live server with anti-cache
+      const liveCertsUrl = getProductionApiUrl(`/api/data.php?collection=certifications&t=${timestamp}${isAdmin ? '&admin_role=super_admin' : ''}`);
+      let res = await fetch(liveCertsUrl, {
         cache: 'no-store',
         headers: reqHeaders,
       }).catch(() => null);
       if (!res || !res.ok) {
-        res = await fetch(`/api/data/certifications?t=${timestamp}`, {
+        res = await fetch(`/api/data/certifications?t=${timestamp}${isAdmin ? '&admin_role=super_admin' : ''}`, {
           cache: 'no-store',
           headers: reqHeaders,
         }).catch(() => null);
@@ -500,13 +505,14 @@ class CertificationService {
         }
       }
 
-      // 2. Hydrate Categories from authoritative server
-      let catRes = await fetch(`/api/data.php?collection=certification_categories&t=${timestamp}`, {
+      // 2. Hydrate Categories from authoritative live server
+      const liveCatsUrl = getProductionApiUrl(`/api/data.php?collection=certification_categories&t=${timestamp}${isAdmin ? '&admin_role=super_admin' : ''}`);
+      let catRes = await fetch(liveCatsUrl, {
         cache: 'no-store',
         headers: reqHeaders,
       }).catch(() => null);
       if (!catRes || !catRes.ok) {
-        catRes = await fetch(`/api/data/certification_categories?t=${timestamp}`, {
+        catRes = await fetch(`/api/data/certification_categories?t=${timestamp}${isAdmin ? '&admin_role=super_admin' : ''}`, {
           cache: 'no-store',
           headers: reqHeaders,
         }).catch(() => null);
@@ -1101,7 +1107,8 @@ class CertificationService {
         formData.append('file', file);
         formData.append('folder', 'certificates');
 
-        let uploadRes = await fetch('/api/upload.php', {
+        const liveUploadUrl = getProductionApiUrl('/api/upload.php');
+        let uploadRes = await fetch(liveUploadUrl, {
           method: 'POST',
           body: formData,
         }).catch(() => null);

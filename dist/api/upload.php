@@ -17,14 +17,18 @@ $allowedOrigins = [
     'http://127.0.0.1:5173'
 ];
 
-if (in_array($origin, $allowedOrigins, true)) {
+if ($origin && (
+    strpos($origin, 'kognitiminds.com') !== false ||
+    strpos($origin, 'localhost') !== false ||
+    strpos($origin, '127.0.0.1') !== false
+)) {
     header("Access-Control-Allow-Origin: $origin");
 } else {
-    header("Access-Control-Allow-Origin: https://www.kognitiminds.com");
+    header("Access-Control-Allow-Origin: *");
 }
 
 header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Admin-Role');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Admin-Role, Accept, Origin, Cache-Control, Pragma');
 header('Cache-Control: no-cache, no-store, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');

@@ -2,6 +2,7 @@ import { Testimonial } from '../types';
 import { dataSyncBus } from './dataSyncBus';
 import { db, isFirebaseConfigured } from './firebase';
 import { ref, set, remove } from 'firebase/database';
+import { getProductionApiUrl, isLocalhost } from './apiConfig';
 
 const LOCAL_STORAGE_KEY = 'km_testimonials_v1';
 
@@ -143,19 +144,22 @@ class TestimonialService {
         } catch {}
       }
 
-      // 2. FAILOVER & HOSTINGER PERSISTENCE
-      const phpUrl =
+      // 2. LIVE PRODUCTION & HOSTINGER PERSISTENCE
+      const relativePhp =
         method === 'DELETE' && id
           ? `/api/data.php?collection=testimonials&id=${encodeURIComponent(id)}${adminParam}`
           : `/api/data.php?collection=testimonials${isBatch ? '&replace=true' : ''}${adminParam}`;
-      let res = await fetch(phpUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
-      if (!res || !res.ok) {
-        const url =
+      const livePhpUrl = getProductionApiUrl(relativePhp);
+      let res = await fetch(livePhpUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
+
+      if (isLocalhost()) {
+        const localUrl =
           method === 'DELETE' && id
             ? `/api/data/testimonials/${encodeURIComponent(id)}${adminParam}`
             : `/api/data/testimonials${isBatch ? '?replace=true' : ''}${adminParam}`;
-        res = await fetch(url, { method, headers, body, cache: 'no-store' }).catch(() => null);
+        fetch(localUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
       }
+
       if (res && res.ok) {
         return await res.json().catch(() => null);
       }
@@ -169,7 +173,8 @@ class TestimonialService {
     if (typeof window === 'undefined') return INITIAL_TESTIMONIALS;
     try {
       let serverData: Testimonial[] | null = null;
-      const res = await fetch('/api/data.php?collection=testimonials', { cache: 'no-store' }).catch(() => null);
+      const liveTestimonialsUrl = getProductionApiUrl('/api/data.php?collection=testimonials');
+      const res = await fetch(liveTestimonialsUrl, { cache: 'no-store' }).catch(() => null);
       if (res && res.ok) {
         serverData = await res.json().catch(() => null);
       }

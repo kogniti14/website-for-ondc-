@@ -71,6 +71,7 @@ import { CompanyMasterManagement } from '../../components/admin/CompanyMasterMan
 import { certificationService } from '../../services/certificationService';
 import { testimonialService } from '../../services/testimonialService';
 import { galleryService } from '../../services/galleryService';
+import { getProductionApiUrl } from '../../services/apiConfig';
 import {
   AdminPublishHeaderBar,
   AdminSectionSaveBar,
@@ -545,7 +546,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
       formData.append('folder', 'b2b_documents');
 
       try {
-        const uploadRes = await fetch('/api/upload.php', {
+        const uploadUrl = getProductionApiUrl('/api/upload.php');
+        const uploadRes = await fetch(uploadUrl, {
           method: 'POST',
           body: formData,
         });

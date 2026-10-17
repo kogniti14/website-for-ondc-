@@ -19,6 +19,7 @@
 import { PolicyUpdateRecord } from '../types';
 import { storageService } from './storageService';
 import { LEGAL_POLICIES } from '../data/legalPolicies';
+import { getProductionApiUrl } from './apiConfig';
 
 const STORAGE_KEY_POLICY_RECORDS = 'km_policy_update_records';
 const STORAGE_KEY_POLICY_VERSIONS = 'km_current_policy_versions';
@@ -66,7 +67,8 @@ class PolicyNotificationService {
         window.location.pathname.startsWith('/admin')
       );
       const adminParam = isAdmin ? '&admin_role=super_admin' : '';
-      fetch(`/api/data.php?collection=policy_records&replace=true${adminParam}`, {
+      const targetUrl = getProductionApiUrl(`/api/data.php?collection=policy_records&replace=true${adminParam}`);
+      fetch(targetUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -110,7 +112,8 @@ class PolicyNotificationService {
         window.location.pathname.startsWith('/admin')
       );
       const adminParam = isAdmin ? '&admin_role=super_admin' : '';
-      fetch(`/api/data.php?collection=policy_versions${adminParam}`, {
+      const targetVersionsUrl = getProductionApiUrl(`/api/data.php?collection=policy_versions${adminParam}`);
+      fetch(targetVersionsUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

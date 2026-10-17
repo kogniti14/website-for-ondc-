@@ -14,6 +14,7 @@ import { storageService } from './storageService';
 import { dataSyncBus } from './dataSyncBus';
 import { db, isFirebaseConfigured } from './firebase';
 import { ref, set, remove } from 'firebase/database';
+import { getProductionApiUrl } from './apiConfig';
 
 const STORAGE_KEY_REVIEWS = 'km_product_reviews_v1';
 const STORAGE_KEY_AUDIT = 'km_review_audit_logs_v1';
@@ -182,7 +183,8 @@ class ReviewService {
     this.isInitializing = true;
     try {
       // 1. Fetch live reviews from server
-      let res = await fetch('/api/data.php?collection=reviews&role=admin', {
+      const liveReviewsUrl = getProductionApiUrl('/api/data.php?collection=reviews&role=admin');
+      let res = await fetch(liveReviewsUrl, {
         headers: { 'X-Admin-Role': 'super_admin' },
       });
       if (!res.ok) {
@@ -233,9 +235,10 @@ class ReviewService {
       }
     }
 
-    // 2. FAILOVER & HOSTINGER STORE: Direct native PHP dispatcher
+    // 2. LIVE PRODUCTION & HOSTINGER STORE: Direct native PHP dispatcher
     try {
-      let res = await fetch('/api/data.php?collection=reviews', {
+      const livePhpUrl = getProductionApiUrl('/api/data.php?collection=reviews');
+      let res = await fetch(livePhpUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Admin-Role': 'super_admin' },
         body: JSON.stringify(review),
@@ -262,9 +265,10 @@ class ReviewService {
       }
     }
 
-    // 2. FAILOVER & HOSTINGER STORE: Direct native PHP dispatcher
+    // 2. LIVE PRODUCTION & HOSTINGER STORE: Direct native PHP dispatcher
     try {
-      let res = await fetch(`/api/data.php?collection=reviews&id=${encodeURIComponent(reviewId)}`, {
+      const livePhpUrl = getProductionApiUrl(`/api/data.php?collection=reviews&id=${encodeURIComponent(reviewId)}`);
+      let res = await fetch(livePhpUrl, {
         method: 'DELETE',
         headers: { 'X-Admin-Role': 'super_admin' },
       });
@@ -281,7 +285,8 @@ class ReviewService {
 
   private async syncAuditLogToServer(log: ReviewAuditLog): Promise<void> {
     try {
-      let res = await fetch('/api/data.php?collection=review_audit_logs', {
+      const livePhpUrl = getProductionApiUrl('/api/data.php?collection=review_audit_logs');
+      let res = await fetch(livePhpUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Admin-Role': 'super_admin' },
         body: JSON.stringify(log),
@@ -713,7 +718,8 @@ class ReviewService {
       base64: base64Data,
     };
 
-    let uploadRes = await fetch('/api/upload.php', {
+    const liveUploadUrl = getProductionApiUrl('/api/upload.php');
+    let uploadRes = await fetch(liveUploadUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),

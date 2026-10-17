@@ -19,6 +19,7 @@ import {
   CompanyMasterValidationResult,
 } from '../config/companyMaster';
 import { dataSyncBus } from './dataSyncBus';
+import { getProductionApiUrl } from './apiConfig';
 
 const STORAGE_KEY = 'km_company_master_v1';
 
@@ -126,7 +127,8 @@ class CompanyMasterService {
         headers['X-Admin-Role'] = 'super_admin';
         headers['Authorization'] = 'Bearer admin';
       }
-      fetch(`/api/data.php?collection=company_settings${adminParam}`, {
+      const targetUrl = getProductionApiUrl(`/api/data.php?collection=company_settings${adminParam}`);
+      fetch(targetUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify(candidate),

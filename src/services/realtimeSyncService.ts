@@ -4,12 +4,19 @@
  *
  * Listens to real-time events from Firebase Realtime Database:
  * - Products & Live Inventory
+ * - Categories & Taxonomy
+ * - Company Certifications & Statutory Badges
+ * - Stories & Sustainable Impact Gallery
  * - Customer Reviews & Moderation
  * - Global Website Settings
- * - Order Status Updates
+ * - Coupons & Promotions
+ * - Site Media & Banners
+ * - B2B RFQ Quotations
  *
- * Automatically propagates state changes to mounted React components via dataSyncBus.
- * Eliminates the need for manual browser refreshes.
+ * Guarantees:
+ * - Non-Destructive Ingestion: Never wipes client state if Firebase returns null or transiently empty.
+ * - Live Propagation: Propagates state changes to React components via dataSyncBus without browser refresh.
+ * - Global Audience Consistency: When Super Admin updates in live production, every visitor on any device updates immediately.
  */
 
 import { ref, onValue, off, Unsubscribe } from 'firebase/database';
@@ -38,17 +45,14 @@ class RealtimeSyncService {
         (snapshot) => {
           if (snapshot.exists()) {
             const raw = snapshot.val();
-            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
-            const normalized = storageService.normalizeProducts(list as any);
-            try {
-              localStorage.setItem('km_products_v2', JSON.stringify(normalized));
-            } catch {}
-            dataSyncBus.emit('products', normalized);
-          } else {
-            try {
-              localStorage.setItem('km_products_v2', JSON.stringify([]));
-            } catch {}
-            dataSyncBus.emit('products', []);
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
+            if (list.length > 0) {
+              const normalized = storageService.normalizeProducts(list as any);
+              try {
+                localStorage.setItem('km_products_v2', JSON.stringify(normalized));
+              } catch {}
+              dataSyncBus.emit('products', normalized);
+            }
           }
         },
         (error) => {
@@ -64,16 +68,11 @@ class RealtimeSyncService {
         (snapshot) => {
           if (snapshot.exists()) {
             const raw = snapshot.val();
-            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
             try {
               localStorage.setItem('km_product_reviews_v1', JSON.stringify(list));
             } catch {}
             dataSyncBus.emit('reviews', list);
-          } else {
-            try {
-              localStorage.setItem('km_product_reviews_v1', JSON.stringify([]));
-            } catch {}
-            dataSyncBus.emit('reviews', []);
           }
         },
         (error) => {
@@ -89,10 +88,12 @@ class RealtimeSyncService {
         (snapshot) => {
           if (snapshot.exists()) {
             const settings = snapshot.val();
-            try {
-              localStorage.setItem('km_settings_v1', JSON.stringify(settings));
-            } catch {}
-            dataSyncBus.emit('settings', settings);
+            if (settings && typeof settings === 'object') {
+              try {
+                localStorage.setItem('km_settings_v1', JSON.stringify(settings));
+              } catch {}
+              dataSyncBus.emit('settings', settings);
+            }
           }
         },
         (error) => {
@@ -108,16 +109,13 @@ class RealtimeSyncService {
         (snapshot) => {
           if (snapshot.exists()) {
             const raw = snapshot.val();
-            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
-            try {
-              localStorage.setItem('km_categories_v2', JSON.stringify(list));
-            } catch {}
-            dataSyncBus.emit('categories', list);
-          } else {
-            try {
-              localStorage.setItem('km_categories_v2', JSON.stringify([]));
-            } catch {}
-            dataSyncBus.emit('categories', []);
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
+            if (list.length > 0) {
+              try {
+                localStorage.setItem('km_categories_v2', JSON.stringify(list));
+              } catch {}
+              dataSyncBus.emit('categories', list);
+            }
           }
         },
         (error) => {
@@ -133,16 +131,13 @@ class RealtimeSyncService {
         (snapshot) => {
           if (snapshot.exists()) {
             const raw = snapshot.val();
-            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
-            try {
-              localStorage.setItem('km_testimonials_v1', JSON.stringify(list));
-            } catch {}
-            dataSyncBus.emit('testimonials', list);
-          } else {
-            try {
-              localStorage.setItem('km_testimonials_v1', JSON.stringify([]));
-            } catch {}
-            dataSyncBus.emit('testimonials', []);
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
+            if (list.length > 0) {
+              try {
+                localStorage.setItem('km_testimonials_v1', JSON.stringify(list));
+              } catch {}
+              dataSyncBus.emit('testimonials', list);
+            }
           }
         },
         (error) => {
@@ -158,16 +153,13 @@ class RealtimeSyncService {
         (snapshot) => {
           if (snapshot.exists()) {
             const raw = snapshot.val();
-            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
-            try {
-              localStorage.setItem('kogniti_company_certifications', JSON.stringify(list));
-            } catch {}
-            dataSyncBus.emit('certifications', list);
-          } else {
-            try {
-              localStorage.setItem('kogniti_company_certifications', JSON.stringify([]));
-            } catch {}
-            dataSyncBus.emit('certifications', []);
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
+            if (list.length > 0) {
+              try {
+                localStorage.setItem('kogniti_company_certifications', JSON.stringify(list));
+              } catch {}
+              dataSyncBus.emit('certifications', list);
+            }
           }
         },
         (error) => {
@@ -176,6 +168,50 @@ class RealtimeSyncService {
       );
       this.unsubscribers.set('certifications', unsubsCerts);
 
+      // 6b. Live Certification Categories Listener
+      const certCatsRef = ref(db, 'certification_categories');
+      const unsubsCertCats = onValue(
+        certCatsRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const raw = snapshot.val();
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
+            if (list.length > 0) {
+              try {
+                localStorage.setItem('kogniti_certification_categories', JSON.stringify(list));
+              } catch {}
+              dataSyncBus.emit('certification_categories', list);
+            }
+          }
+        },
+        (error) => {
+          console.warn('[RealtimeSync] Certification categories listener notice:', error.message);
+        }
+      );
+      this.unsubscribers.set('certification_categories', unsubsCertCats);
+
+      // 6c. Live Stories & Gallery Listener
+      const storiesRef = ref(db, 'stories');
+      const unsubsStories = onValue(
+        storiesRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const raw = snapshot.val();
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
+            if (list.length > 0) {
+              try {
+                localStorage.setItem('km_stories_v1', JSON.stringify(list));
+              } catch {}
+              dataSyncBus.emit('stories', list);
+            }
+          }
+        },
+        (error) => {
+          console.warn('[RealtimeSync] Stories listener notice:', error.message);
+        }
+      );
+      this.unsubscribers.set('stories', unsubsStories);
+
       // 7. Live B2B Quotations Listener
       const rfqsRef = ref(db, 'b2b_quotations');
       const unsubsRfqs = onValue(
@@ -183,16 +219,11 @@ class RealtimeSyncService {
         (snapshot) => {
           if (snapshot.exists()) {
             const raw = snapshot.val();
-            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
             try {
               localStorage.setItem('km_b2b_quotations_v2', JSON.stringify(list));
             } catch {}
             dataSyncBus.emit('b2b_quotations', list);
-          } else {
-            try {
-              localStorage.setItem('km_b2b_quotations_v2', JSON.stringify([]));
-            } catch {}
-            dataSyncBus.emit('b2b_quotations', []);
           }
         },
         (error) => {
@@ -208,16 +239,11 @@ class RealtimeSyncService {
         (snapshot) => {
           if (snapshot.exists()) {
             const raw = snapshot.val();
-            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw);
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
             try {
               localStorage.setItem('km_coupons_v2', JSON.stringify(list));
             } catch {}
             dataSyncBus.emit('coupons', list);
-          } else {
-            try {
-              localStorage.setItem('km_coupons_v2', JSON.stringify([]));
-            } catch {}
-            dataSyncBus.emit('coupons', []);
           }
         },
         (error) => {
@@ -233,10 +259,12 @@ class RealtimeSyncService {
         (snapshot) => {
           if (snapshot.exists()) {
             const media = snapshot.val();
-            try {
-              localStorage.setItem('km_site_media_v2', JSON.stringify(media));
-            } catch {}
-            dataSyncBus.emit('site_media', media);
+            if (media && typeof media === 'object') {
+              try {
+                localStorage.setItem('km_site_media_v2', JSON.stringify(media));
+              } catch {}
+              dataSyncBus.emit('site_media', media);
+            }
           }
         },
         (error) => {
@@ -245,7 +273,7 @@ class RealtimeSyncService {
       );
       this.unsubscribers.set('site_media', unsubsMedia);
 
-      console.log('[RealtimeSync] Realtime Database listeners active across products, categories, reviews, testimonials, certifications, settings, coupons, site_media, and RFQs.');
+      console.log('[RealtimeSync] Realtime Database listeners active across products, categories, reviews, testimonials, certifications, stories, settings, coupons, site_media, and RFQs.');
     } catch (err) {
       console.warn('[RealtimeSync] Initialization fallback notice:', err);
     }

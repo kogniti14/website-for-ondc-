@@ -32,11 +32,15 @@ const ALLOWED_COLLECTIONS = new Set([
   'testimonials',
   'reviews',
   'review_audit_logs',
+  'cancellation_requests',
+  'ondc_orders',
+  'company_settings',
+  'company_master',
 ]);
 
 function validateCollection(req, res, next) {
-  const collection = req.params.collection;
-  if (!ALLOWED_COLLECTIONS.has(collection)) {
+  const collection = req.params.collection || req.query.collection;
+  if (!collection || !ALLOWED_COLLECTIONS.has(collection)) {
     return res.status(400).json({ error: `Collection '${collection}' is not supported.` });
   }
   // Enforce zero-caching for fresh data synchronization
@@ -72,6 +76,43 @@ function sanitizeProductItem(item, isAdmin) {
   delete copy.stockQuantity;
   return copy;
 }
+
+// Universal query dispatcher for ?collection=... parameters (matching PHP dispatcher)
+dataRouter.get('/', validateCollection, (req, res, next) => {
+  if (!req.query.collection) return next();
+  const collection = req.query.collection;
+  const id = req.query.id;
+  const isAdmin = isAuthorizedAdmin(req);
+  if (id) {
+    const item = persistentStore.getById(collection, id);
+    if (!item) return res.status(404).json({ error: 'Item not found' });
+    if (collection === 'products' && !isAdmin) return res.json(sanitizeProductItem(item, false));
+    return res.json(item);
+  }
+  let data = persistentStore.getAll(collection);
+  if (collection === 'products' && !isAdmin && Array.isArray(data)) {
+    return res.json(data.map(p => sanitizeProductItem(p, false)));
+  }
+  return res.json(data);
+});
+
+dataRouter.post('/', validateCollection, (req, res, next) => {
+  if (!req.query.collection) return next();
+  const collection = req.query.collection;
+  const body = req.body;
+  if (req.query.replace === 'true' && Array.isArray(body)) {
+    persistentStore.saveBatch(collection, body);
+    return res.json({ success: true, count: body.length });
+  }
+  const saved = persistentStore.save(collection, body);
+  return res.json({ success: true, item: saved });
+});
+
+dataRouter.delete('/', validateCollection, (req, res, next) => {
+  if (!req.query.collection || !req.query.id) return next();
+  persistentStore.delete(req.query.collection, req.query.id);
+  return res.json({ success: true, deleted: true, id: req.query.id });
+});
 
 // GET all items in collection
 dataRouter.get('/:collection', validateCollection, (req, res) => {

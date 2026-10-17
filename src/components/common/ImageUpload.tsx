@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Upload, X, RefreshCw, Image as ImageIcon, CheckCircle, AlertCircle } from 'lucide-react';
+import { getProductionApiUrl } from '../../services/apiConfig';
 
 interface ImageUploadProps {
   value?: string | string[];
@@ -100,7 +101,8 @@ const uploadImageToServer = async (file: File, base64Fallback: string, folder: s
     formData.append('file', file);
     formData.append('folder', folder);
 
-    let res = await fetch('/api/upload.php', {
+    const liveUploadUrl = getProductionApiUrl('/api/upload.php');
+    let res = await fetch(liveUploadUrl, {
       method: 'POST',
       body: formData,
     }).catch(() => null);

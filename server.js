@@ -146,6 +146,7 @@ app.get('/api/health', (req, res) => {
 
 // 2. Mount Data Persistence Router
 app.use('/api/data', dataRouter);
+app.use('/api/data.php', dataRouter);
 
 // 2b. Secure B2B statutory documents against unauthorized public access (Req 8)
 app.use('/uploads/b2b_documents', (req, res, next) => {

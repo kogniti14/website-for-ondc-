@@ -57,8 +57,8 @@ Options -Indexes -MultiViews
   # ONDC Gateway & Protocol Endpoints CORS Suite
   <FilesMatch "\.(php|json)$">
     Header always set Access-Control-Allow-Origin "*"
-    Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
-    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, Digest, Date, X-Requested-With, Accept"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, Digest, Date, X-Requested-With, Accept, X-Admin-Role, Origin, Cache-Control, Pragma"
   </FilesMatch>
 </IfModule>
 
