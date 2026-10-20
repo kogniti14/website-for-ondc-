@@ -29,7 +29,6 @@ interface FooterProps {
   openPolicyModal: (type: 'privacy' | 'terms' | 'shipping' | 'refund') => void;
   isB2B?: boolean;
   onNavigateToShop?: () => void;
-  onOpenOndcModal?: () => void;
 }
 
 export const Footer: React.FC<FooterProps> = ({
@@ -38,7 +37,6 @@ export const Footer: React.FC<FooterProps> = ({
   openPolicyModal,
   isB2B = false,
   onNavigateToShop,
-  onOpenOndcModal,
 }) => {
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
@@ -613,16 +611,6 @@ export const Footer: React.FC<FooterProps> = ({
                   onMouseLeave={(e) => (e.currentTarget.style.color = '#CBD5E1')}
                 >
                   Business Dashboard
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    if (onOpenOndcModal) onOpenOndcModal();
-                  }}
-                  style={{ color: '#20C4E8', fontWeight: 600, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
-                >
-                  🌐 ONDC Live Node Status
                 </button>
               </li>
             </ul>

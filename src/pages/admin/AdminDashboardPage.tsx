@@ -78,6 +78,7 @@ import {
   AdminPublishSummaryModal,
   PublishSummaryData,
 } from '../../components/admin/AdminPublishWorkflow';
+import { OndcNetworkModal } from '../../components/common/OndcNetworkModal';
 
 interface AdminDashboardPageProps {
   products: Product[];
@@ -136,6 +137,15 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  // Superadmin ONDC Live Node Diagnostic Modal State & Tab Guard
+  const [showOndcNodeModal, setShowOndcNodeModal] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'ondc' && !isSuperAdmin) {
+      setActiveTab('overview');
+    }
+  }, [activeTab, isSuperAdmin]);
 
   // Razorpay Gateway State
   const [razorpayConfig, setRazorpayConfig] = useState<RazorpayConfig>(() => razorpayService.getConfig());
@@ -2330,6 +2340,29 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
             {isSuperAdmin && (
               <button
+                onClick={() => setShowOndcNodeModal(true)}
+                className="btn btn-sm"
+                style={{
+                  background: 'rgba(32, 196, 232, 0.15)',
+                  color: '#20C4E8',
+                  border: '1px solid rgba(32, 196, 232, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  fontWeight: 700,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  borderRadius: '8px',
+                  padding: '0.35rem 0.75rem',
+                }}
+                title="View Live ONDC Node Diagnostic Status"
+              >
+                🌐 ONDC Live Node Status
+              </button>
+            )}
+
+            {isSuperAdmin && (
+              <button
                 onClick={() => {
                   setSuperAdminCurrentPassword('');
                   setSuperAdminNewPassword('');
@@ -2944,43 +2977,45 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 Statutory
               </span>
             </button>
-            <button
-              onClick={() => setActiveTab('ondc')}
-              data-tab="ondc"
-              data-active={activeTab === 'ondc'}
-              className="admin-nav-item"
-              style={{
-                padding: '0.5rem 0.2rem',
-                color: activeTab === 'ondc' ? '#2563EB' : 'var(--slate-600)',
-                borderBottom: activeTab === 'ondc' ? '2px solid #2563EB' : '2px solid transparent',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                fontSize: '0.9rem',
-                fontWeight: activeTab === 'ondc' ? 700 : 600,
-                background: 'transparent',
-                border: 'none',
-                borderBottomStyle: 'solid',
-                borderBottomWidth: '2px',
-                borderBottomColor: activeTab === 'ondc' ? '#2563EB' : 'transparent',
-                cursor: 'pointer',
-              }}
-            >
-              <Globe size={16} style={{ color: '#2563EB' }} /> ONDC Console
-              <span
+            {isSuperAdmin && (
+              <button
+                onClick={() => setActiveTab('ondc')}
+                data-tab="ondc"
+                data-active={activeTab === 'ondc'}
+                className="admin-nav-item"
                 style={{
-                  backgroundColor: '#DBEAFE',
-                  color: '#1E40AF',
-                  fontSize: '0.62rem',
-                  fontWeight: 800,
-                  padding: '0.1rem 0.4rem',
-                  borderRadius: '4px',
-                  textTransform: 'uppercase',
+                  padding: '0.5rem 0.2rem',
+                  color: activeTab === 'ondc' ? '#2563EB' : 'var(--slate-600)',
+                  borderBottom: activeTab === 'ondc' ? '2px solid #2563EB' : '2px solid transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  fontSize: '0.9rem',
+                  fontWeight: activeTab === 'ondc' ? 700 : 600,
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottomStyle: 'solid',
+                  borderBottomWidth: '2px',
+                  borderBottomColor: activeTab === 'ondc' ? '#2563EB' : 'transparent',
+                  cursor: 'pointer',
                 }}
               >
-                ONDC:RETeB2B
-              </span>
-            </button>
+                <Globe size={16} style={{ color: '#2563EB' }} /> ONDC Console
+                <span
+                  style={{
+                    backgroundColor: '#DBEAFE',
+                    color: '#1E40AF',
+                    fontSize: '0.62rem',
+                    fontWeight: 800,
+                    padding: '0.1rem 0.4rem',
+                    borderRadius: '4px',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  ONDC:RETeB2B
+                </span>
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('company_master')}
               data-tab="company_master"
@@ -7543,8 +7578,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
           </div>
         )}
 
-        {/* ONDC:RETeB2B Network Management Console */}
-        {activeTab === 'ondc' && (
+        {/* ONDC:RETeB2B Network Management Console (Strictly Restricted to Super Admin) */}
+        {activeTab === 'ondc' && isSuperAdmin && (
           <div>
             <AdminSectionSaveBar
               sectionKey="ondc"
@@ -11728,6 +11763,14 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         data={publishModalData}
         onClose={() => setPublishModalData(null)}
       />
+
+      {/* Superadmin ONDC Live Node Status Diagnostic Modal */}
+      {isSuperAdmin && (
+        <OndcNetworkModal
+          isOpen={showOndcNodeModal}
+          onClose={() => setShowOndcNodeModal(false)}
+        />
+      )}
     </div>
   );
 };

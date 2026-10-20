@@ -62,6 +62,7 @@ import {
 import { MOCK_PRODUCTS } from '../../data/mockProducts';
 import { storageService } from '../../services/storageService';
 import { dataSyncBus } from '../../services/dataSyncBus';
+import { OndcNetworkModal } from '../common/OndcNetworkModal';
 
 export type OndcSubTab =
   | 'overview'
@@ -847,6 +848,7 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
   const [activeSubTab, setActiveSubTab] = useState<OndcSubTab>(initialSubTab || 'overview');
   const [selectedApiAction, setSelectedApiAction] = useState<string | null>(null);
   const [activePayloadTab, setActivePayloadTab] = useState<'request' | 'sync' | 'callback' | 'state'>('request');
+  const [showNodeStatusModal, setShowNodeStatusModal] = useState(false);
 
   // ONDC Orders Interactive Management State
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
@@ -1789,6 +1791,27 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setShowNodeStatusModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              background: 'rgba(32, 196, 232, 0.15)',
+              color: '#20C4E8',
+              border: '1px solid rgba(32, 196, 232, 0.4)',
+              borderRadius: '8px',
+              padding: '0.65rem 1.1rem',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            title="Open Live ONDC Node Diagnostics & Health Status"
+          >
+            <Globe size={16} />
+            🌐 ONDC Live Node Status
+          </button>
           <button
             onClick={handleCopyOnSearchPayload}
             style={{
@@ -4408,6 +4431,13 @@ export const OndcManagement: React.FC<OndcManagementProps> = ({ initialSubTab })
             </div>
           </div>
         </div>
+      )}
+      {/* Superadmin ONDC Live Node Status Diagnostic Modal */}
+      {showNodeStatusModal && (
+        <OndcNetworkModal
+          isOpen={showNodeStatusModal}
+          onClose={() => setShowNodeStatusModal(false)}
+        />
       )}
     </div>
   );
