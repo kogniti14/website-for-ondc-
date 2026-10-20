@@ -1,0 +1,32 @@
+[
+  {
+    "id": "cat_paper",
+    "name": "Sustainable & Agri-Waste-Based Paper",
+    "slug": "paper",
+    "displayOrder": 1
+  },
+  {
+    "id": "cat_notebooks",
+    "name": "Eco Notebooks & Notepads",
+    "slug": "notebooks",
+    "displayOrder": 2
+  },
+  {
+    "id": "cat_stationery",
+    "name": "Stationery & Office Organizers",
+    "slug": "stationery",
+    "displayOrder": 3
+  },
+  {
+    "id": "cat_gifting",
+    "name": "Corporate Gifting & Hampers",
+    "slug": "gifting",
+    "displayOrder": 4
+  },
+  {
+    "id": "cat_institutional",
+    "name": "Institutional Bulk Pallets",
+    "slug": "institutional",
+    "displayOrder": 5
+  }
+]

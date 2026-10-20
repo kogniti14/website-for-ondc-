@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider, useCart } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
 import { storageService } from './services/storageService';
+import { testimonialService } from './services/testimonialService';
 import { dataSyncBus } from './services/dataSyncBus';
 import { realtimeSyncService } from './services/realtimeSyncService';
 import { Product, B2COrder, B2BOrder, Category, B2CUser } from './types';
@@ -132,6 +133,7 @@ const MainApp: React.FC = () => {
     storageService.hydrateFromServer(true).then(() => {
       refreshData();
     });
+    testimonialService.hydrateFromServer(true);
   }, []);
 
   useEffect(() => {

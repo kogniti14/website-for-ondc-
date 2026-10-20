@@ -18,7 +18,11 @@ import { Testimonial, TestimonialStatus } from '../../types';
 import { testimonialService } from '../../services/testimonialService';
 import { dataSyncBus } from '../../services/dataSyncBus';
 
-export const TestimonialManagement: React.FC = () => {
+export interface TestimonialManagementProps {
+  onChanged?: () => void;
+}
+
+export const TestimonialManagement: React.FC<TestimonialManagementProps> = ({ onChanged }) => {
   const [testimonials, setTestimonials] = useState<Testimonial[]>(() =>
     testimonialService.getAllTestimonials()
   );
@@ -39,8 +43,14 @@ export const TestimonialManagement: React.FC = () => {
   const [status, setStatus] = useState<TestimonialStatus>('published');
   const [isFeatured, setIsFeatured] = useState(true);
 
-  // Refresh on sync
+  // Hydrate from live server and refresh on sync bus
   useEffect(() => {
+    testimonialService.hydrateFromServer(true).then((data) => {
+      if (Array.isArray(data)) {
+        setTestimonials(data);
+      }
+    });
+
     const unsub = dataSyncBus.subscribe('testimonials', (updated: Testimonial[]) => {
       if (Array.isArray(updated)) {
         setTestimonials(updated);
@@ -100,6 +110,7 @@ export const TestimonialManagement: React.FC = () => {
 
       setTestimonials(testimonialService.getAllTestimonials());
       setModalOpen(false);
+      onChanged?.();
       setFeedbackMsg({
         type: 'success',
         text: editingItem ? 'Testimonial updated successfully.' : 'New testimonial added successfully.',
@@ -117,6 +128,7 @@ export const TestimonialManagement: React.FC = () => {
       await testimonialService.deleteTestimonial(id);
       setTestimonials(testimonialService.getAllTestimonials());
       setDeleteConfirmId(null);
+      onChanged?.();
       setFeedbackMsg({ type: 'success', text: 'Testimonial deleted successfully.' });
       setTimeout(() => setFeedbackMsg(null), 3000);
     } catch {
@@ -131,6 +143,7 @@ export const TestimonialManagement: React.FC = () => {
       status: nextStatus,
     });
     setTestimonials(testimonialService.getAllTestimonials());
+    onChanged?.();
   };
 
   const handleMove = async (index: number, direction: 'up' | 'down') => {
@@ -144,6 +157,7 @@ export const TestimonialManagement: React.FC = () => {
 
     await testimonialService.reorderTestimonials(list);
     setTestimonials(list);
+    onChanged?.();
   };
 
   const filtered = testimonials.filter((t) => {

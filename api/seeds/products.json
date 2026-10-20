@@ -1,0 +1,862 @@
+[
+  {
+    "id": "km-agri-a4-75",
+    "name": "Kogniti AgroPrint 75 GSM A4 Sustainable Copier Paper (500 Sheets)",
+    "tagline": "100% Tree-Free Copier Paper Crafted from Upcycled Agricultural Crop Residue",
+    "sku": "KM-PAP-AG75",
+    "hsn": "48025610",
+    "category": "Sustainable & Agri-Waste-Based Paper",
+    "b2cMrp": 399,
+    "b2cPrice": 289,
+    "b2bWholesalePrice": 198,
+    "b2bMoq": 10,
+    "b2bDiscountSlabs": [
+      {
+        "minQty": 10,
+        "maxQty": 49,
+        "discountPercent": 0,
+        "label": "Base Wholesale"
+      },
+      {
+        "minQty": 50,
+        "maxQty": 199,
+        "discountPercent": 8,
+        "label": "Office Tier (8% Off)"
+      },
+      {
+        "minQty": 200,
+        "maxQty": 499,
+        "discountPercent": 15,
+        "label": "Campus Tier (15% Off)"
+      },
+      {
+        "minQty": 500,
+        "discountPercent": 22,
+        "label": "Institutional Truckload (22% Off)"
+      }
+    ],
+    "gstRate": 18,
+    "stock": 445,
+    "rating": 4.9,
+    "reviewCount": 328,
+    "isFeatured": true,
+    "isBestSeller": true,
+    "isNewArrival": false,
+    "images": [
+      "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80",
+      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=1000&q=80"
+    ],
+    "shortDescription": "Eco-engineered multipurpose 75 GSM A4 copier paper manufactured using agricultural crop residue pulp.",
+    "description": "Breakthrough sustainable paper manufactured from agricultural residue such as wheat straw, sugarcane bagasse, and paddy stalks. Eliminates stubble burning and protects forest ecosystems.",
+    "specifications": {
+      "Paper Weight (GSM)": "75 GSM Standard Commercial Copier",
+      "Raw Material": "100% Agricultural Crop Waste (Tree-Free Residue Pulp)",
+      "Sheet Size": "A4 (210mm x 297mm)",
+      "Sheets Per Ream": "500 Precision Cut Sheets",
+      "Opacity": "92% (High Opacity for Double-Sided Duplex Printing)",
+      "Printer Compatibility": "Laserjet, Inkjet, Digital Photocopiers & High-Speed Multi-Function Printers",
+      "Environmental Certifications": "ISO 14001, ISO 9001 & Zero-Deforestation Verified",
+      "Brightness - Whiteness": "94% ISO Brightness (Elemental Chlorine Free)"
+    },
+    "features": [
+      "Engineered from upcycled Indian agricultural waste — zero trees cut down",
+      "Jam-free performance tested at 120+ pages per minute across enterprise laser printers",
+      "Enhanced surface smoothness prevents ink feathering and nozzle clogging",
+      "High opacity ensures zero show-through during double-sided duplex photocopying",
+      "Acid-free composition ensures archival document permanence for up to 100 years"
+    ],
+    "dimensions": "21.0cm x 29.7cm x 5.2cm",
+    "weight": "2.35 kg",
+    "warranty": "100% Quality & Performance Guarantee",
+    "leadTimeDays": 2,
+    "categoryId": "cat_paper",
+    "categoryName": "Sustainable & Agri-Waste-Based Paper",
+    "stockQuantity": 2400,
+    "stockStatus": "in_stock",
+    "stockStatusMode": "manual",
+    "updatedAt": "2026-09-29T20:22:00.974Z"
+  },
+  {
+    "id": "km-agri-a4-80",
+    "name": "Kogniti AgroPrint 80 GSM A4 Premium Copier Paper (500 Sheets)",
+    "tagline": "Ultra-Smooth 80 GSM High-Brightness Paper for Executive Printing & Contracts",
+    "sku": "KM-PAP-AG80",
+    "hsn": "48025610",
+    "category": "Sustainable & Agri-Waste-Based Paper",
+    "b2cMrp": 449,
+    "b2cPrice": 329,
+    "b2bWholesalePrice": 225,
+    "b2bMoq": 10,
+    "b2bDiscountSlabs": [
+      {
+        "minQty": 10,
+        "maxQty": 49,
+        "discountPercent": 0,
+        "label": "Base Wholesale"
+      },
+      {
+        "minQty": 50,
+        "maxQty": 199,
+        "discountPercent": 8,
+        "label": "Corporate Tier (8% Off)"
+      },
+      {
+        "minQty": 200,
+        "discountPercent": 18,
+        "label": "Bulk Enterprise (18% Off)"
+      }
+    ],
+    "gstRate": 18,
+    "stock": 1800,
+    "rating": 4.8,
+    "reviewCount": 215,
+    "isFeatured": true,
+    "isBestSeller": false,
+    "isNewArrival": true,
+    "images": [
+      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=1000&q=80"
+    ],
+    "shortDescription": "High-density 80 GSM A4 agricultural residue paper with 98% ISO brightness.",
+    "description": "Engineered for boardrooms, law firms, and high-impact presentations. Ultra-smooth surface prevents feathering.",
+    "specifications": {
+      "Paper Weight (GSM)": "80 GSM Heavyweight Executive Grade",
+      "Raw Material": "Agro-Residue Cellulose Pulp Blend",
+      "Sheet Size": "A4 (210mm x 297mm)",
+      "Sheets Per Ream": "500 Sheets",
+      "Brightness": "96% ISO Ultra-Bright White",
+      "Surface Finish": "Micro-Calendered Satin Smooth",
+      "Color Compatibility": "Full Color Laser & High-Definition Pigment Inkjet"
+    },
+    "features": [
+      "Vibrant color saturation and rapid ink absorption with zero bleeding",
+      "Heavyweight 80 GSM prevents page curling under heavy color toner coverage",
+      "Produced with non-toxic Elemental Chlorine Free (ECF) bleaching",
+      "Moisture-barrier shrink-wrapped ream packaging for long-term freshness"
+    ],
+    "dimensions": "21.0cm x 29.7cm x 5.6cm",
+    "weight": "2.50 kg",
+    "warranty": "Quality Guarantee",
+    "leadTimeDays": 2,
+    "categoryId": "cat_paper",
+    "categoryName": "Sustainable & Agri-Waste-Based Paper",
+    "stockQuantity": 1800,
+    "stockStatus": "in_stock",
+    "stockStatusMode": "manual"
+  },
+  {
+    "id": "km-copier-a4-carton",
+    "name": "Kogniti AgroPrint A4 Carton Pack (5 Reams / 2,500 Sheets)",
+    "tagline": "Standard Enterprise Office Supply Box — 5 Reams of 75 GSM Tree-Free Paper",
+    "sku": "KM-PAP-BOX5",
+    "hsn": "48025610",
+    "category": "Sustainable & Agri-Waste-Based Paper",
+    "b2cMrp": 1899,
+    "b2cPrice": 1399,
+    "b2bWholesalePrice": 940,
+    "b2bMoq": 4,
+    "b2bDiscountSlabs": [
+      {
+        "minQty": 4,
+        "maxQty": 19,
+        "discountPercent": 0,
+        "label": "Carton Wholesale"
+      },
+      {
+        "minQty": 20,
+        "maxQty": 99,
+        "discountPercent": 10,
+        "label": "Pallet Order (10% Off)"
+      },
+      {
+        "minQty": 100,
+        "discountPercent": 18,
+        "label": "Full Truckload (18% Off)"
+      }
+    ],
+    "gstRate": 18,
+    "stock": 450,
+    "rating": 4.9,
+    "reviewCount": 442,
+    "isFeatured": true,
+    "isBestSeller": true,
+    "isNewArrival": false,
+    "images": [
+      "https://images.unsplash.com/photo-1589330694653-dad6ef495b54?auto=format&fit=crop&w=1000&q=80"
+    ],
+    "shortDescription": "Standard office master carton holding 5 shrink-wrapped reams of 75 GSM sustainable paper.",
+    "description": "Master carton packaging engineered for quick handling and institutional storage in corporate mailrooms.",
+    "specifications": {
+      "Carton Contents": "5 Reams x 500 Sheets (2,500 Total Sheets)",
+      "Paper Weight": "75 GSM High Speed Copier Grade",
+      "Carton Packaging": "5-Ply Heavy-Duty Recyclable Kraft Outer Box with Carry Handles",
+      "Moisture Control": "Wax-coated water-resistant inner ream wrappers",
+      "Pallet Stacking": "Up to 8 Cartons High Stacking Strength"
+    },
+    "features": [
+      "Economical bulk procurement for corporate departments and exam centers",
+      "Consistent sheet caliper and cut precision guarantees zero multi-sheet feed jams",
+      "Reduces organizational carbon footprint by 70% compared to virgin wood paper",
+      "Includes batch inspection certificate and GST invoice with input tax credit"
+    ],
+    "dimensions": "31.5cm x 22.5cm x 27.5cm",
+    "weight": "11.8 kg",
+    "warranty": "Quality Assurance",
+    "leadTimeDays": 2,
+    "categoryId": "cat_paper",
+    "categoryName": "Sustainable & Agri-Waste-Based Paper",
+    "stockQuantity": 450,
+    "stockStatus": "in_stock",
+    "stockStatusMode": "manual"
+  },
+  {
+    "id": "km-notebook-spiral-a5",
+    "name": "Kogniti EcoSpiral A5 Professional Notebook (160 Pages)",
+    "tagline": "Durable Recycled Kraft Cover with Unbleached Agri-Residue Smooth Lined Pages",
+    "sku": "KM-NB-SP160",
+    "hsn": "48201090",
+    "category": "Eco Notebooks & Notepads",
+    "b2cMrp": 249,
+    "b2cPrice": 179,
+    "b2bWholesalePrice": 110,
+    "b2bMoq": 25,
+    "b2bDiscountSlabs": [
+      {
+        "minQty": 25,
+        "maxQty": 99,
+        "discountPercent": 0,
+        "label": "Office Wholesale"
+      },
+      {
+        "minQty": 100,
+        "maxQty": 499,
+        "discountPercent": 12,
+        "label": "Conference Bulk (12% Off)"
+      },
+      {
+        "minQty": 500,
+        "discountPercent": 20,
+        "label": "Annual Supply (20% Off)"
+      }
+    ],
+    "gstRate": 18,
+    "stock": 1200,
+    "rating": 4.8,
+    "reviewCount": 189,
+    "isFeatured": true,
+    "isBestSeller": true,
+    "isNewArrival": false,
+    "images": [
+      "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1000&q=80"
+    ],
+    "shortDescription": "Executive wire-bound A5 notebook with 100% post-consumer recycled covers.",
+    "description": "Twin-loop black metal wire-bound notebook. Ideal for daily notes, project logs, and training workshops.",
+    "specifications": {
+      "Size": "A5 (148mm x 210mm)",
+      "Page Count": "160 Pages (80 Sheets)",
+      "Paper Weight": "80 GSM Natural Shade Agri-Waste Paper",
+      "Ruling": "Single Line 8mm Ruled with Margin and Date Header",
+      "Cover Material": "450 GSM Heavy Uncoated Kraft Board with Matte Varnish",
+      "Binding": "Rust-Resistant Black Twin-Wire Metal Spiral Binding"
+    },
+    "features": [
+      "Smooth fountain pen friendly paper with zero ghosting or feathering",
+      "Micro-perforated sheets for clean, tear-free page removal",
+      "360-degree lay-flat flexibility for comfortable writing on the go",
+      "Custom corporate cover logo embossing available on bulk B2B orders"
+    ],
+    "dimensions": "14.8cm x 21.0cm x 1.4cm",
+    "weight": "0.24 kg",
+    "warranty": "Replacement Warranty against binding defects",
+    "leadTimeDays": 2,
+    "categoryId": "cat_notebooks",
+    "categoryName": "Eco Notebooks & Notepads",
+    "stockQuantity": 1200,
+    "stockStatus": "in_stock",
+    "stockStatusMode": "manual"
+  },
+  {
+    "id": "km-notebook-subject-b5",
+    "name": "Kogniti Multi-Subject B5 Campus Notebook (300 Pages)",
+    "tagline": "5-Subject Tabbed Notebook Crafted with Off-White Tree-Free Writing Paper",
+    "sku": "KM-NB-SUB5",
+    "hsn": "48201090",
+    "category": "Eco Notebooks & Notepads",
+    "b2cMrp": 399,
+    "b2cPrice": 289,
+    "b2bWholesalePrice": 185,
+    "b2bMoq": 20,
+    "b2bDiscountSlabs": [
+      {
+        "minQty": 20,
+        "maxQty": 99,
+        "discountPercent": 0,
+        "label": "Institutional Base"
+      },
+      {
+        "minQty": 100,
+        "maxQty": 299,
+        "discountPercent": 10,
+        "label": "Campus Bookstore (10% Off)"
+      },
+      {
+        "minQty": 300,
+        "discountPercent": 18,
+        "label": "University Tier (18% Off)"
+      }
+    ],
+    "gstRate": 18,
+    "stock": 800,
+    "rating": 4.7,
+    "reviewCount": 167,
+    "isFeatured": false,
+    "isBestSeller": true,
+    "isNewArrival": false,
+    "images": [
+      "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=1000&q=80"
+    ],
+    "shortDescription": "B5 5-subject notebook with color-coded dividers made from recycled board.",
+    "description": "Designed for university students and multi-project corporate teams.",
+    "specifications": {
+      "Size": "B5 (176mm x 250mm)",
+      "Page Count": "300 Pages (150 Sheets)",
+      "Dividers": "4 Color-coded Index Tab Polypropylene Dividers with Insert Pockets",
+      "Paper": "75 GSM High-Brightness Eco-Friendly Crop Pulp Paper",
+      "Binding": "Spiral Double-Wire Ring with Snag-Proof Coil Lock"
+    },
+    "features": [
+      "Divided into 5 organized subject sections with internal assignment folders",
+      "Smudge-resistant ruling optimized for ballpoint, gel, and highlighters",
+      "Water-resistant flexible front and back poly covers",
+      "Engineered for long lectures, lab records, and university coursework"
+    ],
+    "dimensions": "17.6cm x 25.0cm x 2.2cm",
+    "weight": "0.45 kg",
+    "warranty": "Manufacturing defect replacement",
+    "leadTimeDays": 2,
+    "categoryId": "cat_notebooks",
+    "categoryName": "Eco Notebooks & Notepads",
+    "stockQuantity": 800,
+    "stockStatus": "in_stock",
+    "stockStatusMode": "manual"
+  },
+  {
+    "id": "km-journal-hardbound",
+    "name": "Kogniti Heritage Hardbound Executive Journal (192 Pages)",
+    "tagline": "Bound in Upcycled Cotton Rag Cover with Gold Foil Debossed Logo",
+    "sku": "KM-JRN-HB192",
+    "hsn": "48201090",
+    "category": "Eco Notebooks & Notepads",
+    "b2cMrp": 599,
+    "b2cPrice": 429,
+    "b2bWholesalePrice": 280,
+    "b2bMoq": 15,
+    "b2bDiscountSlabs": [
+      {
+        "minQty": 15,
+        "maxQty": 49,
+        "discountPercent": 0,
+        "label": "Executive Base"
+      },
+      {
+        "minQty": 50,
+        "maxQty": 199,
+        "discountPercent": 10,
+        "label": "Corporate Gifting (10% Off)"
+      },
+      {
+        "minQty": 200,
+        "discountPercent": 20,
+        "label": "Summit Edition (20% Off)"
+      }
+    ],
+    "gstRate": 18,
+    "stock": 650,
+    "rating": 4.9,
+    "reviewCount": 145,
+    "isFeatured": true,
+    "isBestSeller": false,
+    "isNewArrival": true,
+    "images": [
+      "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1000&q=80"
+    ],
+    "shortDescription": "Hardbound luxury journal with bookmark ribbon, elastic band, and back pocket.",
+    "description": "Crafted for leadership meetings, strategic journaling, and corporate milestones.",
+    "specifications": {
+      "Size": "A5 (148mm x 210mm)",
+      "Page Count": "192 Pages (96 Sheets)",
+      "Paper Weight": "100 GSM Ultra-Smooth Acid-Free Agri-Waste Paper",
+      "Binding": "Thread-Bound Smyth-Sewn Casebound (180° Lay-Flat)",
+      "Cover": "Eco-Friendly Textured Vegan Hardcover with Debossed Brand Accent",
+      "Accessories": "Satin Ribbon Marker, Elastic Band Closure & Rear Document Pocket"
+    },
+    "features": [
+      "180° true lay-flat binding allows effortless writing across both pages",
+      "Zero bleed-through with fountain pen ink, markers, and rollerballs",
+      "Rear gusseted expandable pocket stores receipts, notes, and cards",
+      "Ideal for executive corporate gifts and leadership retreats"
+    ],
+    "dimensions": "14.5cm x 21.5cm x 1.8cm",
+    "weight": "0.38 kg",
+    "warranty": "1 Year Warranty",
+    "leadTimeDays": 2,
+    "categoryId": "cat_notebooks",
+    "categoryName": "Eco Notebooks & Notepads",
+    "stockQuantity": 650,
+    "stockStatus": "in_stock",
+    "stockStatusMode": "manual"
+  },
+  {
+    "id": "km-journal-dotted",
+    "name": "Kogniti Artisan Dotted Grid Eco-Journal (A5, 160 Pages)",
+    "tagline": "5mm Subtle Dotted Grid Layout for Bullet Journaling, Habit Tracking & Sketching",
+    "sku": "KM-JRN-DOT160",
+    "hsn": "48201000",
+    "category": "Journals",
+    "b2cMrp": 549,
+    "b2cPrice": 389,
+    "b2bWholesalePrice": 265,
+    "b2bMoq": 15,
+    "b2bDiscountSlabs": [
+      {
+        "minQty": 15,
+        "maxQty": 49,
+        "discountPercent": 0,
+        "label": "Base Wholesale"
+      },
+      {
+        "minQty": 50,
+        "maxQty": 149,
+        "discountPercent": 10,
+        "label": "Studio Batch (10% Off)"
+      },
+      {
+        "minQty": 150,
+        "discountPercent": 16,
+        "label": "Retail Bulk (16% Off)"
+      }
+    ],
+    "gstRate": 18,
+    "stock": 950,
+    "rating": 4.8,
+    "reviewCount": 112,
+    "isFeatured": false,
+    "isBestSeller": false,
+    "isNewArrival": true,
+    "images": [
+      "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=1000&q=80",
+      "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1000&q=80"
+    ],
+    "shortDescription": "Minimalist dotted grid journal with 160 numbered pages of 90 GSM tree-free paper. Perfect for bullet journaling, agile sprint tracking, architectural sketches, and creative planning.",
+    "description": "Designed for organizers, designers, and creatives, the Artisan Dotted Grid Journal gives you complete layout freedom. The 5mm light gray dots guide your writing and diagrams without distracting from your content.",
+    "specifications": {
+      "Size": "A5 (148mm x 210mm)",
+      "Page Count": "160 Numbered Pages with 3 Index Pages",
+      "Grid Format": "5mm Light Grey Dot Matrix",
+      "Paper Weight": "90 GSM Natural Bleed-Resistant Agricultural Paper",
+      "Cover": "Flexible Soft-Touch Recycled Kraft Cover"
+    },
+    "features": [
+      "Numbered pages and custom index section for structured bullet journaling",
+      "Non-intrusive 5mm dot grid guides lettering and technical diagrams",
+      "Tear-resistant rounded edges protect corners inside backpacks and briefcases",
+      "100% biodegradable and recyclable materials throughout"
+    ],
+    "dimensions": "14.8cm x 21.0cm x 1.2cm",
+    "weight": "290 g",
+    "warranty": "Quality Guarantee",
+    "leadTimeDays": 2,
+    "stockQuantity": 950,
+    "stockStatus": "in_stock",
+    "stockStatusMode": "manual"
+  },
+  {
+    "id": "km-stat-desk-organizer",
+    "name": "Kogniti KraftDesk Modular Desktop Organizer Set",
+    "tagline": "Precision Cut Recycled High-Density Kraft Board Organizers (Set of 4)",
+    "sku": "KM-ORG-DK4",
+    "hsn": "48191010",
+    "category": "Stationery & Office Organizers",
+    "b2cMrp": 699,
+    "b2cPrice": 499,
+    "b2bWholesalePrice": 320,
+    "b2bMoq": 10,
+    "b2bDiscountSlabs": [
+      {
+        "minQty": 10,
+        "maxQty": 49,
+        "discountPercent": 0,
+        "label": "Office Wholesale"
+      },
+      {
+        "minQty": 50,
+        "maxQty": 149,
+        "discountPercent": 8,
+        "label": "Facility Setup (8% Off)"
+      },
+      {
+        "minQty": 150,
+        "discountPercent": 16,
+        "label": "Workspace Fitout (16% Off)"
+      }
+    ],
+    "gstRate": 18,
+    "stock": 350,
+    "rating": 4.8,
+    "reviewCount": 156,
+    "isFeatured": true,
+    "isBestSeller": true,
+    "isNewArrival": false,
+    "images": [
+      "https://images.unsplash.com/photo-1585776245991-cf89dd7fc73a?auto=format&fit=crop&w=1000&q=80"
+    ],
+    "shortDescription": "Plastic-free modular 4-piece desk organizer set for modern workspaces.",
+    "description": "Includes pen stand, document tray, sticky notes cube, and card holder.",
+    "specifications": {
+      "Material": "High-Density 1200 GSM Pressed Recycled Kraft Board",
+      "Compartments": "Sticky Note Dock, Business Card Holder, Pen Cup & Paperclip Tray",
+      "Included Stationery": "400 Sheets Self-Adhesive Agri-Waste Sticky Notes + 100 Page Memo Pad",
+      "Adhesive Type": "Water-Based Solvent-Free Removable Adhesive (Leaves No Residue)",
+      "Finish": "Natural Kraft Matte with Plant-Based Moisture Seal"
+    },
+    "features": [
+      "Replaces disposable plastic organizers with durable pressed agro-paper board",
+      "Includes high-tack, residue-free tree-free sticky notes that stick reliably to monitors & desks",
+      "Non-slip natural rubber base pads protect polished wood and glass desktops",
+      "Custom laser engraving of corporate logo available for B2B procurement"
+    ],
+    "dimensions": "28.0cm x 18.0cm x 12.0cm",
+    "weight": "0.62 kg",
+    "warranty": "1 Year Warranty",
+    "leadTimeDays": 3,
+    "categoryId": "cat_stationery",
+    "categoryName": "Stationery & Office Organizers",
+    "stockQuantity": 350,
+    "stockStatus": "in_stock",
+    "stockStatusMode": "manual"
+  },
+  {
+    "id": "km-pen-bamboo-roller",
+    "name": "Kogniti PureStem Bamboo Rollerball Pen (Pack of 10)",
+    "tagline": "100% Biodegradable Bamboo Barrel with High-Precision German Metal Refill",
+    "sku": "KM-PEN-BAM10",
+    "hsn": "96081019",
+    "category": "Stationery & Office Organizers",
+    "b2cMrp": 499,
+    "b2cPrice": 349,
+    "b2bWholesalePrice": 210,
+    "b2bMoq": 15,
+    "b2bDiscountSlabs": [
+      {
+        "minQty": 15,
+        "maxQty": 49,
+        "discountPercent": 0,
+        "label": "Pack Wholesale"
+      },
+      {
+        "minQty": 50,
+        "maxQty": 199,
+        "discountPercent": 12,
+        "label": "Event Swag (12% Off)"
+      },
+      {
+        "minQty": 200,
+        "discountPercent": 22,
+        "label": "Corporate Bulk (22% Off)"
+      }
+    ],
+    "gstRate": 18,
+    "stock": 900,
+    "rating": 4.9,
+    "reviewCount": 310,
+    "isFeatured": false,
+    "isBestSeller": true,
+    "isNewArrival": false,
+    "images": [
+      "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=1000&q=80"
+    ],
+    "shortDescription": "Sustainable bamboo rollerball pens with laser-engravable natural barrels.",
+    "description": "Smooth 0.7mm blue gel refill, balanced weight, and zero single-use plastic barrel.",
+    "specifications": {
+      "Set Contents": "5 Plantable Seed Ballpoint Pens + 5 Plantable Seed HB Graphite Pencils",
+      "Seed Varieties": "Organic Holy Basil (Tulsi), Marigold, Tomato, Coriander & Spinach",
+      "Barrel Material": "100% Rolled Recycled Paper & Biodegradable Seed Capsule",
+      "Ink Refill": "0.7mm German Blue Non-Toxic Quick-Dry Ink (Writes for 1,200 meters)",
+      "Lead Quality": "2B Dark Smooth Graphite Lead with Zero Wood"
+    },
+    "features": [
+      "Plantable water-soluble seed capsule sprouts vibrant plants in 7-10 days",
+      "Zero wood used — saves trees while keeping plastic out of municipal waste",
+      "Comfortable non-slip rolled-paper grip absorbs finger sweat during long exams and meetings",
+      "Packaged in an unbleached recycled cardboard gift sleeve"
+    ],
+    "dimensions": "14.0cm x 1.1cm x 1.1cm",
+    "weight": "0.18 kg",
+    "warranty": "Seed Germination Guarantee",
+    "leadTimeDays": 2,
+    "categoryId": "cat_stationery",
+    "categoryName": "Stationery & Office Organizers",
+    "stockQuantity": 900,
+    "stockStatus": "in_stock",
+    "stockStatusMode": "manual"
+  },
+  {
+    "id": "km-folder-kraft-expandable",
+    "name": "Kogniti FileMaster Expandable Kraft Document Folder (Pack of 10)",
+    "tagline": "Heavy-Duty 350 GSM Recycled Manila Board with Cloth Gusset",
+    "sku": "KM-FLD-EX10",
+    "hsn": "48203000",
+    "category": "Stationery & Office Organizers",
+    "b2cMrp": 449,
+    "b2cPrice": 319,
+    "b2bWholesalePrice": 195,
+    "b2bMoq": 15,
+    "b2bDiscountSlabs": [
+      {
+        "minQty": 15,
+        "maxQty": 49,
+        "discountPercent": 0,
+        "label": "Carton Tier"
+      },
+      {
+        "minQty": 50,
+        "maxQty": 199,
+        "discountPercent": 10,
+        "label": "Enterprise Legal (10% Off)"
+      },
+      {
+        "minQty": 200,
+        "discountPercent": 18,
+        "label": "Archive Bulk (18% Off)"
+      }
+    ],
+    "gstRate": 18,
+    "stock": 750,
+    "rating": 4.7,
+    "reviewCount": 98,
+    "isFeatured": false,
+    "isBestSeller": false,
+    "isNewArrival": false,
+    "images": [
+      "https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=1000&q=80"
+    ],
+    "shortDescription": "Expandable 2-inch gusset document wallet holding up to 300 A4 sheets.",
+    "description": "Reinforced edges and natural cotton ribbon tie closure for compliance and records.",
+    "specifications": {
+      "Pack Quantity": "6 Expandable Document Folders",
+      "Size": "Foolscap / Legal (350mm x 250mm) - Fits A4 & FS Documents",
+      "Capacity": "Expands up to 35mm (250 Sheets per folder)",
+      "Material": "400 GSM Heavy Uncoated Recycled Kraft Board",
+      "Closure": "Dual Corner Elastic Band with Metal Eyelets"
+    },
+    "features": [
+      "Spacious 35mm expansion holds certificates, invoices, blueprints & legal briefs",
+      "Cloth-tape reinforced spine prevents tearing under maximum paper load",
+      "Index label area on front cover and spine for systematic filing classification",
+      "100% recyclable, zero synthetic plastic lamination"
+    ],
+    "dimensions": "34.5cm x 24.5cm x 5.0cm",
+    "weight": "0.85 kg",
+    "warranty": "Replacement Guarantee against tears upon delivery",
+    "leadTimeDays": 2,
+    "categoryId": "cat_stationery",
+    "categoryName": "Stationery & Office Organizers",
+    "stockQuantity": 750,
+    "stockStatus": "in_stock",
+    "stockStatusMode": "manual"
+  },
+  {
+    "id": "km-art-sketchbook-a4",
+    "name": "Kogniti Artisan Heavyweight A4 Art Sketchbook (120 Pages, 140 GSM)",
+    "tagline": "Rough Grain Tree-Free Agro-Residue Paper for Charcoal, Ink, Watercolor & Gouache",
+    "sku": "KM-ART-SK140",
+    "hsn": "48201090",
+    "category": "Eco Notebooks & Notepads",
+    "b2cMrp": 499,
+    "b2cPrice": 369,
+    "b2bWholesalePrice": 240,
+    "b2bMoq": 15,
+    "b2bDiscountSlabs": [
+      {
+        "minQty": 15,
+        "maxQty": 49,
+        "discountPercent": 0,
+        "label": "Studio Wholesale"
+      },
+      {
+        "minQty": 50,
+        "maxQty": 199,
+        "discountPercent": 10,
+        "label": "Design School (10% Off)"
+      },
+      {
+        "minQty": 200,
+        "discountPercent": 20,
+        "label": "Institutional (20% Off)"
+      }
+    ],
+    "gstRate": 18,
+    "stock": 500,
+    "rating": 4.9,
+    "reviewCount": 138,
+    "isFeatured": false,
+    "isBestSeller": false,
+    "isNewArrival": true,
+    "images": [
+      "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1000&q=80"
+    ],
+    "shortDescription": "Acid-free 140 GSM artist sketchbook with cold-pressed natural texture.",
+    "description": "Micro-perforated sheets allow clean tearing without damaging binding.",
+    "specifications": {
+      "Size": "A4 (210mm x 297mm)",
+      "Paper Weight": "140 GSM Heavyweight Mixed Media Paper",
+      "Sheet Count": "80 Sheets (160 Pages)",
+      "Texture": "Natural Cold-Pressed Medium Grain",
+      "pH Value": "Acid-Free Archival (pH 7.5 - 8.5, Will Not Yellow)",
+      "Binding": "Double Wire-O Hardcover Binding with 1.8mm Stiff Backing Board"
+    },
+    "features": [
+      "Natural textured tooth holds graphite, charcoal, colored pencils & pastels",
+      "Micro-perforated edges allow clean removal of finished artwork for framing",
+      "Rigid 1.8mm backing board functions as an easel for outdoor plein-air sketching",
+      "Chlorine-free, acid-free archival longevity preserves illustrations for decades"
+    ],
+    "dimensions": "21.0cm x 29.7cm x 1.8cm",
+    "weight": "0.62 kg",
+    "warranty": "Quality Guarantee",
+    "leadTimeDays": 2,
+    "categoryId": "cat_notebooks",
+    "categoryName": "Eco Notebooks & Notepads",
+    "stockQuantity": 500,
+    "stockStatus": "in_stock",
+    "stockStatusMode": "manual"
+  },
+  {
+    "id": "km-eco-hamper-exec",
+    "name": "Kogniti Executive GreenWelcome Eco Hamper Box",
+    "tagline": "Curated 7-Piece Sustainable Onboarding Kit in Luxury Rigid Kraft Gift Box",
+    "sku": "KM-HMP-EXEC",
+    "hsn": "48209090",
+    "category": "Corporate Gifting & Hampers",
+    "b2cMrp": 1899,
+    "b2cPrice": 1399,
+    "b2bWholesalePrice": 920,
+    "b2bMoq": 5,
+    "b2bDiscountSlabs": [
+      {
+        "minQty": 5,
+        "maxQty": 24,
+        "discountPercent": 0,
+        "label": "Corporate Base"
+      },
+      {
+        "minQty": 25,
+        "maxQty": 99,
+        "discountPercent": 8,
+        "label": "Quarterly Induction (8% Off)"
+      },
+      {
+        "minQty": 100,
+        "discountPercent": 18,
+        "label": "Enterprise Annual (18% Off)"
+      }
+    ],
+    "gstRate": 18,
+    "stock": 220,
+    "rating": 4.9,
+    "reviewCount": 220,
+    "isFeatured": true,
+    "isBestSeller": true,
+    "isNewArrival": false,
+    "images": [
+      "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=1000&q=80"
+    ],
+    "shortDescription": "Comprehensive corporate welcome kit in debossed magnetic-latch kraft box.",
+    "description": "Includes journal, bamboo pen, desk calendar, plantable seed coaster, notebook, sticker pack.",
+    "specifications": {
+      "Hamper Components": "5 Premium Items: A5 Hardbound Journal + 4 Seed Pens + Bamboo Ruler + Desk Sticky Pad + Welcome Card",
+      "Packaging": "Luxury Matte Black or Kraft Gift Box with Jute Ribbon & Seed Paper Tag",
+      "Custom Branding": "Free Laser Logo Engraving on orders > 50 units",
+      "Environmental Impact": "100% Plastic-Free, Biodegradable & Compostable Materials"
+    },
+    "features": [
+      "Complete eco-friendly executive kit ready for employee welcome & partner gifting",
+      "Every item communicates real environmental innovation and carbon reduction",
+      "Includes seed paper greeting card that can be planted in soil to sprout flowers",
+      "Customized company branding and custom message card inserts available"
+    ],
+    "dimensions": "32.0cm x 26.0cm x 9.0cm",
+    "weight": "1.45 kg",
+    "warranty": "1 Year Warranty",
+    "leadTimeDays": 4,
+    "categoryId": "cat_gifting",
+    "categoryName": "Corporate Gifting & Hampers",
+    "stockQuantity": 220,
+    "stockStatus": "in_stock",
+    "stockStatusMode": "manual"
+  },
+  {
+    "id": "km-inst-pallet-a4",
+    "name": "Kogniti Institutional Bulk Pallet: 75 GSM Agro Copier Paper (40 Cartons / 200 Reams)",
+    "tagline": "Direct-from-Mill Industrial Pallet for Universities, Examination Boards & Enterprises",
+    "sku": "KM-INST-PLT40",
+    "hsn": "48025610",
+    "category": "Institutional Bulk Pallets",
+    "b2cMrp": 79800,
+    "b2cPrice": 55600,
+    "b2bWholesalePrice": 38000,
+    "b2bMoq": 1,
+    "b2bDiscountSlabs": [
+      {
+        "minQty": 1,
+        "maxQty": 2,
+        "discountPercent": 0,
+        "label": "Single Pallet"
+      },
+      {
+        "minQty": 3,
+        "maxQty": 9,
+        "discountPercent": 5,
+        "label": "Multi-Campus (5% Off)"
+      },
+      {
+        "minQty": 10,
+        "discountPercent": 12,
+        "label": "Container Load (12% Off)"
+      }
+    ],
+    "gstRate": 18,
+    "stock": 25,
+    "rating": 5,
+    "reviewCount": 74,
+    "isFeatured": true,
+    "isBestSeller": true,
+    "isNewArrival": false,
+    "images": [
+      "https://images.unsplash.com/photo-1589330694653-dad6ef495b54?auto=format&fit=crop&w=1000&q=80"
+    ],
+    "shortDescription": "Industrial wooden pallet wrapped in weather-proof stretch film with 100,000 sheets.",
+    "description": "Delivered directly via hydraulic liftgate trucks. Dedicated transport insurance and batch quality certificate included.",
+    "specifications": {
+      "Total Quantity": "40 Cartons = 200 Reams = 100,000 Sheets",
+      "Paper Grade": "75 GSM Premium High-Speed Agro-Waste Copier Paper",
+      "Pallet Standard": "Standard 1200mm x 1000mm Heat-Treated Wooden Pallet",
+      "Protection": "Heavy-Duty 25-Micron Stretch Film Wrap + Cardboard Corner Angles",
+      "Logistics Handling": "Forklift Ready with Scheduled Surface Transit & Delivery Challan"
+    },
+    "features": [
+      "Lowest per-ream cost in India for certified sustainable tree-free paper",
+      "Official statutory GST tax invoice with full 18% input tax credit claimable",
+      "Dedicated institutional relationship manager assigned for dispatch tracking",
+      "Strict quality batch certification for university examination printing compliance"
+    ],
+    "dimensions": "120.0cm x 100.0cm x 135.0cm",
+    "weight": "475.0 kg",
+    "warranty": "Factory Quality Assurance & Batch Replacement Guarantee",
+    "leadTimeDays": 4,
+    "categoryId": "cat_institutional",
+    "categoryName": "Institutional Bulk Pallets",
+    "stockQuantity": 25,
+    "stockStatus": "limited_stock",
+    "stockStatusMode": "manual"
+  }
+]

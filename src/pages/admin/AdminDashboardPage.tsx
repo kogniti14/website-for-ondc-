@@ -7604,7 +7604,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
               onSaveSection={handleSaveTestimonialsSection}
               feedbackMessage={sectionSaveFeedback['testimonials']}
             />
-            <TestimonialManagement />
+            <TestimonialManagement onChanged={() => stageSection('testimonials')} />
           </div>
         )}
 

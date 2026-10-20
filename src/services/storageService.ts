@@ -45,6 +45,7 @@ import {
   CancellationRequest,
 } from '../types';
 import { companyMasterService } from './companyMasterService';
+import { testimonialService } from './testimonialService';
 import { MOCK_PRODUCTS, MOCK_COUPONS, CATEGORIES } from '../data/mockProducts';
 import { emailOtpService } from './emailOtpService';
 import { dataSyncBus } from './dataSyncBus';
@@ -3029,6 +3030,12 @@ class StorageService {
       await this.syncServerCollection('cancellation_requests', cancellations);
       dataSyncBus.emit('cancellation_requests', cancellations);
       details.push({ label: 'Cancellation Requests', count: `${cancellations.length} requests` });
+
+      // 15. Publish Client Testimonials & Feedback
+      const testimonials = testimonialService.getAllTestimonials();
+      await this.syncServerCollection('testimonials', testimonials);
+      dataSyncBus.emit('testimonials', testimonials);
+      details.push({ label: 'Client Testimonials & Feedback', count: `${testimonials.length} reviews` });
 
       dataSyncBus.emit('orders_updated');
 

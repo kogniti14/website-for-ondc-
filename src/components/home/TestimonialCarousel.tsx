@@ -56,6 +56,9 @@ export const TestimonialCarousel: React.FC = () => {
 
   // Sync with database/Admin Panel via dataSyncBus
   useEffect(() => {
+    testimonialService.hydrateFromServer().then(() => {
+      setTestimonials(testimonialService.getTestimonials({ onlyPublished: true }));
+    });
     const unsub = dataSyncBus.subscribe('testimonials', () => {
       setTestimonials(testimonialService.getTestimonials({ onlyPublished: true }));
     });

@@ -132,12 +132,15 @@ class RealtimeSyncService {
           if (snapshot.exists()) {
             const raw = snapshot.val();
             const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
-            if (list.length > 0) {
-              try {
-                localStorage.setItem('km_testimonials_v1', JSON.stringify(list));
-              } catch {}
-              dataSyncBus.emit('testimonials', list);
-            }
+            try {
+              localStorage.setItem('km_testimonials_v1', JSON.stringify(list));
+            } catch {}
+            dataSyncBus.emit('testimonials', list);
+          } else {
+            try {
+              localStorage.setItem('km_testimonials_v1', JSON.stringify([]));
+            } catch {}
+            dataSyncBus.emit('testimonials', []);
           }
         },
         (error) => {

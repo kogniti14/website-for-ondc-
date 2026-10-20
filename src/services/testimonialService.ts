@@ -90,6 +90,11 @@ class TestimonialService {
 
   constructor() {
     if (typeof window !== 'undefined') {
+      dataSyncBus.subscribe('testimonials', (updated: Testimonial[]) => {
+        if (Array.isArray(updated)) {
+          this.memoryTestimonials = updated;
+        }
+      });
       setTimeout(() => this.hydrateFromServer(), 50);
     }
   }
@@ -155,8 +160,8 @@ class TestimonialService {
       if (isLocalhost()) {
         const localUrl =
           method === 'DELETE' && id
-            ? `/api/data/testimonials/${encodeURIComponent(id)}${adminParam}`
-            : `/api/data/testimonials${isBatch ? '?replace=true' : ''}${adminParam}`;
+            ? `/api/data/testimonials/${encodeURIComponent(id)}${adminParam ? '?' + adminParam.slice(1) : ''}`
+            : `/api/data/testimonials${isBatch ? '?replace=true' : ''}${adminParam ? (isBatch ? '&' : '?') + adminParam.slice(1) : ''}`;
         fetch(localUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
       }
 
@@ -169,23 +174,43 @@ class TestimonialService {
     return null;
   }
 
-  public async hydrateFromServer(): Promise<Testimonial[]> {
+  public async hydrateFromServer(force: boolean = false): Promise<Testimonial[]> {
     if (typeof window === 'undefined') return INITIAL_TESTIMONIALS;
+    if (this.isHydrated && !force && this.memoryTestimonials) {
+      return this.memoryTestimonials;
+    }
+
+    const isAdmin = typeof window !== 'undefined' && (
+      localStorage.getItem('km_active_role') === 'admin' ||
+      Boolean(localStorage.getItem('km_active_admin_id')) ||
+      Boolean(localStorage.getItem('km_admin_session')) ||
+      window.location.pathname.startsWith('/admin')
+    );
+    const adminParam = isAdmin ? '&admin_role=super_admin' : '';
+    const headers: Record<string, string> = {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    };
+    if (isAdmin) {
+      headers['X-Admin-Role'] = 'super_admin';
+      headers['Authorization'] = 'Bearer admin';
+    }
+
     try {
       let serverData: Testimonial[] | null = null;
-      const liveTestimonialsUrl = getProductionApiUrl('/api/data.php?collection=testimonials');
-      const res = await fetch(liveTestimonialsUrl, { cache: 'no-store' }).catch(() => null);
+      const liveTestimonialsUrl = getProductionApiUrl(`/api/data.php?collection=testimonials&t=${Date.now()}${adminParam}`);
+      const res = await fetch(liveTestimonialsUrl, { headers, cache: 'no-store' }).catch(() => null);
       if (res && res.ok) {
         serverData = await res.json().catch(() => null);
       }
-      if (!serverData || !Array.isArray(serverData) || serverData.length === 0) {
-        const fallbackRes = await fetch('/api/data/testimonials', { cache: 'no-store' }).catch(() => null);
+      if (!serverData || !Array.isArray(serverData)) {
+        const fallbackRes = await fetch(`/api/data/testimonials?t=${Date.now()}${adminParam}`, { headers, cache: 'no-store' }).catch(() => null);
         if (fallbackRes && fallbackRes.ok) {
           serverData = await fallbackRes.json().catch(() => null);
         }
       }
 
-      if (serverData && Array.isArray(serverData) && serverData.length > 0) {
+      if (serverData && Array.isArray(serverData)) {
         this.memoryTestimonials = serverData;
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(serverData));
         this.isHydrated = true;
@@ -208,9 +233,9 @@ class TestimonialService {
     if (typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (stored) {
+        if (stored !== null) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             this.memoryTestimonials = parsed;
             return [...parsed].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
           }

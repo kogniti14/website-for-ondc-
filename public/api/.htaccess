@@ -3,8 +3,8 @@ Options -Indexes -MultiViews
 
 <IfModule mod_headers.c>
   Header always set Access-Control-Allow-Origin "*"
-  Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
-  Header always set Access-Control-Allow-Headers "Content-Type, Authorization, Digest, Date, X-Requested-With, Accept"
+  Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+  Header always set Access-Control-Allow-Headers "Content-Type, Authorization, Digest, Date, X-Requested-With, Accept, X-Admin-Role, Origin, Cache-Control, Pragma"
 </IfModule>
 
 <IfModule mod_rewrite.c>
