@@ -208,14 +208,14 @@ class StorageService {
       // 2. LIVE PRODUCTION & HOSTINGER STORE: Direct native PHP dispatcher (guaranteed active on Hostinger LiteSpeed)
       const relativePhp = method === 'DELETE' && id
         ? `/api/data.php?collection=${collection}&id=${encodeURIComponent(id)}${adminParam}`
-        : `/api/data.php?collection=${collection}${adminParam ? '?' + adminParam.slice(1) : ''}`;
+        : `/api/data.php?collection=${collection}${adminParam}`;
       const livePhpUrl = getProductionApiUrl(relativePhp);
       let res = await fetch(livePhpUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
 
       // If running on localhost, also keep local persistent store updated
       if (isLocalhost()) {
         const localUrl = method === 'DELETE' && id
-          ? `/api/data/${collection}/${encodeURIComponent(id)}${adminParam}`
+          ? `/api/data/${collection}/${encodeURIComponent(id)}${adminParam ? '?' + adminParam.slice(1) : ''}`
           : `/api/data/${collection}${adminParam ? '?' + adminParam.slice(1) : ''}`;
         fetch(localUrl, { method, headers, body, cache: 'no-store' }).catch(() => null);
       }
@@ -312,13 +312,16 @@ class StorageService {
    * - Correctly unwrap object collections (site_media, settings, policies)
    * - Send admin authorization headers to preserve inventory data for admins
    */
-  async hydrateFromServer(): Promise<void> {
-    if (typeof window === 'undefined' || this.isHydrated) return;
+  async hydrateFromServer(force: boolean = false): Promise<void> {
+    if (typeof window === 'undefined') return;
+    if (this.isHydrated && !force) return;
     this.isHydrated = true;
 
     const isAdmin = typeof window !== 'undefined' && (
       localStorage.getItem('km_active_role') === 'admin' ||
-      Boolean(localStorage.getItem('km_active_admin_id'))
+      Boolean(localStorage.getItem('km_active_admin_id')) ||
+      Boolean(localStorage.getItem('km_admin_session')) ||
+      window.location.pathname.startsWith('/admin')
     );
 
     const reqHeaders: Record<string, string> = {
@@ -345,55 +348,58 @@ class StorageService {
       { collection: 'coupons', key: KEYS.COUPONS, defaultVal: MOCK_COUPONS, isArray: true },
       { collection: 'admin_users', key: KEYS.ADMIN_USERS, defaultVal: SEED_ADMIN_USERS, isArray: true },
       { collection: 'testimonials', key: 'km_testimonials_v1', defaultVal: [], isArray: true },
+      { collection: 'cancellation_requests', key: KEYS.CANCELLATION_REQUESTS, defaultVal: [], isArray: true },
       { collection: 'settings', key: 'km_settings_v1', defaultVal: {}, isArray: false },
       { collection: 'site_media', key: KEYS.SITE_MEDIA, defaultVal: {}, isArray: false },
       { collection: 'company_settings', key: KEYS.COMPANY_SETTINGS, defaultVal: {}, isArray: false },
     ];
 
     const timestamp = Date.now();
-    for (const item of mappings) {
-      try {
-        const livePhpUrl = getProductionApiUrl(
-          `/api/data.php?collection=${item.collection}&t=${timestamp}${isAdmin ? '&admin_role=super_admin' : ''}`
-        );
-        let res = await fetch(livePhpUrl, {
-          cache: 'no-store',
-          headers: reqHeaders,
-        }).catch(() => null);
-
-        if (!res || !res.ok) {
-          const fallbackUrl = `/api/data/${item.collection}?t=${timestamp}${isAdmin ? '&admin_role=super_admin' : ''}`;
-          res = await fetch(fallbackUrl, {
+    await Promise.all(
+      mappings.map(async (item) => {
+        try {
+          const livePhpUrl = getProductionApiUrl(
+            `/api/data.php?collection=${item.collection}&t=${timestamp}${isAdmin ? '&admin_role=super_admin' : ''}`
+          );
+          let res = await fetch(livePhpUrl, {
             cache: 'no-store',
             headers: reqHeaders,
           }).catch(() => null);
-        }
 
-        if (res && res.ok) {
-          const serverData = await res.json();
-          if (item.isArray && Array.isArray(serverData)) {
-            // Live production server is the single source of truth
-            const finalData = item.collection === 'products' ? this.normalizeProducts(serverData) : serverData;
-            this.setItem(item.key, finalData);
-            dataSyncBus.emit(item.collection, finalData);
-          } else if (!item.isArray) {
-            // Object collection: handle both direct object and unwrapped single-item array
-            let serverObj = serverData;
-            if (Array.isArray(serverData)) {
-              serverObj = serverData[0] || {};
-            }
-            if (serverObj && typeof serverObj === 'object') {
-              const localObj = this.getItem<any>(item.key, item.defaultVal) || {};
-              const merged = { ...localObj, ...serverObj };
-              this.setItem(item.key, merged);
-              dataSyncBus.emit(item.collection, merged);
+          if (!res || !res.ok) {
+            const fallbackUrl = `/api/data/${item.collection}?t=${timestamp}${isAdmin ? '&admin_role=super_admin' : ''}`;
+            res = await fetch(fallbackUrl, {
+              cache: 'no-store',
+              headers: reqHeaders,
+            }).catch(() => null);
+          }
+
+          if (res && res.ok) {
+            const serverData = await res.json();
+            if (item.isArray && Array.isArray(serverData)) {
+              // Live production server is the single source of truth
+              const finalData = item.collection === 'products' ? this.normalizeProducts(serverData) : serverData;
+              this.setItem(item.key, finalData);
+              dataSyncBus.emit(item.collection, finalData);
+            } else if (!item.isArray) {
+              // Object collection: handle both direct object and unwrapped single-item array
+              let serverObj = serverData;
+              if (Array.isArray(serverData)) {
+                serverObj = serverData[0] || {};
+              }
+              if (serverObj && typeof serverObj === 'object') {
+                const localObj = this.getItem<any>(item.key, item.defaultVal) || {};
+                const merged = { ...localObj, ...serverObj };
+                this.setItem(item.key, merged);
+                dataSyncBus.emit(item.collection, merged);
+              }
             }
           }
+        } catch {
+          // Non-blocking background hydration
         }
-      } catch {
-        // Non-blocking background hydration
-      }
-    }
+      })
+    );
 
     // Notify listeners that order and counter metrics are freshly hydrated
     dataSyncBus.emit('orders_updated');
@@ -740,7 +746,8 @@ class StorageService {
       users.push(user);
     }
     this.setItem(KEYS.B2C_USERS, users);
-    this.syncServer('b2c_users', user);
+    this.syncServer('b2c_users', user).catch(() => {});
+    this.syncServerCollection('b2c_users', users).catch(() => {});
     dataSyncBus.emit('b2c_users', users);
   }
 
@@ -748,7 +755,8 @@ class StorageService {
     const list = this.getB2CUsers();
     const remaining = list.filter((u) => u.id !== id);
     this.setItem(KEYS.B2C_USERS, remaining);
-    this.syncServer('b2c_users', null, 'DELETE', id);
+    this.syncServer('b2c_users', null, 'DELETE', id).catch(() => {});
+    this.syncServerCollection('b2c_users', remaining).catch(() => {});
     dataSyncBus.emit('b2c_users', remaining);
     return list.length !== remaining.length;
   }
@@ -759,7 +767,14 @@ class StorageService {
     const initial = this.getB2CUsers();
     const remaining = initial.filter((u) => !idSet.has(u.id));
     this.setItem(KEYS.B2C_USERS, remaining);
-    ids.forEach((id) => this.syncServer('b2c_users', null, 'DELETE', id));
+    this.syncServerCollection('b2c_users', remaining).catch(() => {});
+    if (isFirebaseConfigured() && db) {
+      for (const id of ids) {
+        try {
+          remove(ref(db, `b2c_users/${id}`)).catch(() => {});
+        } catch {}
+      }
+    }
     dataSyncBus.emit('b2c_users', remaining);
     return initial.length - remaining.length;
   }
@@ -810,7 +825,8 @@ class StorageService {
       list.unshift(business);
     }
     this.setItem(KEYS.B2B_BUSINESSES, list);
-    this.syncServer('b2b_businesses', business);
+    this.syncServer('b2b_businesses', business).catch(() => {});
+    this.syncServerCollection('b2b_businesses', list).catch(() => {});
     dataSyncBus.emit('b2b_businesses', list);
   }
 
@@ -827,7 +843,8 @@ class StorageService {
         target.verificationStatus = 'rejected';
       }
       this.setItem(KEYS.B2B_BUSINESSES, list);
-      this.syncServer('b2b_businesses', target);
+      this.syncServer('b2b_businesses', target).catch(() => {});
+      this.syncServerCollection('b2b_businesses', list).catch(() => {});
       dataSyncBus.emit('b2b_businesses', list);
     }
   }
@@ -848,7 +865,8 @@ class StorageService {
       }
       if (reason) target.statusReason = reason;
       this.setItem(KEYS.B2B_BUSINESSES, list);
-      this.syncServer('b2b_businesses', target);
+      this.syncServer('b2b_businesses', target).catch(() => {});
+      this.syncServerCollection('b2b_businesses', list).catch(() => {});
       dataSyncBus.emit('b2b_businesses', list);
     }
   }
@@ -1110,6 +1128,7 @@ class StorageService {
     this.setItem(KEYS.B2B_BUSINESSES, list);
     dataSyncBus.emit('b2b_businesses', list);
     await this.syncServer('b2b_businesses', target);
+    await this.syncServerCollection('b2b_businesses', list);
     return true;
   }
 
@@ -1117,7 +1136,8 @@ class StorageService {
     const list = this.getB2BBusinesses();
     const remaining = list.filter((b) => b.id !== id);
     this.setItem(KEYS.B2B_BUSINESSES, remaining);
-    this.syncServer('b2b_businesses', null, 'DELETE', id);
+    this.syncServer('b2b_businesses', null, 'DELETE', id).catch(() => {});
+    this.syncServerCollection('b2b_businesses', remaining).catch(() => {});
     dataSyncBus.emit('b2b_businesses', remaining);
     return list.length !== remaining.length;
   }
@@ -1128,7 +1148,14 @@ class StorageService {
     const initial = this.getB2BBusinesses();
     const remaining = initial.filter((b) => !idSet.has(b.id));
     this.setItem(KEYS.B2B_BUSINESSES, remaining);
-    ids.forEach((id) => this.syncServer('b2b_businesses', null, 'DELETE', id));
+    this.syncServerCollection('b2b_businesses', remaining).catch(() => {});
+    if (isFirebaseConfigured() && db) {
+      for (const id of ids) {
+        try {
+          remove(ref(db, `b2b_businesses/${id}`)).catch(() => {});
+        } catch {}
+      }
+    }
     dataSyncBus.emit('b2b_businesses', remaining);
     return initial.length - remaining.length;
   }
@@ -1180,7 +1207,8 @@ class StorageService {
       }
     }
     this.setItem(KEYS.B2C_ORDERS, orders);
-    this.syncServer('b2c_orders', order);
+    this.syncServer('b2c_orders', order).catch(() => {});
+    this.syncServerCollection('b2c_orders', orders).catch(() => {});
     dataSyncBus.emit('b2c_orders', orders);
     dataSyncBus.emit('orders_updated');
   }
@@ -1207,6 +1235,7 @@ class StorageService {
       }
       this.setItem(KEYS.B2C_ORDERS, orders);
       await this.syncServer('b2c_orders', order);
+      await this.syncServerCollection('b2c_orders', orders);
       dataSyncBus.emit('b2c_orders', orders);
       dataSyncBus.emit('orders_updated');
     }
@@ -1230,6 +1259,7 @@ class StorageService {
     });
     this.setItem(KEYS.B2C_ORDERS, orders);
     await this.syncServer('b2c_orders', order);
+    await this.syncServerCollection('b2c_orders', orders);
     dataSyncBus.emit('b2c_orders', orders);
     dataSyncBus.emit('orders_updated');
     return order;
@@ -1259,6 +1289,7 @@ class StorageService {
     }
     this.setItem(KEYS.B2C_ORDERS, orders);
     await this.syncServer('b2c_orders', order);
+    await this.syncServerCollection('b2c_orders', orders);
     dataSyncBus.emit('b2c_orders', orders);
     dataSyncBus.emit('orders_updated');
     return order;
@@ -1268,7 +1299,8 @@ class StorageService {
     const orders = this.getB2COrders();
     const remaining = orders.filter((o) => o.id !== id);
     this.setItem(KEYS.B2C_ORDERS, remaining);
-    this.syncServer('b2c_orders', null, 'DELETE', id);
+    this.syncServer('b2c_orders', null, 'DELETE', id).catch(() => {});
+    this.syncServerCollection('b2c_orders', remaining).catch(() => {});
     dataSyncBus.emit('b2c_orders', remaining);
     dataSyncBus.emit('orders_updated');
     return orders.length !== remaining.length;
@@ -1280,7 +1312,14 @@ class StorageService {
     const initial = this.getB2COrders();
     const remaining = initial.filter((o) => !idSet.has(o.id));
     this.setItem(KEYS.B2C_ORDERS, remaining);
-    ids.forEach((id) => this.syncServer('b2c_orders', null, 'DELETE', id));
+    this.syncServerCollection('b2c_orders', remaining).catch(() => {});
+    if (isFirebaseConfigured() && db) {
+      for (const id of ids) {
+        try {
+          remove(ref(db, `b2c_orders/${id}`)).catch(() => {});
+        } catch {}
+      }
+    }
     dataSyncBus.emit('b2c_orders', remaining);
     dataSyncBus.emit('orders_updated');
     return initial.length - remaining.length;
@@ -1309,7 +1348,8 @@ class StorageService {
       }
     }
     this.setItem(KEYS.B2B_ORDERS, orders);
-    this.syncServer('b2b_orders', order);
+    this.syncServer('b2b_orders', order).catch(() => {});
+    this.syncServerCollection('b2b_orders', orders).catch(() => {});
     dataSyncBus.emit('b2b_orders', orders);
     dataSyncBus.emit('orders_updated');
   }
@@ -1336,6 +1376,7 @@ class StorageService {
       }
       this.setItem(KEYS.B2B_ORDERS, orders);
       await this.syncServer('b2b_orders', order);
+      await this.syncServerCollection('b2b_orders', orders);
       dataSyncBus.emit('b2b_orders', orders);
       dataSyncBus.emit('orders_updated');
     }
@@ -1359,6 +1400,7 @@ class StorageService {
     });
     this.setItem(KEYS.B2B_ORDERS, orders);
     await this.syncServer('b2b_orders', order);
+    await this.syncServerCollection('b2b_orders', orders);
     dataSyncBus.emit('b2b_orders', orders);
     dataSyncBus.emit('orders_updated');
     return order;
@@ -1390,6 +1432,7 @@ class StorageService {
 
     this.setItem(KEYS.B2B_ORDERS, orders);
     await this.syncServer('b2b_orders', order);
+    await this.syncServerCollection('b2b_orders', orders);
     dataSyncBus.emit('b2b_orders', orders);
     dataSyncBus.emit('orders_updated');
     return order;
@@ -1399,7 +1442,8 @@ class StorageService {
     const orders = this.getB2BOrders();
     const remaining = orders.filter((o) => o.id !== id);
     this.setItem(KEYS.B2B_ORDERS, remaining);
-    this.syncServer('b2b_orders', null, 'DELETE', id);
+    this.syncServer('b2b_orders', null, 'DELETE', id).catch(() => {});
+    this.syncServerCollection('b2b_orders', remaining).catch(() => {});
     dataSyncBus.emit('b2b_orders', remaining);
     dataSyncBus.emit('orders_updated');
     return orders.length !== remaining.length;
@@ -1411,7 +1455,14 @@ class StorageService {
     const initial = this.getB2BOrders();
     const remaining = initial.filter((o) => !idSet.has(o.id));
     this.setItem(KEYS.B2B_ORDERS, remaining);
-    ids.forEach((id) => this.syncServer('b2b_orders', null, 'DELETE', id));
+    this.syncServerCollection('b2b_orders', remaining).catch(() => {});
+    if (isFirebaseConfigured() && db) {
+      for (const id of ids) {
+        try {
+          remove(ref(db, `b2b_orders/${id}`)).catch(() => {});
+        } catch {}
+      }
+    }
     dataSyncBus.emit('b2b_orders', remaining);
     dataSyncBus.emit('orders_updated');
     return initial.length - remaining.length;
@@ -1435,7 +1486,8 @@ class StorageService {
       orders.unshift(order);
     }
     this.setItem(KEYS.ONDC_ORDERS, orders);
-    this.syncServer('ondc_orders', order);
+    this.syncServer('ondc_orders', order).catch(() => {});
+    this.syncServerCollection('ondc_orders', orders).catch(() => {});
     // Also sync to backend ondc-gateway
     fetch('/api/admin/ondc/orders/update', {
       method: 'POST',
@@ -1469,6 +1521,7 @@ class StorageService {
       order.updatedAt = new Date().toISOString();
       this.setItem(KEYS.ONDC_ORDERS, orders);
       await this.syncServer('ondc_orders', order);
+      await this.syncServerCollection('ondc_orders', orders);
       await fetch('/api/admin/ondc/orders/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1483,7 +1536,8 @@ class StorageService {
     const orders = this.getOndcOrders();
     const remaining = orders.filter((o) => o.id !== id);
     this.setItem(KEYS.ONDC_ORDERS, remaining);
-    this.syncServer('ondc_orders', null, 'DELETE', id);
+    this.syncServer('ondc_orders', null, 'DELETE', id).catch(() => {});
+    this.syncServerCollection('ondc_orders', remaining).catch(() => {});
     fetch(`/api/admin/ondc/orders/delete?id=${encodeURIComponent(id)}`, { method: 'POST' }).catch(() => null);
     dataSyncBus.emit('ondc_orders', remaining);
     dataSyncBus.emit('orders_updated');
@@ -1496,8 +1550,16 @@ class StorageService {
     const initial = this.getOndcOrders();
     const remaining = initial.filter((o) => !idSet.has(o.id));
     this.setItem(KEYS.ONDC_ORDERS, remaining);
+    this.syncServerCollection('ondc_orders', remaining).catch(() => {});
+    if (isFirebaseConfigured() && db) {
+      for (const id of ids) {
+        try {
+          remove(ref(db, `ondc_orders/${id}`)).catch(() => {});
+        } catch {}
+      }
+    }
     ids.forEach((id) => {
-      this.syncServer('ondc_orders', null, 'DELETE', id);
+      this.syncServer('ondc_orders', null, 'DELETE', id).catch(() => {});
       fetch(`/api/admin/ondc/orders/delete?id=${encodeURIComponent(id)}`, { method: 'POST' }).catch(() => null);
     });
     dataSyncBus.emit('ondc_orders', remaining);
@@ -2103,13 +2165,17 @@ class StorageService {
       quotations.unshift(quotation);
     }
     this.setItem(KEYS.B2B_QUOTATIONS, quotations);
-    this.syncServer('b2b_quotations', quotation);
+    this.syncServer('b2b_quotations', quotation).catch(() => {});
+    this.syncServerCollection('b2b_quotations', quotations).catch(() => {});
+    dataSyncBus.emit('b2b_quotations', quotations);
   }
 
   deleteB2BQuotation(id: string): void {
     const quotations = this.getB2BQuotations().filter((q) => q.id !== id);
     this.setItem(KEYS.B2B_QUOTATIONS, quotations);
-    this.syncServer('b2b_quotations', null, 'DELETE', id);
+    this.syncServer('b2b_quotations', null, 'DELETE', id).catch(() => {});
+    this.syncServerCollection('b2b_quotations', quotations).catch(() => {});
+    dataSyncBus.emit('b2b_quotations', quotations);
   }
 
   deleteMultipleB2BQuotations(ids: string[]): number {
@@ -2118,7 +2184,15 @@ class StorageService {
     const initial = this.getB2BQuotations();
     const remaining = initial.filter((q) => !idSet.has(q.id));
     this.setItem(KEYS.B2B_QUOTATIONS, remaining);
-    ids.forEach((id) => this.syncServer('b2b_quotations', null, 'DELETE', id));
+    this.syncServerCollection('b2b_quotations', remaining).catch(() => {});
+    if (isFirebaseConfigured() && db) {
+      for (const id of ids) {
+        try {
+          remove(ref(db, `b2b_quotations/${id}`)).catch(() => {});
+        } catch {}
+      }
+    }
+    dataSyncBus.emit('b2b_quotations', remaining);
     return initial.length - remaining.length;
   }
 
@@ -2519,6 +2593,9 @@ class StorageService {
         users[index].rejectionReason = reason || 'Application declined by Super Admin';
       }
       this.setItem(KEYS.ADMIN_USERS, users);
+      this.syncServer('admin_users', users[index]).catch(() => {});
+      this.syncServerCollection('admin_users', users).catch(() => {});
+      dataSyncBus.emit('admin_users', users);
       return users[index];
     }
     return null;
@@ -2537,6 +2614,9 @@ class StorageService {
     }
     const remaining = this.getAdminUsers().filter((u) => u.id !== id);
     this.setItem(KEYS.ADMIN_USERS, remaining);
+    this.syncServer('admin_users', null, 'DELETE', id).catch(() => {});
+    this.syncServerCollection('admin_users', remaining).catch(() => {});
+    dataSyncBus.emit('admin_users', remaining);
     return { success: true, message: `Staff account @${admin.userId} removed.` };
   }
 
@@ -2563,6 +2643,15 @@ class StorageService {
 
     const remaining = all.filter((u) => !deletableIds.has(u.id));
     this.setItem(KEYS.ADMIN_USERS, remaining);
+    this.syncServerCollection('admin_users', remaining).catch(() => {});
+    if (isFirebaseConfigured() && db) {
+      for (const id of deletableIds) {
+        try {
+          remove(ref(db, `admin_users/${id}`)).catch(() => {});
+        } catch {}
+      }
+    }
+    dataSyncBus.emit('admin_users', remaining);
     return { deletedCount: deletableIds.size, protectedSkipped };
   }
 
@@ -2891,8 +2980,57 @@ class StorageService {
       const companyMaster = companyMasterService.getCompanyMaster();
       await this.syncServer('company_settings', { ...companyMaster, updatedAt: timestamp });
       dataSyncBus.emit('company_settings', companyMaster);
-
       details.push({ label: 'Global Store & Company Master Settings', count: 'Published' });
+
+      // 7. Publish Retail Orders (B2C)
+      const b2cOrders = this.getB2COrders();
+      await this.syncServerCollection('b2c_orders', b2cOrders);
+      dataSyncBus.emit('b2c_orders', b2cOrders);
+      details.push({ label: 'Retail Orders (B2C)', count: `${b2cOrders.length} orders` });
+
+      // 8. Publish Wholesale Orders (B2B)
+      const b2bOrders = this.getB2BOrders();
+      await this.syncServerCollection('b2b_orders', b2bOrders);
+      dataSyncBus.emit('b2b_orders', b2bOrders);
+      details.push({ label: 'Wholesale Orders (B2B)', count: `${b2bOrders.length} orders` });
+
+      // 9. Publish ONDC Network Orders
+      const ondcOrders = this.getOndcOrders();
+      await this.syncServerCollection('ondc_orders', ondcOrders);
+      dataSyncBus.emit('ondc_orders', ondcOrders);
+      details.push({ label: 'ONDC Network Orders', count: `${ondcOrders.length} orders` });
+
+      // 10. Publish B2B RFQ Quotations
+      const quotations = this.getB2BQuotations();
+      await this.syncServerCollection('b2b_quotations', quotations);
+      dataSyncBus.emit('b2b_quotations', quotations);
+      details.push({ label: 'B2B RFQ Quotations', count: `${quotations.length} quotes` });
+
+      // 11. Publish Registered Customers (B2C)
+      const b2cUsers = this.getB2CUsers();
+      await this.syncServerCollection('b2c_users', b2cUsers);
+      dataSyncBus.emit('b2c_users', b2cUsers);
+      details.push({ label: 'Registered Customers (B2C)', count: `${b2cUsers.length} users` });
+
+      // 12. Publish Corporate Accounts (B2B)
+      const b2bBusinesses = this.getB2BBusinesses();
+      await this.syncServerCollection('b2b_businesses', b2bBusinesses);
+      dataSyncBus.emit('b2b_businesses', b2bBusinesses);
+      details.push({ label: 'Corporate Accounts (B2B)', count: `${b2bBusinesses.length} accounts` });
+
+      // 13. Publish Admin Registry
+      const adminUsers = this.getAdminUsers();
+      await this.syncServerCollection('admin_users', adminUsers);
+      dataSyncBus.emit('admin_users', adminUsers);
+      details.push({ label: 'Admin Registry', count: `${adminUsers.length} personnel` });
+
+      // 14. Publish Cancellation Requests
+      const cancellations = this.getCancellationRequests();
+      await this.syncServerCollection('cancellation_requests', cancellations);
+      dataSyncBus.emit('cancellation_requests', cancellations);
+      details.push({ label: 'Cancellation Requests', count: `${cancellations.length} requests` });
+
+      dataSyncBus.emit('orders_updated');
 
       return {
         success: true,

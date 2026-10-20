@@ -127,6 +127,13 @@ const MainApp: React.FC = () => {
     }
   }, []);
 
+  // Live hydration from production server on startup
+  useEffect(() => {
+    storageService.hydrateFromServer(true).then(() => {
+      refreshData();
+    });
+  }, []);
+
   useEffect(() => {
     const unsubProd = dataSyncBus.subscribe('products', (data) => {
       if (Array.isArray(data)) setProducts(storageService.normalizeProducts(data));
@@ -155,6 +162,10 @@ const MainApp: React.FC = () => {
     const unsubMedia = dataSyncBus.subscribe('site_media', () => {
       refreshData();
     });
+    const unsubOrders = dataSyncBus.subscribe('orders_updated', () => {
+      setB2cOrders(storageService.getB2COrders());
+      setB2bOrders(storageService.getB2BOrders());
+    });
 
     return () => {
       unsubProd();
@@ -166,6 +177,7 @@ const MainApp: React.FC = () => {
       unsubQuotes();
       unsubCoupons();
       unsubMedia();
+      unsubOrders();
     };
   }, []);
 

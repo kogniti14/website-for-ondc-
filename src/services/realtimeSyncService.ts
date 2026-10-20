@@ -273,7 +273,163 @@ class RealtimeSyncService {
       );
       this.unsubscribers.set('site_media', unsubsMedia);
 
-      console.log('[RealtimeSync] Realtime Database listeners active across products, categories, reviews, testimonials, certifications, stories, settings, coupons, site_media, and RFQs.');
+      // 10. Live B2C Retail Orders Listener
+      const b2cOrdersRef = ref(db, 'b2c_orders');
+      const unsubsB2COrders = onValue(
+        b2cOrdersRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const raw = snapshot.val();
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
+            try {
+              localStorage.setItem('km_b2c_orders_v2', JSON.stringify(list));
+            } catch {}
+            dataSyncBus.emit('b2c_orders', list);
+            dataSyncBus.emit('orders_updated');
+          } else {
+            try {
+              localStorage.setItem('km_b2c_orders_v2', JSON.stringify([]));
+            } catch {}
+            dataSyncBus.emit('b2c_orders', []);
+            dataSyncBus.emit('orders_updated');
+          }
+        },
+        (error) => {
+          console.warn('[RealtimeSync] B2C Orders listener notice:', error.message);
+        }
+      );
+      this.unsubscribers.set('b2c_orders', unsubsB2COrders);
+
+      // 11. Live B2B Wholesale Orders Listener
+      const b2bOrdersRef = ref(db, 'b2b_orders');
+      const unsubsB2BOrders = onValue(
+        b2bOrdersRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const raw = snapshot.val();
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
+            try {
+              localStorage.setItem('km_b2b_orders_v2', JSON.stringify(list));
+            } catch {}
+            dataSyncBus.emit('b2b_orders', list);
+            dataSyncBus.emit('orders_updated');
+          } else {
+            try {
+              localStorage.setItem('km_b2b_orders_v2', JSON.stringify([]));
+            } catch {}
+            dataSyncBus.emit('b2b_orders', []);
+            dataSyncBus.emit('orders_updated');
+          }
+        },
+        (error) => {
+          console.warn('[RealtimeSync] B2B Orders listener notice:', error.message);
+        }
+      );
+      this.unsubscribers.set('b2b_orders', unsubsB2BOrders);
+
+      // 12. Live ONDC Protocol Orders Listener
+      const ondcOrdersRef = ref(db, 'ondc_orders');
+      const unsubsOndcOrders = onValue(
+        ondcOrdersRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const raw = snapshot.val();
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
+            try {
+              localStorage.setItem('km_ondc_orders_v1', JSON.stringify(list));
+            } catch {}
+            dataSyncBus.emit('ondc_orders', list);
+            dataSyncBus.emit('orders_updated');
+          }
+        },
+        (error) => {
+          console.warn('[RealtimeSync] ONDC Orders listener notice:', error.message);
+        }
+      );
+      this.unsubscribers.set('ondc_orders', unsubsOndcOrders);
+
+      // 13. Live B2C Customers Listener
+      const b2cUsersRef = ref(db, 'b2c_users');
+      const unsubsB2CUsers = onValue(
+        b2cUsersRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const raw = snapshot.val();
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
+            try {
+              localStorage.setItem('km_b2c_users_v1', JSON.stringify(list));
+            } catch {}
+            dataSyncBus.emit('b2c_users', list);
+          }
+        },
+        (error) => {
+          console.warn('[RealtimeSync] B2C Users listener notice:', error.message);
+        }
+      );
+      this.unsubscribers.set('b2c_users', unsubsB2CUsers);
+
+      // 14. Live B2B Verified Corporate Accounts Listener
+      const b2bBizRef = ref(db, 'b2b_businesses');
+      const unsubsB2BBiz = onValue(
+        b2bBizRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const raw = snapshot.val();
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
+            try {
+              localStorage.setItem('km_b2b_businesses_v1', JSON.stringify(list));
+            } catch {}
+            dataSyncBus.emit('b2b_businesses', list);
+          }
+        },
+        (error) => {
+          console.warn('[RealtimeSync] B2B Businesses listener notice:', error.message);
+        }
+      );
+      this.unsubscribers.set('b2b_businesses', unsubsB2BBiz);
+
+      // 15. Live Company Master Statutory Information Listener
+      const companySettingsRef = ref(db, 'company_settings');
+      const unsubsCompanySettings = onValue(
+        companySettingsRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const val = snapshot.val();
+            if (val && typeof val === 'object') {
+              try {
+                localStorage.setItem('km_company_master_v1', JSON.stringify(val));
+              } catch {}
+              dataSyncBus.emit('company_settings', val);
+            }
+          }
+        },
+        (error) => {
+          console.warn('[RealtimeSync] Company Master Settings listener notice:', error.message);
+        }
+      );
+      this.unsubscribers.set('company_settings', unsubsCompanySettings);
+
+      // 16. Live Cancellation Requests Listener
+      const cancellationRef = ref(db, 'cancellation_requests');
+      const unsubsCancellation = onValue(
+        cancellationRef,
+        (snapshot) => {
+          if (snapshot.exists()) {
+            const raw = snapshot.val();
+            const list = Array.isArray(raw) ? raw.filter(Boolean) : Object.values(raw || {});
+            try {
+              localStorage.setItem('km_cancellation_requests_v1', JSON.stringify(list));
+            } catch {}
+            dataSyncBus.emit('cancellation_requests', list);
+          }
+        },
+        (error) => {
+          console.warn('[RealtimeSync] Cancellation requests listener notice:', error.message);
+        }
+      );
+      this.unsubscribers.set('cancellation_requests', unsubsCancellation);
+
+      console.log('[RealtimeSync] Realtime Database listeners active across products, categories, orders, users, RFQs, reviews, testimonials, certifications, stories, settings, coupons, site_media, and cancellations.');
     } catch (err) {
       console.warn('[RealtimeSync] Initialization fallback notice:', err);
     }
