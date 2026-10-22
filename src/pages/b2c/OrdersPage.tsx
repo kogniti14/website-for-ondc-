@@ -136,7 +136,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
 
       storageService.saveB2COrder(updatedOrder);
       setOrderToCancel(null);
-      alert(`Order #${orderToCancel.orderNumber} successfully cancelled under ONDC RETeB2B 1.2.5 protocol.`);
+      alert(`Order #${orderToCancel.orderNumber} has been successfully cancelled.`);
     } catch {
       alert('Unable to complete this request. Please try again.');
     } finally {
@@ -170,7 +170,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
 
       storageService.saveB2COrder(updatedOrder);
       setOrderToReturn(null);
-      alert(`Return request for Order #${orderToReturn.orderNumber} processed via ONDC /update protocol.`);
+      alert(`Return request for Order #${orderToReturn.orderNumber} has been successfully submitted.`);
     } catch {
       alert('Unable to complete this request. Please try again.');
     } finally {
@@ -819,7 +819,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
             </div>
 
             <p style={{ fontSize: '0.88rem', color: 'var(--slate-600)', marginBottom: '1.25rem' }}>
-              Are you sure you want to cancel this order? This action will trigger the official ONDC RETeB2B <strong>/cancel</strong> protocol workflow, restock allocated warehouse inventory, and cancel fulfillment.
+              Are you sure you want to cancel this order? This action will cancel fulfillment and restock the items.
             </p>
 
             <div style={{ marginBottom: '1.5rem' }}>
@@ -886,7 +886,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({ orders, setActiveTab }) 
             </div>
 
             <p style={{ fontSize: '0.88rem', color: 'var(--slate-600)', marginBottom: '1.25rem' }}>
-              Submit a formal reverse fulfillment request under ONDC RETeB2B <strong>/update</strong>. Our logistics partner will schedule reverse pickup upon approval.
+              Submit a formal return request for this order. Our logistics partner will schedule pickup upon approval.
             </p>
 
             <div style={{ marginBottom: '1.5rem' }}>

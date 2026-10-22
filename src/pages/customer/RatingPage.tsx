@@ -53,7 +53,6 @@ export const RatingPage: React.FC<RatingPageProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [protocolStatus, setProtocolStatus] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const targetProduct = products.find((p) => p.id === selectedProductId) || products[0];
@@ -112,10 +111,7 @@ export const RatingPage: React.FC<RatingPageProps> = ({
       // 2. If associated with an order, optionally dispatch ONDC protocol rating
       if (selectedOrderId) {
         try {
-          const ondcRes = await ondcClientService.submitRating(selectedOrderId, rating, text.trim());
-          if (ondcRes.success) {
-            setProtocolStatus('ONDC Network ACK: Order rating broadcast to buyer app');
-          }
+          await ondcClientService.submitRating(selectedOrderId, rating, text.trim());
         } catch {
           // Non-blocking network feedback
         }
@@ -188,25 +184,6 @@ export const RatingPage: React.FC<RatingPageProps> = ({
                 <p style={{ color: '#64748B', maxWidth: '480px', margin: '0 auto 1.5rem', fontSize: '0.95rem' }}>
                   {successMessage}
                 </p>
-                {protocolStatus && (
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                      padding: '0.5rem 1rem',
-                      background: '#F0FDF4',
-                      border: '1px solid #BBF7D0',
-                      borderRadius: '8px',
-                      color: '#15803D',
-                      fontSize: '0.85rem',
-                      marginBottom: '1.5rem',
-                    }}
-                  >
-                    <Sparkles size={16} />
-                    <span>{protocolStatus}</span>
-                  </div>
-                )}
                 <div>
                   <button
                     onClick={() => {

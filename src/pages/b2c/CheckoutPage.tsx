@@ -325,12 +325,12 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
             note: 'Order auto-confirmed for commercial warehouse allocation and freight dispatch.',
           },
           {
-            status: 'ONDC RETeB2B 1.2.5 CONFIRMED',
+            status: 'ORDER ALLOCATED',
             timestamp: new Date().toLocaleTimeString('en-IN', {
               hour: '2-digit',
               minute: '2-digit',
             }),
-            note: `Synchronized order on ONDC network with Transaction ID ${ondcContextData.transactionId}`,
+            note: 'Order synchronized for fulfillment and warehouse allocation.',
           },
         ],
         ondcContext: ondcContextData,
@@ -437,12 +437,12 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
           )} (Razorpay Payment ID: ${transactionId}). Section 31 Tax Invoice generated.`,
         },
         {
-          status: 'ONDC B2C NETWORK CONFIRMED',
+          status: 'ORDER ALLOCATED',
           timestamp: new Date().toLocaleTimeString('en-IN', {
             hour: '2-digit',
             minute: '2-digit',
           }),
-          note: `Synchronized order on ONDC network with Transaction ID ${ondcContextData.transactionId}`,
+          note: 'Order synchronized for fulfillment and warehouse allocation.',
         },
       ],
       ondcContext: ondcContextData,

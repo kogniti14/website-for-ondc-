@@ -69,7 +69,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   const [activeTabSection, setActiveTabSection] = useState<'specs' | 'features' | 'reviews' | 'delivery'>('specs');
   const [pincode, setPincode] = useState('');
   const [pincodeStatus, setPincodeStatus] = useState<string | null>(null);
-  const [protocolStatus, setProtocolStatus] = useState<string | null>(null);
 
   const { addToB2CCart, addToB2BCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -81,11 +80,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
       onSelectProduct(product);
       ondcClientService
         .selectProduct(product.id, quantity)
-        .then((res) => {
-          if (res.success) {
-            setProtocolStatus('ONDC Network ACK: Item selected and price verified');
-          }
-        })
         .catch(() => {});
     }
   }, [product?.id]);
@@ -234,26 +228,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                     <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </button>
                 ))}
-              </div>
-            )}
-
-            {protocolStatus && (
-              <div
-                style={{
-                  marginTop: '1rem',
-                  padding: '0.65rem 1rem',
-                  background: '#F0FDF4',
-                  border: '1px solid #BBF7D0',
-                  borderRadius: '8px',
-                  fontSize: '0.8rem',
-                  color: '#15803D',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
-              >
-                <CheckCircle2 size={16} />
-                <span>{protocolStatus}</span>
               </div>
             )}
           </div>

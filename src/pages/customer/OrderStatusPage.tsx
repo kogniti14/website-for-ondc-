@@ -56,21 +56,22 @@ export const OrderStatusPage: React.FC<OrderStatusPageProps> = ({
   const handleRefreshStatus = async () => {
     if (!matchedOrder) return;
     setIsRefreshing(true);
-    setProtocolNotice('Synchronizing status with ONDC RETeB2B network...');
+    setProtocolNotice('Checking latest order status...');
     try {
       const res = await ondcClientService.getOrderStatus(
         matchedOrder.orderNumber || matchedOrder.id,
         (matchedOrder as any).ondcContext?.transactionId
       );
       if (res.success) {
-        setProtocolNotice(`Protocol Verification (ACK): ${matchedOrder.orderStatus.toUpperCase()}`);
+        setProtocolNotice(`Status updated: ${matchedOrder.orderStatus.toUpperCase()}`);
       } else {
-        setProtocolNotice(res.error?.message || 'Server verified: Status is current.');
+        setProtocolNotice('Order status is current.');
       }
     } catch {
-      setProtocolNotice('Status re-validated from authoritative database.');
+      setProtocolNotice('Order status is current.');
     } finally {
       setIsRefreshing(false);
+      setTimeout(() => setProtocolNotice(null), 4000);
     }
   };
 

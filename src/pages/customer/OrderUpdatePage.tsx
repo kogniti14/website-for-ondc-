@@ -171,7 +171,7 @@ export const OrderUpdatePage: React.FC<OrderUpdatePageProps> = ({
               </h1>
             </div>
             <p style={{ margin: 0, fontSize: '0.85rem', color: '#94A3B8' }}>
-              Connected to ONDC RETeB2B 1.2.5 buyer-initiated update & reverse logistics workflow.
+              Seamless buyer-initiated order modifications and reverse logistics workflow.
             </p>
           </div>
 

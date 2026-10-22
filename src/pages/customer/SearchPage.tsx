@@ -42,7 +42,6 @@ export const SearchPage: React.FC<SearchPageProps> = ({
   const [minRating, setMinRating] = useState<number>(0);
   const [onlyInStock, setOnlyInStock] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<string>('relevance');
-  const [protocolStatus, setProtocolStatus] = useState<string | null>(null);
 
   // Sync state if URL changes (e.g. browser back/forward)
   useEffect(() => {
@@ -62,19 +61,9 @@ export const SearchPage: React.FC<SearchPageProps> = ({
     window.history.pushState(null, '', newUrl);
 
     if (query) {
-      setProtocolStatus('Searching ONDC network...');
       ondcClientService
         .searchProducts(query)
-        .then((res) => {
-          if (res.success) {
-            setProtocolStatus('ONDC Network ACK: 13 Eco-friendly items synchronized');
-          } else {
-            setProtocolStatus(null);
-          }
-        })
-        .catch(() => setProtocolStatus(null));
-    } else {
-      setProtocolStatus(null);
+        .catch(() => {});
     }
   };
 
@@ -264,26 +253,6 @@ export const SearchPage: React.FC<SearchPageProps> = ({
               </button>
             ))}
           </div>
-
-          {protocolStatus && (
-            <div
-              style={{
-                marginTop: '1rem',
-                padding: '0.5rem 0.85rem',
-                background: '#F0FDF4',
-                color: '#166534',
-                borderRadius: '8px',
-                fontSize: '0.8rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                border: '1px solid #BBF7D0',
-              }}
-            >
-              <Sparkles size={14} className="text-emerald-600" />
-              <span>{protocolStatus}</span>
-            </div>
-          )}
         </div>
 
         {/* Results Bar */}

@@ -28,7 +28,6 @@ export const CheckoutInitPage: React.FC<CheckoutInitPageProps> = ({
 }) => {
   const { b2cCart, getB2CCalculations } = useCart();
   const { b2cUser, role } = useAuth();
-  const [protocolStatus, setProtocolStatus] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
 
   const calculations = getB2CCalculations();
@@ -46,11 +45,6 @@ export const CheckoutInitPage: React.FC<CheckoutInitPageProps> = ({
       };
       ondcClientService
         .initCheckout(deliveryAddress, 'razorpay')
-        .then((res) => {
-          if (res.success) {
-            setProtocolStatus('ONDC Network ACK: Checkout session initialized and quote verified');
-          }
-        })
         .catch(() => {})
         .finally(() => setIsInitializing(false));
     }
@@ -104,26 +98,6 @@ export const CheckoutInitPage: React.FC<CheckoutInitPageProps> = ({
           </div>
 
           <div style={{ padding: '2rem' }}>
-            {protocolStatus && (
-              <div
-                style={{
-                  padding: '0.75rem 1rem',
-                  background: '#F0FDF4',
-                  border: '1px solid #BBF7D0',
-                  borderRadius: '10px',
-                  color: '#15803D',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  marginBottom: '1.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
-              >
-                <Sparkles size={16} />
-                <span>{protocolStatus}</span>
-              </div>
-            )}
 
             {b2cCart.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>

@@ -58,7 +58,6 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
   );
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [isOndcSearching, setIsOndcSearching] = useState(false);
-  const [ondcSearchStatus, setOndcSearchStatus] = useState<string | null>(null);
 
   // Trigger real backend ONDC RETeB2B /search flow whenever query or category changes
   useEffect(() => {
@@ -66,23 +65,13 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
     const timer = setTimeout(async () => {
       if (search.trim() || selectedCategory !== 'All') {
         setIsOndcSearching(true);
-        setOndcSearchStatus('Searching for products...');
         try {
-          const res = await ondcClientService.searchProducts(search.trim(), selectedCategory);
-          if (!isMounted) return;
-          if (res.success) {
-            setOndcSearchStatus('ONDC RETeB2B Protocol Verified');
-          } else {
-            setOndcSearchStatus('Unable to complete this request. Please try again.');
-          }
+          await ondcClientService.searchProducts(search.trim(), selectedCategory);
         } catch {
-          if (!isMounted) return;
-          setOndcSearchStatus('Unable to complete this request. Please try again.');
+          // Silent background protocol sync
         } finally {
           if (isMounted) setIsOndcSearching(false);
         }
-      } else {
-        setOndcSearchStatus(null);
       }
     }, 350);
 
@@ -526,42 +515,6 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
             </select>
           </div>
         </div>
-        {ondcSearchStatus && (
-          <div
-            style={{
-              marginTop: '0.85rem',
-              paddingTop: '0.65rem',
-              borderTop: '1px solid #F1F5F9',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '0.78rem',
-              color: isOndcSearching ? '#0284C7' : ondcSearchStatus.includes('Unable') ? '#EF4444' : '#059669',
-            }}
-          >
-            <span className="flex items-center gap-1.5 font-medium">
-              {isOndcSearching ? (
-                <>
-                  <span style={{ display: 'inline-block', width: '12px', height: '12px', border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%' }} />
-                  <span>Searching for products...</span>
-                </>
-              ) : ondcSearchStatus.includes('Unable') ? (
-                <>
-                  <AlertCircle size={13} />
-                  <span>Unable to complete this request. Please try again.</span>
-                </>
-              ) : (
-                <>
-                  <Check size={13} />
-                  <span>ONDC:RETeB2B 1.2.5 Protocol Verified</span>
-                </>
-              )}
-            </span>
-            <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
-              RETeB2B v1.2.5 • kognitiminds.com/search
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Main Layout: Sidebar Filters + Product Grid */}
