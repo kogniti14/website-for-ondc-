@@ -16,11 +16,11 @@
  * Official Footer Standard:
  *   KOGNITI MINDS PRIVATE LIMITED
  *   CIN: U46496UP2024PTC213997 | PAN: AALCK4750F | GSTIN: 09AALCK4750F1ZC
- *   Address: Panchsheel Greens-2, Sec-16 B, Greater Noida West, Bisrakh, Bishrakh,
- *            Gautam Buddha Nagar, Uttar Pradesh, India - 201306
+ *   Address: Panchsheel Green 2, Greater Noida West, Sector 16B, Uttar Pradesh – 201306, India
  */
 
 import { companyMasterService } from './companyMasterService';
+import { formatCompanyAddress } from '../config/companyMaster';
 import { CompanyMasterSettings } from '../types';
 
 export interface CommercialEmailItem {
@@ -90,7 +90,7 @@ class CommercialEmailService {
               <strong>GSTIN:</strong> <span style="font-family: monospace; color: #059669;">${cm.gstin}</span> (${cm.gst_state})
             </div>
             <div style="margin-bottom: 12px; color: #475569; font-size: 11.5px;">
-              <strong>Registered Office:</strong> ${cm.address_line_1}, ${cm.address_line_2}, ${cm.city}, ${cm.district}, ${cm.state}, ${cm.country} - ${cm.pincode}
+              <strong>Registered Office:</strong> ${formatCompanyAddress(cm)}
             </div>
             <div style="padding-top: 10px; border-top: 1px solid #E2E8F0; font-size: 11px; color: #94A3B8; display: flex; justify-content: space-between; flex-wrap: wrap;">
               <span>Enquiries: <a href="mailto:${cm.support_email}" style="color: #2563EB; text-decoration: none;">${cm.support_email}</a> | Tel: ${cm.support_phone}</span>

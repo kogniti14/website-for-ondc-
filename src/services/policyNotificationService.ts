@@ -272,7 +272,7 @@ class PolicyNotificationService {
           <tr>
             <td style="background-color: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 24px 32px; text-align: center; font-size: 11px; color: #94A3B8; line-height: 1.6;">
               © ${new Date().getFullYear()} KOGNITI MINDS PRIVATE LIMITED (CIN: U46496UP2024PTC213997).<br>
-              Registered Office: Panchsheel Greens-2, Sec-16 B, Gr. Noida West, Bisrakh, Gautam Buddha Nagar, UP - 201306<br>
+              Registered Office: Panchsheel Green 2, Greater Noida West, Sector 16B, Uttar Pradesh – 201306, India<br>
               Operational Office: 4th Floor, VBSS New Building, Bihiya Chaurasta, Bhojpur (Bihar) - 802154<br>
               You received this statutory notification because you are a registered customer or procurement account holder.
             </td>

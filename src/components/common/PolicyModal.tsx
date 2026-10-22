@@ -186,7 +186,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({ type, onClose, onOpenF
               CIN: U46496UP2024PTC213997 | PAN: AALCK4750F | GSTIN: 09AALCK4750F1ZC
             </div>
             <div style={{ fontSize: '0.74rem', color: '#64748B', marginBottom: '4px' }}>
-              Address: Panchsheel Greens-2, Sec-16 B, Greater Noida West, Bisrakh, Bishrakh, Gautam Buddha Nagar, Uttar Pradesh - 201306
+              Address: Panchsheel Green 2, Greater Noida West, Sector 16B, Uttar Pradesh – 201306, India
             </div>
             <div>
               Email:{' '}

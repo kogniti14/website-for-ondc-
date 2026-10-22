@@ -530,7 +530,7 @@ export const SupportPage: React.FC<SupportPageProps> = ({ setActiveTab }) => {
                       Registered Office (Uttar Pradesh):
                     </strong>
                     <span style={{ fontSize: '0.82rem', color: '#475569', lineHeight: 1.45, display: 'block', marginTop: '2px' }}>
-                      Panchsheel Greens-2, Sec-16 B, Greater Noida West, Bisrakh, Bishrakh, Greater Noida West, Gautam Buddha Nagar, Uttar Pradesh, India - 201306
+                      Panchsheel Green 2, Greater Noida West, Sector 16B, Uttar Pradesh – 201306, India
                     </span>
                   </div>
                 </div>

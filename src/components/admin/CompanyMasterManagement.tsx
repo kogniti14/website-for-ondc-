@@ -505,7 +505,7 @@ export const CompanyMasterManagement: React.FC<CompanyMasterManagementProps> = (
                       className="form-input"
                       value={formData.address_line_1}
                       onChange={(e) => handleChange('address_line_1', e.target.value)}
-                      placeholder="Panchsheel Greens-2, Sec-16 B"
+                      placeholder="Panchsheel Green 2, Greater Noida West"
                       required
                     />
                   </div>
@@ -519,7 +519,7 @@ export const CompanyMasterManagement: React.FC<CompanyMasterManagementProps> = (
                       className="form-input"
                       value={formData.address_line_2}
                       onChange={(e) => handleChange('address_line_2', e.target.value)}
-                      placeholder="Greater Noida West, Bisrakh, Bishrakh"
+                      placeholder="Sector 16B"
                     />
                   </div>
 

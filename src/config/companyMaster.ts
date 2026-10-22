@@ -56,8 +56,8 @@ export const OFFICIAL_COMPANY_MASTER: CompanyMasterSettings = {
   msme_udyam: 'UDYAM-UP-06-0034981',
   gst_state: 'Uttar Pradesh',
   gst_state_code: '09',
-  address_line_1: 'Panchsheel Greens-2, Sec-16 B',
-  address_line_2: 'Greater Noida West, Bisrakh',
+  address_line_1: 'Panchsheel Green 2, Greater Noida West',
+  address_line_2: 'Sector 16B',
   branch_office: '4th Floor, VBSS New Building, Bihiya Chaurasta, Bhojpur, Bihar, India - 802154',
   city: 'Greater Noida West',
   district: 'Gautam Buddha Nagar',
@@ -159,7 +159,22 @@ export function validateCompanyMaster(data: Partial<CompanyMasterSettings>): Com
  * Helper to produce standard formatted full business address
  */
 export function formatCompanyAddress(company: CompanyMasterSettings = OFFICIAL_COMPANY_MASTER): string {
-  return `${company.address_line_1}, ${company.address_line_2}, ${company.district}, ${company.state}, ${company.country} - ${company.pincode}`;
+  if (!company) {
+    return 'Panchsheel Green 2, Greater Noida West, Sector 16B, Uttar Pradesh – 201306, India';
+  }
+  const l1 = (company.address_line_1 || '').trim();
+  const l2 = (company.address_line_2 || '').trim();
+  const state = (company.state || 'Uttar Pradesh').trim();
+  const pincode = (company.pincode || '201306').trim();
+  const country = (company.country || 'India').trim();
+
+  // If default, empty, or canonical Panchsheel address
+  if (!l1 || l1.toLowerCase().includes('panchsheel')) {
+    return 'Panchsheel Green 2, Greater Noida West, Sector 16B, Uttar Pradesh – 201306, India';
+  }
+
+  const parts = [l1, l2, state ? `${state} – ${pincode}` : pincode, country].filter(Boolean);
+  return parts.join(', ');
 }
 
 /**

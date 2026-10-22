@@ -657,7 +657,7 @@ export const Footer: React.FC<FooterProps> = ({
                 <div>
                   <span style={{ color: '#FFFFFF', fontWeight: 700 }}>Registered Office:</span><br />
                   <span>
-                    {companyMaster.address_line_1}, {companyMaster.address_line_2}{companyMaster.district ? `, ${companyMaster.district}` : ''}, {companyMaster.state}, {companyMaster.country || 'India'} - {companyMaster.pincode}
+                    Panchsheel Green 2, Greater Noida West, Sector 16B, Uttar Pradesh – 201306, India
                   </span>
                 </div>
               </div>
@@ -803,54 +803,6 @@ export const Footer: React.FC<FooterProps> = ({
           </div>
         </div>
 
-        {/* Statutory Corporate Master Identification Strip */}
-        <div
-          style={{
-            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-            padding: '1rem 1.25rem',
-            background: 'rgba(16, 45, 85, 0.6)',
-            borderRadius: '10px',
-            marginBottom: '1.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
-            fontSize: '0.78rem',
-            color: '#CBD5E1',
-            border: '1px solid rgba(32, 196, 232, 0.15)',
-          }}
-        >
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem' }}>
-            <span style={{ color: '#FFFFFF', fontWeight: 700 }}>{companyMaster.legal_name}</span>
-            <span style={{ color: '#475569' }}>|</span>
-            <span>CIN: <code style={{ color: '#93C5FD', fontWeight: 600 }}>{companyMaster.cin}</code></span>
-            <span style={{ color: '#475569' }}>|</span>
-            <span>PAN: <code style={{ color: '#FDE047', fontWeight: 600 }}>{companyMaster.pan}</code></span>
-            <span style={{ color: '#475569' }}>|</span>
-            <span>GSTIN: <code style={{ color: '#86EFAC', fontWeight: 600 }}>{companyMaster.gstin}</code> ({companyMaster.gst_state})</span>
-            <span style={{ color: '#475569' }}>|</span>
-            <span>MSME / Udyam Reg. No.: <code style={{ color: '#38BDF8', fontWeight: 600 }}>{companyMaster.msme_udyam || 'UDYAM-UP-06-0034981'}</code></span>
-          </div>
-          <div
-            style={{
-              color: '#94A3B8',
-              fontSize: '0.74rem',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '0.5rem',
-              borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-              paddingTop: '0.5rem',
-            }}
-          >
-            <div>
-              <span style={{ color: '#FFFFFF', fontWeight: 600 }}>Registered Office:</span>{' '}
-              {companyMaster.address_line_1}, {companyMaster.address_line_2}{companyMaster.district ? `, ${companyMaster.district}` : ''}, {companyMaster.state}, {companyMaster.country || 'India'} - {companyMaster.pincode}
-            </div>
-            <div>
-              <span style={{ color: '#FFFFFF', fontWeight: 600 }}>Branch Office:</span>{' '}
-              {companyMaster.branch_office || '4th Floor, VBSS New Building, Bihiya Chaurasta, Bhojpur, Bihar, India - 802154'}
-            </div>
-          </div>
-        </div>
 
         {/* Bottom Legal & Safe Payments Strip */}
         <div

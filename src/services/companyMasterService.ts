@@ -36,12 +36,36 @@ class CompanyMasterService {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        const val = validateCompanyMaster(parsed);
+        const clean: CompanyMasterSettings = {
+          ...OFFICIAL_COMPANY_MASTER,
+          ...parsed,
+          legal_name: (parsed.legal_name || '').trim() || OFFICIAL_COMPANY_MASTER.legal_name,
+          cin: (parsed.cin || '').trim() || OFFICIAL_COMPANY_MASTER.cin,
+          pan: (parsed.pan || '').trim() || OFFICIAL_COMPANY_MASTER.pan,
+          gstin: (parsed.gstin || '').trim() || OFFICIAL_COMPANY_MASTER.gstin,
+          msme_udyam: (parsed.msme_udyam || '').trim() || OFFICIAL_COMPANY_MASTER.msme_udyam,
+          address_line_1: (parsed.address_line_1 || '').trim() || OFFICIAL_COMPANY_MASTER.address_line_1,
+          address_line_2: (parsed.address_line_2 || '').trim() || OFFICIAL_COMPANY_MASTER.address_line_2,
+          branch_office: (parsed.branch_office || '').trim() || OFFICIAL_COMPANY_MASTER.branch_office,
+          city: (parsed.city || '').trim() || OFFICIAL_COMPANY_MASTER.city,
+          district: (parsed.district || '').trim() || OFFICIAL_COMPANY_MASTER.district,
+          state: (parsed.state || '').trim() || OFFICIAL_COMPANY_MASTER.state,
+          country: (parsed.country || '').trim() || OFFICIAL_COMPANY_MASTER.country,
+          pincode: (parsed.pincode || '').trim() || OFFICIAL_COMPANY_MASTER.pincode,
+        };
+        // Normalize any legacy Panchsheel address with duplicated fields
+        if (clean.address_line_1.includes('Greens-2') || clean.address_line_2.includes('Bisrakh')) {
+          clean.address_line_1 = OFFICIAL_COMPANY_MASTER.address_line_1;
+          clean.address_line_2 = OFFICIAL_COMPANY_MASTER.address_line_2;
+        }
+        const val = validateCompanyMaster(clean);
         if (val.isValid) {
-          this.cachedMaster = { ...OFFICIAL_COMPANY_MASTER, ...parsed };
+          this.cachedMaster = clean;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
         } else {
           console.warn('[CompanyMasterService] Invalid stored company master, falling back to official defaults:', val.errors);
           this.cachedMaster = { ...OFFICIAL_COMPANY_MASTER };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(this.cachedMaster));
         }
       } else {
         this.cachedMaster = { ...OFFICIAL_COMPANY_MASTER };
@@ -59,7 +83,19 @@ class CompanyMasterService {
     if (!this.cachedMaster) {
       this.init();
     }
-    return this.cachedMaster || { ...OFFICIAL_COMPANY_MASTER };
+    const cm = this.cachedMaster || { ...OFFICIAL_COMPANY_MASTER };
+    return {
+      ...OFFICIAL_COMPANY_MASTER,
+      ...cm,
+      cin: (cm.cin || '').trim() || OFFICIAL_COMPANY_MASTER.cin,
+      pan: (cm.pan || '').trim() || OFFICIAL_COMPANY_MASTER.pan,
+      gstin: (cm.gstin || '').trim() || OFFICIAL_COMPANY_MASTER.gstin,
+      address_line_1: (cm.address_line_1 || '').trim() || OFFICIAL_COMPANY_MASTER.address_line_1,
+      address_line_2: (cm.address_line_2 || '').trim() || OFFICIAL_COMPANY_MASTER.address_line_2,
+      state: (cm.state || '').trim() || OFFICIAL_COMPANY_MASTER.state,
+      country: (cm.country || '').trim() || OFFICIAL_COMPANY_MASTER.country,
+      pincode: (cm.pincode || '').trim() || OFFICIAL_COMPANY_MASTER.pincode,
+    };
   }
 
   /**
