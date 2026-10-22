@@ -14,6 +14,7 @@ export interface CompanyMasterSettings {
   cin: string;
   pan: string;
   gstin: string;
+  msme_udyam?: string;
   gst_state: string;
   gst_state_code: string;
   address_line_1: string;
@@ -52,11 +53,12 @@ export const OFFICIAL_COMPANY_MASTER: CompanyMasterSettings = {
   cin: 'U46496UP2024PTC213997',
   pan: 'AALCK4750F',
   gstin: '09AALCK4750F1ZC',
+  msme_udyam: 'UDYAM-UP-06-0034981',
   gst_state: 'Uttar Pradesh',
   gst_state_code: '09',
   address_line_1: 'Panchsheel Greens-2, Sec-16 B',
-  address_line_2: 'Greater Noida West, Bisrakh, Bishrakh',
-  branch_office: '4th Floor, VBSS New Building, Bihiya Chaurasta, Bhojpur (Bihar) - 802154',
+  address_line_2: 'Greater Noida West, Bisrakh',
+  branch_office: '4th Floor, VBSS New Building, Bihiya Chaurasta, Bhojpur, Bihar, India - 802154',
   city: 'Greater Noida West',
   district: 'Gautam Buddha Nagar',
   state: 'Uttar Pradesh',

@@ -22,6 +22,7 @@ import { dataSyncBus } from '../../services/dataSyncBus';
 import { companyMasterService } from '../../services/companyMasterService';
 import { SiteMedia } from '../../types';
 import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
+import { PaymentLogos } from './PaymentLogos';
 
 interface FooterProps {
   setActiveTab: (tab: string) => void;
@@ -342,63 +343,9 @@ export const Footer: React.FC<FooterProps> = ({
               <span>From Farm Waste to Future-Ready Paper.</span>
             </div>
 
-            <p style={{ fontSize: '0.84rem', lineHeight: '1.6', marginBottom: '1rem', color: '#CBD5E1' }}>
+            <p style={{ fontSize: '0.84rem', lineHeight: '1.6', marginBottom: '1.25rem', color: '#CBD5E1' }}>
               Kogniti Minds Private Limited is an Indian sustainable paper manufacturing enterprise pioneering the conversion of agricultural waste (crop residue) into premium, 100% tree-free paper products for individuals, businesses, and institutions across India.
             </p>
-
-            {/* Official Business & Government Ecosystem Badges */}
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '0.5rem',
-                marginBottom: '1.25rem',
-              }}
-              aria-label="Government and Business Ecosystem Recognition"
-            >
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  padding: '0.3rem 0.6rem',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  fontSize: '0.74rem',
-                  color: '#FFFFFF',
-                  fontWeight: 600,
-                }}
-              >
-                <img
-                  src="/official-make-in-india-seal.png?v=20261002"
-                  alt="Make in India"
-                  style={{ height: '20px', width: 'auto', display: 'block' }}
-                />
-                <span>Make in India</span>
-              </div>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  padding: '0.3rem 0.6rem',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  fontSize: '0.74rem',
-                  color: '#FFFFFF',
-                  fontWeight: 600,
-                }}
-              >
-                <img
-                  src="/official-msme-gov-logo.png?v=20261002"
-                  alt="Ministry of MSME / Udyam"
-                  style={{ height: '18px', width: 'auto', display: 'block' }}
-                />
-                <span>MSME / Udyam</span>
-              </div>
-            </div>
 
             {/* Official Social Media & Helpline Links */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.8rem' }}>
@@ -703,21 +650,49 @@ export const Footer: React.FC<FooterProps> = ({
               </li>
             </ul>
 
-            {/* Office Locations Summary */}
-            <div style={{ fontSize: '0.78rem', color: '#94A3B8', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {/* Office Locations & Corporate Addresses */}
+            <div style={{ fontSize: '0.78rem', color: '#CBD5E1', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
               <div className="flex items-start gap-2">
-                <MapPin size={13} className="text-amber-400" style={{ flexShrink: 0, marginTop: '3px' }} />
+                <MapPin size={14} className="text-amber-400" style={{ flexShrink: 0, marginTop: '3px' }} />
                 <div>
-                  <span style={{ color: '#FFFFFF', fontWeight: 600 }}>Registered Office:</span><br />
-                  {companyMaster.address_line_1}, {companyMaster.address_line_2}, {companyMaster.city}, {companyMaster.state} - {companyMaster.pincode}
+                  <span style={{ color: '#FFFFFF', fontWeight: 700 }}>Registered Office:</span><br />
+                  <span>
+                    {companyMaster.address_line_1}, {companyMaster.address_line_2}{companyMaster.district ? `, ${companyMaster.district}` : ''}, {companyMaster.state}, {companyMaster.country || 'India'} - {companyMaster.pincode}
+                  </span>
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <MapPin size={13} className="text-emerald-400" style={{ flexShrink: 0, marginTop: '3px' }} />
+                <MapPin size={14} className="text-emerald-400" style={{ flexShrink: 0, marginTop: '3px' }} />
                 <div>
-                  <span style={{ color: '#FFFFFF', fontWeight: 600 }}>Branch Office:</span><br />
-                  4th Floor, VBSS New Building, Bihiya Chaurasta, Bhojpur (Bihar) - 802154
+                  <span style={{ color: '#FFFFFF', fontWeight: 700 }}>Branch Office:</span><br />
+                  <span>{companyMaster.branch_office || '4th Floor, VBSS New Building, Bihiya Chaurasta, Bhojpur, Bihar, India - 802154'}</span>
                 </div>
+              </div>
+
+              {/* Secure Payments Section Directly Below Branch Office Address */}
+              <div
+                style={{
+                  marginTop: '0.5rem',
+                  paddingTop: '0.75rem',
+                  borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    marginBottom: '0.5rem',
+                    color: '#FFFFFF',
+                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    letterSpacing: '0.01em',
+                  }}
+                >
+                  <ShieldCheck size={14} className="text-cyan-400" />
+                  <span>Secure Payments</span>
+                </div>
+                <PaymentLogos variant="card" />
               </div>
             </div>
           </div>
@@ -832,14 +807,12 @@ export const Footer: React.FC<FooterProps> = ({
         <div
           style={{
             borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-            padding: '0.85rem 1.25rem',
-            background: 'rgba(16, 45, 85, 0.5)',
+            padding: '1rem 1.25rem',
+            background: 'rgba(16, 45, 85, 0.6)',
             borderRadius: '10px',
             marginBottom: '1.5rem',
             display: 'flex',
-            flexWrap: 'wrap',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            flexDirection: 'column',
             gap: '0.75rem',
             fontSize: '0.78rem',
             color: '#CBD5E1',
@@ -848,21 +821,38 @@ export const Footer: React.FC<FooterProps> = ({
         >
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem' }}>
             <span style={{ color: '#FFFFFF', fontWeight: 700 }}>{companyMaster.legal_name}</span>
-            <span style={{ color: '#475569' }}>•</span>
+            <span style={{ color: '#475569' }}>|</span>
             <span>CIN: <code style={{ color: '#93C5FD', fontWeight: 600 }}>{companyMaster.cin}</code></span>
-            <span style={{ color: '#475569' }}>•</span>
+            <span style={{ color: '#475569' }}>|</span>
             <span>PAN: <code style={{ color: '#FDE047', fontWeight: 600 }}>{companyMaster.pan}</code></span>
-            <span style={{ color: '#475569' }}>•</span>
+            <span style={{ color: '#475569' }}>|</span>
             <span>GSTIN: <code style={{ color: '#86EFAC', fontWeight: 600 }}>{companyMaster.gstin}</code> ({companyMaster.gst_state})</span>
-            <span style={{ color: '#475569' }}>•</span>
-            <span>MSME / Udyam: <code style={{ color: '#38BDF8', fontWeight: 600 }}>Registered MSE</code></span>
+            <span style={{ color: '#475569' }}>|</span>
+            <span>MSME / Udyam Reg. No.: <code style={{ color: '#38BDF8', fontWeight: 600 }}>{companyMaster.msme_udyam || 'UDYAM-UP-06-0034981'}</code></span>
           </div>
-          <div style={{ color: '#94A3B8', fontSize: '0.74rem' }}>
-            Registered Office: {companyMaster.address_line_1}, {companyMaster.address_line_2}, {companyMaster.city}, {companyMaster.state}, {companyMaster.country} - {companyMaster.pincode}
+          <div
+            style={{
+              color: '#94A3B8',
+              fontSize: '0.74rem',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '0.5rem',
+              borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+              paddingTop: '0.5rem',
+            }}
+          >
+            <div>
+              <span style={{ color: '#FFFFFF', fontWeight: 600 }}>Registered Office:</span>{' '}
+              {companyMaster.address_line_1}, {companyMaster.address_line_2}{companyMaster.district ? `, ${companyMaster.district}` : ''}, {companyMaster.state}, {companyMaster.country || 'India'} - {companyMaster.pincode}
+            </div>
+            <div>
+              <span style={{ color: '#FFFFFF', fontWeight: 600 }}>Branch Office:</span>{' '}
+              {companyMaster.branch_office || '4th Floor, VBSS New Building, Bihiya Chaurasta, Bhojpur, Bihar, India - 802154'}
+            </div>
           </div>
         </div>
 
-        {/* Bottom Legal, Highlights & Safe Payments Strip */}
+        {/* Bottom Legal & Safe Payments Strip */}
         <div
           style={{
             borderTop: '1px solid rgba(255, 255, 255, 0.08)',
@@ -880,33 +870,10 @@ export const Footer: React.FC<FooterProps> = ({
             © {new Date().getFullYear()} Kogniti Minds Private Limited. All Rights Reserved. Built for Indian Individuals & Enterprises.
           </div>
 
-          {/* Service Highlights */}
-          <div className="flex items-center gap-3" style={{ fontSize: '0.74rem', color: '#CBD5E1' }}>
-            <span className="flex items-center gap-1">
-              <Leaf size={12} className="text-emerald-400" /> 100% Tree-Free Paper
-            </span>
-            <span>•</span>
-            <span className="flex items-center gap-1">
-              <Award size={12} className="text-amber-400" /> Make in India &amp; MSME
-            </span>
-            <span>•</span>
-            <span className="flex items-center gap-1">
-              <FileText size={12} className="text-cyan-400" /> GST Invoices &amp; 18% ITC
-            </span>
-            <span>•</span>
-            <span className="flex items-center gap-1">
-              <Truck size={12} className="text-blue-400" /> Pan-India Dispatch
-            </span>
-          </div>
-
           {/* Secure Indian Payment Badges */}
-          <div className="flex items-center gap-1.5">
-            <span style={{ fontSize: '0.72rem', color: '#94A3B8', marginRight: '4px' }}>Secure Payments:</span>
-            <span style={{ background: '#102D55', padding: '0.2rem 0.5rem', borderRadius: '4px', color: '#E2E8F0', fontWeight: 700, fontSize: '0.72rem', border: '1px solid rgba(255,255,255,0.1)' }}>UPI</span>
-            <span style={{ background: '#102D55', padding: '0.2rem 0.5rem', borderRadius: '4px', color: '#E2E8F0', fontWeight: 700, fontSize: '0.72rem', border: '1px solid rgba(255,255,255,0.1)' }}>RuPay</span>
-            <span style={{ background: '#102D55', padding: '0.2rem 0.5rem', borderRadius: '4px', color: '#E2E8F0', fontWeight: 700, fontSize: '0.72rem', border: '1px solid rgba(255,255,255,0.1)' }}>Visa</span>
-            <span style={{ background: '#102D55', padding: '0.2rem 0.5rem', borderRadius: '4px', color: '#E2E8F0', fontWeight: 700, fontSize: '0.72rem', border: '1px solid rgba(255,255,255,0.1)' }}>Mastercard</span>
-            <span style={{ background: '#102D55', padding: '0.2rem 0.5rem', borderRadius: '4px', color: '#E2E8F0', fontWeight: 700, fontSize: '0.72rem', border: '1px solid rgba(255,255,255,0.1)' }}>NetBanking</span>
+          <div className="flex items-center gap-2">
+            <span style={{ fontSize: '0.74rem', color: '#CBD5E1', fontWeight: 600 }}>Secure Payments:</span>
+            <PaymentLogos variant="compact" />
           </div>
         </div>
       </div>

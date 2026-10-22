@@ -87,6 +87,8 @@ class CompanyMasterService {
       cin: (data.cin || current.cin).trim().toUpperCase(),
       pan: (data.pan || current.pan).trim().toUpperCase(),
       gstin: (data.gstin || current.gstin).trim().toUpperCase(),
+      msme_udyam: (data.msme_udyam !== undefined ? data.msme_udyam : (current.msme_udyam || 'UDYAM-UP-06-0034981')).trim().toUpperCase(),
+      branch_office: (data.branch_office !== undefined ? data.branch_office : (current.branch_office || '4th Floor, VBSS New Building, Bihiya Chaurasta, Bhojpur, Bihar, India - 802154')).trim(),
       pincode: (data.pincode || current.pincode).trim(),
       updated_at: new Date().toISOString(),
     };

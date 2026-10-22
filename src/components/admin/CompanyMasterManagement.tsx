@@ -477,6 +477,19 @@ export const CompanyMasterManagement: React.FC<CompanyMasterManagementProps> = (
                 </div>
               </div>
 
+              <div style={{ marginTop: '0.85rem' }}>
+                <label className="form-label" style={{ fontWeight: 700, fontSize: '0.82rem' }}>
+                  MSME / Udyam Registration Number
+                </label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={formData.msme_udyam || ''}
+                  onChange={(e) => handleChange('msme_udyam', e.target.value.toUpperCase())}
+                  placeholder="UDYAM-UP-06-0034981"
+                />
+              </div>
+
               <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '1rem', marginTop: '0.5rem' }}>
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0F172A', marginBottom: '0.85rem' }}>
                   Registered Office Address
@@ -567,6 +580,19 @@ export const CompanyMasterManagement: React.FC<CompanyMasterManagementProps> = (
                         required
                       />
                     </div>
+                  </div>
+
+                  <div style={{ marginTop: '0.85rem' }}>
+                    <label className="form-label" style={{ fontWeight: 600, fontSize: '0.8rem' }}>
+                      Branch Office Address
+                    </label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={formData.branch_office || ''}
+                      onChange={(e) => handleChange('branch_office', e.target.value)}
+                      placeholder="4th Floor, VBSS New Building, Bihiya Chaurasta, Bhojpur, Bihar, India - 802154"
+                    />
                   </div>
                 </div>
               </div>
