@@ -250,8 +250,8 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
                 <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Zero distributor markups on bulk supply</div>
               </div>
               <div style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px' }}>
-                <div style={{ color: '#38BDF8', fontWeight: 800, fontSize: '1.15rem' }}>Wholesale Slabs</div>
-                <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Tiered volume pricing up to 28% off</div>
+                <div style={{ color: '#38BDF8', fontWeight: 800, fontSize: '1.15rem' }}>Wholesale Slabs*</div>
+                <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Tiered volume pricing up to 28% off*</div>
               </div>
               <div style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px' }}>
                 <div style={{ color: '#34D399', fontWeight: 800, fontSize: '1.15rem' }}>100% GST Credit</div>
@@ -531,12 +531,12 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
                     <div>
                       <div className="flex items-baseline gap-2">
                         <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#38BDF8' }}>
-                          ₹{p.b2bWholesalePrice.toLocaleString('en-IN')}
+                          ₹{p.b2bWholesalePrice.toLocaleString('en-IN')}*
                         </span>
-                        <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>/ unit (excl. GST)</span>
+                        <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>/ unit (excl. GST)*</span>
                       </div>
                       <div style={{ fontSize: '0.72rem', color: '#FBBF24', marginTop: '0.2rem' }}>
-                        MOQ: {p.b2bMoq} units • Slabs up to {p.b2bDiscountSlabs[p.b2bDiscountSlabs.length - 1]?.discountPercent}% off
+                        MOQ: {p.b2bMoq} units • Slabs up to {p.b2bDiscountSlabs[p.b2bDiscountSlabs.length - 1]?.discountPercent}% off*
                       </div>
                     </div>
                   ) : (
@@ -575,6 +575,30 @@ export const B2BHomePage: React.FC<B2BHomePageProps> = ({
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Illustrative Wholesale Pricing Notice */}
+          <div
+            style={{
+              marginTop: '2rem',
+              padding: '1.1rem 1.25rem',
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '12px',
+              fontSize: '0.76rem',
+              color: '#94A3B8',
+              lineHeight: 1.5,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.35rem',
+            }}
+          >
+            <div>
+              <strong style={{ color: '#FCD34D' }}>* Illustrative Wholesale Pricing Notice:</strong> All amounts, wholesale prices, discount slabs, and tax benefits displayed are illustrative examples only and are not final prices. Actual pricing will depend on the final quotation, order quantity, applicable taxes, logistics, and approved commercial offers.
+            </div>
+            <div style={{ fontWeight: 600, color: '#38BDF8' }}>
+              *Terms and Conditions Apply
+            </div>
           </div>
         </div>
       </section>

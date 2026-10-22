@@ -492,8 +492,8 @@ export const GstInputCreditPage: React.FC<GstInputCreditPageProps> = ({
                   color: '#0F172A',
                 }}
               >
-                <span>Total Invoice Value:</span>
-                <span>₹{totalInvoiceAmount.toLocaleString('en-IN')}</span>
+                <span>Total Invoice Value*:</span>
+                <span>₹{totalInvoiceAmount.toLocaleString('en-IN')}*</span>
               </div>
             </div>
 
@@ -511,17 +511,41 @@ export const GstInputCreditPage: React.FC<GstInputCreditPageProps> = ({
             >
               <div>
                 <div style={{ fontSize: '0.76rem', color: '#065F46', fontWeight: 700, textTransform: 'uppercase' }}>
-                  Eligible ITC Claim Value
+                  Eligible ITC Claim Value*
                 </div>
                 <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#047857' }}>
-                  ₹{gstAmount.toLocaleString('en-IN')}
+                  ₹{gstAmount.toLocaleString('en-IN')}*
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.72rem', color: '#065F46', fontWeight: 600 }}>Effective Net Cost:</div>
+                <div style={{ fontSize: '0.72rem', color: '#065F46', fontWeight: 600 }}>Effective Net Cost*:</div>
                 <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>
-                  ₹{netEffectiveCost.toLocaleString('en-IN')}
+                  ₹{netEffectiveCost.toLocaleString('en-IN')}*
                 </div>
+              </div>
+            </div>
+
+            {/* Disclaimer & Terms Note */}
+            <div
+              style={{
+                marginTop: '0.85rem',
+                padding: '0.75rem 0.85rem',
+                borderRadius: '8px',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                fontSize: '0.72rem',
+                color: '#64748B',
+                lineHeight: 1.45,
+              }}
+            >
+              <div style={{ fontWeight: 600, color: '#334155', marginBottom: '2px' }}>
+                * Illustrative Calculation Only
+              </div>
+              <div>
+                All amounts, discounts, savings, and tax benefits are illustrative examples only and are not final prices. Actual pricing will depend on the final quotation, order quantity, applicable taxes, and approved offers.
+              </div>
+              <div style={{ marginTop: '4px', fontWeight: 600, color: '#0F766E' }}>
+                *Terms and Conditions Apply
               </div>
             </div>
           </div>

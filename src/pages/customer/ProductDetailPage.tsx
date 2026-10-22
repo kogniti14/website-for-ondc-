@@ -328,16 +328,16 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
             >
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', marginBottom: '0.25rem' }}>
                 <span style={{ fontSize: '1.85rem', fontWeight: 900, color: '#0F172A' }}>
-                  ₹{b2cPrice.toLocaleString('en-IN')}
+                  ₹{b2cPrice.toLocaleString('en-IN')}*
                 </span>
                 {b2cMrp > b2cPrice && (
                   <span style={{ fontSize: '1.1rem', color: '#94A3B8', textDecoration: 'line-through' }}>
-                    ₹{b2cMrp.toLocaleString('en-IN')}
+                    ₹{b2cMrp.toLocaleString('en-IN')}*
                   </span>
                 )}
                 {b2cMrp > b2cPrice && (
                   <span style={{ background: '#DCFCE7', color: '#15803D', fontSize: '0.8rem', fontWeight: 700, padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                    Save {Math.round(((b2cMrp - b2cPrice) / b2cMrp) * 100)}%
+                    Save {Math.round(((b2cMrp - b2cPrice) / b2cMrp) * 100)}%*
                   </span>
                 )}
               </div>
@@ -362,10 +362,31 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
                     <Building2 size={16} /> B2B Wholesale Tier:
                   </span>
                   <span style={{ fontWeight: 800, color: '#0F172A' }}>
-                    ₹{product.b2bWholesalePrice} / unit (MOQ: {product.b2bMoq || 10} units)
+                    ₹{product.b2bWholesalePrice}* / unit (MOQ: {product.b2bMoq || 10} units)
                   </span>
                 </div>
               )}
+
+              {/* Pricing & Terms Disclaimer */}
+              <div
+                style={{
+                  marginTop: '0.85rem',
+                  padding: '0.65rem 0.75rem',
+                  borderRadius: '6px',
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  fontSize: '0.72rem',
+                  color: '#64748B',
+                  lineHeight: 1.45,
+                }}
+              >
+                <div>
+                  * All amounts, discounts, savings, and tax benefits are illustrative examples only and are not final prices. Actual pricing will depend on the final quotation, order quantity, applicable taxes, and approved offers.
+                </div>
+                <div style={{ marginTop: '3px', fontWeight: 600, color: '#0F766E' }}>
+                  *Terms and Conditions Apply
+                </div>
+              </div>
             </div>
 
             {/* Description */}

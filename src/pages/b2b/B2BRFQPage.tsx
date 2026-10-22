@@ -310,7 +310,7 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
                 >
                   {products.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} (MOQ: {p.b2bMoq} | Wholesale Base: ₹{p.b2bWholesalePrice.toLocaleString('en-IN')})
+                      {p.name} (MOQ: {p.b2bMoq} | Illustrative Wholesale Base: ₹{p.b2bWholesalePrice.toLocaleString('en-IN')}*)
                     </option>
                   ))}
                 </select>
@@ -509,6 +509,27 @@ export const B2BRFQPage: React.FC<B2BRFQPageProps> = ({
                   className="form-textarea"
                   style={{ background: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.2)', color: '#FFF' }}
                 />
+              </div>
+
+              {/* Illustrative Notice & Terms */}
+              <div
+                style={{
+                  marginBottom: '1.25rem',
+                  padding: '0.85rem 1rem',
+                  borderRadius: '8px',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  fontSize: '0.74rem',
+                  color: '#94A3B8',
+                  lineHeight: 1.45,
+                }}
+              >
+                <div>
+                  <strong style={{ color: '#FCD34D' }}>* Illustrative RFQ Notice:</strong> All amounts, rates, discounts, and budgets entered or displayed are illustrative examples only and are not final prices. Actual pricing will depend on the final quotation, order quantity, applicable taxes, and approved offers from Kogniti Minds commercial desk.
+                </div>
+                <div style={{ marginTop: '4px', fontWeight: 600, color: '#38BDF8' }}>
+                  *Terms and Conditions Apply
+                </div>
               </div>
 
               <button

@@ -321,9 +321,9 @@ export const B2BCartPage: React.FC<B2BCartPageProps> = ({
                       {/* Pricing & Slabs Info */}
                       <div className="flex items-center gap-3 flex-wrap" style={{ margin: '0.75rem 0' }}>
                         <div>
-                          <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Wholesale Price: </span>
+                          <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Wholesale Price*: </span>
                           <strong style={{ fontSize: '1.15rem', color: '#38BDF8' }}>
-                            ₹{product.b2bWholesalePrice.toLocaleString('en-IN')}
+                            ₹{product.b2bWholesalePrice.toLocaleString('en-IN')}*
                           </strong>
                           <span style={{ fontSize: '0.72rem', color: '#94A3B8' }}> / unit</span>
                         </div>
@@ -332,7 +332,7 @@ export const B2BCartPage: React.FC<B2BCartPageProps> = ({
                         </span>
                         {tierDiscount > 0 && (
                           <span className="badge badge-green" style={{ fontSize: '0.7rem' }}>
-                            ✓ {tierDiscount}% Volume Tier Discount Applied
+                            ✓ {tierDiscount}% Volume Tier Discount Applied*
                           </span>
                         )}
                       </div>
@@ -361,9 +361,9 @@ export const B2BCartPage: React.FC<B2BCartPageProps> = ({
                         </div>
 
                         <div>
-                          <span style={{ fontSize: '0.75rem', color: '#94A3B8', display: 'block', textAlign: 'right' }}>Taxable Base:</span>
+                          <span style={{ fontSize: '0.75rem', color: '#94A3B8', display: 'block', textAlign: 'right' }}>Taxable Base*:</span>
                           <strong style={{ fontSize: '1.15rem', color: '#FFFFFF' }}>
-                            ₹{Math.round(baseTotal * (1 - tierDiscount / 100)).toLocaleString('en-IN')}
+                            ₹{Math.round(baseTotal * (1 - tierDiscount / 100)).toLocaleString('en-IN')}*
                           </strong>
                         </div>
                       </div>
@@ -431,25 +431,25 @@ export const B2BCartPage: React.FC<B2BCartPageProps> = ({
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.88rem', marginBottom: '1.25rem' }}>
                 <div className="flex justify-between">
-                  <span style={{ color: '#94A3B8' }}>Wholesale Subtotal:</span>
-                  <strong style={{ color: '#FFFFFF' }}>₹{calculations.subtotal.toLocaleString('en-IN')}</strong>
+                  <span style={{ color: '#94A3B8' }}>Wholesale Subtotal*:</span>
+                  <strong style={{ color: '#FFFFFF' }}>₹{calculations.subtotal.toLocaleString('en-IN')}*</strong>
                 </div>
 
                 {calculations.discount > 0 && (
                   <div className="flex justify-between" style={{ color: '#34D399' }}>
-                    <span>Volume Tier Discount:</span>
-                    <strong>- ₹{calculations.discount.toLocaleString('en-IN')}</strong>
+                    <span>Volume Tier Discount*:</span>
+                    <strong>- ₹{calculations.discount.toLocaleString('en-IN')}*</strong>
                   </div>
                 )}
 
                 <div className="flex justify-between">
-                  <span style={{ color: '#94A3B8' }}>Taxable Base:</span>
-                  <strong style={{ color: '#FFFFFF' }}>₹{calculations.taxableAmount.toLocaleString('en-IN')}</strong>
+                  <span style={{ color: '#94A3B8' }}>Taxable Base*:</span>
+                  <strong style={{ color: '#FFFFFF' }}>₹{calculations.taxableAmount.toLocaleString('en-IN')}*</strong>
                 </div>
 
                 <div className="flex justify-between">
-                  <span style={{ color: '#94A3B8' }}>18% Statutory GST (CGST 9% + SGST 9%):</span>
-                  <strong style={{ color: '#38BDF8' }}>₹{calculations.totalGst.toLocaleString('en-IN')}</strong>
+                  <span style={{ color: '#94A3B8' }}>18% Statutory GST (CGST 9% + SGST 9%)*:</span>
+                  <strong style={{ color: '#38BDF8' }}>₹{calculations.totalGst.toLocaleString('en-IN')}*</strong>
                 </div>
 
                 <div className="flex justify-between">
@@ -459,13 +459,37 @@ export const B2BCartPage: React.FC<B2BCartPageProps> = ({
 
                 <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '1rem', marginTop: '0.5rem' }}>
                   <div className="flex justify-between items-baseline">
-                    <span style={{ color: '#CBD5E1', fontWeight: 700 }}>Total Net Payable:</span>
+                    <span style={{ color: '#CBD5E1', fontWeight: 700 }}>Total Net Payable*:</span>
                     <strong style={{ fontSize: '1.75rem', fontWeight: 900, color: '#34D399' }}>
-                      ₹{calculations.total.toLocaleString('en-IN')}
+                      ₹{calculations.total.toLocaleString('en-IN')}*
                     </strong>
                   </div>
                   <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '0.2rem' }}>
                     Inclusive of 18% GST • 100% ITC Eligible Section 31 Tax Invoice
+                  </div>
+                </div>
+
+                {/* Illustrative Notice & Terms */}
+                <div
+                  style={{
+                    marginTop: '0.5rem',
+                    padding: '0.75rem 0.85rem',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    fontSize: '0.72rem',
+                    color: '#94A3B8',
+                    lineHeight: 1.45,
+                  }}
+                >
+                  <div style={{ fontWeight: 600, color: '#FCD34D', marginBottom: '2px' }}>
+                    * Illustrative Pricing Notice
+                  </div>
+                  <div>
+                    All amounts, discounts, savings, and tax calculations are illustrative examples only and are not final prices. Actual pricing will depend on the final quotation, order quantity, applicable taxes, delivery pin-code, and approved commercial offers.
+                  </div>
+                  <div style={{ marginTop: '4px', fontWeight: 600, color: '#38BDF8' }}>
+                    *Terms and Conditions Apply
                   </div>
                 </div>
               </div>

@@ -382,19 +382,22 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
                 {isApproved ? (
                   <div>
                     <div style={{ fontSize: '0.72rem', color: '#34D399', fontWeight: 800, letterSpacing: '0.03em' }}>
-                      DIRECT MANUFACTURER PRICING
+                      DIRECT MANUFACTURER PRICING*
                     </div>
                     <div className="flex items-baseline gap-1">
                       <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#38BDF8' }}>
-                        ₹{Number(product.b2bWholesalePrice || 0).toLocaleString('en-IN')}
+                        ₹{Number(product.b2bWholesalePrice || 0).toLocaleString('en-IN')}*
                       </span>
-                      <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>/ unit</span>
+                      <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>/ unit (excl. GST)*</span>
                     </div>
                     <div className="flex items-center gap-1 text-amber-400" style={{ fontSize: '0.75rem', fontWeight: 700, marginTop: '0.2rem' }}>
                       MOQ: {product.b2bMoq || 10} Units
                     </div>
                     <div style={{ fontSize: '0.72rem', color: '#34D399', marginTop: '0.1rem' }}>
-                      +18% GST (100% ITC Eligible)
+                      +18% GST (100% ITC Eligible)*
+                    </div>
+                    <div style={{ fontSize: '0.68rem', color: '#94A3B8', marginTop: '0.2rem', fontStyle: 'italic' }}>
+                      *All amounts illustrative • Terms Apply
                     </div>
 
                     <div className="flex flex-col gap-2" style={{ marginTop: '0.85rem' }}>
@@ -482,6 +485,30 @@ export const B2BCatalogPage: React.FC<B2BCatalogPageProps> = ({
               </div>
             </div>
           )))}
+        </div>
+
+        {/* Catalog Pricing Disclaimer */}
+        <div
+          style={{
+            marginTop: '2rem',
+            padding: '1rem 1.25rem',
+            background: 'rgba(255, 255, 255, 0.04)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '12px',
+            fontSize: '0.76rem',
+            color: '#94A3B8',
+            lineHeight: 1.5,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.25rem',
+          }}
+        >
+          <div>
+            <strong style={{ color: '#FCD34D' }}>* Illustrative Wholesale Pricing Notice:</strong> All amounts, wholesale prices, discount slabs, and tax benefits are illustrative examples only and are not final prices. Actual pricing will depend on the final quotation, order quantity, applicable taxes, delivery logistics, and approved commercial offers.
+          </div>
+          <div style={{ fontWeight: 600, color: '#38BDF8' }}>
+            *Terms and Conditions Apply
+          </div>
         </div>
       </div>
     </div>

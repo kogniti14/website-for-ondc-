@@ -270,17 +270,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <div>
                   <div className="flex items-baseline gap-2">
                     <span style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--slate-900)' }}>
-                      ₹{b2bWholesalePrice.toLocaleString('en-IN')}
+                      ₹{b2bWholesalePrice.toLocaleString('en-IN')}*
                     </span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>/ unit (excl. GST)</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)' }}>/ unit (excl. GST)*</span>
                   </div>
                   <div className="flex items-center gap-2" style={{ marginTop: '0.2rem' }}>
                     <span className="badge badge-amber" style={{ fontSize: '0.68rem' }}>
                       MOQ: {b2bMoq} Units
                     </span>
                     <span style={{ fontSize: '0.72rem', color: 'var(--emerald-600)', fontWeight: 600 }}>
-                      Bulk tiers up to {maxSlabDiscount}% off
+                      Bulk tiers up to {maxSlabDiscount}% off*
                     </span>
+                  </div>
+                  <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '0.15rem', fontStyle: 'italic' }}>
+                    *Illustrative example only • Terms Apply
                   </div>
                 </div>
               ) : (
@@ -307,14 +310,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <div>
               <div className="flex items-baseline gap-2">
                 <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--slate-900)' }}>
-                  ₹{b2cPrice.toLocaleString('en-IN')}
+                  ₹{b2cPrice.toLocaleString('en-IN')}*
                 </span>
                 <span style={{ fontSize: '0.82rem', color: 'var(--slate-400)', textDecoration: 'line-through' }}>
-                  ₹{b2cMrp.toLocaleString('en-IN')}
+                  ₹{b2cMrp.toLocaleString('en-IN')}*
                 </span>
               </div>
               <div style={{ fontSize: '0.68rem', color: 'var(--slate-500)', marginTop: '0.1rem' }}>
                 Inclusive of 18% GST (HSN: {product.hsn || '48025610'})
+              </div>
+              <div style={{ fontSize: '0.65rem', color: '#64748B', marginTop: '0.15rem', fontStyle: 'italic' }}>
+                *Illustrative example only • Terms Apply
               </div>
             </div>
           )}

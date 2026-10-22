@@ -729,6 +729,30 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
               ))}
             </div>
           )}
+
+          {/* Illustrative Pricing & Terms Disclaimer */}
+          <div
+            style={{
+              marginTop: '2.5rem',
+              padding: '1rem 1.25rem',
+              borderRadius: '12px',
+              background: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              fontSize: '0.74rem',
+              color: '#64748B',
+              lineHeight: 1.5,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem',
+            }}
+          >
+            <div>
+              <strong style={{ color: '#0F172A' }}>* Illustrative Pricing Notice:</strong> All amounts, product prices, discounts, and savings displayed across the catalog are illustrative examples only and are not final prices. Actual pricing will depend on the final quotation, order quantity, applicable taxes, delivery pin-code, and approved offers.
+            </div>
+            <div style={{ fontWeight: 600, color: 'var(--primary-700)' }}>
+              *Terms and Conditions Apply
+            </div>
+          </div>
         </div>
       </div>
     </div>

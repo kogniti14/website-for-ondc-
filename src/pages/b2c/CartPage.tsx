@@ -262,10 +262,10 @@ export const CartPage: React.FC<CartPageProps> = ({
 
                       <div className="flex items-baseline gap-2" style={{ marginBottom: '0.6rem' }}>
                         <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--slate-900)' }}>
-                          ₹{product.b2cPrice.toLocaleString('en-IN')}
+                          ₹{product.b2cPrice.toLocaleString('en-IN')}*
                         </span>
                         <span style={{ fontSize: '0.75rem', color: 'var(--slate-400)', textDecoration: 'line-through' }}>
-                          ₹{product.b2cMrp.toLocaleString('en-IN')}
+                          ₹{product.b2cMrp.toLocaleString('en-IN')}*
                         </span>
                         <span style={{ fontSize: '0.72rem', color: 'var(--slate-500)' }}>
                           (Incl. 18% GST)
@@ -319,9 +319,9 @@ export const CartPage: React.FC<CartPageProps> = ({
 
                       {/* Mobile Item Total */}
                       <div className="hide-on-desktop flex items-center justify-between" style={{ marginTop: '0.65rem', paddingTop: '0.4rem', borderTop: '1px dashed var(--border-color)' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)', fontWeight: 600 }}>Item Total:</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--slate-500)', fontWeight: 600 }}>Item Total*:</span>
                         <span style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--primary)' }}>
-                          ₹{itemTotal.toLocaleString('en-IN')}
+                          ₹{itemTotal.toLocaleString('en-IN')}*
                         </span>
                       </div>
                     </div>
@@ -329,9 +329,9 @@ export const CartPage: React.FC<CartPageProps> = ({
                     {/* Subtotal (Desktop) */}
                     <div style={{ textAlign: 'right', minWidth: '90px' }} className="hide-on-mobile">
                       <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--slate-900)' }}>
-                        ₹{itemTotal.toLocaleString('en-IN')}
+                        ₹{itemTotal.toLocaleString('en-IN')}*
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--slate-400)' }}>Item Total</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--slate-400)' }}>Item Total*</div>
                     </div>
                   </div>
                 );
@@ -411,25 +411,25 @@ export const CartPage: React.FC<CartPageProps> = ({
               {/* Price Breakdown */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
                 <div className="flex justify-between text-slate-600">
-                  <span>Item Subtotal ({b2cCart.reduce((s, i) => s + i.quantity, 0)} units):</span>
-                  <span className="font-semibold text-slate-800">₹{calculations.subtotal.toLocaleString('en-IN')}</span>
+                  <span>Item Subtotal ({b2cCart.reduce((s, i) => s + i.quantity, 0)} units)*:</span>
+                  <span className="font-semibold text-slate-800">₹{calculations.subtotal.toLocaleString('en-IN')}*</span>
                 </div>
 
                 {calculations.discount > 0 && (
                   <div className="flex justify-between text-emerald-600 font-medium">
-                    <span>Promo Coupon Discount:</span>
-                    <span>- ₹{calculations.discount.toLocaleString('en-IN')}</span>
+                    <span>Promo Coupon Discount*:</span>
+                    <span>- ₹{calculations.discount.toLocaleString('en-IN')}*</span>
                   </div>
                 )}
 
                 <div className="flex justify-between text-slate-500 text-xs">
-                  <span>Net Taxable Base Value:</span>
-                  <span>₹{calculations.taxableAmount.toLocaleString('en-IN')}</span>
+                  <span>Net Taxable Base Value*:</span>
+                  <span>₹{calculations.taxableAmount.toLocaleString('en-IN')}*</span>
                 </div>
 
                 <div className="flex justify-between text-slate-500 text-xs">
-                  <span>CGST (9%) + SGST (9%) [Included]:</span>
-                  <span>₹{calculations.totalGst.toLocaleString('en-IN')}</span>
+                  <span>CGST (9%) + SGST (9%) [Included]*:</span>
+                  <span>₹{calculations.totalGst.toLocaleString('en-IN')}*</span>
                 </div>
 
                 <div className="flex justify-between text-slate-600">
@@ -453,11 +453,32 @@ export const CartPage: React.FC<CartPageProps> = ({
                     color: 'var(--slate-900)',
                   }}
                 >
-                  <span>Grand Total:</span>
-                  <span>₹{calculations.total.toLocaleString('en-IN')}</span>
+                  <span>Grand Total*:</span>
+                  <span>₹{calculations.total.toLocaleString('en-IN')}*</span>
                 </div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--slate-400)', textAlign: 'right' }}>
                   Total includes all applicable taxes & shipping
+                </div>
+
+                {/* Illustrative Pricing & Terms Note */}
+                <div
+                  style={{
+                    marginTop: '0.5rem',
+                    padding: '0.65rem 0.75rem',
+                    borderRadius: '6px',
+                    background: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                    fontSize: '0.71rem',
+                    color: '#64748B',
+                    lineHeight: 1.45,
+                  }}
+                >
+                  <div>
+                    * All amounts, discounts, savings, and taxes are illustrative examples only and are not final prices. Actual pricing will depend on the final quotation, order quantity, applicable taxes, delivery pin-code, and approved offers.
+                  </div>
+                  <div style={{ marginTop: '3px', fontWeight: 600, color: 'var(--primary-700)' }}>
+                    *Terms and Conditions Apply
+                  </div>
                 </div>
               </div>
 

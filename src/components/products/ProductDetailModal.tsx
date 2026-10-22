@@ -272,12 +272,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {isB2BMode ? (
                 isB2BApproved ? (
                   <div>
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Approved Wholesale Price</div>
+                    <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Approved Wholesale Price*</div>
                     <div className="flex items-baseline gap-2">
                       <span style={{ fontSize: '1.6rem', fontWeight: 800, color: '#38BDF8' }}>
-                        ₹{product.b2bWholesalePrice.toLocaleString('en-IN')}
+                        ₹{product.b2bWholesalePrice.toLocaleString('en-IN')}*
                       </span>
-                      <span style={{ fontSize: '0.85rem', color: '#CBD5E1' }}>/ unit (Excl. 18% GST)</span>
+                      <span style={{ fontSize: '0.85rem', color: '#CBD5E1' }}>/ unit (Excl. 18% GST)*</span>
                     </div>
                     <div className="flex items-center gap-2" style={{ marginTop: '0.4rem' }}>
                       <span className="badge badge-amber">MOQ: {product.b2bMoq} Units</span>
@@ -305,13 +305,34 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                             <span style={{ color: '#FCD34D', fontWeight: 700 }}>
                               {slab.minQty}{slab.maxQty ? `-${slab.maxQty}` : '+'} units:
                             </span>{' '}
-                            <span style={{ color: '#FFFFFF' }}>{slab.discountPercent}% Off</span>
+                            <span style={{ color: '#FFFFFF' }}>{slab.discountPercent}% Off*</span>
                           </div>
                         ))}
                       </div>
                     </div>
                     <div style={{ fontSize: '0.75rem', color: '#6EE7B7', marginTop: '0.5rem', fontWeight: 700 }}>
                       DIRECT MANUFACTURER PRICING • 100% GST Invoice with Input Tax Credit
+                    </div>
+
+                    {/* B2B Disclaimer */}
+                    <div
+                      style={{
+                        marginTop: '0.75rem',
+                        padding: '0.65rem 0.75rem',
+                        borderRadius: '6px',
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        fontSize: '0.72rem',
+                        color: '#94A3B8',
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      <div>
+                        * All amounts, discounts, and savings are illustrative examples only and are not final prices. Actual pricing will depend on the final quotation, order quantity, applicable taxes, and approved offers.
+                      </div>
+                      <div style={{ marginTop: '3px', fontWeight: 600, color: '#38BDF8' }}>
+                        *Terms and Conditions Apply
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -338,17 +359,38 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <div>
                   <div className="flex items-baseline gap-3">
                     <span style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary-700)' }}>
-                      ₹{product.b2cPrice.toLocaleString('en-IN')}
+                      ₹{product.b2cPrice.toLocaleString('en-IN')}*
                     </span>
                     <span style={{ fontSize: '1rem', color: 'var(--slate-400)', textDecoration: 'line-through' }}>
-                      ₹{product.b2cMrp.toLocaleString('en-IN')}
+                      ₹{product.b2cMrp.toLocaleString('en-IN')}*
                     </span>
                     <span className="badge badge-green" style={{ fontSize: '0.75rem' }}>
-                      Save {discountPercent}%
+                      Save {discountPercent}%*
                     </span>
                   </div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--slate-500)', marginTop: '0.25rem' }}>
                     100% GENUINE PRODUCTS | GST Invoice Available • FREE PAN-INDIA DELIVERY on Orders Above ₹1,999
+                  </div>
+
+                  {/* B2C Disclaimer */}
+                  <div
+                    style={{
+                      marginTop: '0.65rem',
+                      padding: '0.6rem 0.75rem',
+                      borderRadius: '6px',
+                      background: '#F8FAFC',
+                      border: '1px solid #E2E8F0',
+                      fontSize: '0.71rem',
+                      color: '#64748B',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    <div>
+                      * All amounts, discounts, and savings are illustrative examples only and are not final prices. Actual pricing will depend on the final quotation, order quantity, applicable taxes, and approved offers.
+                    </div>
+                    <div style={{ marginTop: '3px', fontWeight: 600, color: 'var(--primary-700)' }}>
+                      *Terms and Conditions Apply
+                    </div>
                   </div>
                 </div>
               )}

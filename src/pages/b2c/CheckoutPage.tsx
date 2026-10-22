@@ -1226,7 +1226,7 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                         </div>
                       </div>
                       <span style={{ fontWeight: 700, flexShrink: 0 }}>
-                        ₹{(itemPrice * item.quantity).toLocaleString('en-IN')}
+                        ₹{(itemPrice * item.quantity).toLocaleString('en-IN')}*
                       </span>
                     </div>
                   );
@@ -1246,24 +1246,24 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                 }}
               >
                 <div className="flex justify-between text-slate-600">
-                  <span>{isB2B ? 'Wholesale Base Subtotal:' : 'Subtotal:'}</span>
-                  <span>₹{calculations.subtotal.toLocaleString('en-IN')}</span>
+                  <span>{isB2B ? 'Wholesale Base Subtotal*:' : 'Subtotal*:'}</span>
+                  <span>₹{calculations.subtotal.toLocaleString('en-IN')}*</span>
                 </div>
                 {calculations.discount > 0 && (
                   <div className="flex justify-between text-emerald-600 font-medium">
-                    <span>{isB2B ? 'Volume Slab Discount:' : 'Coupon Discount:'}</span>
-                    <span>- ₹{calculations.discount.toLocaleString('en-IN')}</span>
+                    <span>{isB2B ? 'Volume Slab Discount*:' : 'Coupon Discount*:'}</span>
+                    <span>- ₹{calculations.discount.toLocaleString('en-IN')}*</span>
                   </div>
                 )}
                 {isB2B && (
                   <div className="flex justify-between text-slate-700 font-medium">
-                    <span>Taxable Net Amount:</span>
-                    <span>₹{calculations.taxableAmount.toLocaleString('en-IN')}</span>
+                    <span>Taxable Net Amount*:</span>
+                    <span>₹{calculations.taxableAmount.toLocaleString('en-IN')}*</span>
                   </div>
                 )}
                 <div className="flex justify-between text-slate-500 text-xs">
-                  <span>{isB2B ? 'GST (18% ITC Eligible):' : 'GST (18% Included):'}</span>
-                  <span>₹{calculations.totalGst.toLocaleString('en-IN')}</span>
+                  <span>{isB2B ? 'GST (18% ITC Eligible)*:' : 'GST (18% Included)*:'}</span>
+                  <span>₹{calculations.totalGst.toLocaleString('en-IN')}*</span>
                 </div>
                 <div className="flex justify-between text-slate-600">
                   <span>{isB2B ? 'Commercial Freight:' : 'Delivery:'}</span>
@@ -1280,10 +1280,31 @@ export const CheckoutPage: React.FC<CheckoutPageProps> = ({
                     fontWeight: 800,
                   }}
                 >
-                  <span>Grand Total:</span>
+                  <span>Grand Total*:</span>
                   <span style={{ color: isB2B ? '#D97706' : 'var(--primary)' }}>
-                    ₹{calculations.total.toLocaleString('en-IN')}
+                    ₹{calculations.total.toLocaleString('en-IN')}*
                   </span>
+                </div>
+
+                {/* Pricing & Terms Disclaimer */}
+                <div
+                  style={{
+                    marginTop: '0.5rem',
+                    padding: '0.65rem 0.75rem',
+                    borderRadius: '6px',
+                    background: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                    fontSize: '0.71rem',
+                    color: '#64748B',
+                    lineHeight: 1.45,
+                  }}
+                >
+                  <div>
+                    * All amounts, discounts, savings, and taxes are illustrative examples only and are not final prices. Actual pricing will depend on the final quotation, order quantity, applicable taxes, delivery pin-code, and approved offers.
+                  </div>
+                  <div style={{ marginTop: '3px', fontWeight: 600, color: isB2B ? '#D97706' : 'var(--primary-700)' }}>
+                    *Terms and Conditions Apply
+                  </div>
                 </div>
               </div>
 

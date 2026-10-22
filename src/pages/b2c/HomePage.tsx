@@ -275,8 +275,9 @@ export const HomePage: React.FC<HomePageProps> = ({
                       <div style={{ color: '#94A3B8', fontSize: '0.8rem' }}>100% Tree-Free Indian Agricultural Residue Paper</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#38BDF8' }}>₹289</div>
-                      <div style={{ fontSize: '0.75rem', color: '#94A3B8', textDecoration: 'line-through' }}>₹399</div>
+                      <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#38BDF8' }}>₹289*</div>
+                      <div style={{ fontSize: '0.75rem', color: '#94A3B8', textDecoration: 'line-through' }}>₹399*</div>
+                      <div style={{ fontSize: '0.62rem', color: '#94A3B8', marginTop: '2px' }}>*Terms Apply</div>
                     </div>
                   </div>
                 </div>
@@ -721,20 +722,20 @@ export const HomePage: React.FC<HomePageProps> = ({
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
                 <div className="flex justify-between" style={{ fontSize: '0.85rem' }}>
-                  <span style={{ color: '#94A3B8' }}>Retail Price (200 Reams):</span>
-                  <span style={{ color: '#CBD5E1', textDecoration: 'line-through' }}>₹79,800</span>
+                  <span style={{ color: '#94A3B8' }}>Retail Price (200 Reams)*:</span>
+                  <span style={{ color: '#CBD5E1', textDecoration: 'line-through' }}>₹79,800*</span>
                 </div>
                 <div className="flex justify-between" style={{ fontSize: '0.85rem' }}>
-                  <span style={{ color: '#94A3B8' }}>Wholesale Pallet Price:</span>
-                  <span style={{ color: '#FFFFFF', fontWeight: 600 }}>₹39,600</span>
+                  <span style={{ color: '#94A3B8' }}>Wholesale Pallet Price*:</span>
+                  <span style={{ color: '#FFFFFF', fontWeight: 600 }}>₹39,600*</span>
                 </div>
                 <div className="flex justify-between" style={{ fontSize: '0.85rem' }}>
-                  <span style={{ color: '#34D399' }}>Volume Tier Discount (12%):</span>
-                  <span style={{ color: '#34D399', fontWeight: 700 }}>- ₹4,752</span>
+                  <span style={{ color: '#34D399' }}>Volume Tier Discount (12%)*:</span>
+                  <span style={{ color: '#34D399', fontWeight: 700 }}>- ₹4,752*</span>
                 </div>
                 <div className="flex justify-between" style={{ fontSize: '0.85rem' }}>
-                  <span style={{ color: '#38BDF8' }}>Input Tax Credit (18% GST):</span>
-                  <span style={{ color: '#38BDF8', fontWeight: 700 }}>₹6,273 Claimable</span>
+                  <span style={{ color: '#38BDF8' }}>Input Tax Credit (18% GST)*:</span>
+                  <span style={{ color: '#38BDF8', fontWeight: 700 }}>₹6,273 Claimable*</span>
                 </div>
                 <div
                   className="flex justify-between items-baseline"
@@ -743,10 +744,35 @@ export const HomePage: React.FC<HomePageProps> = ({
                     borderTop: '1px solid rgba(255, 255, 255, 0.15)',
                   }}
                 >
-                  <span style={{ fontWeight: 700, color: '#FFFFFF' }}>Total Net Savings:</span>
+                  <span style={{ fontWeight: 700, color: '#FFFFFF' }}>Total Net Savings*:</span>
                   <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FBBF24' }}>
-                    Save ₹51,000+
+                    Save ₹51,000+*
                   </span>
+                </div>
+              </div>
+
+              {/* Illustrative Example & Terms Notice */}
+              <div
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.65rem 0.85rem',
+                  marginBottom: '1.25rem',
+                  fontSize: '0.72rem',
+                  color: '#94A3B8',
+                  lineHeight: '1.45',
+                  textAlign: 'left',
+                }}
+              >
+                <div style={{ color: '#FCD34D', fontWeight: 700, marginBottom: '0.15rem' }}>
+                  * Illustrative Examples Only
+                </div>
+                <div>
+                  All amounts, discounts, and tax savings are illustrative examples only and are not final prices. Actual pricing will depend on the final quotation, order quantity, applicable taxes, and approved offers.
+                </div>
+                <div style={{ marginTop: '0.25rem', color: '#E2E8F0', fontWeight: 700 }}>
+                  *Terms and Conditions Apply
                 </div>
               </div>
 
