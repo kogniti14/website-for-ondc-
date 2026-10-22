@@ -39,13 +39,24 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
   onBuyNow,
   setActiveTab,
 }) => {
-  // Resolve product from URL query param or fallback
+  // Resolve product from URL query param, path param (/product/:id), or fallback
   const getProductFromUrl = (): Product | null => {
     if (typeof window !== 'undefined') {
+      const pathname = window.location.pathname;
+      if (pathname.startsWith('/product/')) {
+        const idOrSlug = decodeURIComponent(pathname.replace(/^\/product\//, '').replace(/\/$/, '')).toLowerCase();
+        const found = products.find(
+          (p) =>
+            p.id.toLowerCase() === idOrSlug ||
+            (p.sku && p.sku.toLowerCase() === idOrSlug) ||
+            (p.slug && p.slug.toLowerCase() === idOrSlug)
+        );
+        if (found) return found;
+      }
       const params = new URLSearchParams(window.location.search);
       const pid = params.get('productId');
       if (pid) {
-        const found = products.find((p) => p.id === pid || p.sku === pid);
+        const found = products.find((p) => p.id === pid || p.sku === pid || (p.slug && p.slug.toLowerCase() === pid.toLowerCase()));
         if (found) return found;
       }
     }
@@ -129,7 +140,6 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
         <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: '#64748B' }}>
           <button
             onClick={() => {
-              window.history.pushState(null, '', '/');
               setActiveTab('home');
             }}
             style={{ background: 'none', border: 'none', padding: 0, color: '#0284C7', cursor: 'pointer', fontWeight: 600 }}
@@ -139,12 +149,11 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({
           <span>/</span>
           <button
             onClick={() => {
-              window.history.pushState(null, '', '/search');
-              setActiveTab('search');
+              setActiveTab('shop');
             }}
             style={{ background: 'none', border: 'none', padding: 0, color: '#0284C7', cursor: 'pointer', fontWeight: 600 }}
           >
-            Products
+            Shop
           </button>
           <span>/</span>
           <span style={{ color: '#0F172A', fontWeight: 700 }}>{product.name}</span>

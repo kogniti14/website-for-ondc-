@@ -39,6 +39,7 @@ export interface Product {
   weight: string;
   warranty: string;
   leadTimeDays: number;
+  slug?: string;
   updatedAt?: string;
   createdAt?: string;
 }

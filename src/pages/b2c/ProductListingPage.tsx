@@ -28,6 +28,7 @@ interface ProductListingPageProps {
   onOpenProduct: (product: Product) => void;
   onBuyNow: (product: Product) => void;
   isShopNowView?: boolean;
+  onCategoryChange?: (category: string) => void;
 }
 
 export const ProductListingPage: React.FC<ProductListingPageProps> = ({
@@ -41,6 +42,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
   onOpenProduct,
   onBuyNow,
   isShopNowView = false,
+  onCategoryChange,
 }) => {
   const categoryList: (Category & { slug?: string })[] = (categories && categories.length > 0 ? categories : CATEGORIES) as (Category & { slug?: string })[];
   const [search, setSearch] = useState(initialSearch);
@@ -224,9 +226,16 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
       });
   }, [safeProducts, search, selectedCategory, priceRange, minRating, onlyInStock, onlyBestSellers, onlyNewArrivals, sortBy]);
 
+  const handleCategorySelect = (categoryName: string) => {
+    setSelectedCategory(categoryName);
+    if (onCategoryChange) {
+      onCategoryChange(categoryName);
+    }
+  };
+
   const handleResetFilters = () => {
     setSearch('');
-    setSelectedCategory('All');
+    handleCategorySelect('All');
     setPriceRange(100000);
     setMinRating(0);
     setOnlyInStock(false);
@@ -258,7 +267,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
                 type="radio"
                 name="cat"
                 checked={selectedCategory === 'All'}
-                onChange={() => setSelectedCategory('All')}
+                onChange={() => handleCategorySelect('All')}
               />
               <span>All Categories</span>
             </div>
@@ -273,7 +282,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
                     type="radio"
                     name="cat"
                     checked={selectedCategory === c.name}
-                    onChange={() => setSelectedCategory(c.name)}
+                    onChange={() => handleCategorySelect(c.name)}
                   />
                   <span>{c.name}</span>
                 </div>
@@ -458,7 +467,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
           {/* Quick Category Chips */}
           <div className="flex items-center gap-2 flex-wrap hide-on-mobile">
             <button
-              onClick={() => setSelectedCategory('All')}
+              onClick={() => handleCategorySelect('All')}
               className={`btn btn-sm ${selectedCategory === 'All' ? 'btn-primary' : 'btn-outline'}`}
               style={{ borderRadius: 'var(--radius-full)' }}
             >
@@ -469,7 +478,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({
               return (
                 <button
                   key={c.id}
-                  onClick={() => setSelectedCategory(c.name)}
+                  onClick={() => handleCategorySelect(c.name)}
                   className={`btn btn-sm ${selectedCategory === c.name ? 'btn-primary' : 'btn-outline'}`}
                   style={{ borderRadius: 'var(--radius-full)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
                 >

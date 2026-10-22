@@ -64,7 +64,12 @@ import { CheckoutInitPage } from './pages/customer/CheckoutInitPage';
 import { OrderUpdatePage } from './pages/customer/OrderUpdatePage';
 import { GstInputCreditPage } from './pages/customer/GstInputCreditPage';
 
-// Gallery & Certification Components
+// URL Routing System
+import { AppRoutes, parseCurrentRoute, slugify, navigateTo } from './utils/urlRouting';
+
+// Gallery & Certification Services & Components
+import { galleryService } from './services/galleryService';
+import { certificationService } from './services/certificationService';
 import { StoryDetailModal } from './components/gallery/StoryDetailModal';
 import { CertificateDetailModal } from './components/certification/CertificateDetailModal';
 import { GalleryStory, CompanyCertification } from './types';
@@ -195,141 +200,152 @@ const MainApp: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab, b2bTab]);
 
+  // Canonical URL resolver for any tab / subtab state
+  const getCanonicalUrl = (tab: string, b2bSubTab: string | null = b2bTab): string => {
+    if (tab === 'b2b') {
+      switch (b2bSubTab) {
+        case 'catalog': return AppRoutes.b2bCatalog();
+        case 'deals': return AppRoutes.b2bDeals();
+        case 'rfq': return AppRoutes.b2bRfq();
+        case 'dashboard': return AppRoutes.b2bDashboard();
+        case 'cart': return AppRoutes.b2bCart();
+        case 'stories': return AppRoutes.b2bStories();
+        case 'certifications': return AppRoutes.b2bCompliance();
+        default: return AppRoutes.b2bOverview();
+      }
+    }
+    switch (tab) {
+      case 'home': return AppRoutes.home();
+      case 'shop': return AppRoutes.shop();
+      case 'products': return selectedCategory && selectedCategory !== 'All' ? AppRoutes.category(selectedCategory) : AppRoutes.products();
+      case 'deals': return AppRoutes.deals();
+      case 'new-arrivals': return AppRoutes.newArrivals();
+      case 'stories':
+      case 'success-stories': return AppRoutes.successStories();
+      case 'certifications':
+      case 'certifications-compliance': return AppRoutes.certifications();
+      case 'cart': return AppRoutes.cart();
+      case 'checkout': return isB2BCheckout ? AppRoutes.b2bCheckout() : AppRoutes.checkout();
+      case 'orders': return AppRoutes.orders();
+      case 'wishlist': return AppRoutes.wishlist();
+      case 'account': return AppRoutes.account();
+      case 'track': return AppRoutes.track();
+      case 'support': return AppRoutes.support();
+      case 'gst-input-credit': return AppRoutes.gstInputCredit();
+      case 'search': return AppRoutes.search(searchQuery);
+      case 'admin': return AppRoutes.admin();
+      case 'terms': return AppRoutes.terms();
+      case 'privacy': return AppRoutes.privacy();
+      case 'refund': return AppRoutes.refund();
+      case 'shipping': return AppRoutes.shipping();
+      case 'init': return AppRoutes.init();
+      case 'confirm': return AppRoutes.confirm();
+      case 'status': return AppRoutes.status();
+      case 'cancel': return AppRoutes.cancel();
+      case 'update': return AppRoutes.update();
+      case 'rating': return AppRoutes.rating();
+      case 'b2b-deals': return AppRoutes.b2bDeals();
+      case 'wholesale-catalog': return AppRoutes.b2bCatalog();
+      case 'rfq': return AppRoutes.b2bRfq();
+      case 'business-dashboard': return AppRoutes.b2bDashboard();
+      case 'b2b-cart': return AppRoutes.b2bCart();
+      case 'b2b-checkout': return AppRoutes.b2bCheckout();
+      default: return tab.startsWith('/') ? tab : `/${tab}`;
+    }
+  };
+
   // Support direct pathname & hash navigation and back button for all sections
   useEffect(() => {
     const handleRouteCheck = () => {
       if (typeof window === 'undefined') return;
-      const pathname = window.location.pathname.toLowerCase();
+      const parsed = parseCurrentRoute(categories, products);
 
-      // 1. Admin & Protocol Explorer Routes
-      if (pathname.startsWith('/admin')) {
-        setActiveTab('admin');
-        return;
+      setActiveTab(parsed.activeTab);
+      if (parsed.b2bTab) {
+        setB2bTab(parsed.b2bTab);
       }
-      if (pathname.startsWith('/on_')) {
-        const cleanSlug = pathname.replace(/^\//, '').replace(/_/g, '-');
-        window.history.replaceState(null, '', `/admin/ondc/${cleanSlug}`);
-        setActiveTab('admin');
-        return;
+      if (parsed.isB2BCheckout) {
+        setIsB2BCheckout(true);
+      } else if (parsed.activeTab === 'checkout' && !parsed.isB2BCheckout) {
+        setIsB2BCheckout(false);
       }
 
-      // 2. B2B Portal Dedicated Routes
-      if (pathname === '/b2b' || pathname === '/b2b-overview') {
-        setActiveTab('b2b');
-        setB2bTab('overview');
-        return;
-      }
-      if (pathname === '/b2b-deals') {
-        setActiveTab('b2b');
-        setB2bTab('deals');
-        return;
-      }
-      if (pathname === '/wholesale-catalog') {
-        setActiveTab('b2b');
-        setB2bTab('catalog');
-        return;
-      }
-      if (pathname === '/rfq') {
-        setActiveTab('b2b');
-        setB2bTab('rfq');
-        return;
-      }
-      if (pathname === '/business-dashboard') {
-        setActiveTab('b2b');
-        setB2bTab('dashboard');
-        return;
-      }
-      if (pathname === '/business-login') {
-        setActiveTab('b2b');
-        setB2bAuthMode('login');
-        setB2bAuthModalOpen(true);
-        return;
-      }
-      if (pathname === '/business-register') {
-        setActiveTab('b2b');
-        setB2bAuthMode('register');
-        setB2bAuthModalOpen(true);
-        return;
-      }
-      if (pathname === '/gst-input-credit') {
-        setActiveTab('gst-input-credit');
-        return;
-      }
-      if (pathname === '/certifications-compliance') {
-        setActiveTab('certifications');
-        return;
-      }
-
-      // 3. Main Website Routes
-      if (pathname === '/login') {
-        setAuthModalMode('login');
-        setAuthModalOpen(true);
-        return;
-      }
-      if (pathname === '/products') {
-        setActiveTab('products');
-        return;
-      }
-      if (pathname === '/shop') {
-        setActiveTab('shop');
-        return;
-      }
-      if (pathname === '/deals') {
-        setActiveTab('deals');
-        return;
-      }
-      if (pathname === '/success-stories') {
-        setActiveTab('stories');
-        return;
-      }
-      if (pathname === '/certifications') {
-        setActiveTab('certifications');
-        return;
-      }
-      if (pathname === '/track') {
-        setActiveTab('track');
-        return;
-      }
-      if (pathname === '/support') {
-        setActiveTab('support');
-        return;
-      }
-
-      // 4. Production Customer Routes (including ONDC)
-      const customerMatch = pathname.match(/^\/(search|select|init|confirm|status|track|cancel|update|rating|support)$/);
-      if (customerMatch) {
-        const routeName = customerMatch[1];
-        setActiveTab(routeName);
-        if (routeName === 'select') {
-          const params = new URLSearchParams(window.location.search);
-          const pid = params.get('productId');
-          if (pid) {
-            const found = storageService.getProductById(pid) || products.find((p) => p.id === pid || p.sku === pid);
-            if (found) setSelectedProduct(found);
-          }
-        } else if (routeName === 'search') {
-          const params = new URLSearchParams(window.location.search);
-          const q = params.get('q');
-          if (q) setSearchQuery(q);
+      // Synchronize product detail
+      if (parsed.productId) {
+        const pid = parsed.productId.toLowerCase();
+        const found = products.find(
+          (p) =>
+            p.id.toLowerCase() === pid ||
+            (p.slug && p.slug.toLowerCase() === pid) ||
+            (p.sku && p.sku.toLowerCase() === pid)
+        ) || storageService.getProductById(parsed.productId);
+        if (found) {
+          setSelectedProduct(found);
         }
-        return;
+      } else if (parsed.activeTab !== 'select') {
+        setSelectedProduct(null);
       }
 
-      // 5. Utility & Policy Routes
-      const utilMatch = pathname.match(/^\/(cart|checkout|orders|wishlist|account|terms|privacy|refund|shipping)$/);
-      if (utilMatch) {
-        setActiveTab(utilMatch[1]);
-        return;
+      // Synchronize category
+      if (parsed.categoryName) {
+        setSelectedCategory(parsed.categoryName);
       }
 
-      // 6. Hash / Home Fallback
-      const hash = window.location.hash.replace('#', '').toLowerCase();
-      if (hash && ['terms', 'privacy', 'refund', 'shipping', 'new-arrivals', 'certifications', 'stories', 'shop', 'products', 'b2b', 'admin', 'deals'].includes(hash)) {
-        setActiveTab(hash);
-      } else if (!pathname || pathname === '/' || hash === 'home') {
-        setActiveTab('home');
+      // Synchronize story
+      if (parsed.storyId) {
+        const sid = parsed.storyId;
+        const found = galleryService.getStoryById(sid) || galleryService.getStoryBySlug(sid);
+        if (found) {
+          setSelectedStory(found);
+        }
+      } else {
+        setSelectedStory(null);
+      }
+
+      // Synchronize certification
+      if (parsed.certificateId) {
+        const cid = parsed.certificateId;
+        const found = certificationService.getCertificateById(cid) || certificationService.getCertificateBySlug(cid);
+        if (found) {
+          setSelectedCertificate(found);
+        }
+      } else {
+        setSelectedCertificate(null);
+      }
+
+      // Synchronize Auth Modals
+      if (parsed.authModal) {
+        setAuthModalMode(parsed.authModal);
+        setAuthModalOpen(true);
+      } else {
+        setAuthModalOpen(false);
+      }
+
+      if (parsed.b2bAuthModal) {
+        setB2bAuthMode(parsed.b2bAuthModal);
+        setB2bAuthModalOpen(true);
+      } else {
+        setB2bAuthModalOpen(false);
+      }
+
+      if (parsed.adminAuthModal) {
+        setAdminAuthMode(parsed.adminAuthModal);
+        setAdminAuthModalOpen(true);
+      } else {
+        setAdminAuthModalOpen(false);
+      }
+
+      // Synchronize search query
+      if (parsed.searchQuery) {
+        setSearchQuery(parsed.searchQuery);
+      }
+
+      // Close policy modal if route is full legal page
+      if (parsed.policyType) {
+        setPolicyModalType(null);
       }
     };
+
     handleRouteCheck();
     window.addEventListener('hashchange', handleRouteCheck);
     window.addEventListener('popstate', handleRouteCheck);
@@ -337,135 +353,187 @@ const MainApp: React.FC = () => {
       window.removeEventListener('hashchange', handleRouteCheck);
       window.removeEventListener('popstate', handleRouteCheck);
     };
-  }, [products]);
+  }, [products, categories]);
 
-  // Handlers
+  // Handlers with proper browser URL synchronization
   const handleSetActiveTab = (tab: string) => {
-    setActiveTab(tab);
     let targetPath = '/';
+    let newActiveTab = tab;
 
     switch (tab) {
       case 'home':
-        targetPath = '/';
+        newActiveTab = 'home';
+        targetPath = AppRoutes.home();
         break;
       case 'products':
-        targetPath = '/products';
+        newActiveTab = 'products';
+        targetPath = selectedCategory && selectedCategory !== 'All' ? AppRoutes.category(selectedCategory) : AppRoutes.products();
         break;
       case 'shop':
-        targetPath = '/shop';
+        newActiveTab = 'shop';
+        targetPath = AppRoutes.shop();
         break;
       case 'deals':
-        targetPath = '/deals';
+        newActiveTab = 'deals';
+        targetPath = AppRoutes.deals();
+        break;
+      case 'new-arrivals':
+        newActiveTab = 'new-arrivals';
+        targetPath = AppRoutes.newArrivals();
         break;
       case 'stories':
       case 'success-stories':
-        setActiveTab('stories');
-        targetPath = '/success-stories';
+        newActiveTab = 'stories';
+        targetPath = AppRoutes.successStories();
         break;
       case 'certifications':
       case 'certifications-compliance':
-        setActiveTab('certifications');
-        targetPath = tab === 'certifications-compliance' ? '/certifications-compliance' : '/certifications';
+        newActiveTab = 'certifications';
+        targetPath = AppRoutes.certifications();
         break;
       case 'track':
-        setActiveTab('track');
-        targetPath = '/track';
+        newActiveTab = 'track';
+        targetPath = AppRoutes.track();
         break;
       case 'support':
-        setActiveTab('support');
-        targetPath = '/support';
+        newActiveTab = 'support';
+        targetPath = AppRoutes.support();
         break;
       case 'admin':
-        setActiveTab('admin');
-        targetPath = '/admin';
+        newActiveTab = 'admin';
+        targetPath = AppRoutes.admin();
         break;
       case 'gst-input-credit':
-        setActiveTab('gst-input-credit');
-        targetPath = '/gst-input-credit';
+        newActiveTab = 'gst-input-credit';
+        targetPath = AppRoutes.gstInputCredit();
         break;
       case 'b2b':
       case 'b2b-overview':
-        setActiveTab('b2b');
+        newActiveTab = 'b2b';
         setB2bTab('overview');
-        targetPath = '/b2b-overview';
+        targetPath = AppRoutes.b2bOverview();
         break;
       case 'b2b-deals':
-        setActiveTab('b2b');
+        newActiveTab = 'b2b';
         setB2bTab('deals');
-        targetPath = '/b2b-deals';
+        targetPath = AppRoutes.b2bDeals();
         break;
       case 'wholesale-catalog':
-        setActiveTab('b2b');
+        newActiveTab = 'b2b';
         setB2bTab('catalog');
-        targetPath = '/wholesale-catalog';
+        targetPath = AppRoutes.b2bCatalog();
         break;
       case 'rfq':
-        setActiveTab('b2b');
+        newActiveTab = 'b2b';
         setB2bTab('rfq');
-        targetPath = '/rfq';
+        targetPath = AppRoutes.b2bRfq();
         break;
       case 'business-dashboard':
-        setActiveTab('b2b');
+        newActiveTab = 'b2b';
         setB2bTab('dashboard');
-        targetPath = '/business-dashboard';
+        targetPath = AppRoutes.b2bDashboard();
+        break;
+      case 'b2b-cart':
+        newActiveTab = 'b2b';
+        setB2bTab('cart');
+        targetPath = AppRoutes.b2bCart();
+        break;
+      case 'b2b-checkout':
+        newActiveTab = 'checkout';
+        setIsB2BCheckout(true);
+        targetPath = AppRoutes.b2bCheckout();
         break;
       case 'business-login':
-        setActiveTab('b2b');
+        newActiveTab = 'b2b';
         setB2bTab('overview');
-        targetPath = '/business-login';
         handleOpenB2BAuth('login');
-        break;
+        return;
       case 'business-register':
-        targetPath = '/business-register';
+        newActiveTab = 'b2b';
+        setB2bTab('overview');
         handleOpenB2BAuth('register');
-        break;
+        return;
       case 'login':
-        targetPath = '/login';
         handleOpenAuth('login');
+        return;
+      case 'register':
+        handleOpenAuth('register');
+        return;
+      case 'cart':
+        newActiveTab = 'cart';
+        targetPath = AppRoutes.cart();
+        break;
+      case 'checkout':
+        newActiveTab = 'checkout';
+        targetPath = isB2BCheckout ? AppRoutes.b2bCheckout() : AppRoutes.checkout();
+        break;
+      case 'orders':
+        newActiveTab = 'orders';
+        targetPath = AppRoutes.orders();
+        break;
+      case 'wishlist':
+        newActiveTab = 'wishlist';
+        targetPath = AppRoutes.wishlist();
+        break;
+      case 'account':
+        newActiveTab = 'account';
+        targetPath = AppRoutes.account();
+        break;
+      case 'terms':
+        newActiveTab = 'terms';
+        targetPath = AppRoutes.terms();
+        break;
+      case 'privacy':
+        newActiveTab = 'privacy';
+        targetPath = AppRoutes.privacy();
+        break;
+      case 'refund':
+        newActiveTab = 'refund';
+        targetPath = AppRoutes.refund();
+        break;
+      case 'shipping':
+        newActiveTab = 'shipping';
+        targetPath = AppRoutes.shipping();
         break;
       case 'search':
+        newActiveTab = 'search';
+        targetPath = AppRoutes.search(searchQuery);
+        break;
       case 'select':
+        newActiveTab = 'select';
+        targetPath = selectedProduct ? AppRoutes.product(selectedProduct) : '/shop';
+        break;
       case 'init':
       case 'confirm':
       case 'status':
       case 'cancel':
       case 'update':
       case 'rating':
-      case 'cart':
-      case 'checkout':
-      case 'orders':
-      case 'wishlist':
-      case 'account':
-      case 'terms':
-      case 'privacy':
-      case 'refund':
-      case 'shipping':
+        newActiveTab = tab;
         targetPath = `/${tab}`;
         break;
       default:
+        newActiveTab = tab.replace(/^\//, '');
         targetPath = tab.startsWith('/') ? tab : `/${tab}`;
     }
 
+    setActiveTab(newActiveTab);
     if (typeof window !== 'undefined' && window.location.pathname !== targetPath) {
-      window.history.pushState(null, '', targetPath + (tab === 'search' || tab === 'select' ? window.location.search : ''));
+      window.history.pushState(null, '', targetPath);
     }
   };
 
   const handleSetB2bTab = (subtab: string) => {
     setB2bTab(subtab);
     setActiveTab('b2b');
-    let targetPath = '/b2b-overview';
-    if (subtab === 'catalog') targetPath = '/wholesale-catalog';
-    else if (subtab === 'rfq') targetPath = '/rfq';
-    else if (subtab === 'dashboard') targetPath = '/business-dashboard';
-    else if (subtab === 'deals') targetPath = '/b2b-deals';
-    else if (subtab === 'stories') {
-      setActiveTab('stories');
-      targetPath = '/success-stories';
-    } else if (subtab === 'certifications') {
-      setActiveTab('certifications');
-      targetPath = '/certifications-compliance';
-    }
+    let targetPath = AppRoutes.b2bOverview();
+    if (subtab === 'catalog') targetPath = AppRoutes.b2bCatalog();
+    else if (subtab === 'rfq') targetPath = AppRoutes.b2bRfq();
+    else if (subtab === 'dashboard') targetPath = AppRoutes.b2bDashboard();
+    else if (subtab === 'deals') targetPath = AppRoutes.b2bDeals();
+    else if (subtab === 'cart') targetPath = AppRoutes.b2bCart();
+    else if (subtab === 'stories') targetPath = AppRoutes.b2bStories();
+    else if (subtab === 'certifications') targetPath = AppRoutes.b2bCompliance();
 
     if (typeof window !== 'undefined' && window.location.pathname !== targetPath) {
       window.history.pushState(null, '', targetPath);
@@ -481,18 +549,60 @@ const MainApp: React.FC = () => {
 
   const handleOpenProduct = (p: Product) => {
     setSelectedProduct(p);
-    window.history.pushState(null, '', `/select?productId=${p.id}`);
+    const targetPath = AppRoutes.product(p);
+    if (typeof window !== 'undefined' && window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath);
+    }
     setActiveTab('select');
+  };
+
+  const handleCloseProduct = () => {
+    setSelectedProduct(null);
+    if (activeTab === 'select') {
+      handleSetActiveTab('shop');
+    }
+  };
+
+  const handleOpenStory = (story: GalleryStory) => {
+    setSelectedStory(story);
+    const targetPath = AppRoutes.story(story);
+    if (typeof window !== 'undefined' && window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath);
+    }
+  };
+
+  const handleCloseStory = () => {
+    setSelectedStory(null);
+    const fallback = activeTab === 'b2b' ? AppRoutes.b2bStories() : AppRoutes.successStories();
+    if (typeof window !== 'undefined' && (window.location.pathname.startsWith('/story/') || window.location.search.includes('story='))) {
+      window.history.pushState(null, '', fallback);
+    }
+  };
+
+  const handleOpenCertificate = (cert: CompanyCertification) => {
+    setSelectedCertificate(cert);
+    const targetPath = AppRoutes.certification(cert);
+    if (typeof window !== 'undefined' && window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath);
+    }
+  };
+
+  const handleCloseCertificate = () => {
+    setSelectedCertificate(null);
+    const fallback = activeTab === 'b2b' ? AppRoutes.b2bCompliance() : AppRoutes.certifications();
+    if (typeof window !== 'undefined' && (window.location.pathname.startsWith('/certification/') || window.location.search.includes('cert='))) {
+      window.history.pushState(null, '', fallback);
+    }
   };
 
   const handleB2BBuyNow = (p: Product) => {
     addToB2BCart(p.id, p.b2bMoq || 1);
     if (role !== 'b2b' || !b2bBusiness) {
-      handleOpenB2BAuth();
+      handleOpenB2BAuth('login');
       return;
     }
     setIsB2BCheckout(true);
-    setActiveTab('checkout');
+    handleSetActiveTab('checkout');
   };
 
   const handleBuyNow = (p: Product) => {
@@ -506,28 +616,86 @@ const MainApp: React.FC = () => {
       return;
     }
     setIsB2BCheckout(false);
-    setActiveTab('checkout');
+    handleSetActiveTab('checkout');
   };
 
   const handleOpenAuth = (mode: 'login' | 'register' = 'login') => {
     setAuthModalMode(mode);
     setAuthModalOpen(true);
+    const target = mode === 'register' ? AppRoutes.register() : AppRoutes.login();
+    if (typeof window !== 'undefined' && window.location.pathname !== target) {
+      window.history.pushState(null, '', target);
+    }
+  };
+
+  const handleCloseAuth = () => {
+    setAuthModalOpen(false);
+    if (typeof window !== 'undefined' && (window.location.pathname === '/login' || window.location.pathname === '/register')) {
+      const canonical = getCanonicalUrl(activeTab, b2bTab);
+      window.history.pushState(null, '', canonical);
+    }
   };
 
   const handleOpenB2BAuth = (mode: 'login' | 'register' = 'login') => {
     setB2bAuthMode(mode);
     setB2bAuthModalOpen(true);
+    const target = mode === 'register' ? AppRoutes.b2bRegister() : AppRoutes.b2bLogin();
+    if (typeof window !== 'undefined' && window.location.pathname !== target) {
+      window.history.pushState(null, '', target);
+    }
+  };
+
+  const handleCloseB2BAuth = () => {
+    setB2bAuthModalOpen(false);
+    if (typeof window !== 'undefined' && (window.location.pathname === '/business-login' || window.location.pathname === '/business-register')) {
+      const canonical = getCanonicalUrl(activeTab, b2bTab);
+      window.history.pushState(null, '', canonical);
+    }
+  };
+
+  const handleOpenAdminAuth = (mode: 'login' | 'register' = 'login') => {
+    setAdminAuthMode(mode);
+    setAdminAuthModalOpen(true);
+    const target = mode === 'register' ? AppRoutes.adminRegister() : AppRoutes.adminLogin();
+    if (typeof window !== 'undefined' && window.location.pathname !== target) {
+      window.history.pushState(null, '', target);
+    }
+  };
+
+  const handleCloseAdminAuth = () => {
+    setAdminAuthModalOpen(false);
+    if (typeof window !== 'undefined' && (window.location.pathname === '/admin/login' || window.location.pathname === '/admin/register')) {
+      window.history.pushState(null, '', AppRoutes.admin());
+    }
+  };
+
+  const handleOpenPolicyModal = (type: 'privacy' | 'terms' | 'shipping' | 'refund') => {
+    setPolicyModalType(type);
+    const target = `/${type}`;
+    if (typeof window !== 'undefined' && window.location.pathname !== target) {
+      window.history.pushState(null, '', target);
+    }
+  };
+
+  const handleClosePolicyModal = () => {
+    setPolicyModalType(null);
+    if (typeof window !== 'undefined' && ['/privacy', '/terms', '/shipping', '/refund'].includes(window.location.pathname)) {
+      const canonical = getCanonicalUrl(activeTab, b2bTab);
+      window.history.pushState(null, '', canonical);
+    }
   };
 
   const handleOpenRfqModal = (p: Product) => {
     setRfqTargetProduct(p);
-    setB2bTab('rfq');
-    setActiveTab('b2b');
+    handleSetB2bTab('rfq');
   };
 
   const handleOrderSuccess = (order: B2COrder) => {
     refreshData();
-    window.history.pushState(null, '', `/confirm?orderId=${order.orderNumber || order.id}`);
+    const targetPath = AppRoutes.confirm(order.orderNumber || order.id);
+    if (typeof window !== 'undefined') {
+      window.history.pushState(null, '', targetPath);
+    }
     setActiveTab('confirm');
   };
 
@@ -571,27 +739,31 @@ const MainApp: React.FC = () => {
             categories={categories}
             onSelectCategory={(cat) => {
               setSelectedCategory(cat);
-              handleSetActiveTab('products');
+              const target = AppRoutes.category(cat);
+              if (typeof window !== 'undefined' && window.location.pathname !== target) {
+                window.history.pushState(null, '', target);
+              }
+              setActiveTab('products');
             }}
             onOpenProduct={handleOpenProduct}
             onBuyNow={handleBuyNow}
             setActiveTab={handleSetActiveTab}
-            openB2BAuthModal={handleOpenB2BAuth}
-            onOpenStory={(story) => setSelectedStory(story)}
-            onOpenCertificate={(cert) => setSelectedCertificate(cert)}
+            openB2BAuthModal={() => handleOpenB2BAuth('register')}
+            onOpenStory={handleOpenStory}
+            onOpenCertificate={handleOpenCertificate}
             onNavigateToShop={handleNavigateToShop}
           />
         )}
 
         {activeTab === 'stories' && (
           <SuccessStoriesPage
-            onOpenStory={(story) => setSelectedStory(story)}
+            onOpenStory={handleOpenStory}
           />
         )}
 
         {activeTab === 'certifications' && (
           <CertificationsPage
-            onOpenCertificate={(cert) => setSelectedCertificate(cert)}
+            onOpenCertificate={handleOpenCertificate}
           />
         )}
 
@@ -605,6 +777,13 @@ const MainApp: React.FC = () => {
             onOpenProduct={handleOpenProduct}
             onBuyNow={handleBuyNow}
             isShopNowView={activeTab === 'shop'}
+            onCategoryChange={(cat) => {
+              setSelectedCategory(cat);
+              const target = AppRoutes.category(cat);
+              if (typeof window !== 'undefined' && window.location.pathname !== target) {
+                window.history.pushState(null, '', target);
+              }
+            }}
           />
         )}
 
@@ -652,10 +831,10 @@ const MainApp: React.FC = () => {
               if (role !== 'b2c' || !b2cUser) {
                 handleOpenAuth('login');
               } else {
-                setActiveTab('checkout');
+                handleSetActiveTab('checkout');
               }
             }}
-            setActiveTab={setActiveTab}
+            setActiveTab={handleSetActiveTab}
             onOpenProduct={handleOpenProduct}
             onOpenAuth={handleOpenAuth}
           />
@@ -669,15 +848,13 @@ const MainApp: React.FC = () => {
             onB2BOrderSuccess={() => {
               refreshData();
               setIsB2BCheckout(false);
-              setActiveTab('b2b');
-              setB2bTab('dashboard');
+              handleSetB2bTab('dashboard');
             }}
             onBackToCart={() => {
               if (isB2BCheckout) {
-                setActiveTab('b2b');
-                setB2bTab('cart');
+                handleSetB2bTab('cart');
               } else {
-                setActiveTab('cart');
+                handleSetActiveTab('cart');
               }
             }}
             onOpenAuth={handleOpenAuth}
@@ -688,7 +865,7 @@ const MainApp: React.FC = () => {
         {activeTab === 'orders' && (
           <OrdersPage
             orders={b2cOrders}
-            setActiveTab={setActiveTab}
+            setActiveTab={handleSetActiveTab}
           />
         )}
 
@@ -697,14 +874,14 @@ const MainApp: React.FC = () => {
             products={products}
             onOpenProduct={handleOpenProduct}
             onBuyNow={handleBuyNow}
-            setActiveTab={setActiveTab}
+            setActiveTab={handleSetActiveTab}
           />
         )}
 
         {activeTab === 'account' && (
           <CustomerDashboardPage
             orders={b2cOrders}
-            setActiveTab={setActiveTab}
+            setActiveTab={handleSetActiveTab}
           />
         )}
 
@@ -815,8 +992,8 @@ const MainApp: React.FC = () => {
                 setB2bTab={handleSetB2bTab}
                 openB2BAuthModal={() => handleOpenB2BAuth('login')}
                 onOpenProduct={handleOpenProduct}
-                onOpenStory={(story) => setSelectedStory(story)}
-                onOpenCertificate={(cert) => setSelectedCertificate(cert)}
+                onOpenStory={handleOpenStory}
+                onOpenCertificate={handleOpenCertificate}
               />
             )}
 
@@ -868,27 +1045,27 @@ const MainApp: React.FC = () => {
                 products={products}
                 onProceedToCheckout={() => {
                   setIsB2BCheckout(true);
-                  setActiveTab('checkout');
+                  handleSetActiveTab('b2b-checkout');
                 }}
-                setB2bTab={setB2bTab}
+                setB2bTab={handleSetB2bTab}
                 onOpenProduct={handleOpenProduct}
-                openB2BAuthModal={handleOpenB2BAuth}
+                openB2BAuthModal={() => handleOpenB2BAuth('login')}
                 onRfqCreated={() => {
                   refreshData();
-                  setB2bTab('dashboard');
+                  handleSetB2bTab('dashboard');
                 }}
               />
             )}
 
             {b2bTab === 'stories' && (
               <B2BSuccessStoriesPage
-                onOpenStory={(story) => setSelectedStory(story)}
+                onOpenStory={handleOpenStory}
               />
             )}
 
             {b2bTab === 'certifications' && (
               <B2BCertificationsPage
-                onOpenCertificate={(cert) => setSelectedCertificate(cert)}
+                onOpenCertificate={handleOpenCertificate}
               />
             )}
           </div>
@@ -1030,7 +1207,7 @@ const MainApp: React.FC = () => {
         <Footer
           setActiveTab={handleSetActiveTab}
           setB2bTab={handleSetB2bTab}
-          openPolicyModal={(type) => setPolicyModalType(type)}
+          openPolicyModal={(type) => handleOpenPolicyModal(type)}
           isB2B={activeTab === 'b2b'}
           onNavigateToShop={handleNavigateToShop}
         />
@@ -1040,8 +1217,8 @@ const MainApp: React.FC = () => {
       {selectedStory && (
         <StoryDetailModal
           story={selectedStory}
-          onClose={() => setSelectedStory(null)}
-          onSelectStory={(s) => setSelectedStory(s)}
+          onClose={handleCloseStory}
+          onSelectStory={handleOpenStory}
           isB2BMode={activeTab === 'b2b'}
         />
       )}
@@ -1049,15 +1226,15 @@ const MainApp: React.FC = () => {
       {selectedCertificate && (
         <CertificateDetailModal
           cert={selectedCertificate}
-          onClose={() => setSelectedCertificate(null)}
+          onClose={handleCloseCertificate}
           isB2BMode={activeTab === 'b2b'}
         />
       )}
 
-      {selectedProduct && (
+      {selectedProduct && activeTab !== 'select' && (
         <ProductDetailModal
           product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
+          onClose={handleCloseProduct}
           onBuyNow={handleBuyNow}
           onRequestQuote={(p) => handleOpenRfqModal(p)}
           isB2BMode={activeTab === 'b2b'}
@@ -1067,14 +1244,14 @@ const MainApp: React.FC = () => {
       {authModalOpen && (
         <AuthModal
           initialMode={authModalMode}
-          onClose={() => setAuthModalOpen(false)}
+          onClose={handleCloseAuth}
         />
       )}
 
       {b2bAuthModalOpen && (
         <B2BAuthModal
           initialMode={b2bAuthMode}
-          onClose={() => setB2bAuthModalOpen(false)}
+          onClose={handleCloseB2BAuth}
           onSuccess={() => {
             refreshData();
             setActiveTab('b2b');
@@ -1086,10 +1263,10 @@ const MainApp: React.FC = () => {
       {policyModalType && (
         <PolicyModal
           type={policyModalType}
-          onClose={() => setPolicyModalType(null)}
+          onClose={handleClosePolicyModal}
           onOpenFullPage={(type) => {
             setPolicyModalType(null);
-            setActiveTab(type);
+            handleSetActiveTab(type);
           }}
         />
       )}
@@ -1097,10 +1274,10 @@ const MainApp: React.FC = () => {
       {adminAuthModalOpen && (
         <AdminAuthModal
           initialMode={adminAuthMode}
-          onClose={() => setAdminAuthModalOpen(false)}
+          onClose={handleCloseAdminAuth}
           onSuccess={() => {
             refreshData();
-            setActiveTab('admin');
+            handleSetActiveTab('admin');
           }}
         />
       )}

@@ -191,7 +191,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 </button>
 
                 <button
-                  onClick={() => setActiveTab('b2b')}
+                  onClick={() => setActiveTab('b2b-deals')}
                   className="btn btn-lg"
                   style={{
                     borderRadius: 'var(--radius-full)',
@@ -673,7 +673,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
               <div className="flex items-center gap-4 flex-wrap">
                 <button
-                  onClick={() => setActiveTab('b2b')}
+                  onClick={() => setActiveTab('b2b-deals')}
                   className="btn btn-amber btn-lg"
                   style={{ borderRadius: 'var(--radius-full)', padding: '0.85rem 2rem' }}
                 >
@@ -777,7 +777,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               </div>
 
               <button
-                onClick={() => setActiveTab('b2b')}
+                onClick={() => setActiveTab('rfq')}
                 className="btn btn-primary"
                 style={{ width: '100%', borderRadius: 'var(--radius-md)' }}
               >
