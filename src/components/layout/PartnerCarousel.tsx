@@ -45,9 +45,8 @@ const OFFICIAL_PARTNERS: PartnerItem[] = [
     logoSrc: '/swayam-plus-logo.png',
     altText: 'SWAYAM Plus — Internship Opportunities at KOGNITI MINDS',
     description: 'Explore internship opportunities with KOGNITI MINDS and take the next step towards building your professional career.',
-    verifiedUrl: '/internships',
+    verifiedUrl: 'https://swayamplus.education.gov.in/',
     ctaText: 'Explore Internship Opportunities',
-    isInternal: true,
   },
   {
     id: 'msme-udyam',
@@ -134,16 +133,10 @@ export const PartnerCarousel: React.FC = () => {
                 <a
                   key={`primary-${partner.id}`}
                   href={partner.verifiedUrl}
-                  onClick={(e) => {
-                    if (partner.isInternal) {
-                      e.preventDefault();
-                      navigateTo(partner.verifiedUrl);
-                    }
-                  }}
-                  target={partner.isInternal ? '_self' : '_blank'}
-                  rel={partner.isInternal ? undefined : 'noopener noreferrer'}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className={`km-partner-card ${isSwayam ? 'km-partner-card-swayam' : ''}`}
-                  title={partner.isInternal ? partner.name : `Visit verified official portal: ${partner.name} (${partner.verifiedUrl})`}
+                  title={`Visit verified official portal: ${partner.name} (${partner.verifiedUrl})`}
                   aria-label={`${partner.name} - ${partner.category}: ${partner.description}.`}
                 >
                   <span className={`km-partner-category-badge ${partner.categoryBadgeClass}`}>
@@ -163,7 +156,7 @@ export const PartnerCarousel: React.FC = () => {
 
                   <div className="km-partner-name">
                     <span>{partner.name}</span>
-                    {!isSwayam && <ExternalLink size={13} style={{ color: 'var(--km-cyan)', flexShrink: 0 }} />}
+                    <ExternalLink size={13} style={{ color: 'var(--km-cyan)', flexShrink: 0 }} />
                   </div>
 
                   <div className="km-partner-desc">
@@ -172,7 +165,13 @@ export const PartnerCarousel: React.FC = () => {
 
                   {partner.ctaText && (
                     <div style={{ marginTop: '0.75rem', width: '100%' }}>
-                      <span
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          navigateTo('/internships');
+                        }}
                         className="btn btn-sm btn-primary"
                         style={{
                           width: '100%',
@@ -188,10 +187,11 @@ export const PartnerCarousel: React.FC = () => {
                           border: 'none',
                           color: '#FFFFFF',
                           boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
+                          cursor: 'pointer',
                         }}
                       >
                         {partner.ctaText} <ArrowRight size={13} />
-                      </span>
+                      </button>
                     </div>
                   )}
                 </a>
@@ -205,14 +205,8 @@ export const PartnerCarousel: React.FC = () => {
                 <a
                   key={`loop-${partner.id}`}
                   href={partner.verifiedUrl}
-                  onClick={(e) => {
-                    if (partner.isInternal) {
-                      e.preventDefault();
-                      navigateTo(partner.verifiedUrl);
-                    }
-                  }}
-                  target={partner.isInternal ? '_self' : '_blank'}
-                  rel={partner.isInternal ? undefined : 'noopener noreferrer'}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className={`km-partner-card ${isSwayam ? 'km-partner-card-swayam' : ''}`}
                   aria-hidden="true"
                   tabIndex={-1}
@@ -234,7 +228,7 @@ export const PartnerCarousel: React.FC = () => {
 
                   <div className="km-partner-name">
                     <span>{partner.name}</span>
-                    {!isSwayam && <ExternalLink size={13} style={{ color: 'var(--km-cyan)', flexShrink: 0 }} />}
+                    <ExternalLink size={13} style={{ color: 'var(--km-cyan)', flexShrink: 0 }} />
                   </div>
 
                   <div className="km-partner-desc">
@@ -243,7 +237,13 @@ export const PartnerCarousel: React.FC = () => {
 
                   {partner.ctaText && (
                     <div style={{ marginTop: '0.75rem', width: '100%' }}>
-                      <span
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          navigateTo('/internships');
+                        }}
                         className="btn btn-sm btn-primary"
                         style={{
                           width: '100%',
@@ -259,10 +259,11 @@ export const PartnerCarousel: React.FC = () => {
                           border: 'none',
                           color: '#FFFFFF',
                           boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
+                          cursor: 'pointer',
                         }}
                       >
                         {partner.ctaText} <ArrowRight size={13} />
-                      </span>
+                      </button>
                     </div>
                   )}
                 </a>

@@ -235,7 +235,7 @@ export const InternshipsPage: React.FC<InternshipsPageProps> = ({ setActiveTab }
               {/* Action Buttons */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
                 <a
-                  href="https://swayam-plus.ac.in/"
+                  href="https://swayamplus.education.gov.in/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-primary btn-lg"
@@ -464,7 +464,7 @@ export const InternshipsPage: React.FC<InternshipsPageProps> = ({ setActiveTab }
 
                 <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '1rem' }}>
                   <a
-                    href="https://swayam-plus.ac.in/"
+                    href="https://swayamplus.education.gov.in/"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{

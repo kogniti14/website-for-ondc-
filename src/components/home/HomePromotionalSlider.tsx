@@ -12,6 +12,7 @@ import {
   GraduationCap,
   Layers,
   Award,
+  ExternalLink,
 } from 'lucide-react';
 
 interface HomePromotionalSliderProps {
@@ -258,6 +259,29 @@ export const HomePromotionalSlider: React.FC<HomePromotionalSliderProps> = ({
                   >
                     Explore Internship Opportunities <ArrowRight size={18} />
                   </button>
+
+                  <a
+                    href="https://swayamplus.education.gov.in/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      background: '#EFF6FF',
+                      color: '#0284C7',
+                      border: '1px solid #BFDBFE',
+                      padding: '0.82rem 1.5rem',
+                      borderRadius: '9999px',
+                      fontSize: '0.92rem',
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 2px 6px rgba(2, 132, 199, 0.08)',
+                    }}
+                  >
+                    Visit Official Portal <ExternalLink size={16} />
+                  </a>
                 </div>
               </div>
 
