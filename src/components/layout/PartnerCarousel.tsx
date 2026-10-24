@@ -1,16 +1,19 @@
 import React from 'react';
-import { ExternalLink, ShieldCheck, Sparkles, Building2 } from 'lucide-react';
+import { ExternalLink, ShieldCheck, Sparkles, Building2, Briefcase, ArrowRight } from 'lucide-react';
+import { navigateTo } from '../../utils/urlRouting';
 
 interface PartnerItem {
   id: string;
   name: string;
-  category: 'AVAILABLE ON OFFICIAL PLATFORMS' | 'INCUBATION PARTNER' | 'STARTUP ECOSYSTEM' | 'BUSINESS & GOVERNMENT ECOSYSTEM';
+  category: string;
   categoryBadgeClass: string;
   logoSrc: string;
   altText: string;
   description: string;
   verifiedUrl: string;
   badgeIcon?: React.ReactNode;
+  ctaText?: string;
+  isInternal?: boolean;
 }
 
 const OFFICIAL_PARTNERS: PartnerItem[] = [
@@ -33,6 +36,18 @@ const OFFICIAL_PARTNERS: PartnerItem[] = [
     altText: 'ONDC - Open Network for Digital Commerce Official Protocol',
     description: 'Open Network for Digital Commerce (Node: kogniti-minds-bpp)',
     verifiedUrl: 'https://ondc.org/',
+  },
+  {
+    id: 'swayam-plus',
+    name: 'Internship Opportunities at KOGNITI MINDS',
+    category: 'Available on SWAYAM Plus',
+    categoryBadgeClass: 'km-partner-badge-swayam',
+    logoSrc: '/swayam-plus-logo.png',
+    altText: 'SWAYAM Plus — Internship Opportunities at KOGNITI MINDS',
+    description: 'Explore internship opportunities with KOGNITI MINDS and take the next step towards building your professional career.',
+    verifiedUrl: '/internships',
+    ctaText: 'Explore Internship Opportunities',
+    isInternal: true,
   },
   {
     id: 'msme-udyam',
@@ -99,7 +114,7 @@ export const PartnerCarousel: React.FC = () => {
             OUR OFFICIAL PLATFORMS, BUSINESS &amp; GOVERNMENT ECOSYSTEM
           </h2>
           <p className="km-partner-subtitle">
-            Connected with recognised national initiatives, Make in India, MSME / Udyam, public procurement platforms, and our incubation ecosystem.
+            Connected with recognised national initiatives, Make in India, MSME / Udyam, public procurement platforms, SWAYAM Plus internship opportunities, and our incubation ecosystem.
           </p>
           <div className="km-partner-divider" aria-hidden="true" />
         </div>
@@ -113,76 +128,146 @@ export const PartnerCarousel: React.FC = () => {
         >
           <div className="km-partner-track">
             {/* Primary Interactive Set (Screen reader accessible & keyboard navigable) */}
-            {OFFICIAL_PARTNERS.map((partner) => (
-              <a
-                key={`primary-${partner.id}`}
-                href={partner.verifiedUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="km-partner-card"
-                title={`Visit verified official portal: ${partner.name} (${partner.verifiedUrl})`}
-                aria-label={`${partner.name} - ${partner.category}: ${partner.description}. Opens official portal in a new tab.`}
-              >
-                <span className={`km-partner-category-badge ${partner.categoryBadgeClass}`}>
-                  {partner.category}
-                </span>
+            {OFFICIAL_PARTNERS.map((partner) => {
+              const isSwayam = partner.id === 'swayam-plus';
+              return (
+                <a
+                  key={`primary-${partner.id}`}
+                  href={partner.verifiedUrl}
+                  onClick={(e) => {
+                    if (partner.isInternal) {
+                      e.preventDefault();
+                      navigateTo(partner.verifiedUrl);
+                    }
+                  }}
+                  target={partner.isInternal ? '_self' : '_blank'}
+                  rel={partner.isInternal ? undefined : 'noopener noreferrer'}
+                  className={`km-partner-card ${isSwayam ? 'km-partner-card-swayam' : ''}`}
+                  title={partner.isInternal ? partner.name : `Visit verified official portal: ${partner.name} (${partner.verifiedUrl})`}
+                  aria-label={`${partner.name} - ${partner.category}: ${partner.description}.`}
+                >
+                  <span className={`km-partner-category-badge ${partner.categoryBadgeClass}`}>
+                    {isSwayam && <Briefcase size={12} style={{ marginRight: '4px' }} />}
+                    {partner.category}
+                  </span>
 
-                <div className="km-partner-logo-box">
-                  <img
-                    src={partner.logoSrc}
-                    alt={partner.altText}
-                    className="km-partner-logo-img"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
+                  <div className="km-partner-logo-box">
+                    <img
+                      src={partner.logoSrc}
+                      alt={partner.altText}
+                      className="km-partner-logo-img"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
 
-                <div className="km-partner-name">
-                  <span>{partner.name}</span>
-                  <ExternalLink size={13} style={{ color: 'var(--km-cyan)', flexShrink: 0 }} />
-                </div>
+                  <div className="km-partner-name">
+                    <span>{partner.name}</span>
+                    {!isSwayam && <ExternalLink size={13} style={{ color: 'var(--km-cyan)', flexShrink: 0 }} />}
+                  </div>
 
-                <div className="km-partner-desc">
-                  {partner.description}
-                </div>
-              </a>
-            ))}
+                  <div className="km-partner-desc">
+                    {partner.description}
+                  </div>
+
+                  {partner.ctaText && (
+                    <div style={{ marginTop: '0.75rem', width: '100%' }}>
+                      <span
+                        className="btn btn-sm btn-primary"
+                        style={{
+                          width: '100%',
+                          fontSize: '0.76rem',
+                          fontWeight: 700,
+                          borderRadius: '6px',
+                          padding: '0.45rem 0.65rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.35rem',
+                          background: 'linear-gradient(135deg, #0284C7 0%, #1D4ED8 100%)',
+                          border: 'none',
+                          color: '#FFFFFF',
+                          boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
+                        }}
+                      >
+                        {partner.ctaText} <ArrowRight size={13} />
+                      </span>
+                    </div>
+                  )}
+                </a>
+              );
+            })}
 
             {/* Seamless Infinite Loop Duplicate Set (Hidden from Screen Readers to prevent duplication) */}
-            {OFFICIAL_PARTNERS.map((partner) => (
-              <a
-                key={`loop-${partner.id}`}
-                href={partner.verifiedUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="km-partner-card"
-                aria-hidden="true"
-                tabIndex={-1}
-              >
-                <span className={`km-partner-category-badge ${partner.categoryBadgeClass}`}>
-                  {partner.category}
-                </span>
+            {OFFICIAL_PARTNERS.map((partner) => {
+              const isSwayam = partner.id === 'swayam-plus';
+              return (
+                <a
+                  key={`loop-${partner.id}`}
+                  href={partner.verifiedUrl}
+                  onClick={(e) => {
+                    if (partner.isInternal) {
+                      e.preventDefault();
+                      navigateTo(partner.verifiedUrl);
+                    }
+                  }}
+                  target={partner.isInternal ? '_self' : '_blank'}
+                  rel={partner.isInternal ? undefined : 'noopener noreferrer'}
+                  className={`km-partner-card ${isSwayam ? 'km-partner-card-swayam' : ''}`}
+                  aria-hidden="true"
+                  tabIndex={-1}
+                >
+                  <span className={`km-partner-category-badge ${partner.categoryBadgeClass}`}>
+                    {isSwayam && <Briefcase size={12} style={{ marginRight: '4px' }} />}
+                    {partner.category}
+                  </span>
 
-                <div className="km-partner-logo-box">
-                  <img
-                    src={partner.logoSrc}
-                    alt=""
-                    className="km-partner-logo-img"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
+                  <div className="km-partner-logo-box">
+                    <img
+                      src={partner.logoSrc}
+                      alt=""
+                      className="km-partner-logo-img"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
 
-                <div className="km-partner-name">
-                  <span>{partner.name}</span>
-                  <ExternalLink size={13} style={{ color: 'var(--km-cyan)', flexShrink: 0 }} />
-                </div>
+                  <div className="km-partner-name">
+                    <span>{partner.name}</span>
+                    {!isSwayam && <ExternalLink size={13} style={{ color: 'var(--km-cyan)', flexShrink: 0 }} />}
+                  </div>
 
-                <div className="km-partner-desc">
-                  {partner.description}
-                </div>
-              </a>
-            ))}
+                  <div className="km-partner-desc">
+                    {partner.description}
+                  </div>
+
+                  {partner.ctaText && (
+                    <div style={{ marginTop: '0.75rem', width: '100%' }}>
+                      <span
+                        className="btn btn-sm btn-primary"
+                        style={{
+                          width: '100%',
+                          fontSize: '0.76rem',
+                          fontWeight: 700,
+                          borderRadius: '6px',
+                          padding: '0.45rem 0.65rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.35rem',
+                          background: 'linear-gradient(135deg, #0284C7 0%, #1D4ED8 100%)',
+                          border: 'none',
+                          color: '#FFFFFF',
+                          boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
+                        }}
+                      >
+                        {partner.ctaText} <ArrowRight size={13} />
+                      </span>
+                    </div>
+                  )}
+                </a>
+              );
+            })}
           </div>
         </div>
       </div>

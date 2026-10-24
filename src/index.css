@@ -1454,6 +1454,25 @@ input, select, textarea {
   border: 1px solid rgba(5, 150, 105, 0.3);
 }
 
+.km-partner-badge-swayam {
+  background: #EFF6FF;
+  color: #0284C7;
+  border: 1px solid #BFDBFE;
+  font-weight: 700;
+}
+
+.km-partner-card-swayam {
+  flex: 0 0 300px;
+  background: #FFFFFF;
+  border: 1.5px solid #BFDBFE;
+  box-shadow: 0 4px 15px rgba(2, 132, 199, 0.08);
+}
+
+.km-partner-card-swayam:hover {
+  border-color: #0284C7;
+  box-shadow: 0 10px 24px rgba(2, 132, 199, 0.2);
+}
+
 .km-partner-logo-box {
   height: 64px;
   width: 100%;
