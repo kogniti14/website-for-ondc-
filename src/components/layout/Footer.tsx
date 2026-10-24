@@ -699,7 +699,7 @@ export const Footer: React.FC<FooterProps> = ({
                     letterSpacing: '0.01em',
                   }}
                 >
-                  <ShieldCheck size={14} className="text-cyan-400" />
+                  <ShieldCheck size={14} color="#20C4E8" style={{ color: '#20C4E8' }} />
                   <span>Secure Payments</span>
                 </div>
                 <PaymentLogos variant="card" />

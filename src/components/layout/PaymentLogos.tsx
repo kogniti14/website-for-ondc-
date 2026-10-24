@@ -156,33 +156,90 @@ interface PaymentLogosProps {
 export const PaymentLogos: React.FC<PaymentLogosProps> = ({ variant = 'card', className = '' }) => {
   if (variant === 'compact') {
     return (
-      <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
+      <div
+        className={`km-payment-logos-compact ${className}`}
+        style={{
+          display: 'inline-flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: '6px',
+          backgroundColor: '#FFFFFF',
+          padding: '4px 8px',
+          borderRadius: '6px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+        }}
+      >
         <span
-          className="inline-flex items-center justify-center bg-white px-2 py-0.5 rounded shadow-sm border border-slate-200 transition-transform hover:scale-105"
+          className="km-payment-badge-compact"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#FFFFFF',
+            padding: '2px 4px',
+            borderRadius: '4px',
+          }}
           title="UPI - Unified Payments Interface"
         >
           <UpiLogo height={16} />
         </span>
+        <span style={{ width: '1px', height: '12px', backgroundColor: '#CBD5E1', display: 'inline-block' }} />
         <span
-          className="inline-flex items-center justify-center bg-white px-2 py-0.5 rounded shadow-sm border border-slate-200 transition-transform hover:scale-105"
+          className="km-payment-badge-compact"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#FFFFFF',
+            padding: '2px 4px',
+            borderRadius: '4px',
+          }}
           title="RuPay Debit & Credit Cards"
         >
           <RuPayLogo height={16} />
         </span>
+        <span style={{ width: '1px', height: '12px', backgroundColor: '#CBD5E1', display: 'inline-block' }} />
         <span
-          className="inline-flex items-center justify-center bg-white px-2 py-0.5 rounded shadow-sm border border-slate-200 transition-transform hover:scale-105"
+          className="km-payment-badge-compact"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#FFFFFF',
+            padding: '2px 4px',
+            borderRadius: '4px',
+          }}
           title="Visa Cards"
         >
           <VisaLogo height={16} />
         </span>
+        <span style={{ width: '1px', height: '12px', backgroundColor: '#CBD5E1', display: 'inline-block' }} />
         <span
-          className="inline-flex items-center justify-center bg-white px-2 py-0.5 rounded shadow-sm border border-slate-200 transition-transform hover:scale-105"
+          className="km-payment-badge-compact"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#FFFFFF',
+            padding: '2px 4px',
+            borderRadius: '4px',
+          }}
           title="Mastercard"
         >
           <MastercardLogo height={16} />
         </span>
+        <span style={{ width: '1px', height: '12px', backgroundColor: '#CBD5E1', display: 'inline-block' }} />
         <span
-          className="inline-flex items-center justify-center bg-white px-2 py-0.5 rounded shadow-sm border border-slate-200 transition-transform hover:scale-105"
+          className="km-payment-badge-compact"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#FFFFFF',
+            padding: '2px 4px',
+            borderRadius: '4px',
+          }}
           title="NetBanking (All Major Banks)"
         >
           <NetBankingLogo height={16} />
@@ -192,33 +249,102 @@ export const PaymentLogos: React.FC<PaymentLogosProps> = ({ variant = 'card', cl
   }
 
   return (
-    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
+    <div
+      className={`km-payment-logos-container ${className}`}
+      style={{
+        display: 'inline-flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: '8px',
+        backgroundColor: '#FFFFFF',
+        padding: '8px 12px',
+        borderRadius: '8px',
+        border: '1px solid #E2E8F0',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+        maxWidth: '100%',
+      }}
+    >
       <div
-        className="inline-flex items-center justify-center bg-white px-2.5 py-1 rounded-md shadow-sm border border-slate-200/90 hover:border-cyan-400 transition-all hover:scale-105"
+        className="km-payment-badge"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#FFFFFF',
+          padding: '4px 8px',
+          borderRadius: '6px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+          height: '28px',
+        }}
         title="UPI - Unified Payments Interface (PhonePe, GPay, Paytm, BHIM)"
       >
         <UpiLogo height={18} />
       </div>
       <div
-        className="inline-flex items-center justify-center bg-white px-2.5 py-1 rounded-md shadow-sm border border-slate-200/90 hover:border-cyan-400 transition-all hover:scale-105"
+        className="km-payment-badge"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#FFFFFF',
+          padding: '4px 8px',
+          borderRadius: '6px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+          height: '28px',
+        }}
         title="RuPay Debit & Credit Cards"
       >
         <RuPayLogo height={18} />
       </div>
       <div
-        className="inline-flex items-center justify-center bg-white px-2.5 py-1 rounded-md shadow-sm border border-slate-200/90 hover:border-cyan-400 transition-all hover:scale-105"
+        className="km-payment-badge"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#FFFFFF',
+          padding: '4px 8px',
+          borderRadius: '6px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+          height: '28px',
+        }}
         title="Visa Debit & Credit Cards"
       >
         <VisaLogo height={18} />
       </div>
       <div
-        className="inline-flex items-center justify-center bg-white px-2.5 py-1 rounded-md shadow-sm border border-slate-200/90 hover:border-cyan-400 transition-all hover:scale-105"
+        className="km-payment-badge"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#FFFFFF',
+          padding: '4px 8px',
+          borderRadius: '6px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+          height: '28px',
+        }}
         title="Mastercard Debit & Credit Cards"
       >
         <MastercardLogo height={18} />
       </div>
       <div
-        className="inline-flex items-center justify-center bg-white px-2.5 py-1 rounded-md shadow-sm border border-slate-200/90 hover:border-cyan-400 transition-all hover:scale-105"
+        className="km-payment-badge"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#FFFFFF',
+          padding: '4px 8px',
+          borderRadius: '6px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+          height: '28px',
+        }}
         title="NetBanking - 50+ Major Indian Banks"
       >
         <NetBankingLogo height={18} />
@@ -226,5 +352,6 @@ export const PaymentLogos: React.FC<PaymentLogosProps> = ({ variant = 'card', cl
     </div>
   );
 };
+
 
 export default PaymentLogos;
