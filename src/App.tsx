@@ -63,6 +63,7 @@ import { OrderConfirmPage } from './pages/customer/OrderConfirmPage';
 import { CheckoutInitPage } from './pages/customer/CheckoutInitPage';
 import { OrderUpdatePage } from './pages/customer/OrderUpdatePage';
 import { GstInputCreditPage } from './pages/customer/GstInputCreditPage';
+import { InternshipsPage } from './pages/customer/InternshipsPage';
 
 // URL Routing System
 import { AppRoutes, parseCurrentRoute, slugify, navigateTo } from './utils/urlRouting';
@@ -232,6 +233,7 @@ const MainApp: React.FC = () => {
       case 'track': return AppRoutes.track();
       case 'support': return AppRoutes.support();
       case 'gst-input-credit': return AppRoutes.gstInputCredit();
+      case 'internships': return AppRoutes.internships();
       case 'search': return AppRoutes.search(searchQuery);
       case 'admin': return AppRoutes.admin();
       case 'terms': return AppRoutes.terms();
@@ -806,6 +808,12 @@ const MainApp: React.FC = () => {
             setActiveTab={handleSetActiveTab}
             openB2BAuth={(m) => handleOpenB2BAuth(m || 'login')}
             openAuth={(m) => handleOpenAuth(m || 'login')}
+          />
+        )}
+
+        {activeTab === 'internships' && (
+          <InternshipsPage
+            setActiveTab={handleSetActiveTab}
           />
         )}
 

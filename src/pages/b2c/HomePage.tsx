@@ -19,6 +19,7 @@ import { storageService } from '../../services/storageService';
 import { dataSyncBus } from '../../services/dataSyncBus';
 import { getTelUrl, getWhatsAppUrl, getWhatsAppDisplayNumber } from '../../config/whatsappConfig';
 import { TestimonialCarousel } from '../../components/home/TestimonialCarousel';
+import { HomePromotionalSlider } from '../../components/home/HomePromotionalSlider';
 
 interface HomePageProps {
   products?: Product[];
@@ -466,6 +467,13 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Professional Homepage Promotional Showcase Slider (featuring SWAYAM Plus Internship Opportunities, Sustainable Paper, & B2B Deals) */}
+      <HomePromotionalSlider
+        onNavigateToInternships={() => setActiveTab('internships')}
+        onNavigateToShop={() => (onNavigateToShop ? onNavigateToShop() : setActiveTab('products'))}
+        onNavigateToB2B={() => setActiveTab('b2b-deals')}
+      />
 
       {/* 2. Shop Now Direct Shopping Callout */}
       <section style={{ padding: '3rem 0 4rem' }}>

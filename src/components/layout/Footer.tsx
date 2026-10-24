@@ -610,6 +610,16 @@ export const Footer: React.FC<FooterProps> = ({
               </li>
               <li>
                 <button
+                  onClick={() => navigateTo('internships')}
+                  style={{ color: '#CBD5E1', textAlign: 'left', transition: 'color 0.15s ease' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#20C4E8')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = '#CBD5E1')}
+                >
+                  Internships &amp; Careers (SWAYAM Plus)
+                </button>
+              </li>
+              <li>
+                <button
                   onClick={() => navigateTo('terms')}
                   style={{ color: '#CBD5E1', textAlign: 'left', transition: 'color 0.15s ease' }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = '#20C4E8')}

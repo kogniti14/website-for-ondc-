@@ -56,6 +56,8 @@ export const AppRoutes = {
   track: () => '/track',
   support: (method?: 'phone' | 'whatsapp') => (method ? `/support?method=${method}` : '/support'),
   gstInputCredit: () => '/gst-input-credit',
+  internships: () => '/internships',
+  careers: () => '/internships',
   search: (q?: string) => (q && q.trim() ? `/search?q=${encodeURIComponent(q.trim())}` : '/search'),
 
   // Auth Routes
@@ -347,6 +349,10 @@ export function parseCurrentRoute(
   }
   if (pathname === '/gst-input-credit' || pathname === '/gst-credit' || pathname === '/itc-calculator') {
     result.activeTab = 'gst-input-credit';
+    return result;
+  }
+  if (pathname === '/internships' || pathname === '/careers' || pathname === '/internship-opportunities') {
+    result.activeTab = 'internships';
     return result;
   }
   if (pathname === '/search') {
