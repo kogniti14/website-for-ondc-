@@ -615,7 +615,7 @@ export const Footer: React.FC<FooterProps> = ({
                   onMouseEnter={(e) => (e.currentTarget.style.color = '#20C4E8')}
                   onMouseLeave={(e) => (e.currentTarget.style.color = '#CBD5E1')}
                 >
-                  Internships &amp; Careers (SWAYAM Plus)
+                  Internship Opportunities (SWAYAM Plus)
                 </button>
               </li>
               <li>

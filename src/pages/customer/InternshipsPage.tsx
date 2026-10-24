@@ -257,8 +257,8 @@ export const InternshipsPage: React.FC<InternshipsPageProps> = ({ setActiveTab }
                 </a>
 
                 <a
-                  href={`mailto:careers@kognitiminds.com?subject=${encodeURIComponent(
-                    'Application for Internship Opportunity - SWAYAM Plus Candidate'
+                  href={`mailto:${OFFICIAL_COMPANY_MASTER.support_email}?subject=${encodeURIComponent(
+                    'Enquiry - Internship Opportunities at Kogniti Minds'
                   )}`}
                   className="btn btn-lg"
                   style={{
@@ -275,7 +275,7 @@ export const InternshipsPage: React.FC<InternshipsPageProps> = ({ setActiveTab }
                     textDecoration: 'none',
                   }}
                 >
-                  <Mail size={16} className="text-blue-600" /> Contact Talent Desk
+                  <Mail size={16} className="text-blue-600" /> General Enquiry
                 </a>
               </div>
             </div>
@@ -566,11 +566,11 @@ export const InternshipsPage: React.FC<InternshipsPageProps> = ({ setActiveTab }
               }}
             >
               <div>
-                <strong>Questions regarding internships?</strong> Email our talent desk at{' '}
-                <a href="mailto:careers@kognitiminds.com" style={{ color: '#0284C7', fontWeight: 600 }}>
-                  careers@kognitiminds.com
+                <strong>Questions regarding internships?</strong> Official applications are accepted directly via{' '}
+                <a href="https://swayamplus.education.gov.in/" target="_blank" rel="noopener noreferrer" style={{ color: '#0284C7', fontWeight: 600 }}>
+                  SWAYAM Plus Portal
                 </a>{' '}
-                or{' '}
+                or reach out to{' '}
                 <a href={`mailto:${OFFICIAL_COMPANY_MASTER.support_email}`} style={{ color: '#0284C7', fontWeight: 600 }}>
                   {OFFICIAL_COMPANY_MASTER.support_email}
                 </a>
