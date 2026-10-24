@@ -238,8 +238,10 @@ export const HomePromotionalSlider: React.FC<HomePromotionalSliderProps> = ({
 
                 {/* Required Call-to-Action Button */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={onNavigateToInternships}
+                  <a
+                    href="https://swayamplus.education.gov.in/"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="btn btn-primary btn-lg"
                     style={{
                       background: 'linear-gradient(135deg, #0284C7 0%, #1D4ED8 100%)',
@@ -249,21 +251,18 @@ export const HomePromotionalSlider: React.FC<HomePromotionalSliderProps> = ({
                       fontSize: '0.95rem',
                       fontWeight: 700,
                       boxShadow: '0 8px 24px rgba(2, 132, 199, 0.35)',
-                      border: 'none',
-                      cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.5rem',
+                      textDecoration: 'none',
                       transition: 'all 0.2s ease',
                     }}
                   >
                     Explore Internship Opportunities <ArrowRight size={18} />
-                  </button>
+                  </a>
 
-                  <a
-                    href="https://swayamplus.education.gov.in/"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={onNavigateToInternships}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -275,13 +274,12 @@ export const HomePromotionalSlider: React.FC<HomePromotionalSliderProps> = ({
                       borderRadius: '9999px',
                       fontSize: '0.92rem',
                       fontWeight: 700,
-                      textDecoration: 'none',
-                      transition: 'all 0.2s ease',
+                      cursor: 'pointer',
                       boxShadow: '0 2px 6px rgba(2, 132, 199, 0.08)',
                     }}
                   >
-                    Visit Official Portal <ExternalLink size={16} />
-                  </a>
+                    View Track Details &amp; Roles <Briefcase size={16} />
+                  </button>
                 </div>
               </div>
 

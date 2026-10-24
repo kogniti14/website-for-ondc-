@@ -165,13 +165,7 @@ export const PartnerCarousel: React.FC = () => {
 
                   {partner.ctaText && (
                     <div style={{ marginTop: '0.75rem', width: '100%' }}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          navigateTo('/internships');
-                        }}
+                      <span
                         className="btn btn-sm btn-primary"
                         style={{
                           width: '100%',
@@ -187,11 +181,10 @@ export const PartnerCarousel: React.FC = () => {
                           border: 'none',
                           color: '#FFFFFF',
                           boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
-                          cursor: 'pointer',
                         }}
                       >
                         {partner.ctaText} <ArrowRight size={13} />
-                      </button>
+                      </span>
                     </div>
                   )}
                 </a>
@@ -237,13 +230,7 @@ export const PartnerCarousel: React.FC = () => {
 
                   {partner.ctaText && (
                     <div style={{ marginTop: '0.75rem', width: '100%' }}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          navigateTo('/internships');
-                        }}
+                      <span
                         className="btn btn-sm btn-primary"
                         style={{
                           width: '100%',
@@ -259,11 +246,10 @@ export const PartnerCarousel: React.FC = () => {
                           border: 'none',
                           color: '#FFFFFF',
                           boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
-                          cursor: 'pointer',
                         }}
                       >
                         {partner.ctaText} <ArrowRight size={13} />
-                      </button>
+                      </span>
                     </div>
                   )}
                 </a>
