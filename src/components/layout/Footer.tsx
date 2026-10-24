@@ -831,12 +831,6 @@ export const Footer: React.FC<FooterProps> = ({
           <div>
             © {new Date().getFullYear()} Kogniti Minds Private Limited. All Rights Reserved. Built for Indian Individuals & Enterprises.
           </div>
-
-          {/* Secure Indian Payment Badges */}
-          <div className="flex items-center gap-2">
-            <span style={{ fontSize: '0.74rem', color: '#CBD5E1', fontWeight: 600 }}>Secure Payments:</span>
-            <PaymentLogos variant="compact" />
-          </div>
         </div>
       </div>
     </footer>
