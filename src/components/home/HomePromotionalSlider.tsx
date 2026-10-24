@@ -102,161 +102,10 @@ export const HomePromotionalSlider: React.FC<HomePromotionalSliderProps> = ({
             justifyContent: 'center',
           }}
         >
-          {/* SLIDE 0: Flagship AgroPrint Sustainable Copier Paper */}
+          {/* SLIDE 0: SWAYAM PLUS INTERNSHIP OPPORTUNITIES (USER REQUIREMENT - PRIMARY SLIDE) */}
           <div
             style={{
               display: currentSlide === 0 ? 'block' : 'none',
-              background: 'linear-gradient(135deg, #0A0F1D 0%, #172554 60%, #0F172A 100%)',
-              color: '#FFFFFF',
-              padding: 'clamp(2rem, 4vw, 3rem) clamp(1.5rem, 4vw, 3rem)',
-              position: 'relative',
-              animation: 'fadeInSlide 0.4s ease-out',
-            }}
-          >
-            {/* Ambient Background Glow */}
-            <div
-              style={{
-                position: 'absolute',
-                top: '-30%',
-                right: '5%',
-                width: '380px',
-                height: '380px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(16, 185, 129, 0.18) 0%, rgba(16, 185, 129, 0) 70%)',
-                pointerEvents: 'none',
-              }}
-            />
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
-                gap: '2rem',
-                alignItems: 'center',
-                position: 'relative',
-                zIndex: 2,
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.85rem', flexWrap: 'wrap' }}>
-                  <span
-                    className="inline-flex items-center gap-1.5"
-                    style={{
-                      background: 'rgba(16, 185, 129, 0.15)',
-                      color: '#34D399',
-                      border: '1px solid rgba(16, 185, 129, 0.35)',
-                      padding: '0.35rem 0.85rem',
-                      borderRadius: '9999px',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                    }}
-                  >
-                    <Sparkles size={14} className="text-emerald-400" />
-                    100% Tree-Free Innovation
-                  </span>
-                  <span
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      color: '#93C5FD',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '9999px',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                    }}
-                  >
-                    Direct Manufacturer Pricing
-                  </span>
-                </div>
-
-                <h2
-                  style={{
-                    fontSize: 'clamp(1.6rem, 3.2vw, 2.35rem)',
-                    fontWeight: 800,
-                    color: '#FFFFFF',
-                    lineHeight: '1.25',
-                    letterSpacing: '-0.025em',
-                    marginBottom: '0.75rem',
-                  }}
-                >
-                  From Agricultural Crop Waste to Everyday Paper
-                </h2>
-
-                <p
-                  style={{
-                    fontSize: 'clamp(0.95rem, 1.8vw, 1.05rem)',
-                    color: '#CBD5E1',
-                    lineHeight: '1.6',
-                    maxWidth: '620px',
-                    marginBottom: '1.5rem',
-                  }}
-                >
-                  Discover our flagship 75 GSM copier paper and notebooks milled from upcycled farm crop residue. High opacity, jam-free high-speed printing, and eligible for 18% GST Input Tax Credit.
-                </p>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                  <button
-                    onClick={onNavigateToShop}
-                    className="btn btn-primary"
-                    style={{
-                      background: 'linear-gradient(135deg, #2563EB 0%, #10B981 100%)',
-                      color: '#FFFFFF',
-                      borderRadius: '9999px',
-                      padding: '0.85rem 2rem',
-                      fontSize: '0.95rem',
-                      fontWeight: 700,
-                      boxShadow: '0 8px 24px rgba(37, 99, 235, 0.35)',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    Explore Paper Catalog <ArrowRight size={18} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Slide 0 Right Feature Card */}
-              <div
-                style={{
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '12px',
-                  padding: '1.5rem',
-                  backdropFilter: 'blur(10px)',
-                }}
-              >
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#93C5FD', textTransform: 'uppercase', marginBottom: '0.85rem' }}>
-                  Why Agro-Waste Paper?
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.86rem', color: '#E2E8F0' }}>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-emerald-400" />
-                    <span>Saves forests by replacing virgin tree pulp with stubble fibers</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-emerald-400" />
-                    <span>Reduces crop burning and supports Indian farmers directly</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-emerald-400" />
-                    <span>Compliant with ISO 9001 and ISO 14001 mill standards</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 size={16} className="text-emerald-400" />
-                    <span>Seamless high-volume laser, inkjet, and xerox printing</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* SLIDE 1: SWAYAM PLUS INTERNSHIP OPPORTUNITIES (USER REQUIREMENT) */}
-          <div
-            style={{
-              display: currentSlide === 1 ? 'block' : 'none',
               background: '#FFFFFF',
               color: '#0F172A',
               padding: 'clamp(2rem, 4vw, 3rem) clamp(1.5rem, 4vw, 3rem)',
@@ -526,6 +375,157 @@ export const HomePromotionalSlider: React.FC<HomePromotionalSliderProps> = ({
             </div>
           </div>
 
+          {/* SLIDE 1: Flagship AgroPrint Sustainable Copier Paper */}
+          <div
+            style={{
+              display: currentSlide === 1 ? 'block' : 'none',
+              background: 'linear-gradient(135deg, #0A0F1D 0%, #172554 60%, #0F172A 100%)',
+              color: '#FFFFFF',
+              padding: 'clamp(2rem, 4vw, 3rem) clamp(1.5rem, 4vw, 3rem)',
+              position: 'relative',
+              animation: 'fadeInSlide 0.4s ease-out',
+            }}
+          >
+            {/* Ambient Background Glow */}
+            <div
+              style={{
+                position: 'absolute',
+                top: '-30%',
+                right: '5%',
+                width: '380px',
+                height: '380px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(16, 185, 129, 0.18) 0%, rgba(16, 185, 129, 0) 70%)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
+                gap: '2rem',
+                alignItems: 'center',
+                position: 'relative',
+                zIndex: 2,
+              }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.85rem', flexWrap: 'wrap' }}>
+                  <span
+                    className="inline-flex items-center gap-1.5"
+                    style={{
+                      background: 'rgba(16, 185, 129, 0.15)',
+                      color: '#34D399',
+                      border: '1px solid rgba(16, 185, 129, 0.35)',
+                      padding: '0.35rem 0.85rem',
+                      borderRadius: '9999px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                    }}
+                  >
+                    <Sparkles size={14} className="text-emerald-400" />
+                    100% Tree-Free Innovation
+                  </span>
+                  <span
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      color: '#93C5FD',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      padding: '0.35rem 0.75rem',
+                      borderRadius: '9999px',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Direct Manufacturer Pricing
+                  </span>
+                </div>
+
+                <h2
+                  style={{
+                    fontSize: 'clamp(1.6rem, 3.2vw, 2.35rem)',
+                    fontWeight: 800,
+                    color: '#FFFFFF',
+                    lineHeight: '1.25',
+                    letterSpacing: '-0.025em',
+                    marginBottom: '0.75rem',
+                  }}
+                >
+                  From Agricultural Crop Waste to Everyday Paper
+                </h2>
+
+                <p
+                  style={{
+                    fontSize: 'clamp(0.95rem, 1.8vw, 1.05rem)',
+                    color: '#CBD5E1',
+                    lineHeight: '1.6',
+                    maxWidth: '620px',
+                    marginBottom: '1.5rem',
+                  }}
+                >
+                  Discover our flagship 75 GSM copier paper and notebooks milled from upcycled farm crop residue. High opacity, jam-free high-speed printing, and eligible for 18% GST Input Tax Credit.
+                </p>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={onNavigateToShop}
+                    className="btn btn-primary"
+                    style={{
+                      background: 'linear-gradient(135deg, #2563EB 0%, #10B981 100%)',
+                      color: '#FFFFFF',
+                      borderRadius: '9999px',
+                      padding: '0.85rem 2rem',
+                      fontSize: '0.95rem',
+                      fontWeight: 700,
+                      boxShadow: '0 8px 24px rgba(37, 99, 235, 0.35)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    Explore Paper Catalog <ArrowRight size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Slide 1 Right Feature Card */}
+              <div
+                style={{
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  padding: '1.5rem',
+                  backdropFilter: 'blur(10px)',
+                }}
+              >
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#93C5FD', textTransform: 'uppercase', marginBottom: '0.85rem' }}>
+                  Why Agro-Waste Paper?
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.86rem', color: '#E2E8F0' }}>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-emerald-400" />
+                    <span>Saves forests by replacing virgin tree pulp with stubble fibers</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-emerald-400" />
+                    <span>Reduces crop burning and supports Indian farmers directly</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-emerald-400" />
+                    <span>Compliant with ISO 9001 and ISO 14001 mill standards</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={16} className="text-emerald-400" />
+                    <span>Seamless high-volume laser, inkjet, and xerox printing</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* SLIDE 2: Dedicated B2B & Wholesale Institutional Procurement */}
           <div
             style={{
@@ -689,9 +689,9 @@ export const HomePromotionalSlider: React.FC<HomePromotionalSliderProps> = ({
               width: '38px',
               height: '38px',
               borderRadius: '50%',
-              background: currentSlide === 1 ? 'rgba(255, 255, 255, 0.92)' : 'rgba(15, 23, 42, 0.75)',
-              color: currentSlide === 1 ? '#0F172A' : '#FFFFFF',
-              border: currentSlide === 1 ? '1px solid #CBD5E1' : '1px solid rgba(255, 255, 255, 0.2)',
+              background: currentSlide === 0 ? 'rgba(255, 255, 255, 0.92)' : 'rgba(15, 23, 42, 0.75)',
+              color: currentSlide === 0 ? '#0F172A' : '#FFFFFF',
+              border: currentSlide === 0 ? '1px solid #CBD5E1' : '1px solid rgba(255, 255, 255, 0.2)',
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
               display: 'flex',
               alignItems: 'center',
@@ -715,9 +715,9 @@ export const HomePromotionalSlider: React.FC<HomePromotionalSliderProps> = ({
               width: '38px',
               height: '38px',
               borderRadius: '50%',
-              background: currentSlide === 1 ? 'rgba(255, 255, 255, 0.92)' : 'rgba(15, 23, 42, 0.75)',
-              color: currentSlide === 1 ? '#0F172A' : '#FFFFFF',
-              border: currentSlide === 1 ? '1px solid #CBD5E1' : '1px solid rgba(255, 255, 255, 0.2)',
+              background: currentSlide === 0 ? 'rgba(255, 255, 255, 0.92)' : 'rgba(15, 23, 42, 0.75)',
+              color: currentSlide === 0 ? '#0F172A' : '#FFFFFF',
+              border: currentSlide === 0 ? '1px solid #CBD5E1' : '1px solid rgba(255, 255, 255, 0.2)',
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
               display: 'flex',
               alignItems: 'center',
@@ -756,10 +756,10 @@ export const HomePromotionalSlider: React.FC<HomePromotionalSliderProps> = ({
                     height: '9px',
                     borderRadius: '9999px',
                     background: isActive
-                      ? currentSlide === 1
+                      ? currentSlide === 0
                         ? '#0284C7'
                         : '#38BDF8'
-                      : currentSlide === 1
+                      : currentSlide === 0
                       ? 'rgba(148, 163, 184, 0.4)'
                       : 'rgba(255, 255, 255, 0.35)',
                     border: 'none',
